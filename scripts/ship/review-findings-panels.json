@@ -1,0 +1,203 @@
+{
+  "branch": "feat/sprint-2.5+",
+  "reviewed_at": "2026-03-28T00:00:00Z",
+  "files_reviewed": [
+    "src/components/track/panels/BowelSection.tsx",
+    "src/components/track/panels/BristolScale.tsx",
+    "src/components/track/panels/CycleHormonalSection.tsx",
+    "src/components/track/panels/FluidSection.tsx",
+    "src/components/track/panels/FoodSection.tsx",
+    "src/components/track/panels/ObservationWindow.tsx",
+    "src/components/track/panels/PanelTimePicker.tsx",
+    "src/components/track/panels/bowelConstants.ts",
+    "src/components/track/panels/bristolScaleData.ts",
+    "src/components/track/panels/index.ts",
+    "src/components/track/FoodMatchingModal.tsx",
+    "src/components/track/RawInputEditModal.tsx",
+    "src/components/track/TodayStatusRow.tsx"
+  ],
+  "findings": [
+    {
+      "id": "F001",
+      "severity": "HIGH",
+      "category": "correctness",
+      "file": "src/components/track/panels/BowelSection.tsx",
+      "line": 543,
+      "title": "handleSave missing guard against concurrent calls from Button onClick",
+      "description": "The Log BM Button has onClick={handleSave} with disabled={saving}, but the Notes Input onKeyDown at line 537 already has an explicit `!saving` guard before calling handleSave. The Button itself does NOT check `saving` before calling — it relies only on the `disabled` attribute. The disabled attribute prevents clicks on the button element, but if the Enter key triggers the PanelTimePicker's onEnterKey (line 527) AND the Notes input's onKeyDown fires simultaneously (both are in the DOM at the same time), two concurrent calls could slip through. More concretely: handleSave is not wrapped in useCallback and has no internal in-flight guard, so repeated rapid async invocations are possible. Fix: add an early return `if (saving) return;` at the top of handleSave, and wrap it in useCallback.",
+      "fix": "const handleSave = useCallback(async () => {\n  if (saving || bristolCode === null) return;\n  // ... rest of handler\n}, [saving, bristolCode, ...deps]);",
+      "implemented": false
+    },
+    {
+      "id": "F002",
+      "severity": "HIGH",
+      "category": "accessibility",
+      "file": "src/components/track/FoodMatchingModal.tsx",
+      "line": 459,
+      "title": "role=option buttons outside a proper listbox owner — broken ARIA tree",
+      "description": "The search results list uses role=\"listbox\" on the container (line 417) and role=\"option\" on individual buttons (line 459). However, the listbox contains group header divs (role not set) between the listbox and its options. Screen readers require role=\"option\" elements to be direct or owned children of role=\"listbox\" — intervening generic divs break the ownership chain and cause AT to ignore the options. Additionally, the combobox input (role=\"combobox\", line 401) has aria-controls=\"food-canonical-listbox\" which is correct, but aria-expanded is set to `groupedOptions.length > 0` (line 402). When results are loading, groupedOptions is empty, so aria-expanded=false, which wrongly signals the popup is closed when it is actually showing a loading state.",
+      "fix": "1. Flatten the grouping so options are direct children of the listbox, or use aria-owns + aria-setsize/aria-posinset on each option. 2. Set aria-expanded=true whenever the listbox is visible (open state), not based on result count: aria-expanded={open}.",
+      "implemented": false
+    },
+    {
+      "id": "F003",
+      "severity": "HIGH",
+      "category": "correctness",
+      "file": "src/components/track/panels/BristolScale.tsx",
+      "line": 175,
+      "title": "BristolScalePicker accepts value: number but the type contract requires 1–7",
+      "description": "BristolScalePickerProps declares `value: number` (line 170), not `value: 1 | 2 | 3 | 4 | 5 | 6 | 7`. This means callers can pass any number without a TypeScript error, and the component will silently render with no selection (isSelected will never be true). The sibling BowelSection uses the strict union type internally — the looser type on this shared picker is a mismatch and a regression risk if the picker is wired up elsewhere with a plain number.",
+      "fix": "Change the prop type to match the canonical domain type:\ninterface BristolScalePickerProps {\n  value: 1 | 2 | 3 | 4 | 5 | 6 | 7;\n  onChange: (value: 1 | 2 | 3 | 4 | 5 | 6 | 7) => void;\n  compact?: boolean;\n}",
+      "implemented": false
+    },
+    {
+      "id": "F004",
+      "severity": "HIGH",
+      "category": "correctness",
+      "file": "src/components/track/panels/usePanelTime — PanelTimePicker.tsx",
+      "line": 34,
+      "title": "PanelTimePicker computes defaultDate/defaultTime at render time — stale for long-lived panels",
+      "description": "PanelTimePicker calculates `const now = new Date()` and derives defaultDate/defaultTime from it on every render. When the popover is first opened, `timeValue` is empty so displayTime shows the current time — but this is the time the parent component last re-rendered, not the moment the user opens the popover. On a long-lived Track page (open for hours), the displayed 'Now' label will drift. The issue is compounded because the time inputs in the popover also use this stale `now` as their default values. However this is a display issue not a save issue — getTimestampMs() in usePanelTime correctly uses Date.now() when timeValue is empty.",
+      "fix": "This is a display-only cosmetic drift (save is correct). Lower impact than F001–F003. Could be addressed by computing `now` inside the popover's open handler, or by using a ref that captures the current time when the popover opens.",
+      "implemented": false
+    },
+    {
+      "id": "F005",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/components/track/panels/BowelSection.tsx",
+      "line": 179,
+      "title": "Bristol code null-check is the only form validation — no feedback to user",
+      "description": "handleSave at line 179 silently returns early if bristolCode is null. There is no visual indication to the user that they must select a Bristol type before logging. The Save button is always enabled (only disabled={saving}, not also disabled when bristolCode is null). A user who clicks Log BM without selecting a Bristol type gets no feedback — the button appears to do nothing.",
+      "fix": "Either disable the button when bristolCode is null:\n<Button disabled={saving || bristolCode === null}>\nor show an inline validation message when the user attempts to save without a selection.",
+      "implemented": false
+    },
+    {
+      "id": "F006",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/components/track/panels/FluidSection.tsx",
+      "line": 165,
+      "title": "Enter key in amount input always logs Water, ignores showOther mode",
+      "description": "The amount input onKeyDown handler at line 164 always calls handleLogSelectedFluid('Water') when Enter is pressed, even when showOther is true. This means if a user has typed a custom drink name and presses Enter in the amount field, Water is logged instead of their custom drink. The PanelTimePicker's onEnterKey at line 139 correctly checks showOther, but the amount input's own handler does not.",
+      "fix": "Change the amount input onKeyDown:\nonKeyDown={(event) => {\n  if (event.key === 'Enter') {\n    event.preventDefault();\n    if (showOther) void handleOtherSubmit();\n    else void handleLogSelectedFluid('Water');\n  }\n}}",
+      "implemented": false
+    },
+    {
+      "id": "F007",
+      "severity": "MODERATE",
+      "category": "accessibility",
+      "file": "src/components/track/panels/CycleHormonalSection.tsx",
+      "line": 163,
+      "title": "Collapsible section button missing aria-controls reference",
+      "description": "The toggle button at line 163 has aria-expanded={panelOpen} but no aria-controls attribute pointing to the collapsible content. Screen readers use aria-controls to announce which region is being expanded/collapsed. Without it, assistive technology users know the button toggles something but cannot programmatically navigate to the expanded content.",
+      "fix": "Add an id to the collapsible div and wire it to the button:\n<button aria-expanded={panelOpen} aria-controls=\"cycle-panel-content\">\n<div id=\"cycle-panel-content\">",
+      "implemented": false
+    },
+    {
+      "id": "F008",
+      "severity": "MODERATE",
+      "category": "accessibility",
+      "file": "src/components/track/panels/CycleHormonalSection.tsx",
+      "line": 270,
+      "title": "Symptom buttons have no accessible label text for screen readers",
+      "description": "The symptom toggle buttons (line 270) render only the option.label text content, but have no aria-label. The buttons are inside a group with a visible label 'Symptoms', but that relationship is not programmatic (no fieldset/legend or aria-labelledby on the group div). Individual button labels like 'Cramps' are acceptable, but the group context is lost for AT users.",
+      "fix": "Wrap the symptom buttons in a fieldset with a legend, or add aria-label to each button including the group context, e.g., aria-label={`${option.label} symptom`}.",
+      "implemented": false
+    },
+    {
+      "id": "F009",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/components/track/panels/ObservationWindow.tsx",
+      "line": 95,
+      "title": "Food item name resolution uses String() cast on potentially undefined value",
+      "description": "Line 95: `const name = String(item?.parsedName ?? item?.name ?? '').trim()`. While the null-coalescing chain handles undefined, `String(undefined)` returns the literal string 'undefined'. If both parsedName and name are explicitly set to undefined (not just absent), the chain correctly falls back to '', but the String() wrapper is an unnecessary defensive pattern that obscures what types item is expected to have. The real risk is that item itself could be null/undefined (the type of items array elements is not checked here), which would cause item?.parsedName to return undefined silently and the empty-string check on line 96 saves us — but this is luck, not design.",
+      "fix": "Clarify the item type from SyncedLog (import the actual FoodItem type) and use typed access instead of String() casting. At minimum, add a null guard: `if (!item) continue;`",
+      "implemented": false
+    },
+    {
+      "id": "F010",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/components/track/panels/FoodSection.tsx",
+      "line": 59,
+      "title": "savedTimeValue captured but setTimeValue restorer uses savedTimeValue, not savedDateValue",
+      "description": "Lines 59–61 capture savedName, savedTimeValue, and savedActivePreset for optimistic rollback on error. In the catch block at line 91, setTimeValue(savedTimeValue) is called to restore the time picker state. However, setDateValue is never restored — if the user had set a custom date, error rollback silently drops the date component, only restoring the time component. The user would lose their backdated date on a failed submission.",
+      "fix": "Capture and restore dateValue alongside timeValue:\nconst savedDateValue = dateValue;\n// In catch:\nsetDateValue(savedDateValue);",
+      "implemented": false
+    },
+    {
+      "id": "F011",
+      "severity": "MODERATE",
+      "category": "performance",
+      "file": "src/components/track/FoodMatchingModal.tsx",
+      "line": 95,
+      "title": "useQuery always fires at limit=160 when modal opens with no search query",
+      "description": "When the modal opens and searchQuery is empty with no activeBucketKey, the query fires with limit=160 (line 101). This fetches a large result set on every modal open, before the user has typed anything. For a food registry with 147+ stations, this is a full-registry scan on mount. Combined with useDeferredValue (line 88), changes to the query are batched — but the initial 160-item load is immediate and unconditional.",
+      "fix": "Consider skipping the query (returning 'skip') when the modal has just opened and the user hasn't typed yet, showing a prompt instead. Alternatively reduce the initial limit significantly (e.g. 20) and only expand on search input.",
+      "implemented": false
+    },
+    {
+      "id": "F012",
+      "severity": "MODERATE",
+      "category": "accessibility",
+      "file": "src/components/track/panels/BowelSection.tsx",
+      "line": 233,
+      "title": "Report trigger toggle uses role=toolbar but buttons are not focus-managed per toolbar pattern",
+      "description": "The report trigger mode toggle at line 239 has role=\"toolbar\", which requires keyboard navigation via arrow keys between toolbar items per ARIA spec (the toolbar composite widget pattern). The buttons inside receive normal tab focus instead. This is inconsistent — either use role=\"group\" (which has no arrow-key requirement) or implement toolbar roving tabindex navigation.",
+      "fix": "Replace role=\"toolbar\" with role=\"group\" which correctly describes a group of related controls without implying arrow-key navigation:\n<div role=\"group\" aria-label=\"Report trigger mode\">",
+      "implemented": false
+    },
+    {
+      "id": "F013",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/components/track/panels/bowelConstants.ts",
+      "line": 55,
+      "title": "SEVERITY_COLORS array index coupling is fragile — breaks if option order changes",
+      "description": "In BowelSection.tsx, SEVERITY_COLORS is accessed by index `i` from the options.map() iteration (BowelSection line 71: `const colors = SEVERITY_COLORS[i]`). This creates an implicit coupling between the array order of URGENCY/EFFORT options and the position in SEVERITY_COLORS. If either array is reordered (e.g. adding 'none-at-all' urgency at position 0), the color mapping breaks silently with no TypeScript error.",
+      "fix": "Map colors to option values explicitly rather than by position:\nexport const SEVERITY_COLORS: Record<string, {...}> = {\n  low: { ... },\n  medium: { ... },\n  high: { ... },\n  immediate: { ... },\n};\nAnd look up by opt.value instead of index.",
+      "implemented": false
+    },
+    {
+      "id": "F014",
+      "severity": "NICE_TO_HAVE",
+      "category": "correctness",
+      "file": "src/components/track/panels/PanelTimePicker.tsx",
+      "line": 76,
+      "title": "Date input has no max attribute — allows future dates",
+      "description": "The date input at line 73 has no max attribute, so users can select future dates and log events in the future. This may be intentional for scheduling, but for a health tracking app that records what happened, future-dated entries would create incorrect transit time calculations and mislead the ObservationWindow. The time input similarly has no validation against future timestamps.",
+      "fix": "Add max={defaultDate} to the date input to prevent future-date selection:\n<input type=\"date\" max={defaultDate} .../>",
+      "implemented": false
+    },
+    {
+      "id": "F015",
+      "severity": "NICE_TO_HAVE",
+      "category": "simplicity",
+      "file": "src/components/track/panels/BristolScale.tsx",
+      "line": 226,
+      "title": "Type 4 sparkle emoji is hardcoded into BristolScalePicker, not in data",
+      "description": "Line 226: `{isSelected && option.value === 4 && <span aria-hidden='true'>{\"\\u2728\"}</span>}`. The 'ideal' designation for Type 4 is baked into the rendering component rather than declared in bristolScaleData or BRISTOL_SCALE entries. If the clinical definition of 'ideal' ever changes or needs to be configurable per user, this requires a component edit instead of a data update.",
+      "fix": "Add an `isIdeal?: boolean` field to BristolOption in bristolScaleData.ts and set it true for Type 4. The component can then render the indicator conditionally based on the data.",
+      "implemented": false
+    },
+    {
+      "id": "F016",
+      "severity": "NICE_TO_HAVE",
+      "category": "simplicity",
+      "file": "src/components/track/panels/FluidSection.tsx",
+      "line": 148,
+      "title": "Double space in className is a minor formatting artifact",
+      "description": "Line 148: `className=\"flex  pb-2 snap-start\"` has a double space between 'flex' and 'pb-2'. Harmless at runtime but suggests this line was manually edited and not run through the formatter.",
+      "fix": "Remove the extra space: className=\"flex pb-2 snap-start\"",
+      "implemented": false
+    }
+  ],
+  "summary": {
+    "critical": 0,
+    "high": 3,
+    "moderate": 8,
+    "nice_to_have": 3
+  }
+}

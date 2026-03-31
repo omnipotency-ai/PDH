@@ -1,0 +1,160 @@
+{
+  "branch": "feat/sprint-2.5+",
+  "reviewed_at": "2026-03-28T00:00:00Z",
+  "review_focus": "Utility library audit — src/lib/*.ts",
+  "files_reviewed": [
+    "src/lib/utils.ts",
+    "src/lib/dateUtils.ts",
+    "src/lib/errors.ts",
+    "src/lib/debugLog.ts",
+    "src/lib/featureFlags.ts",
+    "src/lib/inputSafety.ts",
+    "src/lib/timeConstants.ts",
+    "src/lib/units.ts",
+    "src/lib/formatWeight.ts",
+    "src/lib/motionVariants.ts",
+    "src/lib/sounds.ts",
+    "src/lib/chakraColors.ts"
+  ],
+  "findings": [
+    {
+      "id": "LU001",
+      "severity": "HIGH",
+      "category": "correctness",
+      "file": "src/lib/inputSafety.ts",
+      "line": 41,
+      "title": "sanitizePlainText receives a typed string but defensively coerces it anyway — masking upstream bugs",
+      "description": "The function signature is `value: string` but the implementation starts with `String(value ?? '')`. This is a lie: the code exists to handle callers passing `null` or `undefined` where the type says `string`. The coercion silently recovers from broken call sites rather than surfacing them. If a caller genuinely passes `null`, TypeScript should catch it — allowing it at runtime hides that failure and can produce empty strings that look valid when they are not.",
+      "fix": "Remove the `String(value ?? '')` coercion. Let TypeScript enforce the `string` type at call sites. If genuinely nullable callers exist, change the signature to `value: string | null | undefined` and handle that branch explicitly (mirroring `sanitizeOptionalText` on the Convex side).",
+      "implemented": false
+    },
+    {
+      "id": "LU002",
+      "severity": "HIGH",
+      "category": "correctness",
+      "file": "src/lib/inputSafety.ts",
+      "line": 80,
+      "title": "assertMaxLength throws after sanitization — length limit applied post-trim but pre-caller awareness",
+      "description": "The length check runs on the already-sanitized (trimmed, normalised, control-chars-stripped) string, which is correct. However, the thrown `Error` message gives the post-processed length limit but not the actual length of the rejected string. When this bubbles up to a UI error handler it reads as a generic limit violation with no actionable detail for debugging.",
+      "fix": "Include both the actual length and the limit in the error message: `${fieldName} is ${value.length} characters but the maximum is ${maxLength}.`",
+      "implemented": false
+    },
+    {
+      "id": "LU003",
+      "severity": "HIGH",
+      "category": "correctness",
+      "file": "src/lib/sounds.ts",
+      "line": 1,
+      "title": "Module-level AudioContext singleton is never closed — browser resource leak",
+      "description": "The `audioCtx` variable is module-scoped and initialised on first call to `playSound`. It is never suspended or closed when the user navigates away. Each page visit after a hot reload in development creates a fresh context and the old one leaks. In browsers with a hard cap on simultaneous AudioContext instances (Chrome caps at 6) this will fail silently for users who visit the app in multiple tabs or who hot-reload repeatedly during development.",
+      "fix": "Either (a) close the context on a `beforeunload` / `pagehide` listener, or (b) use a module-level singleton with explicit `ctx.close()` exported for test teardown. In production a single long-lived context is acceptable, but the lack of any lifecycle management is a resource leak.",
+      "implemented": false
+    },
+    {
+      "id": "LU004",
+      "severity": "HIGH",
+      "category": "accessibility",
+      "file": "src/lib/sounds.ts",
+      "line": 44,
+      "title": "playSound ignores prefers-reduced-motion — sounds play unconditionally",
+      "description": "`prefers-reduced-motion: reduce` is a user accessibility preference that means 'reduce non-essential motion and audio effects'. Playing sounds without checking this setting violates WCAG 2.1 SC 2.3.3 (AAA) and is a meaningful regression for users with vestibular disorders. The hook `useCelebration.ts` has a hardcoded `SOUND_ENABLED = true` with a comment noting that per-user preferences were removed — that compounds the problem.",
+      "fix": "In `playSound`, check `window.matchMedia('(prefers-reduced-motion: reduce)').matches` and return early if true. Additionally, re-introduce a user-level sound preference setting (even a simple boolean in the profile) so users who want quiet can opt out regardless of OS setting.",
+      "implemented": false
+    },
+    {
+      "id": "LU005",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/lib/dateUtils.ts",
+      "line": 2,
+      "title": "formatLocalDateKey uses local timezone — can produce wrong date for UTC timestamps",
+      "description": "The function calls `date.getFullYear()`, `date.getMonth()`, `date.getDate()` — all of which are timezone-local. If a Convex timestamp (which is always UTC milliseconds) is passed in and the user's system clock is, for example, UTC-5, a log created at 11pm local time on day N but stored as UTC midnight on day N+1 will produce the wrong date key. This is widely used throughout the codebase for grouping log entries by day (habitAggregates, baselineAverages, etc.), making this a systematic grouping correctness issue.",
+      "fix": "The choice of local vs. UTC is a product decision that must be made explicitly and documented. If the app intends to group by the user's local day (the more intuitive choice), the current implementation is correct but this assumption must be documented clearly. If any callers pass UTC-based timestamps expecting UTC date output, they will get wrong results. Audit all callers and add a JSDoc note: `@param input - Must be a value in the user's local timezone; UTC timestamps will produce incorrect dates for users not in UTC.`",
+      "implemented": false
+    },
+    {
+      "id": "LU006",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/lib/units.ts",
+      "line": 89,
+      "title": "cmToFeetInches is exported but has zero callers — dead export",
+      "description": "`cmToFeetInches` is declared and exported in `units.ts` but has no consumers anywhere in `src/`. The codebase uses `cmToInches` directly in `DemographicsSection.tsx` and computes feet/inches inline there. Per the CLAUDE.md 'Leave it Better' rule and the feedback note on dead exports, code that is truly dead should be removed or wired up — not left as technical debt.",
+      "fix": "Either (a) remove `cmToFeetInches` and consolidate the feet/inches logic in `DemographicsSection.tsx` into this shared utility and import it, or (b) keep it and use it in `DemographicsSection.tsx` to eliminate the inline duplication. Option (b) is preferable — the utility is clearly correct and the inline code duplicates it.",
+      "implemented": false
+    },
+    {
+      "id": "LU007",
+      "severity": "MODERATE",
+      "category": "type-safety",
+      "file": "src/lib/formatWeight.ts",
+      "line": 22,
+      "title": "formatWeight and formatWeightDelta accept any number, including NaN and Infinity — no guards",
+      "description": "These functions call `.toFixed(1)` on raw `number` inputs. If a caller passes `NaN` (e.g., when a weight field hasn't been set yet), `toFixed` returns the string `\"NaN\"`, and the UI renders `\"NaN kg\"`. This is observed in `WeightEntryDrawer.tsx` at line 410 where `healthProfile?.startingWeight` is passed conditionally — the conditional guard suggests the caller is aware of missing values, but if it ever evaluates to `NaN` rather than `undefined`, the guard passes and the bad string is rendered.",
+      "fix": "Add a guard at the top of both functions: `if (!Number.isFinite(kg)) return '—';`. The display functions should never return 'NaN unit'.",
+      "implemented": false
+    },
+    {
+      "id": "LU008",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/lib/units.ts",
+      "line": 56,
+      "title": "mlToFlOz rounds to 1 decimal but flOzToMl does not — asymmetric round-trip",
+      "description": "`mlToFlOz` rounds its result to 1 decimal via `Math.round(...*10)/10`. `flOzToMl` returns a raw float (e.g., `flOzToMl(8.5)` → `251.37475`). The round-trip `flOzToMl(mlToFlOz(250))` ≠ 250, which is expected and documented, but `flOzToMl` feeding into ml-storage without rounding means sub-millilitre precision is stored in Convex for imperial users (e.g., `flOzToMl(8)` = `236.588`). The metric path uses `Math.round` explicitly in callers (`FluidSection.tsx:54`), but the rounding discipline is enforced in callers rather than the utility — which means a new caller can easily omit it.",
+      "fix": "Either document that callers are responsible for rounding (add JSDoc), or round in `flOzToMl` to the nearest ml — `return Math.round(flOz * ML_PER_FL_OZ)` — since ml is the canonical storage unit and sub-ml precision is meaningless for beverages.",
+      "implemented": false
+    },
+    {
+      "id": "LU009",
+      "severity": "MODERATE",
+      "category": "design-system",
+      "file": "src/lib/chakraColors.ts",
+      "line": 3,
+      "title": "Hardcoded hex colors bypass the Tailwind v4 design token system",
+      "description": "The CHAKRA object contains raw hex literals (`#E74C3C`, `#FFC700`, etc.) used as inline style props in landing page components. CLAUDE.md explicitly requires 'tokenized colors only' and 'use design system discipline'. These hex values live outside the Tailwind theme, are not accessible to Tailwind's purge/safety pipeline, and create a divergent color system that cannot be themed or audited through Tailwind tooling.",
+      "fix": "Define these colors in the Tailwind v4 CSS theme config (e.g., as `--color-chakra-root: #E74C3C`) and expose them through CSS custom properties or Tailwind classes. The `CHAKRA_SEQUENCE` gradient usage in `ChakraBar.tsx` is the only case that genuinely needs inline styles (for dynamic gradient generation); the single-accent usages in section components can likely use Tailwind classes instead.",
+      "implemented": false
+    },
+    {
+      "id": "LU010",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/lib/sounds.ts",
+      "line": 44,
+      "title": "playSound fires notes before AudioContext resumes — notes may be silently dropped",
+      "description": "When the context is suspended (autoplay policy), `ctx.resume()` is called but not awaited. The code then immediately calls `ctx.currentTime` and schedules oscillators. Because `resume()` is async, the context may still be suspended when notes are scheduled, causing them to be dropped silently. This is particularly likely on the very first user interaction that triggers sound.",
+      "fix": "Await the resume before scheduling: `if (ctx.state === 'suspended') { await ctx.resume(); }` — but since `playSound` is currently `void`, it needs to become `async`, or the scheduling logic needs to be moved into the `.then()` callback of the resume promise.",
+      "implemented": false
+    },
+    {
+      "id": "LU011",
+      "severity": "NICE-TO-HAVE",
+      "category": "correctness",
+      "file": "src/lib/errors.ts",
+      "line": 5,
+      "title": "getErrorMessage does not handle ConvexError or objects with a message property",
+      "description": "Convex throws `ConvexError` instances which extend `Error`, so `instanceof Error` catches them correctly. However, some third-party libraries and fetch failures produce plain objects like `{ message: 'timeout' }` that are not `Error` instances and not strings — these fall through to the fallback. This is a minor gap but the fallback string 'An unknown error occurred' gives the user no useful information when a structured error object was available.",
+      "fix": "Add a check: `if (err && typeof err === 'object' && 'message' in err && typeof (err as any).message === 'string') return (err as any).message;` — insert this between the `instanceof Error` and `typeof string` branches.",
+      "implemented": false
+    },
+    {
+      "id": "LU012",
+      "severity": "NICE-TO-HAVE",
+      "category": "simplicity",
+      "file": "src/lib/featureFlags.ts",
+      "line": 23,
+      "title": "Feature flag is `false` with no mechanism to enable it per environment",
+      "description": "`reproductiveHealth: false` is a compile-time constant with no ability to enable it for development or staging without a code change. This means the only way to test the reproductive health UI is to flip the flag in source and redeploy. For a flag that exists specifically to separate dev work from production, having no environment-based override makes the gate harder to use safely.",
+      "fix": "Consider reading from `import.meta.env.VITE_FEATURE_REPRODUCTIVE_HEALTH === 'true'` with a fallback of `false`. This allows enabling the feature in dev via `.env.local` without changing committed code, and the production build keeps the flag off by default.",
+      "implemented": false
+    }
+  ],
+  "summary": {
+    "critical": 0,
+    "high": 4,
+    "moderate": 6,
+    "nice_to_have": 2
+  },
+  "assessment": "CHANGES_REQUIRED"
+}

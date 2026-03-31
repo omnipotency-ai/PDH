@@ -1,0 +1,104 @@
+{
+  "directResponseToUser": null,
+  "summary": "Peter, you’ve actually done a lot right here, and it shows. After a long, genuinely encouraging run of formed stools — Bristol 3 to 4, large volume, low urgency, no accidents — you had one overnight setback with loose stool (Bristol type 6) at 04:58. That is a real worsening from yesterday, and it’s worth naming clearly, but it came after several stable bowel movements and still without accidents, which matters. The broader weekly picture is still positive too: this week’s average Bristol is 3.8 versus 5.8 last week, with 16 new foods tried and 16 foods cleared already, so despite this wobble your gut is still moving in a better direction overall at day 34 post-reversal.\n\nWhat stands out most is not one dramatic trigger, but a formula problem: several sweet/dairy exposures layered onto a bowel that had been happiest with coherent, slightly moist starch-based meals. The strongest safe pattern remains white rice, toast, white bread, ripe banana, mashed potato, crispy cracker when used as part of a meal, and grilled white meat. The overnight loosening fits better with the accumulation of flavoured yogurt, milk, jam, sweet biscuits, and a more snacky rhythm than with your classic safe starches. You also slept 7 hours, which is better than your average and protective, but fluids are only 250 ml so far today versus your usual 1793 ml, and water is still at 0. After a loose night, that low fluid intake can make the bowel recovery feel more erratic.\n\nSo the main headline is: **Bristol trend worsened acutely from a run of 3–4s to a nocturnal Bristol 6, but the larger recovery trend is still better than last week.** I’d stabilise today with structured, slightly moist safe foods rather than dry grazing, and use the next 1–2 stools to see whether this was a one-night overspill or the start of a true loose patch.",
+  "clinicalReasoning": "**Pattern recognition:** the key story is a long stable phase followed by one overnight loose event, not a full-day unraveling. From Tue 17 Mar 12:20 through Wed 18 Mar 16:09 you produced repeated Bristol 3–4 stools with low urgency and no accidents, including large-volume complete movements. That sequence strongly suggests the anastomosis and downstream bowel were handling your recent diet reasonably well despite some rougher eating. The overnight event at Thu 04:58 was different: Bristol 6, large volume, medium urgency, and 8 episodes spread from roughly 22:00 onward. That change is clinically meaningful because **Bristol has worsened from formed 3–4 into mushy/loose 6**, but it remains less severe than Bristol 7 watery diarrhea.\n\n**Transit and timing:** your baseline transit estimate is slow at 4320 minutes, but post-reversal guts do not empty in one neat block; mixed old and newer contents can move unpredictably, especially overnight. The 04:58 event is far too late to blame on the 10:56 breakfast today and too broad to pin on one single meal. The most plausible contributors sit in the prior 12–24 hours: repeated flavoured yogurt exposures, milk, jam, and the residual effect of earlier sweet biscuit/high-sugar grazing. These foods all have either osmotic sugar load, lactose/dairy potential, or a pattern of appearing in more chaotic snack-based days. By contrast, **white rice, white bread, banana, and crispy cracker have repeated clean exposures inside formed-stool windows and are exonerated again here**.\n\n**Modifier weighting:** today’s partial-day modifiers are actually gentler than your norm. Coffee is only 250 ml so far, cigarettes are 2 versus your average 8.3/day, and Tina is 0 so far versus an average 5.3 counts/day. Sleep is better than average at 7 hours. That means the overnight loose stool is *less* likely to be driven by a major habit spike today and *more* likely to reflect yesterday’s food pattern plus overnight bowel cycling. *Caveat:* the Wed 16:20 Tina use and cigarettes can still accelerate motility later that day and evening, but because your stools stayed formed at 16:09 beforehand, I would treat them as amplifiers rather than sole causes.\n\n**Food evidence model:** recentSafe already includes flavoured yogurt, sweet biscuit, crispy cracker, white rice, ripe banana, toast, white bread, grilled white meat, and mashed potato. Today’s data does not overturn the safe status of the starch anchors, but it does nuance two items. Flavoured yogurt may still be tolerated in moderate conditions, yet the repeated large dairy-sugar exposures on Wed make it look more confounded again. Milk is still only a building food with 3 exposures, and because it was present in the lead-up to the loose night, it remains a watch item rather than cleared. Cottage cheese was previously moving toward provisional safety, but because it appeared alongside jam and broader dairy load before the Bristol 6, I would not strongly blame it; it is confounded, not convicted.\n\n**Mechanism:** after ileostomy reversal, the colon is relearning water absorption and storage while the enteric nervous system recalibrates urgency signals. A day built around coherent starch and protein gives the colon time to reclaim water, whereas repeated sugar-dairy-snack exposures can increase osmotic load and soften stool. Nighttime bowel clustering often means the gut was carrying a higher fluid content into the evening, and sleep-wake transitions can trigger repeated evacuations. The fact that you had no accident and then slept until 10 suggests this was disruptive but self-limited rather than a dangerous red-flag pattern.\n\n**Bottom line:** this looks like a temporary formula break rather than a major setback in recovery. The safest interpretation is that the bowel tolerated your core safe foods well, then got tipped into nocturnal looseness by cumulative sweet/dairy/snack layering with some habit acceleration in the background. If the next stools return toward Bristol 4–5 on structured meals today, that will strongly support a one-night overspill theory rather than a new intolerance.",
+  "educationalInsight": {
+    "topic": "Night-time bowel clustering after reversal",
+    "fact": "After ileostomy reversal, it’s common for the bowel to empty in clusters overnight rather than as one neat movement. The reconnected colon is still relearning how to absorb water and hold stool, and when stool reaches the rectum in a looser state, sleep-wake transitions can trigger repeated urges every 1–2 hours."
+  },
+  "lifestyleExperiment": {
+    "status": "broken",
+    "message": "Your autonomy formula looked good during the Bristol 3–4 run, but the overnight Bristol 6 means the math broke for one night. To get control back, we only need to change one dial for 3 days: either A) keep coffee to one early-morning dose only, B) cut cigarettes roughly in half, C) reduce Tina by 10–20%, or D) keep habits the same but deliberately anchor each meal with heavier binding foods like rice, toast, white bread, or mashed potato. Pick ONE option only. If stools settle back to Bristol 3s and 4s, you earn a free pass on the rest."
+  },
+  "foodAssessments": [
+    {
+      "food": "milk",
+      "verdict": "watch",
+      "confidence": "medium",
+      "causalRole": "possible",
+      "changeType": "unchanged",
+      "modifierSummary": "Overnight loose stool followed a day with repeated dairy exposures and modest stimulant input; habits may have amplified transit but do not fully explain the stool change.",
+      "reasoning": "Milk is still in building status and has now appeared again before a nocturnal Bristol 6. This does not prove milk intolerance, because it sat alongside flavoured yogurt, jam, and a broader sweet-snack pattern, but it is too confounded to clear. Keep it on watch until you get a cleaner trial with milk separated from other dairy-sugar exposures."
+    },
+    {
+      "food": "flavoured yogurt",
+      "verdict": "watch",
+      "confidence": "medium",
+      "causalRole": "possible",
+      "changeType": "downgraded",
+      "modifierSummary": "Large repeated yogurt exposures occurred during the 12–24 hours before the Bristol 6, in a bowel already challenged by sugar load and overnight motility shifts.",
+      "reasoning": "Flavoured yogurt had recently earned safe status, and I want to respect that progress. Today’s evidence does not condemn it as a solo trigger, but two 250 g exposures plus earlier yogurt, alongside milk and jam, make the safety signal less clean. I would temporarily move it back to watch in large portions, while still allowing that small portions may remain tolerable."
+    },
+    {
+      "food": "white rice",
+      "verdict": "safe",
+      "confidence": "high",
+      "causalRole": "unlikely",
+      "changeType": "unchanged",
+      "modifierSummary": "Repeated exposure during formed-stool runs and again before/after the loose event without any unique trigger profile.",
+      "reasoning": "White rice continues to look like one of your best stabilisers. It showed up repeatedly inside the Bristol 3–4 period and has no osmotic sugar, rough fibre, or fat load that would explain the overnight Bristol 6. It is much more likely to be part of the recovery plan than part of the problem."
+    },
+    {
+      "food": "crispy cracker",
+      "verdict": "safe",
+      "confidence": "medium",
+      "causalRole": "unlikely",
+      "changeType": "unchanged",
+      "modifierSummary": "Tolerated repeatedly within formed stools; risk rises when it becomes dry grazing rather than a structured meal component.",
+      "reasoning": "Crispy cracker keeps appearing inside stable windows, so the food itself remains broadly tolerated. The nuance from your recent history still stands: when crackers become the whole architecture of the day, dryness and snack-chaos can worsen stool behavior indirectly. As part of a moist meal, they remain acceptable."
+    },
+    {
+      "food": "smooth tomato sauce",
+      "verdict": "trial_next",
+      "confidence": "medium",
+      "causalRole": "unlikely",
+      "changeType": "unchanged",
+      "modifierSummary": "Already the closest building food to clearance and not implicated in the overnight loose episode.",
+      "reasoning": "Smooth tomato sauce has 6 exposures, neutral tendency, and no convincing evidence linking it to the latest looseness. It is the most mature building trial and a sensible next food to test once today's stool pattern settles back toward Bristol 4–5."
+    }
+  ],
+  "suspectedCulprits": [
+    {
+      "food": "flavoured yogurt",
+      "confidence": "medium",
+      "reasoning": "Not as a sole culprit, but the repeated large exposures on Wed 07:59 and 14:04 sit squarely in the lead-up to the overnight Bristol 6. In a post-reversal bowel, concentrated dairy plus sugar can increase osmotic load and water retention in stool."
+    },
+    {
+      "food": "milk",
+      "confidence": "medium",
+      "reasoning": "Milk remains an unfinished trial and was present on Wed morning before the loose night, then again this morning. It is not proven guilty, but because it is still building and appeared within the broader dairy-heavy window, it stays a plausible contributor."
+    },
+    {
+      "food": "jam",
+      "confidence": "medium",
+      "reasoning": "Jam brought a concentrated sugar load at Wed 12:12 and fits the same osmotic pattern as the previously flagged high-sugar refined snack cluster. It is more suspicious in combination than alone."
+    }
+  ],
+  "likelySafe": [
+    {
+      "food": "white rice",
+      "reasoning": "Repeatedly present during the long Bristol 3–4 run and lacks the sugar/fat/fibre profile that would explain nocturnal loosening."
+    },
+    {
+      "food": "ripe banana",
+      "reasoning": "Banana appeared in several stable meal blocks and is a classic binding food after soft output. It has not shown any meaningful negative signal here."
+    },
+    {
+      "food": "white bread",
+      "reasoning": "White bread and toast continue to sit inside your best-formed stool periods, making them reliable anchors for a stabilising day."
+    }
+  ],
+  "mealPlan": [],
+  "nextFoodToTry": {
+    "food": "smooth tomato sauce",
+    "reasoning": "You’ve already built 6 exposures with a neutral pattern, and it was not part of the strongest suspect cluster for the overnight Bristol 6. Once you get back to a Bristol 4 or 5, a small clean re-trial is the fastest route to graduating another food.",
+    "timing": "Try 1-2 teaspoons with tomorrow's lunch around 15:00, only if today's next stool is Bristol 3-5 and the overnight looseness does not continue."
+  },
+  "miniChallenge": null,
+  "suggestions": [
+    "For the rest of today, use structured slightly moist safe meals rather than dry grazing — for example white rice with a little hard cheese or toast/white bread with cream cheese and banana. This helps the colon reabsorb water more steadily after a loose night.",
+    "Start catching up fluids in a calm way: sip water or tea over the next few hours, because total fluid is only 250 ml so far today versus your average 1793 ml. After repeated overnight stools, gentle rehydration helps reduce that drained, jittery bowel feeling without flooding the gut.",
+    "If you want a cleaner read on the culprit, keep milk, flavoured yogurt, and jam out for the next 12-24 hours while you watch the next 1-2 bowel movements. That isolates whether the overnight Bristol 6 was driven by the dairy-sugar cluster rather than your safe starches."
+  ]
+}
+

@@ -1,0 +1,79 @@
+node_modules/
+build/
+dist/
+coverage/
+.vite-cache/
+.DS_Store
+*.log
+package-lock.json
+.env*
+!.env.example
+
+# Office documents & temp files
+*.xlsx
+*.xls
+*.docx
+*.doc
+*.pptx
+*.ppt
+~$*
+.~lock.*
+
+# Product lifecycle folder (spreadsheets, trackers, working docs)
+product/
+
+# Original high-res logo (69MB) — keep in cloud storage, not in repo
+caca_traca_logo_final_v1.png
+logo_preview.png
+
+# Audit & remediation docs (process artifacts, not source code)
+docs/audits/
+
+# Test artifacts
+playwright-report/
+test-results/
+.playwright/
+.vercel
+.env*.local
+.vercel/README.txt
+.vercel/project.json
+# Food artwork and playwright output directories
+images/
+output/
+
+# Track shared project instructions under .claude/, but keep local state out.
+.claude/**/.DS_Store
+.claude/command-history.log
+concatenated-report.md
+create_indexed_concat.py
+create_indexed_headings.py
+concat_docs.sh
+.playwright-cli/page-2026-03-17T19-16-23-784Z.yml
+.playwright-cli/page-2026-03-17T19-31-12-085Z.yml
+.playwright-cli/page-2026-03-17T19-31-15-676Z.yml
+.playwright-cli/page-2026-03-17T19-31-18-978Z.yml
+.playwright-cli/page-2026-03-17T21-46-30-928Z.yml
+.playwright-cli/page-2026-03-17T21-46-40-687Z.yml
+.playwright-cli/page-2026-03-17T21-46-45-610Z.yml
+.playwright-cli/
+transit map/IMG_4190.HEIC
+transit map/IMG_D8FD3EC2-C7C3-41A7-B3A9-2B6114C7E969 2.JPEG
+transit map/Screenshot 2026-03-06 at 00.52.59 copy.png
+transit map/Screenshot 2026-03-06 at 00.52.59.png
+transit map/Screenshot 2026-03-21 at 19.48.04.png
+transit map/Screenshot 2026-03-21 at 19.48.15.png
+transit map/Screenshot 2026-03-21 at 19.49.19.png
+transit map/transit map image 2.jpg
+transit map/transit map image.png
+scripts/ship/review-findings.json
+
+# Design language eval workspace (scratch, not source code)
+caca-traca-design-language-workspace/
+
+# Scratch prototypes
+design-system-prototype-v2.jsx
+
+# Data dumps & binary artifacts
+docs/logs.json
+docs/logs2.json
+docs/research/exported-assets.zip

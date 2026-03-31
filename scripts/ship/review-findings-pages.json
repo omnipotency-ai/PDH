@@ -1,0 +1,189 @@
+{
+  "branch": "feat/sprint-2.5+",
+  "reviewed_at": "2026-03-28T00:00:00Z",
+  "files_reviewed": [
+    "src/pages/Track.tsx",
+    "src/pages/Patterns.tsx",
+    "src/pages/Settings.tsx",
+    "src/pages/LandingPage.tsx",
+    "src/pages/UiMigrationLab.tsx",
+    "src/pages/secondary_pages/ApiKeyGuidePage.tsx",
+    "src/pages/secondary_pages/Archive.tsx",
+    "src/pages/secondary_pages/Menu.tsx",
+    "src/pages/secondary_pages/PrivacyPage.tsx",
+    "src/pages/secondary_pages/TermsPage.tsx"
+  ],
+  "findings": [
+    {
+      "id": "P001",
+      "severity": "HIGH",
+      "category": "correctness",
+      "file": "src/pages/secondary_pages/Archive.tsx",
+      "line": 94,
+      "title": "Keyboard arrow keys navigate in reverse direction",
+      "description": "The keydown handler maps ArrowLeft to handleNext() (older) and ArrowRight to handlePrev() (newer). This is backwards: left arrow should go to the previous (newer) report and right arrow to the next (older) one — matching standard carousel/pagination conventions. The labels on the UI buttons confirm this: 'Older' has a ChevronLeft icon and 'Newer' has a ChevronRight icon, so the visual expectation is left=older, right=newer. But that means the keyboard binding is also backwards relative to the buttons. A user pressing ArrowLeft expects to move in the same direction as the left-facing button ('Older'), but instead ends up going to 'Newer'. This will disorient users, especially those using keyboard navigation for accessibility.",
+      "fix": "Swap the handlers: ArrowLeft -> handlePrev() (Newer), ArrowRight -> handleNext() (Older). Or, if the intent is spatial (left = go back in time = older), swap the button labels/directions instead and document the convention. Either way, keyboard and pointer behaviour must be consistent.",
+      "implemented": false
+    },
+    {
+      "id": "P002",
+      "severity": "HIGH",
+      "category": "correctness",
+      "file": "src/pages/secondary_pages/ApiKeyGuidePage.tsx",
+      "line": 44,
+      "title": "Privacy disclosure contradicts actual key storage architecture",
+      "description": "The tips array states: 'Your API key is stored locally on your device. It is sent securely to our server when making AI requests but is never stored there.' This is factually wrong. The project memory (feedback_llm_key_architecture.md) and confirmed architecture (convex/lib/apiKeys.ts exists, src/hooks/useApiKey.ts, src/contexts/ApiKeyContext.tsx, AppDataForm.tsx all reference the key) show that BYOK keys are stored server-side in Convex, not browser-locally. PrivacyPage.tsx line 24 also echoes the same incorrect claim. Serving users incorrect information about where their sensitive credentials are stored is a trust and potential legal/GDPR issue.",
+      "fix": "Update both ApiKeyGuidePage.tsx and PrivacyPage.tsx to accurately state that the API key is stored encrypted on Convex servers to enable cross-device access, and is not stored in the browser. Coordinate with the actual copy in AppDataForm.tsx to ensure all three locations are consistent.",
+      "implemented": false
+    },
+    {
+      "id": "P003",
+      "severity": "HIGH",
+      "category": "correctness",
+      "file": "src/pages/secondary_pages/PrivacyPage.tsx",
+      "line": 24,
+      "title": "Same incorrect key storage claim as P002",
+      "description": "Privacy policy line 24 states: 'Only your OpenAI API key is stored locally on your device.' This is the same factual error as P002. The Privacy Policy is a legal document — incorrect statements about data storage location are a GDPR compliance risk.",
+      "fix": "See P002. Update to reflect the actual server-side storage in Convex.",
+      "implemented": false
+    },
+    {
+      "id": "P004",
+      "severity": "MODERATE",
+      "category": "performance",
+      "file": "src/pages/Patterns.tsx",
+      "line": 532,
+      "title": "Both tab contents rendered with forceMount — heavy analysis computed and rendered even on inactive tab",
+      "description": "Both the 'database' and 'transit-map' TabsContent use forceMount. The transit map tab (with its nested tabs, TransitMapContainer, and TransitMap components) mounts immediately on page load even when the user never views it. This means the full transit map SVG, registry computations, and all child component trees are instantiated on every Patterns page render. The database tab's analysis computation (analyzeLogs + buildFoodDatabaseRow + assessmentMap) is expensive and already runs on the parent — mounting the transit tab eagerly adds additional work with no user benefit.",
+      "fix": "Remove forceMount from the secondary (transit-map) TabsContent. The database tab can keep forceMount if preserving scroll position matters. For the transit tab, allow normal lazy mount. If you need to preserve filter state across tab switches, lift that state up rather than relying on forceMount.",
+      "implemented": false
+    },
+    {
+      "id": "P005",
+      "severity": "MODERATE",
+      "category": "performance",
+      "file": "src/pages/secondary_pages/Archive.tsx",
+      "line": 20,
+      "title": "Hardcoded limit of 200 records fetched unconditionally on page mount",
+      "description": "useAiAnalysisHistory(200) subscribes to a Convex query that returns up to 200 AI analysis records. This payload is fetched and kept live regardless of filters applied. For a user who has run Dr. Poo many times over months, this is a significant real-time subscription fetching a large document payload. The useQuery subscription also keeps re-running whenever any record in the set changes. There is no pagination.",
+      "fix": "Consider starting with a smaller default limit (e.g. 50) and adding a 'Load more' control, or implementing cursor-based pagination via a Convex paginated query. At minimum, document the limit as a known constraint in a code comment and add it to the work queue to revisit when the user has >50 reports.",
+      "implemented": false
+    },
+    {
+      "id": "P006",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/pages/Track.tsx",
+      "line": 136,
+      "title": "useEffect dependency array references method references that never change, suppressing the real dependency (now)",
+      "description": "The clock tick useEffect has `[now.getMilliseconds, now.getSeconds]` as its dependency array and suppresses the lint warning with an eslint-disable-line comment. `now.getMilliseconds` and `now.getSeconds` are references to the same built-in prototype methods on every Date instance — they are referentially stable across renders. The real dependency is `now` itself (specifically `now.getSeconds()` and `now.getMilliseconds()` as evaluated values). Because these method references never change, the effect only runs once after mount, which is actually the intended behaviour — but the dependency array comment makes this look intentional via trick rather than being honest about it. The self-correcting timer is correct in design; the dependency array is just misleading.",
+      "fix": "Use an empty dependency array `[]` with a clear comment explaining why: the initial schedule uses the value of `now` captured at mount time only, and the timer is self-sustaining thereafter via the `tick` closure. Or extract the initial delay calculation outside the effect. Remove the eslint-disable comment.",
+      "implemented": false
+    },
+    {
+      "id": "P007",
+      "severity": "MODERATE",
+      "category": "simplicity",
+      "file": "src/pages/Track.tsx",
+      "line": 226,
+      "title": "useBaselineAverages return value assigned to underscore-prefixed variable",
+      "description": "The hook is called for side effects and the result is discarded with `const _baselines = ...`. The comment says 'Hook called for side effects; result intentionally unused'. Using an underscore prefix to silence a lint warning while leaving the variable in scope is a code smell. The hook's side-effect purpose is not obvious to a future reader — what side effects does it trigger? Does it call another hook internally? Does it update Zustand?",
+      "fix": "If the hook is truly side-effect only, rename it to make that explicit (e.g. `useBaselineAveragesEffect`) and return void. If the return value may be used later, document what it contains. Either way, remove the _baselines variable and call the hook without capturing its return value, or use void: `void useBaselineAverages(...)` — actually hooks can't be called inside void, so either expose a clear side-effect hook signature or document the intent in the hook itself.",
+      "implemented": false
+    },
+    {
+      "id": "P008",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/pages/Patterns.tsx",
+      "line": 310,
+      "title": "Smart view ID generated with Date.now() — not collision-safe and not deterministic",
+      "description": "New smart views get the ID `smart-${Date.now().toString(36)}`. This is a client-side localStorage operation so it's not inside a Convex mutation, which means the non-determinism concern doesn't apply to Convex specifically. However: (1) if a user saves two views in the same millisecond (e.g., double-click), they get the same ID and one will silently overwrite the other in the savedViews array because the deduplication check uses label, not id; (2) the ID is purely timestamp-based, which gives no entropy beyond the clock — two different browser sessions at the same second will generate identical IDs.",
+      "fix": "Use `crypto.randomUUID()` which is available in all modern browsers and Vite environments. It is already used elsewhere in this codebase (Track.tsx line 474).",
+      "implemented": false
+    },
+    {
+      "id": "P009",
+      "severity": "MODERATE",
+      "category": "accessibility",
+      "file": "src/pages/secondary_pages/Archive.tsx",
+      "line": 248,
+      "title": "Older/Newer navigation buttons lack accessible descriptions for their disabled state",
+      "description": "The 'Older' and 'Newer' pagination buttons become disabled when at the boundary of the report list. While `disabled` prevents interaction, there is no `aria-label` describing why the button is disabled. A screen reader user will hear 'Older, dimmed' or similar with no context. The star button correctly uses aria-label (line 284), but the navigation buttons do not.",
+      "fix": "Add descriptive aria-labels: e.g. `aria-label={currentIndex >= filteredReports.length - 1 ? 'No older reports' : 'View older report'}`. This is especially important given the app's clinical user base who may use assistive technology.",
+      "implemented": false
+    },
+    {
+      "id": "P010",
+      "severity": "MODERATE",
+      "category": "accessibility",
+      "file": "src/pages/secondary_pages/Menu.tsx",
+      "line": 296,
+      "title": "Search input missing aria-label",
+      "description": "The food search input in MenuPage has a placeholder 'Search foods...' but no `aria-label` or associated `<label>` element. The placeholder alone is not sufficient for screen reader identification — it disappears when the user types. The DatabaseTabContent search input in Patterns.tsx line 363 correctly has `aria-label=\"Search food names\"`. MenuPage.tsx does not follow the same pattern.",
+      "fix": "Add `aria-label=\"Search foods\"` to the input element, or wrap it in a `<label>` (visually hidden with `sr-only` if not desired on-screen).",
+      "implemented": false
+    },
+    {
+      "id": "P011",
+      "severity": "MODERATE",
+      "category": "accessibility",
+      "file": "src/pages/secondary_pages/Menu.tsx",
+      "line": 303,
+      "title": "Status filter buttons have no accessible indication of selected state",
+      "description": "The status filter pill buttons (All, Safe, Watch, Avoid, Building) use CSS class changes to show active state but do not set `aria-pressed` or `aria-current`. Screen reader users cannot determine which filter is currently active.",
+      "fix": "Add `aria-pressed={statusFilter === filter.value}` to each filter button. This is a standard pattern for toggle buttons that control a view.",
+      "implemented": false
+    },
+    {
+      "id": "P012",
+      "severity": "MODERATE",
+      "category": "performance",
+      "file": "src/pages/secondary_pages/Menu.tsx",
+      "line": 218,
+      "title": "MenuPage duplicates the full analyzeLogs call that Patterns.tsx already computes",
+      "description": "MenuPage calls `analyzeLogs(logs, allFoodTrials, { habits, calibration, assessments })` with the same inputs as PatternsPage. Both pages subscribe to the same Convex data (useSyncedLogsContext, useAllFoodTrials, useHabits, useTransitCalibration, useMappedAssessments). Because they are separate routes, this is not a React rendering concern — but it means when a user opens both pages the same computation runs twice from scratch. More importantly, it signals that the analysis is not being lifted into a shared context or hook, which will become a maintenance issue if the analysis logic changes.",
+      "fix": "Consider a shared AnalysisContext or a custom hook (e.g. `useFoodAnalysis`) that memoizes the result. This is a medium-term refactor, not an emergency, but should be tracked in the work queue.",
+      "implemented": false
+    },
+    {
+      "id": "P013",
+      "severity": "NICE-TO-HAVE",
+      "category": "correctness",
+      "file": "src/pages/secondary_pages/ApiKeyGuidePage.tsx",
+      "line": 17,
+      "title": "API pricing and model names in TIPS are outdated",
+      "description": "The tips reference 'GPT-5 mini' and 'GPT-5.2' with specific pricing figures. The project memory (project_llm_matching_unclear.md) notes that the model name situation is 'unclear'. These are static strings that will go stale as OpenAI changes its pricing and model naming. Incorrect pricing causes users to make miscalibrated decisions about budget limits.",
+      "fix": "Either point users to the OpenAI pricing page directly rather than quoting figures, or add a note that prices are approximate and subject to change. Remove specific model version names that may not exist (GPT-5.2) and use whatever names are confirmed in the current Settings UI.",
+      "implemented": false
+    },
+    {
+      "id": "P014",
+      "severity": "NICE-TO-HAVE",
+      "category": "simplicity",
+      "file": "src/pages/Patterns.tsx",
+      "line": 395,
+      "title": "TodayLabel duplicates the self-correcting clock pattern from Track.tsx",
+      "description": "TodayLabel in Patterns.tsx and the `now` state clock in Track.tsx both implement the same self-correcting setTimeout pattern that aligns to the top of each minute. The logic is identical (calculate msUntilNextMinute, set timer, cleanup). This is straightforward duplication that should be a shared hook.",
+      "fix": "Extract a `useMinuteClock()` hook that returns a Date updated every minute using the self-correcting timer. Both Track.tsx and TodayLabel can then use it. This also makes the eslint-disable workaround in Track.tsx easier to fix in one place.",
+      "implemented": false
+    },
+    {
+      "id": "P015",
+      "severity": "NICE-TO-HAVE",
+      "category": "simplicity",
+      "file": "src/pages/UiMigrationLab.tsx",
+      "line": 1,
+      "title": "UiMigrationLab is a dev utility page with no route guard",
+      "description": "UiMigrationLab appears to be a developer testing tool ('Manual Verification', 'Base UI Migration Lab'). It is accessible as a full route with no auth check or feature-flag guard visible in the page itself. If the route is registered and accessible to beta users, it presents an unpolished surface. This is low-risk since it has no data access, but it should either be gated or clearly documented as dev-only.",
+      "fix": "Add a FEATURE_FLAGS.devTools check or a dev-only route guard, or confirm the route is not registered in production builds. A code comment noting the intent would suffice at minimum.",
+      "implemented": false
+    }
+  ],
+  "summary": {
+    "critical": 0,
+    "high": 3,
+    "moderate": 9,
+    "nice_to_have": 3
+  }
+}

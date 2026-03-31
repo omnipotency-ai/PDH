@@ -1,0 +1,13 @@
+{
+    "plugins": {
+    "vercel": {
+      "enabled": true
+    },
+    "compound-engineering": {
+      "enabled": true
+    },
+    "context7-plugin": {
+      "enabled": true
+    }
+  }
+}

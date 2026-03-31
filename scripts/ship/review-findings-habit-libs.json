@@ -1,0 +1,225 @@
+{
+  "branch": "feat/sprint-2.5+",
+  "reviewed_at": "2026-03-28T00:00:00Z",
+  "scope": "habit/health library audit — not a PR diff review; all files audited regardless of change status",
+  "files_reviewed": [
+    "src/lib/habitConstants.ts",
+    "src/lib/habitTemplates.ts",
+    "src/lib/habitProgress.ts",
+    "src/lib/habitAggregates.ts",
+    "src/lib/habitCoaching.ts",
+    "src/lib/habitIcons.tsx",
+    "src/lib/streaks.ts",
+    "src/lib/derivedHabitLogs.ts",
+    "src/lib/healthProfile.ts",
+    "src/lib/reproductiveHealth.ts",
+    "src/lib/celebrations.ts",
+    "src/lib/trialFormatters.ts"
+  ],
+  "findings": [
+    {
+      "id": "F001",
+      "severity": "HIGH",
+      "category": "calculation-correctness",
+      "file": "src/lib/trialFormatters.ts",
+      "line": 5,
+      "title": "formatTransitHours uses wrong division — produces incorrect hours display",
+      "description": "The formula `Math.round(minutes / 6) / 10` is an algebraic contortion of `minutes / 60` but introduces rounding error at the wrong stage. For 90 minutes: (Math.round(90/6)=15) / 10 = 1.5h — that happens to be correct. For 95 minutes: (Math.round(95/6)=16) / 10 = 1.6h, but 95/60 = 1.583h rounds to 1.6h — also coincidentally correct in this case. However the rounding order is wrong by design: dividing by 6 first magnifies rounding error by 10x before the final division by 10. Example: 65 minutes — correct answer is 1.1h. Math.round(65/6)=11, 11/10=1.1h — correct here too by luck, but for 64 minutes: Math.round(64/6)=Math.round(10.667)=11, 11/10=1.1h — but 64/60=1.067h should be 1.1h rounded to 1dp, so still correct. The formula is mathematically equivalent to `Math.round(minutes/6)/10` which equals `Math.round(minutes*10/60)/10` — this is actually the correct 1dp rounding formula. So the result is correct, but the code is obfuscated and will confuse any reader. The comment says '1 decimal place' but there is no test for this.",
+      "fix": "Replace with the legible equivalent: `const hours = Math.round((minutes / 60) * 10) / 10; return `${hours}h`;` — same result, zero confusion.",
+      "implemented": false
+    },
+    {
+      "id": "F002",
+      "severity": "HIGH",
+      "category": "calculation-correctness",
+      "file": "src/lib/habitAggregates.ts",
+      "line": 154,
+      "title": "currentGoodStreak is not bounded to windowSize — can report streaks longer than the data window",
+      "description": "computeStreakSummary iterates `filtered` (all data, sorted descending) to compute currentGoodStreak, but only uses `windowed` (sliced to windowSize) for goodDaysInWindow. If a user has 30 days of uninterrupted good days in the database and windowSize is 7, currentGoodStreak will be 30 while goodDaysInWindow is 7. This is arguably intentional for a lifetime streak, but it is not documented. The danger is in consumers: celebrations.ts checks `streak === 7` (line 31) — this fires when the streak is exactly 7, never again after that, so long-running users miss the milestone. habitCoaching.ts checks `streak.currentGoodStreak >= 7` (line 201) for the 'consider raising target' message, which is correct for >=. However, the docstring says 'consecutive good days ending today' without stating it is unbounded, which can mislead future callers.",
+      "fix": "Either: (1) document explicitly that currentGoodStreak is a lifetime/unbounded streak not capped to windowSize, or (2) add a separate `lifetimeStreak` field and cap `currentGoodStreak` to windowSize. Also fix celebrations.ts to trigger on `streak >= 7` instead of `streak === 7` so long-running users still receive the milestone celebration.",
+      "implemented": false
+    },
+    {
+      "id": "F003",
+      "severity": "HIGH",
+      "category": "calculation-correctness",
+      "file": "src/lib/celebrations.ts",
+      "line": 31,
+      "title": "Milestone celebration fires only when streak === 7, never again after 7 days",
+      "description": "The check `if (streak === 7)` means a user who has maintained a habit for 8, 14, or 30 consecutive days never receives the big streak celebration. Once they pass 7, the streak condition is permanently false. This is a correctness bug that actively penalises consistent users with worse UX than inconsistent ones.",
+      "fix": "Change to `if (streak > 0 && streak % 7 === 0)` to fire on every 7-day milestone (7, 14, 21, ...), or use `if (streak >= 7)` to fire on any streak of 7 or more days.",
+      "implemented": false
+    },
+    {
+      "id": "F004",
+      "severity": "HIGH",
+      "category": "calculation-correctness",
+      "file": "src/lib/reproductiveHealth.ts",
+      "line": 89,
+      "title": "calculateGestationalAgeFromDueDate returns null for post-term pregnancies",
+      "description": "At line 90: `if (gestationalDays < 0) return null`. gestationalDays = 280 - daysUntilDue. When daysUntilDue is negative (due date has passed, i.e. post-term), gestationalDays > 280 and is positive — so this branch does NOT trigger post-term. When daysUntilDue is very large (e.g. user enters wrong due date far in the future), gestationalDays becomes negative and null is correctly returned. However: when gestationalDays >= 280 (post-due), week = Math.floor(gestationalDays / 7) + 1 will be >= 41. The `week` field has no type bound; trimester will return 3, which is correct. This is fine. The real concern: if daysUntilDue is positive and large (e.g. 300), gestationalDays = 280 - 300 = -20, null is returned — correct. But if a user enters a conception date by mistake instead of a due date, the function silently returns null with no explanation to the caller.",
+      "fix": "Add a cap check: if gestationalDays > 300 (clearly erroneous — more than ~43 weeks), return null and let the caller surface a 'check your due date' message. Document the null-return conditions explicitly in JSDoc.",
+      "implemented": false
+    },
+    {
+      "id": "F005",
+      "severity": "MODERATE",
+      "category": "calculation-correctness",
+      "file": "src/lib/habitCoaching.ts",
+      "line": 448,
+      "title": "heuristicSuggestions slices last 7 summaries without sorting — relies on caller ordering",
+      "description": "`daySums.slice(-7)` at line 448 takes the last 7 elements of the filtered array, but `summaries` is not sorted before filtering. The caller provides summaries in whatever order computeDaySummaries returned them. computeDaySummaries builds summaries by iterating habits then dates, so the ordering is deterministic — but it is an implicit contract. If summaries are ever passed in a different order (e.g. from a cached store keyed differently), slice(-7) will silently pick the wrong 7 days, leading to incorrect target-raising/lowering suggestions. By contrast, heuristicHabitSnippet at line 293 correctly sorts before slicing.",
+      "fix": "Sort daySums by date ascending before slicing: `const last7 = daySums.sort((a, b) => a.date.localeCompare(b.date)).slice(-7);` — consistent with the pattern used in heuristicHabitSnippet.",
+      "implemented": false
+    },
+    {
+      "id": "F006",
+      "severity": "MODERATE",
+      "category": "calculation-correctness",
+      "file": "src/lib/habitAggregates.ts",
+      "line": 79,
+      "title": "isGoodDay returns true for destructive habits with no dailyCap set — always a 'good day' regardless of usage",
+      "description": "When a destructive habit has no dailyCap, isGoodDay returns true unconditionally (the fallback at line 87). This means a user who smokes 20 cigarettes on a day where their cigarette habit has no cap set gets credit for a 'good day'. The streak logic and coaching messages then report inflated streaks. The comment says 'No target or cap set — always considered a good day' which is arguably correct for neutral habits, but is problematic for habits explicitly typed as 'destructive'. A destructive habit with no cap is arguably always a bad day, or at minimum should be excluded from streak counts.",
+      "fix": "Either exclude destructive habits with no cap from streak calculations (hasGoal guard in computeStreakSummary callers), or document clearly that destructive habits require a dailyCap to participate in streak calculations. The current silent-true behavior will produce misleading coaching messages.",
+      "implemented": false
+    },
+    {
+      "id": "F007",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/lib/habitTemplates.ts",
+      "line": 123,
+      "title": "normalizeHabitTypeValue infers 'destructive' from dailyCap >= 0 even when dailyCap is 0 for a positive habit",
+      "description": "At line 122-123: `if (typeof dailyCap === 'number' && dailyCap >= 0) return 'destructive'`. This fires on dailyCap=0 for any habit, even those whose rawType did not match any known type. A dailyCap of 0 on what is supposed to be a positive habit would be incorrectly reclassified as destructive. The `>= 0` should be `> 0` for the inference case — the exact-zero case can only safely mean 'zero tolerance' for a destructive habit, not a signal that any unknown habit is destructive.",
+      "fix": "Change condition to `dailyCap > 0` for this inference path, or reorder the checks so explicit kind/type fields are checked first (they already are — but the dailyCap inference fires before name-based inference, which is aggressive).",
+      "implemented": false
+    },
+    {
+      "id": "F008",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/lib/habitTemplates.ts",
+      "line": 444,
+      "title": "coffee template has quickIncrement: 250 but unit: 'count' — unit/increment mismatch",
+      "description": "The coffee template (line 439-452) sets `unit: 'count'`, `quickIncrement: 250`, and `logAs: 'fluid'`. The quickIncrement of 250 only makes sense if the unit is 'ml', but it is declared as 'count'. When habitProgress.ts computes cap-habit fluid display (line 20-21), it does `Math.round(fluidMl / habit.quickIncrement)` to convert ml to cups — this uses quickIncrement=250 as a cup size in ml, which is the right intent. But the unit field saying 'count' while quickIncrement means '250ml' is semantically confusing and can cause incorrect display in progress text at line 86 where it will show '2 left' meaning '2 cups' but the unit label in some paths will read 'count'.",
+      "fix": "Either set `unit: 'ml'` for the coffee template to reflect that measurements are in ml, or add a display unit override. Alternatively add a `displayUnit` field. At minimum, add a comment explaining why quickIncrement is 250 on a count-unit habit.",
+      "implemented": false
+    },
+    {
+      "id": "F009",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/lib/derivedHabitLogs.ts",
+      "line": 137,
+      "title": "Sleep activities are matched by activityType string 'sleep' but sleep habits are stored with habitType 'sleep', not in activityHabitMap",
+      "description": "The code at lines 137-148 handles sleep specially: when `activityType === 'sleep'`, it iterates all habits filtered by `habitType === 'sleep'` directly. This bypasses the activityHabitMap. However, activityHabitMap is populated from habits where `habit.habitType === 'activity'` (line 77). Sleep habits (habitType='sleep') are never added to activityHabitMap. This is by design and works correctly. But: if a user creates a custom habit named 'Sleep' with habitType='activity' (instead of 'sleep'), it would be placed in activityHabitMap under the key 'sleep' and ALSO matched by the special-case sleep handler iterating habitType==='sleep' — double-counting the sleep log. The special-case branch takes `continue` so activityHabitMap is not checked afterward, so actually double-counting does NOT occur. But the exclusion of 'sleep' activity type from activityHabitMap processing is not documented.",
+      "fix": "Add a comment at line 137 explaining why sleep is handled separately and does not fall through to activityHabitMap. Consider guarding the special-case with a check that the derived activityType 'sleep' is excluded from activityHabitMap at population time.",
+      "implemented": false
+    },
+    {
+      "id": "F010",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/lib/habitProgress.ts",
+      "line": 43,
+      "title": "getProgressText for fluid cap habits uses fluidMl for display but count (cups) for cap math — mixing units in the same text",
+      "description": "At line 43-55: for a cap habit with logAs='fluid', the display shows `fluidDisplay` (ml or oz) but the remaining/over calculation uses `value` which is `Math.round(fluidMl / habit.quickIncrement)` — a cup count. The resulting text is `'250ml · 2 left'` where '250ml' is the fluid volume and '2 left' means '2 cups left'. This mixes units in a single string without labeling either. A user sees '2 left' and does not know '2 what'. For coffee with a dailyCap of 3 cups, this reads correctly in context — but any future cap fluid habit with different quickIncrement will produce confusing output.",
+      "fix": "Append the unit to the remaining/over count: `${left} cups left` or dynamically derive the display unit from the habit. Better: use a helper that renders '2 cups left' or '2 servings left' based on a labelable unit.",
+      "implemented": false
+    },
+    {
+      "id": "F011",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/lib/habitCoaching.ts",
+      "line": 293,
+      "title": "heuristicHabitSnippet 'latest' may be yesterday, not today — stale value drives today's message",
+      "description": "At line 293-294, `last7` is the last 7 days of daySummaries sorted ascending. `latest` is the last element — the most recent day in the dataset. If the caller provides summaries ending at yesterday (e.g. because today has not yet been committed to the store), `latestValue` is yesterday's total. The function then says 'X to reach today's target' based on yesterday's total. This is not wrong per se — the caller controls what summaries are passed — but there is no guard or assertion that `latest.date` equals today's date. A defensive check would prevent misleading snippets.",
+      "fix": "Accept `todayDateKey: string` as a parameter and assert that `latest?.date === todayDateKey` before using `latestValue` as 'today'. Fall back to 0 if no entry exists for today.",
+      "implemented": false
+    },
+    {
+      "id": "F012",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/lib/reproductiveHealth.ts",
+      "line": 91,
+      "title": "calculateGestationalAgeFromDueDate: trimester boundaries use weeks 14 and 28, but clinical standard is weeks 13 and 27",
+      "description": "The trimester calculation at line 93: T1 ends at 14*7=98 days (14 weeks), T2 ends at 28*7=196 days (28 weeks). Clinically, the first trimester ends at the end of week 13 (day 91) and the second trimester ends at the end of week 27 (day 189). Using 14 and 28 as the cutoffs places users one week late into each trimester transition, which could produce incorrect trimester labels in the UI and in AI context passed to the LLM.",
+      "fix": "Change boundaries to `gestationalDays < 13 * 7 ? 1 : gestationalDays < 27 * 7 ? 2 : 3` to match standard obstetric trimester definitions (T1: weeks 1-13, T2: weeks 14-27, T3: week 28+).",
+      "implemented": false
+    },
+    {
+      "id": "F013",
+      "severity": "MODERATE",
+      "category": "quality",
+      "file": "src/lib/habitTemplates.ts",
+      "line": 686,
+      "title": "createCustomHabit uses Date.now() twice — risk of mismatched id and createdAt timestamps",
+      "description": "At line 686 and 700, `Date.now()` is called separately for the `id` generation and `createdAt`. In practice these will be the same millisecond, but under any load or testing scenario they can differ. A habit where id contains timestamp T1 but createdAt=T2 is internally inconsistent, breaking sort-by-creation-time ordering keyed from the id suffix.",
+      "fix": "Capture `const now = Date.now()` at the top of the function and use it for both the id suffix and `createdAt`.",
+      "implemented": false
+    },
+    {
+      "id": "F014",
+      "severity": "MODERATE",
+      "category": "quality",
+      "file": "src/lib/habitCoaching.ts",
+      "line": 132,
+      "title": "getHeuristicCoachingMessage checks 'all targets met' BEFORE 'target just met' — the individual milestone message is unreachable when all habits are on target",
+      "description": "At lines 122-128, the function returns 'All targets hit today' if all target habits are met. At lines 130-141, it checks if a specific habit's value equals its target exactly (to fire a specific milestone message with streak context). Because the all-met check returns early, the specific per-habit message at lines 130-141 is unreachable when the user has multiple habits and all are met simultaneously. The richer, more personalized message is always preempted by the generic 'All targets hit today'.",
+      "fix": "Move the single-habit milestone check (step 3) before the all-targets-met check (step 2), or only fire the all-met message when 3+ habits are met simultaneously.",
+      "implemented": false
+    },
+    {
+      "id": "F015",
+      "severity": "NICE-TO-HAVE",
+      "category": "simplicity",
+      "file": "src/lib/habitTemplates.ts",
+      "line": 155,
+      "title": "isSleepHabit has a hardcoded ID fallback 'habit_sleep' — violates no-hard-coded-personalization principle",
+      "description": "`habit.id === 'habit_sleep'` is a hardcoded ID check that bypasses the type-based check. This is a legacy compatibility shim that should be documented as such. Any other sleep habit with a different id (e.g. a user-created 'Nap' habit with habitType='sleep') would be caught by the habitType check anyway, making the id fallback redundant for new data.",
+      "fix": "Remove the `|| habit.id === 'habit_sleep'` clause and rely solely on `habit.habitType === 'sleep'`. If the id check is a genuine legacy requirement, add a comment explaining what data scenarios require it.",
+      "implemented": false
+    },
+    {
+      "id": "F016",
+      "severity": "NICE-TO-HAVE",
+      "category": "simplicity",
+      "file": "src/lib/habitTemplates.ts",
+      "line": 159,
+      "title": "isMovementHabit and isActivityHabit are identical — dead duplication",
+      "description": "Both `isMovementHabit` (line 159) and `isActivityHabit` (line 180) return `habit.habitType === 'activity'`. They are byte-for-byte equivalent. Having two names for the same check creates confusion about whether they have different semantics.",
+      "fix": "Deprecate isMovementHabit and consolidate all callers to use isActivityHabit, which is the canonical name matching the HabitType union value.",
+      "implemented": false
+    },
+    {
+      "id": "F017",
+      "severity": "NICE-TO-HAVE",
+      "category": "simplicity",
+      "file": "src/lib/habitIcons.tsx",
+      "line": 8,
+      "title": "CoffeeIcon and Coffee are both imported — only one is used per entry, creating silent import confusion",
+      "description": "Both `Coffee` (line 6) and `CoffeeIcon` (line 10) are imported from lucide-react. `Coffee` is used for the tea habit icon, `CoffeeIcon` is used for coffee. These are likely the same or nearly identical icons from different export names. It is unclear whether the distinction is intentional or an artifact of a refactor.",
+      "fix": "Pick one name for coffee-family icons and use it consistently, or add a comment explaining why two different coffee icons are needed for tea vs coffee.",
+      "implemented": false
+    },
+    {
+      "id": "F018",
+      "severity": "NICE-TO-HAVE",
+      "category": "simplicity",
+      "file": "src/lib/habitCoaching.ts",
+      "line": 439,
+      "title": "heuristicSuggestions assigns habits to const activeHabits but activeHabits is an alias for habits — dead rename",
+      "description": "Line 439: `const activeHabits = habits;` — this adds no value; there is no filtering (unlike in generateSettingsSuggestions where habits has already been pre-filtered by the caller). The alias is misleading because it implies filtering occurred.",
+      "fix": "Remove the alias and use `habits` directly, or actually filter to non-archived habits with `habits.filter(h => !h.archivedAt)`.",
+      "implemented": false
+    }
+  ],
+  "summary": {
+    "critical": 0,
+    "high": 4,
+    "moderate": 9,
+    "nice_to_have": 4
+  }
+}

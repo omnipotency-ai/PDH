@@ -1,0 +1,1 @@
+export const LONG_PRESS_THRESHOLD_MS = 300;

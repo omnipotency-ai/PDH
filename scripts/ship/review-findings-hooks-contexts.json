@@ -1,0 +1,193 @@
+{
+  "branch": "feat/sprint-2.5+",
+  "reviewed_at": "2026-03-28T00:00:00Z",
+  "review_focus": "Contexts and hooks: context patterns, hook correctness, memoization, subscription management",
+  "files_reviewed": [
+    "src/contexts/ApiKeyContext.tsx",
+    "src/contexts/ProfileContext.tsx",
+    "src/contexts/SyncedLogsContext.tsx",
+    "src/hooks/useAiInsights.ts",
+    "src/hooks/useApiKey.ts",
+    "src/hooks/useBaselineAverages.ts",
+    "src/hooks/useCelebration.ts",
+    "src/hooks/useCelebrationTrigger.ts",
+    "src/hooks/useDayStats.ts",
+    "src/hooks/useDetailSheetController.ts",
+    "src/hooks/useFoodLlmMatching.ts",
+    "src/hooks/useFoodParsing.ts"
+  ],
+  "findings": [
+    {
+      "id": "HC001",
+      "severity": "HIGH",
+      "category": "correctness",
+      "file": "src/contexts/SyncedLogsContext.tsx",
+      "line": 7,
+      "title": "SyncedLogsContext initialised to null — consumers throw before first Convex delivery",
+      "description": "The context is created with createContext<SyncedLog[] | null>(null) and the provider only passes the Convex result in. useAllSyncedLogs() returns [] (via toSyncedLogs) while Convex is loading, so SyncedLogsContext.Provider correctly receives an empty array on first render. However useSyncedLogsContext() guards against null by throwing, not against undefined. The real problem is subtler: if any consumer is rendered before SyncedLogsProvider is mounted (e.g., during testing or route-level lazy loading), it throws an opaque error with no indication that the provider is missing. More practically, the null guard means the first render of any consumer cannot gracefully degrade — it must throw. Consider returning [] instead of throwing when context is null, or document that this is intentional so callers don't need error boundaries.",
+      "fix": "Either document explicitly that the provider must always wrap consumers (and add an error boundary at the provider level), or change the fallback to return an empty array with a dev-only warning. The current throw-on-null pattern is acceptable if every consumer is guaranteed to be inside the provider, but that guarantee is not enforced at the type level.",
+      "implemented": false
+    },
+    {
+      "id": "HC002",
+      "severity": "HIGH",
+      "category": "correctness",
+      "file": "src/hooks/useAiInsights.ts",
+      "line": 94,
+      "title": "stableEndMs computed with Date.now() inside useMemo with no deps — becomes stale after first render",
+      "description": "The useMemo at line 94 computes stableEndMs as Date.now() + 7 days with an empty dependency array ([]). This means the upper bound of the Convex conversation/suggestion queries is frozen to the time of the first render. The intent (per the comment) is stability so query params don't thrash, but an empty-dep memo with Date.now() is effectively a one-time value that drifts further from the truth the longer the component is mounted. For a user who leaves the Track tab open overnight, the 'current half-week' window will become stale. The comment says 'stable' but the correct solution is a boundary that updates when the half-week turns over, not a frozen timestamp.",
+      "fix": "Either accept that the window can be slightly stale (low risk for conversation history) and document it explicitly, or compute the boundary reactively using a stable boundary update (e.g., round to the nearest half-week start) so re-renders within the same half-week period still produce the same value without freezing at mount time. The current approach of an empty-dep useMemo containing Date.now() is an anti-pattern.",
+      "implemented": false
+    },
+    {
+      "id": "HC003",
+      "severity": "HIGH",
+      "category": "correctness",
+      "file": "src/hooks/useApiKey.ts",
+      "line": 100,
+      "title": "hasApiKey reflects IndexedDB state but useFoodLlmMatching gates on it — server-key-only users cannot trigger matching",
+      "description": "hasApiKey is computed as apiKey !== null || hasServerKey === true (line 100), which correctly accounts for the server key. However, the apiKey state variable (line 44) is always null until IndexedDB resolves, and if IndexedDB has no key but the server does, apiKey stays null and hasApiKey depends on the Convex query resolving. During the loading period hasServerKey is undefined, so hasApiKey is false even though a server key exists. useFoodLlmMatching gates on hasApiKey and reads apiKey from context to pass to the Convex action. If apiKey is null but the server key exists, it passes an empty string to the action. This is a pre-existing finding (F010 in review-findings.json) confirmed to still be unimplemented.",
+      "fix": "When apiKey is null but hasServerKey is true, pass null/undefined explicitly to the action and let the server-side action fall back to the stored key. Document the loading state so consumers don't gate on hasApiKey during initialisation.",
+      "implemented": false
+    },
+    {
+      "id": "HC004",
+      "severity": "HIGH",
+      "category": "correctness",
+      "file": "src/hooks/useFoodLlmMatching.ts",
+      "line": 131,
+      "title": "API key passed directly to Convex action from client — key travels over the wire on every matching call",
+      "description": "matchItemsRef.current({ apiKey: apiKeyRef.current ?? '', ... }) at line 131 sends the raw IndexedDB API key as an action argument on every food-matching call. The BYOK architecture decision (feedback_llm_key_architecture.md) says keys should be stored server-side in Convex. The dual-store migration in useApiKey.ts exists precisely to move keys to the server. Yet this call still sends the key over the wire every time, contradicting the server-side architecture. If the action has access to the server-stored key via its own lookup, the client should not be passing the key at all — or it should only pass it as a fallback hint, not as the primary path.",
+      "fix": "Update the matchUnresolvedItems action to first look up the stored server key via internalQuery (as ai.ts and foodLlmMatching.ts already do), and stop passing the raw key from the client entirely. If backward compatibility is needed during migration, accept an optional apiKey arg and prefer the server-stored copy.",
+      "implemented": false
+    },
+    {
+      "id": "HC005",
+      "severity": "MODERATE",
+      "category": "performance",
+      "file": "src/contexts/ProfileContext.tsx",
+      "line": 123,
+      "title": "JSON.stringify used for profile change detection — cost is proportional to profile size on every render",
+      "description": "The profile stabilisation strategy at lines 127-135 computes JSON.stringify(nextProfile) on every render triggered by any Convex update, including unrelated query deliveries. While ResolvedProfile is small, habits and fluidPresets can grow. JSON.stringify is O(n) in the serialised size. This runs even when the profile hasn't changed, defeating part of the purpose. The approach is internally consistent but there are cheaper alternatives.",
+      "fix": "Consider a shallow field-by-field comparison (comparing each top-level key, then deeper only when a key differs) rather than full JSON serialisation. Alternatively, Convex's useQuery is supposed to return the same reference when data is unchanged — verify whether that guarantee holds before adding the workaround at all.",
+      "implemented": false
+    },
+    {
+      "id": "HC006",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/hooks/useBaselineAverages.ts",
+      "line": 60,
+      "title": "logsFingerprint used in useMemo deps but derived outside useMemo — causes unnecessary memos",
+      "description": "logsFingerprint at line 57 is computed as a plain string expression directly in the render body (not inside a useMemo). It is then used as a dep in the needsRecompute useMemo at line 60. This means on every render React computes the string, and since string primitives compare by value this is technically fine — but the pattern is fragile. More importantly, logsFingerprint also appears in inputsRef.current (line 91) without being a dep of executeComputation, so if only the tail entry changes without the count changing (impossible given the current fingerprint formula, but easy to break), the ref update is correct but the useMemo won't retrigger. The fingerprint only captures count and last ID; it misses edits to middle entries.",
+      "fix": "Wrap logsFingerprint in its own useMemo, and document that it only detects appends and count changes — not in-place edits. If edits to existing log entries need to invalidate the baseline, a more robust fingerprint is needed (e.g., hashing the last N IDs).",
+      "implemented": false
+    },
+    {
+      "id": "HC007",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/hooks/useBaselineAverages.ts",
+      "line": 121,
+      "title": "Debounce timer cleanup runs on every needsRecompute change, cancelling scheduled recomputations prematurely",
+      "description": "The useEffect cleanup at lines 141-144 clears pendingTimerRef.current whenever the effect re-runs (i.e., whenever needsRecompute, storedBaseline, or executeComputation changes). If data changes rapidly and needsRecompute flips true → false → true, each false→true transition resets the debounce — that is intentional. But if storedBaseline changes (because a previous computation completed), the effect re-runs, and if a new timer was already scheduled it will be cancelled even though needsRecompute is still true. The next render will reschedule, but the sequence can cause the debounce to restart from zero more often than intended.",
+      "fix": "Separate the 'schedule debounce' effect from the 'needsRecompute detection' logic, or use a single stable effect with internal logic to check whether rescheduling is appropriate.",
+      "implemented": false
+    },
+    {
+      "id": "HC008",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/hooks/useAiInsights.ts",
+      "line": 141,
+      "title": "healthProfile fallback to empty object bypasses type safety",
+      "description": "dataRef.current.healthProfile is initialised and updated as healthProfile ?? ({} as HealthProfile) at lines 127 and 141. Casting an empty object as HealthProfile silently hides missing required fields. If fetchAiInsights reads any required fields from healthProfile before the Convex query resolves, it will receive undefined at runtime despite the TypeScript type claiming otherwise.",
+      "fix": "Use a typed DEFAULT_HEALTH_PROFILE constant (one already exists in the codebase at src/store) as the fallback instead of an empty object cast. This gives safe default values rather than silently-undefined fields.",
+      "implemented": false
+    },
+    {
+      "id": "HC009",
+      "severity": "MODERATE",
+      "category": "security",
+      "file": "src/hooks/useFoodLlmMatching.ts",
+      "line": 148,
+      "title": "Raw error message from Convex action may contain API key fragments and is logged to console",
+      "description": "The catch handler at line 148 extracts err.message and logs it at line 150: console.error('LLM food matching failed for log ${foodLog.id}: ${message}'). If the Convex action throws an error that includes the API key (e.g. in a validation message or request echo), that key will appear in the browser console. The useApiKey hook has a sanitizeApiKeyError helper for exactly this reason, but this hook does not use it.",
+      "fix": "Apply the same sanitisation pattern used in useApiKey.ts: replace any sk-... patterns before logging. Alternatively, import and reuse sanitizeApiKeyError from useApiKey (or extract it to a shared lib/errors utility).",
+      "implemented": false
+    },
+    {
+      "id": "HC010",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/hooks/useFoodParsing.ts",
+      "line": 28,
+      "title": "handleLogFood is not wrapped in useCallback — new function reference on every render",
+      "description": "handleLogFood is declared as a plain async function inside useFoodParsing (line 28) rather than wrapped in useCallback. Any component that receives this function as a prop or dep will re-render or re-run effects whenever the parent renders, even if nothing relevant changed. addSyncedLog (from useAddSyncedLog) is a Convex mutation hook that is itself stable, so the only instability is the lack of memoisation here.",
+      "fix": "Wrap handleLogFood in useCallback with [addSyncedLog, afterSave] as deps. This matches the pattern used in every other hook in this codebase.",
+      "implemented": false
+    },
+    {
+      "id": "HC011",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/hooks/useFoodParsing.ts",
+      "line": 29,
+      "title": "_items parameter accepted but completely ignored — callers may expect items to be saved",
+      "description": "The function signature accepts _items: ParsedItem[] (prefixed with _ to suppress the unused-variable warning). The items array is never used — the function saves with items: [] and relies on server-side processing. This is documented in the comment, but a caller who passes items expecting them to be persisted (e.g. during a refactor) will silently lose their data with no error. The underscore convention only suppresses lint warnings; it does not enforce the no-op contract.",
+      "fix": "Either remove the _items parameter entirely if no caller needs it (check all call sites), or add a runtime assertion: if items.length > 0, log a dev warning that items are ignored. At minimum, rename to make the intent clearer (e.g., remove the parameter and update the interface).",
+      "implemented": false
+    },
+    {
+      "id": "HC012",
+      "severity": "MODERATE",
+      "category": "convex",
+      "file": "src/hooks/useApiKey.ts",
+      "line": 62,
+      "title": "Auto-migration effect fires on every hasServerKey=false delivery, not just once",
+      "description": "The migration effect at lines 60-67 triggers whenever apiKey !== null && hasServerKey === false. hasServerKey is a live Convex query. If the setServerKey mutation fails transiently and the query resolves to false again, the effect will fire again and retry. This retry behaviour is not documented. More importantly, if hasServerKey briefly returns undefined during a re-auth or network blip, then resolves to false, the migration fires again even though the key is already stored. The effect has no guard against concurrent in-flight migration calls.",
+      "fix": "Add a migrationInFlightRef to prevent concurrent calls, and/or add the server key status as a success signal that permanently prevents re-migration (i.e., track whether this session has already attempted migration).",
+      "implemented": false
+    },
+    {
+      "id": "HC013",
+      "severity": "NICE-TO-HAVE",
+      "category": "simplicity",
+      "file": "src/contexts/ApiKeyContext.tsx",
+      "line": 1,
+      "title": "ApiKeyContext is a thin pass-through wrapper with no added value",
+      "description": "ApiKeyContext simply calls useApiKey() and re-exposes it via context. The only benefit is avoiding prop-drilling. The context value type is inferred as ReturnType<typeof useApiKey>, which couples the context shape to the hook implementation with no explicit contract. If useApiKey changes its return shape, all context consumers break silently (TypeScript will catch it, but the abstraction layer provides no documentation boundary).",
+      "fix": "Define an explicit ApiKeyContextValue interface rather than using ReturnType<typeof useApiKey>. This is low priority but would make the public API contract clear and decouple it from hook internals.",
+      "implemented": false
+    },
+    {
+      "id": "HC014",
+      "severity": "NICE-TO-HAVE",
+      "category": "simplicity",
+      "file": "src/hooks/useCelebration.ts",
+      "line": 7,
+      "title": "SOUND_ENABLED and CONFETTI_ENABLED are module-level constants rather than config — removed preferences leave dead code paths",
+      "description": "The comment on lines 5-7 explains that preferences were removed and both are hardcoded to true. This means the if (SOUND_ENABLED) and if (CONFETTI_ENABLED) branches are always taken and the else branches (toast fallbacks) are unreachable dead code. The constants add visual noise without providing configurability.",
+      "fix": "Remove the boolean guards entirely and call playSound/setCelebration directly, or reintroduce proper per-user preference configuration if that is on the roadmap. Dead code makes the intent of the else branches unclear to future readers.",
+      "implemented": false
+    },
+    {
+      "id": "HC015",
+      "severity": "NICE-TO-HAVE",
+      "category": "performance",
+      "file": "src/hooks/useDayStats.ts",
+      "line": 140,
+      "title": "lastBmTimestamp scans all logs on every render — not filtered to today",
+      "description": "The lastBmTimestamp memo at lines 140-147 iterates the full logs array (not todayLogs) to find the most recent digestion event ever. This is intentional (it tracks the last BM globally, not just today's). However it runs on every render where any log changes, including unrelated log types being added. With a large log history this is a linear scan every time.",
+      "fix": "This is acceptable for the current scale, but document why the full logs scan is intentional (not a bug). If logs grow very large, consider maintaining the latest digestion timestamp as a separate Convex query that only returns the latest row rather than scanning client-side.",
+      "implemented": false
+    }
+  ],
+  "summary": {
+    "critical": 0,
+    "high": 4,
+    "moderate": 8,
+    "nice_to_have": 3
+  },
+  "assessment": "CHANGES_REQUIRED"
+}

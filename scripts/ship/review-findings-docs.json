@@ -1,0 +1,117 @@
+{
+  "branch": "codex/chore/food-registry",
+  "reviewed_at": "2026-03-16T10:00:00Z",
+  "review_focus": "Commit dc18279 — docs, package.json, .gitignore, bun.lock",
+  "files_reviewed": [
+    "docs/plans/2026-03-15-food-matching-refactor-migration.md",
+    "docs/research/Food_MAtching.md",
+    "docs/working/2026-03-15-food-matching-refactor-session-handover.md",
+    "docs/working/2026-03-15-food-registry-refactor.md",
+    "package.json",
+    ".gitignore",
+    "bun.lock"
+  ],
+  "findings": [
+    {
+      "id": "DOC-F001",
+      "severity": "HIGH",
+      "category": "documentation",
+      "file": "docs/research/Food_MAtching.md",
+      "line": 1,
+      "title": "Removed safety disclaimer that warned readers the research doc was aspirational, not implemented",
+      "description": "The commit removes a 3-line blockquote disclaimer that explicitly stated the Fuse.js + embeddings + LLM architecture described in this research doc was NOT adopted, and pointed readers to ADR 0002 for the actual architecture. With the disclaimer removed, a future reader (or LLM session) will treat this research document as current architecture guidance. The migration plan in this same commit describes Fuse.js + embeddings as the new target, but that work is not yet shipped — so the research doc is now misleading about the current state of the system.",
+      "fix": "Replace the removed disclaimer with an updated one that reflects the current situation: the research doc is now being used as directional input for an in-progress refactor, but the production system still uses deterministic registry lookup + LLM fallback. Example: '> **Status:** This research document is now informing an active refactor (see `docs/plans/2026-03-15-food-matching-refactor-migration.md`). The production system still uses deterministic registry lookup + LLM fallback as described in ADR 0002.'",
+      "implemented": false
+    },
+    {
+      "id": "DOC-F002",
+      "severity": "MODERATE",
+      "category": "documentation",
+      "file": "docs/plans/2026-03-15-food-matching-refactor-migration.md",
+      "line": 3,
+      "title": "Migration plan references wrong branch name",
+      "description": "The document header says 'Branch: refactor/food-matching' but the work was committed on a different branch. The session handover and registry refactor docs also reference 'refactor/food-matching'. If someone tries to find that branch, it may not exist or may be stale.",
+      "fix": "Update the branch references in all three docs to match the actual branch where the work was committed, or note that the work was merged into the current working branch.",
+      "implemented": false
+    },
+    {
+      "id": "DOC-F003",
+      "severity": "MODERATE",
+      "category": "documentation",
+      "file": "docs/plans/2026-03-15-food-matching-refactor-migration.md",
+      "line": 1,
+      "title": "Migration plan describes aspirational architecture without status markers",
+      "description": "The migration plan describes embedding search, alias tables, confidence routing, and LLM fallback demotion as concrete steps. Per CLAUDE.md: 'Distinguish Reality from Aspiration: Clearly separate what is currently implemented from the intended product direction.' The doc does not mark which steps have been completed vs. which are still planned. The session handover doc does a better job of this separation.",
+      "fix": "Add a status section at the top of the migration plan showing which steps are done (e.g., step 1 pre-processing) and which are still pending.",
+      "implemented": false
+    },
+    {
+      "id": "DOC-F004",
+      "severity": "NICE-TO-HAVE",
+      "category": "documentation",
+      "file": "docs/research/Food_MAtching.md",
+      "line": null,
+      "title": "Filename has inconsistent casing: Food_MAtching.md",
+      "description": "The filename uses mixed case with a stray uppercase 'A' in 'MAtching'. This is a pre-existing issue but worth noting since the file was touched in this commit.",
+      "fix": "Rename to Food_Matching.md or food-matching.md for consistency.",
+      "implemented": false
+    },
+    {
+      "id": "GIT-F001",
+      "severity": "HIGH",
+      "category": "gitignore",
+      "file": ".gitignore",
+      "line": 39,
+      "title": ".gitignore ignores itself",
+      "description": "Line 39 of .gitignore contains '.gitignore' as an ignored pattern. This means git will not track future changes to .gitignore itself. Changes to .gitignore will require 'git add -f .gitignore' to commit. This is almost certainly unintentional and is a pre-existing issue that was not fixed when .gitignore was modified in this commit.",
+      "fix": "Remove the '.gitignore' line from .gitignore.",
+      "implemented": false
+    },
+    {
+      "id": "GIT-F002",
+      "severity": "MODERATE",
+      "category": "gitignore",
+      "file": ".gitignore",
+      "line": 42,
+      "title": "images/ is ignored globally but ~110 individual image paths are also listed redundantly",
+      "description": "Line 42 ignores the entire 'images/' directory, but lines 51-157 list individual image paths under 'images/images-dark/' and 'images/images-light/'. The individual entries are completely redundant since the parent directory is already ignored. This adds ~110 lines of noise.",
+      "fix": "Remove the individual image path entries (lines 51-157) since they are already covered by the 'images/' pattern on line 42.",
+      "implemented": false
+    },
+    {
+      "id": "GIT-F003",
+      "severity": "MODERATE",
+      "category": "gitignore",
+      "file": ".gitignore",
+      "line": 46,
+      "title": ".claude/ agent and skill files are now tracked in git — verify this is intentional",
+      "description": "The old .gitignore had '.claude/' which ignored the entire directory. The new pattern selectively tracks .claude/ contents (agents, skills) while excluding local state. This commit adds 6 .claude/ files to the repo. These files contain Claude Code configuration including model preferences and workflow instructions. They are not secrets, but this is a deliberate change in what gets version-controlled.",
+      "fix": "If intentional (shared agent config), no action needed — this is a reasonable pattern. If unintentional, restore '.claude/' to .gitignore and remove tracked files with 'git rm --cached'.",
+      "implemented": false
+    },
+    {
+      "id": "PKG-F001",
+      "severity": "NICE-TO-HAVE",
+      "category": "package.json",
+      "file": "package.json",
+      "line": 33,
+      "title": "fuse.js added as production dependency — verify it is used in shipped code",
+      "description": "fuse.js (^7.1.0) was added to dependencies (not devDependencies). This is correct if it is imported by code that ships in the client bundle or runs in Convex functions. The commit adds shared/foodMatching.ts which likely uses it.",
+      "fix": "No change needed if fuse.js is used in production code paths. If it turns out to be test-only, move to devDependencies.",
+      "implemented": false
+    }
+  ],
+  "summary": {
+    "critical": 0,
+    "high": 2,
+    "moderate": 4,
+    "nice_to_have": 2
+  },
+  "positive_observations": [
+    "The session handover document is thorough and well-structured — it clearly captures decision history, scope, what was verified, and open questions. This is exactly the kind of continuity documentation CLAUDE.md calls for.",
+    "The .gitignore change to selectively track .claude/ while excluding local state is a thoughtful pattern for shared Claude Code configuration.",
+    "The registry refactor doc clearly separates constraints, implemented changes, known gaps, and next steps — good adherence to the 'distinguish reality from aspiration' principle.",
+    "The bun.lock change is minimal and matches the package.json addition exactly — no unexpected transitive dependency changes.",
+    "No secrets, API keys, tokens, or sensitive data found in any of the reviewed files."
+  ]
+}

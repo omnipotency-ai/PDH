@@ -1,0 +1,156 @@
+{
+  "branch": "feat/sprint-2.5+",
+  "reviewed_at": "2026-03-28T00:00:00Z",
+  "review_focus": "Infrastructure files: routing, state, types, service worker, transit data",
+  "files_reviewed": [
+    "src/App.tsx",
+    "src/main.tsx",
+    "src/routeTree.tsx",
+    "src/store.ts",
+    "src/vite-env.d.ts",
+    "src/registerServiceWorker.ts",
+    "src/types/domain.ts",
+    "src/types/transitMap.ts",
+    "src/data/transitData.ts"
+  ],
+  "findings": [
+    {
+      "id": "I001",
+      "severity": "HIGH",
+      "category": "security",
+      "file": "src/main.tsx",
+      "line": 13,
+      "title": "Env vars cast with `as string` instead of validated",
+      "description": "VITE_CONVEX_URL and VITE_CLERK_PUBLISHABLE_KEY are accessed as `import.meta.env.X as string`. If either variable is absent from the environment (e.g. a misconfigured deployment or a local dev who hasn't set up .env.local), the cast silently passes `undefined` as a string to the SDK constructors. ConvexReactClient with an undefined URL will attempt connections to 'undefined' and surface cryptic runtime errors; ClerkProvider with an undefined key will accept users as unauthenticated or fail silently. The correct pattern is to validate at startup and throw a clear error.",
+      "fix": "Replace the casts with explicit guards:\n```ts\nconst CONVEX_URL = import.meta.env.VITE_CONVEX_URL;\nif (!CONVEX_URL) throw new Error('VITE_CONVEX_URL is not set');\nconst CLERK_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;\nif (!CLERK_KEY) throw new Error('VITE_CLERK_PUBLISHABLE_KEY is not set');\n```",
+      "implemented": false
+    },
+    {
+      "id": "I002",
+      "severity": "HIGH",
+      "category": "security",
+      "file": "src/routeTree.tsx",
+      "line": 458,
+      "title": "Auth guard is a best-effort window.Clerk sniff, not a reliable redirect",
+      "description": "appLayoutRoute.beforeLoad() reads window.Clerk?.session to decide whether to redirect unauthenticated users to /home. This relies on Clerk having set a global before TanStack Router fires beforeLoad, which is not guaranteed — especially on first paint, after a hard refresh, or when Clerk's script is slow. When window.Clerk is undefined, the guard exits without redirecting, so AppLayout renders and the Authenticated/Unauthenticated gates inside it handle the fallback. That is actually safe, BUT two problems remain: (1) unauthenticated users briefly see the AppLayout DOM before the Unauthenticated branch re-renders, and (2) there is no server-authoritative check — the guard is entirely client-side and trivially bypassed by JS console. For a health app storing medical data, this is worth explicitly documenting as a known limitation and pairing with Convex-level requireAuth on every function (which appears to be the case based on previous reviews).",
+      "fix": "Document the intentional design: the Convex layer is the enforcement boundary; the client redirect is UX polish only. Add a code comment to beforeLoad explaining this. Separately, consider a Clerk useAuth-based redirect hook inside a guarded component rather than a window global check, as that is the officially supported pattern.",
+      "implemented": false
+    },
+    {
+      "id": "I003",
+      "severity": "HIGH",
+      "category": "correctness",
+      "file": "src/data/transitData.ts",
+      "line": 7,
+      "title": "transitData.ts defines a parallel food taxonomy that diverges from the canonical registry",
+      "description": "This 2,112-line file defines its own FoodStatus, Station, Track, Zone, SubLine, and MainCategory types with ~197 hardcoded status values and 9 hardcoded isCurrent markers. The canonical types already exist in src/types/transitMap.ts (TransitStation, TransitLine, TransitCorridor, TransitNetwork) and are derived from the evidence pipeline. The two systems use different status vocabularies: transitData.ts uses 'testing' which has no equivalent in FoodPrimaryStatus. Active transit-map components (TransitMap.tsx, StationMarker.tsx, TransitMapInspector.tsx, useTransitScene.ts) still import from this legacy file, meaning the transit map is displaying hardcoded statuses rather than real user evidence. This is a direct violation of the 'Convex is the Boss' principle in CLAUDE.md.",
+      "fix": "Port the transit map components to consume TransitNetwork from the evidence pipeline. The canonical type system is already built (src/types/transitMap.ts). The data file can then be deleted. This is tracked as paused transit map work per MEMORY.md, but the consumer components should not be importing from this file in a deployed branch.",
+      "implemented": false
+    },
+    {
+      "id": "I004",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/types/domain.ts",
+      "line": 434,
+      "title": "DigestiveLogData.episodesCount is typed as `number | string`",
+      "description": "The episodesCount field accepts both number and string. This is a data integrity smell: numeric fields should be numbers. A string '3' and a number 3 will behave differently in averages, comparisons, and any baseline calculations that use episodesCount. If input comes from a text input, coerce it at the form boundary before storing it, not by widening the domain type.",
+      "fix": "Change the type to `number` only. Add a `Number(rawInput)` coercion at the capture form before it reaches the log payload. Existing stored strings should be handled by a Convex-side migration or read-time coercion in the query layer.",
+      "implemented": false
+    },
+    {
+      "id": "I005",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/store.ts",
+      "line": 139,
+      "title": "Zustand store holds habitLogs that duplicate Convex as the source of truth",
+      "description": "The store comment says habitLogs are 'in-memory, populated by SyncedLogsContext from Convex', but the store exposes addHabitLog and removeHabitLog mutators that can be called independently. If any code path calls addHabitLog without going through a Convex mutation first, the in-memory state will diverge from the database on refresh. There is no reconciliation mechanism. The store's role here is ambiguous — it acts as both a cache and a write buffer, which violates the 'Convex is the Boss' principle.",
+      "fix": "Either (a) make the store read-only for habitLogs (remove addHabitLog/removeHabitLog, only expose setHabitLogs) and require all mutations to go through Convex first, or (b) document clearly that add/remove are only called after a successful Convex mutation, with the Convex mutation as the actual source of truth. Option (a) is safer.",
+      "implemented": false
+    },
+    {
+      "id": "I006",
+      "severity": "MODERATE",
+      "category": "routing",
+      "file": "src/routeTree.tsx",
+      "line": 323,
+      "title": "requiresSyncedLogs pathname check is fragile and does not cover /archive",
+      "description": "SyncedLogsProvider is conditionally mounted based on a hardcoded list of pathnames checked with startsWith. /archive is registered as a child of appLayoutRoute but is absent from the requiresSyncedLogs list. If ArchivePage needs access to SyncedLogsContext (likely, given it shows historical logs), it will silently receive no data. Additionally, the check uses string matching — if routes are added without updating this list, the same silent failure will repeat.",
+      "fix": "Check whether ArchivePage consumes SyncedLogsContext and add '/archive' to the list if so. For a more robust long-term solution, move SyncedLogsProvider outside the conditional and let consumers decide whether to subscribe — or use TanStack Router's context mechanism to scope it to specific routes rather than a manual pathname switch.",
+      "implemented": false
+    },
+    {
+      "id": "I007",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/routeTree.tsx",
+      "line": 32,
+      "title": "TrackPage is eagerly imported while all other pages are lazy-loaded",
+      "description": "Line 33 does `import TrackPage from './pages/Track'` as a static import. Every other page (Patterns, Settings, UiMigrationLab, Archive, Menu, LandingPage, Terms, Privacy, ApiKeyGuide) uses React.lazy. This means the Track page bundle is included in the main chunk regardless of whether the user navigates there, increasing initial bundle size. This is especially notable given WQ-090 in the work queue was opened specifically for this issue.",
+      "fix": "Convert to lazy: `const TrackPage = lazy(() => import('./pages/Track'))` and wrap its route component in a Suspense boundary like the other routes. This is already flagged as WQ-090.",
+      "implemented": false
+    },
+    {
+      "id": "I008",
+      "severity": "MODERATE",
+      "category": "types",
+      "file": "src/types/transitMap.ts",
+      "line": 117,
+      "title": "serviceRecord silently ignores Bristol 7 (treating it as out-of-range)",
+      "description": "The serviceRecord function categorises Bristol 6 as 'express' (loose) and counts Bristol >= 7 as 'cancelled'. Per the CLAUDE.md memory file feedback_bristol_strict_range.md, the Bristol scale is strictly 1–7. Bristol 7 is the most severe loose classification and should not be binned as 'cancelled' — that implies a null/invalid entry. The label 'cancelled' makes no clinical sense and could confuse users reading a service record with Bristol 7 episodes.",
+      "fix": "Rename the '>= 7' bucket to something that still fits the transit metaphor but reflects severe looseness, e.g. 'emergency stop' — or combine Bristol 6–7 into a single 'express' count. Confirm what value is intended and update the label accordingly. Also add a comment asserting that values > 7 should never appear.",
+      "implemented": false
+    },
+    {
+      "id": "I009",
+      "severity": "MODERATE",
+      "category": "simplicity",
+      "file": "src/store.ts",
+      "line": 57,
+      "title": "store.ts is a poor home for type guards, constants, and re-exports",
+      "description": "store.ts contains: (1) type guard functions, (2) exported constants (DEFAULT_FLUID_PRESETS, DEFAULT_HEALTH_PROFILE, etc.), (3) re-exported types from other modules, and (4) the Zustand store itself. This gives the file four distinct responsibilities and means any module that needs a DEFAULT_HEALTH_PROFILE must import from the store, creating an artificial coupling. CLAUDE.md says 'write boring code' and 'single responsibility'.",
+      "fix": "Move type guards to a dedicated src/lib/typeGuards.ts. Move domain constants to src/types/domain.ts or src/lib/defaults.ts where they conceptually belong. Keep re-exports only if they are genuinely needed for backward compatibility (and add a comment explaining why). The store itself should only export the store and its state type.",
+      "implemented": false
+    },
+    {
+      "id": "I010",
+      "severity": "NICE-TO-HAVE",
+      "category": "correctness",
+      "file": "src/registerServiceWorker.ts",
+      "line": 8,
+      "title": "Service worker registered with `immediate: true` may cause stale content issues",
+      "description": "registerSW({ immediate: true }) skips the browser's normal SW update flow (waiting for all tabs to close before activating a new version). For a PWA that uses Convex for real-time data, this is usually fine — but if the app ever serves cached assets, `immediate: true` can activate a new SW over a live session, potentially causing a version mismatch between the old cached JS and the new SW. This is low risk currently but worth documenting.",
+      "fix": "Add a comment explaining the tradeoff. If the app adds any caching strategies in the Vite PWA config, revisit whether immediate activation is still appropriate.",
+      "implemented": false
+    },
+    {
+      "id": "I011",
+      "severity": "NICE-TO-HAVE",
+      "category": "types",
+      "file": "src/types/domain.ts",
+      "line": 372,
+      "title": "FoodItem mixes new and legacy field names in a single interface with no deprecation markers",
+      "description": "FoodItem has both old fields (name, rawName) and new fields (userSegment, parsedName, resolvedBy) side by side, all optional. A reader cannot tell which fields are current vs legacy. Without explicit deprecation markers or JSDoc, any new code path might accidentally use the old names, and any schema validator will accept both silently.",
+      "fix": "Add @deprecated JSDoc tags to name and rawName. Consider a discriminated union or a migration helper that normalises old records to new field names at read time, rather than keeping both paths open indefinitely.",
+      "implemented": false
+    },
+    {
+      "id": "I012",
+      "severity": "NICE-TO-HAVE",
+      "category": "simplicity",
+      "file": "src/routeTree.tsx",
+      "line": 94,
+      "title": "RouteErrorBoundary does not log errors to a structured sink",
+      "description": "componentDidCatch logs to console.error only. In production, this means route errors are untracked — no Sentry, no Convex log, no structured error reporting. Given this is a health app where silent failures are especially harmful, errors that crash a route should be surfaced somewhere.",
+      "fix": "Consider adding a call to a lightweight error reporter (or a Convex action that stores the error) inside componentDidCatch. At minimum, add the component name and route path to the console.error call so log triage is easier.",
+      "implemented": false
+    }
+  ],
+  "summary": {
+    "critical": 0,
+    "high": 3,
+    "moderate": 6,
+    "nice_to_have": 3
+  }
+}

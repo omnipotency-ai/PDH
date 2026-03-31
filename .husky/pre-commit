@@ -1,0 +1,10 @@
+#!/bin/sh
+set -e
+
+bun run typecheck
+bun run build
+bun run test:unit
+
+if command -v gitleaks &> /dev/null; then
+  gitleaks git --staged --no-banner
+fi

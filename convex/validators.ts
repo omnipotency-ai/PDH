@@ -1,0 +1,609 @@
+/**
+ * Shared Convex validators for use in both schema.ts and logs.ts.
+ * Keeps validators DRY and ensures schema and function args stay in sync.
+ */
+import { v } from "convex/values";
+
+export const habitKindValidator = v.union(
+  v.literal("positive"),
+  v.literal("destructive"),
+);
+
+export const habitUnitValidator = v.union(
+  v.literal("count"),
+  v.literal("ml"),
+  v.literal("minutes"),
+  v.literal("hours"),
+);
+
+export const habitTypeValidator = v.union(
+  v.literal("sleep"),
+  v.literal("count"),
+  v.literal("activity"),
+  v.literal("fluid"),
+  v.literal("destructive"),
+  v.literal("checkbox"),
+  v.literal("weight"),
+);
+
+export const habitConfigValidator = v.object({
+  id: v.string(),
+  name: v.string(),
+  kind: habitKindValidator,
+  unit: habitUnitValidator,
+  quickIncrement: v.number(),
+  dailyTarget: v.optional(v.number()),
+  dailyCap: v.optional(v.number()),
+  weeklyFrequencyTarget: v.optional(v.number()),
+  showOnTrack: v.boolean(),
+  // Tailwind-style color token (e.g. "violet", "sky", "emerald").
+  // String length is bounded on writes via sanitizeUnknownStringsDeep.
+  color: v.string(),
+  createdAt: v.number(),
+  archivedAt: v.optional(v.number()),
+  logAs: v.optional(v.union(v.literal("habit"), v.literal("fluid"))),
+  habitType: habitTypeValidator,
+  templateKey: v.optional(v.string()),
+});
+
+export const habitsValidator = v.array(habitConfigValidator);
+
+export const fluidPresetValidator = v.object({
+  name: v.string(),
+});
+
+export const fluidPresetsValidator = v.array(fluidPresetValidator);
+
+// Legacy profile docs stored presets as string[] before the lossless preset shape
+// landed. The schema remains backward-compatible until those docs are rewritten.
+export const storedFluidPresetValidator = v.union(
+  fluidPresetValidator,
+  v.string(),
+);
+
+export const storedFluidPresetsValidator = v.array(storedFluidPresetValidator);
+
+export const transitCalibrationValidator = v.object({
+  source: v.union(v.literal("default"), v.literal("learned")),
+  centerMinutes: v.number(),
+  spreadMinutes: v.number(),
+  sampleSize: v.number(),
+  learnedAt: v.union(v.number(), v.null()),
+});
+
+export const foodPersonalisationValidator = v.object({
+  cautionLevel: v.union(
+    v.literal("conservative"),
+    v.literal("balanced"),
+    v.literal("adventurous"),
+  ),
+  upgradeSpeed: v.union(
+    v.literal("conservative"),
+    v.literal("balanced"),
+    v.literal("adventurous"),
+  ),
+});
+
+// Profile habits use the same strict validator as mutation args.
+// The replaceProfile mutation normalizes legacy data on write via
+// normalizeStoredProfileHabits, so all stored data matches this shape.
+// Run the normalizeProfileHabits migration to fix any pre-normalization docs.
+export const storedProfileHabitsValidator = v.array(habitConfigValidator);
+
+// ── AI model validators ─────────────────────────────────────────────────────
+// Allowed OpenAI models that can be sent to chatCompletion.
+// Keep in sync with src/lib/aiModels.ts INSIGHT_MODEL_OPTIONS + BACKGROUND_MODEL.
+export const allowedModelsValidator = v.union(
+  v.literal("gpt-5.4"),
+  v.literal("gpt-5-mini"),
+  // Legacy alias — still accepted for backward compatibility with stored preferences.
+  v.literal("gpt-5.2"),
+);
+
+// ── AI Analysis validators ───────────────────────────────────────────────────
+// These match the AiNutritionistInsight domain type in src/types/domain.ts.
+// Run the normalizeAiInsightData migration before deploying if existing
+// aiAnalyses documents pre-date the current insight schema.
+
+const confidenceLevelValidator = v.union(
+  v.literal("high"),
+  v.literal("medium"),
+  v.literal("low"),
+);
+
+export const foodAssessmentVerdictValidator = v.union(
+  v.literal("safe"),
+  v.literal("watch"),
+  v.literal("avoid"),
+  v.literal("trial_next"),
+  // Legacy verdicts — still present in stored data
+  v.literal("culprit"),
+  v.literal("next_to_try"),
+);
+
+export const foodAssessmentCausalRoleValidator = v.union(
+  v.literal("primary"),
+  v.literal("possible"),
+  v.literal("unlikely"),
+);
+
+export const foodAssessmentChangeTypeValidator = v.union(
+  v.literal("new"),
+  v.literal("upgraded"),
+  v.literal("downgraded"),
+  v.literal("unchanged"),
+);
+
+export const structuredFoodAssessmentValidator = v.object({
+  food: v.string(),
+  verdict: foodAssessmentVerdictValidator,
+  confidence: confidenceLevelValidator,
+  causalRole: foodAssessmentCausalRoleValidator,
+  changeType: foodAssessmentChangeTypeValidator,
+  modifierSummary: v.string(),
+  reasoning: v.string(),
+});
+
+export const foodPrimaryStatusValidator = v.union(
+  v.literal("building"),
+  v.literal("safe"),
+  v.literal("watch"),
+  v.literal("avoid"),
+);
+
+export const foodTendencyValidator = v.union(
+  v.literal("neutral"),
+  v.literal("loose"),
+  v.literal("hard"),
+);
+
+const lifestyleExperimentStatusValidator = v.union(
+  v.literal("adapted"),
+  v.literal("broken"),
+  v.literal("testing"),
+  v.literal("rewarding"),
+);
+
+export const aiInsightValidator = v.union(
+  v.object({
+    directResponseToUser: v.optional(v.union(v.string(), v.null())),
+    summary: v.string(),
+    clinicalReasoning: v.optional(v.union(v.string(), v.null())),
+    educationalInsight: v.optional(
+      v.union(v.object({ topic: v.string(), fact: v.string() }), v.null()),
+    ),
+    lifestyleExperiment: v.optional(
+      v.union(
+        v.object({
+          status: lifestyleExperimentStatusValidator,
+          message: v.string(),
+        }),
+        v.null(),
+      ),
+    ),
+    foodAssessments: v.optional(v.array(structuredFoodAssessmentValidator)),
+    suspectedCulprits: v.array(
+      v.object({
+        food: v.string(),
+        confidence: confidenceLevelValidator,
+        reasoning: v.string(),
+      }),
+    ),
+    likelySafe: v.array(v.object({ food: v.string(), reasoning: v.string() })),
+    mealPlan: v.array(
+      v.object({
+        meal: v.string(),
+        items: v.array(v.string()),
+        reasoning: v.string(),
+      }),
+    ),
+    nextFoodToTry: v.object({
+      food: v.string(),
+      reasoning: v.string(),
+      timing: v.string(),
+    }),
+    miniChallenge: v.optional(
+      v.union(
+        v.object({ challenge: v.string(), duration: v.string() }),
+        v.null(),
+      ),
+    ),
+    suggestions: v.array(v.string()),
+  }),
+  v.null(),
+);
+
+export const aiRequestValidator = v.union(
+  v.object({
+    model: v.string(),
+    messages: v.array(
+      v.object({
+        role: v.string(),
+        content: v.string(),
+      }),
+    ),
+  }),
+  v.null(),
+);
+
+export const aiResponseValidator = v.union(v.string(), v.null());
+
+export const sleepGoalValidator = v.object({
+  targetHours: v.number(),
+  nudgeTime: v.string(),
+  nudgeEnabled: v.boolean(),
+});
+
+export const aiPreferencesValidator = v.object({
+  preferredName: v.string(),
+  locationTimezone: v.string(),
+  mealSchedule: v.object({
+    breakfast: v.string(),
+    middaySnack: v.string(),
+    lunch: v.string(),
+    midafternoonSnack: v.string(),
+    dinner: v.string(),
+    lateEveningSnack: v.string(),
+  }),
+  aiModel: v.union(
+    v.literal("gpt-5-mini"),
+    v.literal("gpt-5.4"),
+    v.literal("gpt-5.2"),
+  ),
+  approach: v.union(
+    v.literal("supportive"),
+    v.literal("personal"),
+    v.literal("analytical"),
+  ),
+  register: v.union(
+    v.literal("everyday"),
+    v.literal("mixed"),
+    v.literal("clinical"),
+  ),
+  outputFormat: v.union(
+    v.literal("narrative"),
+    v.literal("mixed"),
+    v.literal("structured"),
+  ),
+  outputLength: v.union(
+    v.literal("concise"),
+    v.literal("standard"),
+    v.literal("detailed"),
+  ),
+  preset: v.union(
+    v.literal("reassuring_coach"),
+    v.literal("clear_clinician"),
+    v.literal("data_deep_dive"),
+    v.literal("quiet_checkin"),
+    v.literal("custom"),
+  ),
+  promptVersion: v.number(),
+  /** Controls when Dr. Poo reports are generated after bowel logs. undefined = "auto". */
+  reportTriggerMode: v.optional(
+    v.union(v.literal("auto"), v.literal("manual")),
+  ),
+});
+
+// ── Log data validators ────────────────────────────────────────────────────
+
+const recoveryStageValidator = v.union(
+  v.literal(1),
+  v.literal(2),
+  v.literal(3),
+);
+const spiceLevelValidator = v.union(
+  v.literal("plain"),
+  v.literal("mild"),
+  v.literal("spicy"),
+);
+export const foodGroupValidator = v.union(
+  v.literal("protein"),
+  v.literal("carbs"),
+  v.literal("fats"),
+  v.literal("seasoning"),
+);
+export const foodLineValidator = v.union(
+  v.literal("meat_fish"),
+  v.literal("eggs_dairy"),
+  v.literal("vegetable_protein"),
+  v.literal("grains"),
+  v.literal("vegetables"),
+  v.literal("fruit"),
+  v.literal("oils"),
+  v.literal("dairy_fats"),
+  v.literal("nuts_seeds"),
+  v.literal("sauces_condiments"),
+  v.literal("herbs_spices"),
+);
+const foodResolverValidator = v.union(
+  v.literal("alias"),
+  v.literal("fuzzy"),
+  v.literal("embedding"),
+  v.literal("combined"),
+  v.literal("llm"),
+  v.literal("user"),
+);
+const foodMatchCandidateValidator = v.object({
+  canonicalName: v.string(),
+  zone: recoveryStageValidator,
+  group: foodGroupValidator,
+  line: foodLineValidator,
+  bucketKey: v.string(),
+  bucketLabel: v.string(),
+  resolver: foodResolverValidator,
+  combinedConfidence: v.number(),
+  fuzzyScore: v.union(v.number(), v.null()),
+  embeddingScore: v.union(v.number(), v.null()),
+  examples: v.array(v.string()),
+});
+const foodMatchBucketValidator = v.object({
+  bucketKey: v.string(),
+  bucketLabel: v.string(),
+  canonicalOptions: v.array(v.string()),
+  bestConfidence: v.number(),
+});
+
+const foodItemValidator = v.object({
+  // New field names
+  userSegment: v.optional(v.string()),
+  parsedName: v.optional(v.string()),
+  resolvedBy: v.optional(
+    v.union(
+      v.literal("registry"),
+      v.literal("llm"),
+      v.literal("heuristic"),
+      v.literal("user"),
+      v.literal("expired"),
+    ),
+  ),
+  // Legacy field names (for existing data)
+  name: v.optional(v.string()),
+  rawName: v.optional(v.union(v.string(), v.null())),
+  // Unchanged fields
+  canonicalName: v.optional(v.string()),
+  quantity: v.union(v.number(), v.null()),
+  unit: v.union(v.string(), v.null()),
+  quantityText: v.optional(v.union(v.string(), v.null())),
+  defaultPortionDisplay: v.optional(v.string()),
+  preparation: v.optional(v.string()),
+  recoveryStage: v.optional(recoveryStageValidator),
+  spiceLevel: v.optional(spiceLevelValidator),
+  bucketKey: v.optional(v.string()),
+  bucketLabel: v.optional(v.string()),
+  matchConfidence: v.optional(v.number()),
+  matchStrategy: v.optional(foodResolverValidator),
+  matchCandidates: v.optional(v.array(foodMatchCandidateValidator)),
+  bucketOptions: v.optional(v.array(foodMatchBucketValidator)),
+});
+
+const foodLogDataValidator = v.object({
+  rawInput: v.optional(v.string()),
+  items: v.array(foodItemValidator),
+  notes: v.optional(v.string()),
+  mealSlot: v.optional(
+    v.union(
+      v.literal("breakfast"),
+      v.literal("lunch"),
+      v.literal("dinner"),
+      v.literal("snack"),
+    ),
+  ),
+  /** Set by processEvidence to prevent duplicate ingredientExposure writes. */
+  evidenceProcessedAt: v.optional(v.number()),
+  /** Incremented on every items mutation. Used for OCC in applyLlmResults. */
+  itemsVersion: v.optional(v.number()),
+});
+
+const fluidLogDataValidator = v.object({
+  items: v.array(
+    v.object({
+      name: v.string(),
+      quantity: v.number(),
+      unit: v.string(),
+    }),
+  ),
+});
+
+/** Bristol Stool Scale: strictly 1-7 */
+export const bristolCodeValidator = v.union(
+  v.literal(1),
+  v.literal(2),
+  v.literal(3),
+  v.literal(4),
+  v.literal(5),
+  v.literal(6),
+  v.literal(7),
+);
+
+const digestiveLogDataValidator = v.object({
+  bristolCode: bristolCodeValidator,
+  urgencyTag: v.optional(v.string()),
+  effortTag: v.optional(v.string()),
+  consistencyTag: v.optional(v.string()),
+  volumeTag: v.optional(v.string()),
+  accident: v.optional(v.boolean()),
+  notes: v.optional(v.string()),
+  episodesCount: v.optional(v.union(v.number(), v.string())),
+  windowMinutes: v.optional(v.number()),
+});
+
+const habitLogDataValidator = v.object({
+  habitId: v.string(),
+  name: v.string(),
+  habitType: v.string(),
+  quantity: v.optional(v.number()),
+  action: v.optional(v.string()),
+});
+
+const activityLogDataValidator = v.object({
+  activityType: v.string(),
+  durationMinutes: v.optional(v.number()),
+  feelTag: v.optional(v.string()),
+});
+
+const weightLogDataValidator = v.object({
+  weightKg: v.number(),
+});
+
+const reproductiveLogDataValidator = v.object({
+  entryType: v.literal("cycle"),
+  periodStartDate: v.string(),
+  bleedingStatus: v.union(
+    v.literal("none"),
+    v.literal("spotting"),
+    v.literal("light"),
+    v.literal("medium"),
+    v.literal("heavy"),
+  ),
+  symptoms: v.optional(
+    v.array(
+      v.union(
+        v.literal("cramps"),
+        v.literal("bloating"),
+        v.literal("nausea"),
+        v.literal("constipation"),
+        v.literal("diarrhea"),
+        v.literal("headache"),
+        v.literal("fatigue"),
+      ),
+    ),
+  ),
+  notes: v.optional(v.string()),
+});
+
+// ── Health profile validators ──────────────────────────────────────────────
+
+export const reproductiveHealthValidator = v.object({
+  trackingEnabled: v.boolean(),
+  cycleTrackingEnabled: v.boolean(),
+  lastPeriodStartDate: v.string(),
+  currentCyclePhase: v.optional(
+    v.union(
+      v.literal("unknown"),
+      v.literal("menstrual"),
+      v.literal("follicular"),
+      v.literal("ovulatory"),
+      v.literal("luteal"),
+    ),
+  ),
+  cycleSymptomSeverity: v.optional(v.union(v.number(), v.null())),
+  averageCycleLengthDays: v.union(v.number(), v.null()),
+  averagePeriodLengthDays: v.union(v.number(), v.null()),
+  symptomsBeforePeriodDays: v.optional(v.union(v.number(), v.null())),
+  symptomsAfterPeriodDays: v.optional(v.union(v.number(), v.null())),
+  pregnancyStatus: v.union(
+    v.literal("not_pregnant"),
+    v.literal("pregnant"),
+    v.literal("postpartum"),
+  ),
+  pregnancyWeeks: v.optional(v.union(v.number(), v.null())),
+  dueDate: v.string(),
+  postpartumSinceDate: v.string(),
+  breastfeeding: v.optional(v.boolean()),
+  oralContraceptive: v.optional(v.boolean()),
+  contraceptiveNotes: v.optional(v.string()),
+  pregnancyMedicationNotes: v.optional(v.string()),
+  menopauseStatus: v.union(
+    v.literal("not_applicable"),
+    v.literal("perimenopause"),
+    v.literal("menopause"),
+    v.literal("unsure"),
+  ),
+  menopauseHrt: v.optional(v.boolean()),
+  menopauseHrtNotes: v.optional(v.string()),
+  menopauseThyroidIssues: v.optional(v.boolean()),
+  hormonalMedicationNotes: v.string(),
+});
+
+const usageFrequencyValidator = v.union(
+  v.literal("more_than_once_per_day"),
+  v.literal("daily"),
+  v.literal("a_few_times_per_week"),
+  v.literal("about_once_per_week"),
+  v.literal("a_few_times_per_month"),
+  v.literal("about_once_per_month"),
+  v.literal("a_few_times_per_year"),
+  v.literal("about_once_per_year_or_less"),
+  v.literal(""),
+);
+
+export const healthProfileValidator = v.object({
+  gender: v.optional(
+    v.union(
+      v.literal("male"),
+      v.literal("female"),
+      v.literal("non_binary"),
+      v.literal("prefer_not_to_say"),
+      v.literal(""),
+    ),
+  ),
+  ageYears: v.optional(v.union(v.number(), v.null())),
+  surgeryType: v.union(
+    v.literal("Colectomy with ileostomy"),
+    v.literal("Colectomy with colostomy"),
+    v.literal("Colectomy with primary anastomosis"),
+    v.literal("Ileostomy reversal"),
+    v.literal("Colostomy reversal"),
+    v.literal("Other"),
+  ),
+  surgeryTypeOther: v.string(),
+  surgeryDate: v.string(),
+  height: v.union(v.number(), v.null()),
+  startingWeight: v.union(v.number(), v.null()),
+  currentWeight: v.union(v.number(), v.null()),
+  targetWeight: v.optional(v.union(v.number(), v.null())),
+  comorbidities: v.array(v.string()),
+  otherConditions: v.string(),
+  medications: v.string(),
+  supplements: v.optional(v.string()),
+  allergies: v.string(),
+  intolerances: v.optional(v.string()),
+  dietaryHistory: v.optional(v.string()),
+  smokingStatus: v.optional(
+    v.union(
+      v.literal("yes"),
+      v.literal("no"),
+      v.literal("never"),
+      v.literal("former"),
+      v.literal("current"),
+      v.literal(""),
+    ),
+  ),
+  smokingCigarettesPerDay: v.optional(v.union(v.number(), v.null())),
+  smokingYears: v.optional(v.union(v.number(), v.null())),
+  alcoholUse: v.optional(
+    v.union(
+      v.literal("yes"),
+      v.literal("no"),
+      v.literal("none"),
+      v.literal("occasional"),
+      v.literal("regular"),
+      v.literal(""),
+    ),
+  ),
+  alcoholAmountPerSession: v.optional(v.string()),
+  alcoholFrequency: v.optional(usageFrequencyValidator),
+  alcoholYearsAtCurrentLevel: v.optional(v.union(v.number(), v.null())),
+  recreationalDrugUse: v.optional(v.string()),
+  recreationalCategories: v.optional(
+    v.array(v.union(v.literal("stimulants"), v.literal("depressants"))),
+  ),
+  recreationalStimulantsFrequency: v.optional(usageFrequencyValidator),
+  recreationalStimulantsYears: v.optional(v.union(v.number(), v.null())),
+  recreationalDepressantsFrequency: v.optional(usageFrequencyValidator),
+  recreationalDepressantsYears: v.optional(v.union(v.number(), v.null())),
+  lifestyleNotes: v.optional(v.string()),
+  reproductiveHealth: reproductiveHealthValidator,
+});
+
+// ── Log data validators ────────────────────────────────────────────────────
+
+export const logDataValidator = v.union(
+  foodLogDataValidator,
+  fluidLogDataValidator,
+  digestiveLogDataValidator,
+  habitLogDataValidator,
+  activityLogDataValidator,
+  weightLogDataValidator,
+  reproductiveLogDataValidator,
+);

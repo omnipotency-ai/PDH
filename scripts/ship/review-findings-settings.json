@@ -1,0 +1,188 @@
+{
+  "branch": "feat/sprint-2.5+",
+  "reviewed_at": "2026-03-28T00:00:00Z",
+  "review_focus": "Settings components: form validation, settings persistence, data deletion safety, Clerk integration",
+  "files_reviewed": [
+    "src/components/settings/AppDataForm.tsx",
+    "src/components/settings/HealthForm.tsx",
+    "src/components/settings/PersonalisationForm.tsx",
+    "src/components/settings/ReproForm.tsx",
+    "src/components/settings/TrackingForm.tsx",
+    "src/components/settings/DeleteConfirmDrawer.tsx",
+    "src/components/settings/AiSuggestionsCard.tsx",
+    "src/components/settings/FoodPersonalisationSection.tsx",
+    "src/components/settings/CollapsibleSectionHeader.tsx",
+    "src/components/settings/SettingsSelect.tsx",
+    "src/components/settings/SettingsTile.tsx",
+    "src/components/settings/app-data-form/ArtificialIntelligenceSection.tsx",
+    "src/components/settings/app-data-form/CloudProfileSection.tsx",
+    "src/components/settings/app-data-form/DataManagementSection.tsx",
+    "src/components/settings/app-data-form/ReproductiveHealthSection.tsx",
+    "src/components/settings/app-data-form/UnitsSection.tsx",
+    "src/components/settings/app-data-form/index.ts",
+    "src/components/settings/app-data-form/shared.ts",
+    "src/components/settings/app-data-form/useAppDataFormController.ts"
+  ],
+  "findings": [
+    {
+      "id": "SET-001",
+      "severity": "HIGH",
+      "category": "clerk",
+      "file": "convex/logs.ts",
+      "line": 1646,
+      "title": "Raw ctx.auth.getUserIdentity() calls throughout logs.ts instead of requireAuth()",
+      "description": "All Convex functions in logs.ts — including deleteAll, exportBackup, importBackup, and every query/mutation — use the raw ctx.auth.getUserIdentity() pattern rather than the canonical requireAuth(ctx) from convex/lib/auth.ts. CLAUDE.md flags this as a HIGH legacy pattern that needs migrating. The settings UI exercises all three of the highest-stakes paths (deleteAll, exportBackup, importBackup) directly, so this is the most relevant for this review's focus. The risk is that if requireAuth ever gains additional enforcement logic (rate limiting, role checks, audit logging), these paths bypass it silently.",
+      "fix": "Replace every `const identity = await ctx.auth.getUserIdentity(); if (identity === null) throw new Error(\"Not authenticated\"); const userId = identity.subject;` block in logs.ts with `const { userId } = await requireAuth(ctx);`. This is a mechanical migration — the behaviour is currently equivalent, but consistency with the canonical pattern is required.",
+      "implemented": false
+    },
+    {
+      "id": "SET-002",
+      "severity": "HIGH",
+      "category": "correctness",
+      "file": "src/components/settings/app-data-form/useAppDataFormController.ts",
+      "line": 147,
+      "title": "window.confirm() used for factory reset — inconsistent with the stated pattern and blocks the main thread",
+      "description": "handleResetFactorySettings uses window.confirm() for confirmation, while SET-F004 (referenced in comments throughout this same file) explicitly replaced window.confirm with state-driven UI for the import flow. This is internally contradictory. window.confirm() blocks the main thread, cannot be styled, is suppressed in cross-origin iframes, and provides a jarring UX break from the rest of the settings surface. Factory reset is also a destructive operation — losing all habits, health profile, fluid presets, and preferences — that deserves the same treatment as account deletion.",
+      "fix": "Add a `isResetConfirmOpen` state slot (or reuse DeleteConfirmDrawer with a different variant prop) to gate the factory reset behind a modal confirmation, the same way handleDeleteAccountData uses the DeleteConfirmDrawer. Remove the window.confirm() call.",
+      "implemented": false
+    },
+    {
+      "id": "SET-003",
+      "severity": "HIGH",
+      "category": "correctness",
+      "file": "src/components/settings/ReproForm.tsx",
+      "line": 22,
+      "title": "Unsafe property access on healthProfile after isLoading guard — healthProfile can still be a default-valued stub",
+      "description": "After the `if (isLoading) return` guard on line 18, the code accesses `healthProfile.reproductiveHealth` on line 22 without a null check. While `useHealthProfile()` currently always returns a non-null value (it defaults to DEFAULT_HEALTH_PROFILE), the controller interface (useAppDataFormController.ts:17) explicitly types healthProfile as `HealthProfile | null`, and the comment on AppDataForm.tsx:89 states it is 'null until loaded'. There is a type-architecture mismatch: the hook hides a potentially null value behind a default, but code in ReproForm relies on that default never being missing reproductiveHealth fields. If DEFAULT_HEALTH_PROFILE ever omits reproductiveHealth (e.g. a partial override in a future migration), this will throw at runtime with no useful error message.",
+      "fix": "Add an explicit null/undefined guard: `if (!healthProfile?.reproductiveHealth) return null;` after the isLoading guard, or structure the return so TypeScript enforces the check. Also resolve the type-level mismatch: either make useHealthProfile() return `HealthProfile | null` explicitly, or document clearly that it never returns null and remove the null annotation from the controller arg.",
+      "implemented": false
+    },
+    {
+      "id": "SET-004",
+      "severity": "MODERATE",
+      "category": "security",
+      "file": "src/components/settings/app-data-form/ArtificialIntelligenceSection.tsx",
+      "line": 49,
+      "title": "Privacy disclosure is factually inconsistent with CloudProfileSection.tsx",
+      "description": "ArtificialIntelligenceSection.tsx line 49 states: 'Your API key is stored securely on our servers and used to make requests on your behalf.' CloudProfileSection.tsx lines 21-26 state the opposite: 'Your OpenAI API key stays on this device only' and 'Your OpenAI API key is never sent to the cloud.' These two statements contradict each other and are shown in the same settings page. The memory file feedback_llm_key_architecture.md confirms keys are stored server-side in Convex (BYOK server-side), which means the ArtificialIntelligenceSection is correct and CloudProfileSection is wrong — but both are shown to the user simultaneously. This is a user-facing data privacy disclosure inconsistency.",
+      "fix": "Update CloudProfileSection.tsx to remove or correct the claim that the API key 'stays on this device only' and 'is never sent to the cloud'. The correct statement per the BYOK architecture is that the key is stored in Convex (server-side) and never exposed to other users. The handleExport comment ('The OpenAI API key was excluded by design') is also accurate and should stay.",
+      "implemented": false
+    },
+    {
+      "id": "SET-005",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/components/settings/app-data-form/useAppDataFormController.ts",
+      "line": 100,
+      "title": "Export: DOM element created but never appended to document — relies on implicit browser behaviour",
+      "description": "The download anchor element is created with document.createElement('a'), href and download are set, and then anchor.click() is called without ever appending the element to the document body. This works in Chrome/Edge/Firefox for programmatic downloads, but it is not guaranteed by the spec and some environments (certain browsers, test runners, security policies) may silently ignore the click on a detached element. It is also unkind to screen reader tooling.",
+      "fix": "Follow the conventional pattern: `document.body.appendChild(anchor); anchor.click(); document.body.removeChild(anchor);`. This makes the download trigger reliable across environments.",
+      "implemented": false
+    },
+    {
+      "id": "SET-006",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/components/settings/app-data-form/useAppDataFormController.ts",
+      "line": 172,
+      "title": "handleDeleteAccountData does not close the drawer on error — leaves the user in a broken intermediate state",
+      "description": "On success, setIsDeleteDrawerOpen(false) is called (line 178). On failure, the catch block only calls setProfileStatus() — the drawer remains open, isDeleting returns to false, and the user sees no clear path forward. The 'Permanently delete all data' button is re-enabled, meaning a second click would retry the deletion attempt without any additional confirmation. The confirmation word must be re-entered, but the user is not told this.",
+      "fix": "In the catch block, consider whether to close the drawer or keep it open. If kept open, reset inputValue in the drawer so the user must re-type DELETE. Also display an error inside the drawer (not just in profileStatus outside it) so the user sees the failure message in context.",
+      "implemented": false
+    },
+    {
+      "id": "SET-007",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/components/settings/AiSuggestionsCard.tsx",
+      "line": 66,
+      "title": "Client-side API key passed directly to generateSettingsSuggestions — key exposed in client memory",
+      "description": "openAiApiKey is retrieved from ApiKeyContext (IndexedDB) and passed as a plain string argument to generateSettingsSuggestions(), which then passes it to callAi() (a Convex action). The key is therefore present in component state and in the Convex action's args payload. Per the memory file feedback_llm_key_architecture.md, keys are stored server-side in Convex (BYOK server-side). If the canonical architecture stores the key in Convex, it should be retrieved server-side in the action, not passed from the client. The current pattern exposes the key in the client's memory and in the Convex request args (visible in Convex dashboard logs).",
+      "fix": "If the BYOK architecture stores the key in Convex, the Convex action should retrieve it from the database using the authenticated userId rather than accepting it as an arg. If the key is legitimately stored client-side (IndexedDB only), remove the server-side claim from ArtificialIntelligenceSection.tsx and update the privacy disclosure. Choose one architecture and be consistent.",
+      "implemented": false
+    },
+    {
+      "id": "SET-008",
+      "severity": "MODERATE",
+      "category": "simplicity",
+      "file": "src/components/settings/AppDataForm.tsx",
+      "line": 39,
+      "title": "healthProfile from useHealthProfile() is typed as non-null but immediately treated as nullable",
+      "description": "AppDataForm calls useHealthProfile() which returns healthProfile as non-null HealthProfile (defaulting to DEFAULT_HEALTH_PROFILE). It then checks `if (!healthProfile) return` in patchHealthProfile (line 49), passes it as `HealthProfile | null` to the controller, and guards JSX with `{healthProfile ? ... : <loading>}` (line 121). This inconsistency is self-contradicting: the check on line 49 and the JSX guard on line 121 can never be true given the hook's current return type. The comments explain the intent ('null until loaded') but the implementation doesn't match — DEFAULT_HEALTH_PROFILE fires on every render before Convex loads, and any mutation during that window would use stale defaults rather than being blocked. The null-guard appears safe only by coincidence of isLoading behavior in ProfileContext.",
+      "fix": "Either: (a) make useHealthProfile() return `HealthProfile | null` explicitly, returning null when the Convex profile has not yet loaded, so the null guards are accurate and the controller type is correct; or (b) accept that DEFAULT_HEALTH_PROFILE is always the correct initial state, remove the null guards as unnecessary noise, and document why. Option (a) is safer for data correctness.",
+      "implemented": false
+    },
+    {
+      "id": "SET-009",
+      "severity": "MODERATE",
+      "category": "simplicity",
+      "file": "src/components/settings/PersonalisationForm.tsx",
+      "line": 207,
+      "title": "MAX_CUSTOM_FOOD_PRESETS constant defined inline inside a function body",
+      "description": "The value 12 for MAX_CUSTOM_FOOD_PRESETS is defined as a const inside addCustomFoodCard() (line 207). This is not a computed value — it is a configuration constant that belongs at module scope next to MAX_FLUID_PRESETS (which is correctly imported from @/store). If the limit ever needs to change, or if another function needs to reference it, it is invisible and must be found by reading implementation code.",
+      "fix": "Move `const MAX_CUSTOM_FOOD_PRESETS = 12` to module scope, or add it to the appropriate constants file alongside MAX_FLUID_PRESETS.",
+      "implemented": false
+    },
+    {
+      "id": "SET-010",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/components/settings/DeleteConfirmDrawer.tsx",
+      "line": 18,
+      "title": "useIsMobile hook duplicated locally — likely already exists elsewhere in the codebase",
+      "description": "DeleteConfirmDrawer.tsx defines its own useIsMobile hook (lines 18-32) using a matchMedia listener. This is a generic utility that almost certainly exists in a shared location or could be a shared hook. Duplicating it creates two sources of truth for the breakpoint logic and the SSR fallback. If the breakpoint changes in the design system, only one copy gets updated.",
+      "fix": "Extract useIsMobile to a shared hooks file (e.g. src/hooks/useIsMobile.ts) or use an existing equivalent. Verify whether this hook already exists elsewhere before creating a new one.",
+      "implemented": false
+    },
+    {
+      "id": "SET-011",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/components/settings/TrackingForm.tsx",
+      "line": 258,
+      "title": "deleteHabit fires without confirmation — permanently removes habit with a single tap",
+      "description": "The Trash2 delete button in the active habits list calls deleteHabit() immediately on click with no confirmation step. The toast message says 'deleted from Quick Capture' and notes 'Existing logs were kept', but the habit config itself is permanently gone. Given this is a settings screen (not a quick-capture flow), and the CLAUDE.md principle is to confirm before destructive operations, a single tap to permanently delete is inconsistent. This is especially relevant because template habits can be re-added, but custom habits with specific targets/caps/names cannot be recovered.",
+      "fix": "Add a minimal confirmation: either a second-click confirmation pattern (first click changes the button to a 'Confirm delete' state), an inline undo toast with a 5-second reversal window, or a small confirmation popover. For custom habits, display an explicit warning that the habit config cannot be recovered.",
+      "implemented": false
+    },
+    {
+      "id": "SET-012",
+      "severity": "NICE-TO-HAVE",
+      "category": "simplicity",
+      "file": "src/components/settings/HealthForm.tsx",
+      "line": 20,
+      "title": "patchHealthProfile wrapper duplicated across HealthForm, ReproForm, and AppDataForm",
+      "description": "All three components contain identical useCallback wrappers that convert a partial-update call into a full HealthProfile replacement: `(updates) => { if (!healthProfile) return; void setFullHealthProfile({ ...healthProfile, ...updates }); }`. This pattern is copy-pasted across three files. If the merge logic changes (e.g. deep-merge for nested objects), it must be updated in three places.",
+      "fix": "Either add a `patchHealthProfile(updates: Partial<HealthProfile>)` directly to the useHealthProfile() hook return value, or create a usePatchHealthProfile() hook. This eliminates the duplication and provides a single place to update the merge strategy.",
+      "implemented": false
+    },
+    {
+      "id": "SET-013",
+      "severity": "NICE-TO-HAVE",
+      "category": "correctness",
+      "file": "src/components/settings/app-data-form/useAppDataFormController.ts",
+      "line": 79,
+      "title": "Export filename uses 'kaka-tracker' — appears to be a placeholder product name",
+      "description": "The export filename base is hardcoded as `kaka-tracker-${date}`. The product is named 'Caca Traca'. If this is intentional it should be documented; if it is an early placeholder it should be updated to match the product name or made a config constant.",
+      "fix": "Define `const EXPORT_FILENAME_BASE = 'caca-traca'` (or whatever the canonical slug is) as a module-level constant, and use it in the filename construction.",
+      "implemented": false
+    },
+    {
+      "id": "SET-014",
+      "severity": "NICE-TO-HAVE",
+      "category": "simplicity",
+      "file": "src/components/settings/DeleteConfirmDrawer.tsx",
+      "line": 56,
+      "title": "setTimeout for input focus on drawer open is a smell — could conflict with animation timing",
+      "description": "A 350ms setTimeout is used to focus the confirmation input after the drawer opens (line 56). This hardcoded delay is brittle: if the animation duration ever changes, the focus either fires too early (element not yet interactive) or has noticeable lag. Vaul (the drawer library) may expose an onAnimationEnd callback or a ref-based approach that is more reliable.",
+      "fix": "Use the drawer's onAnimationEnd or equivalent lifecycle callback to trigger focus, rather than a fixed timeout. Alternatively, use the HTML autofocus attribute which browsers handle natively after the element enters the DOM.",
+      "implemented": false
+    }
+  ],
+  "summary": {
+    "critical": 0,
+    "high": 3,
+    "moderate": 7,
+    "nice_to_have": 3
+  }
+}

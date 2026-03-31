@@ -1,0 +1,213 @@
+{
+  "branch": "feat/sprint-2.5+",
+  "reviewed_at": "2026-03-28T00:00:00Z",
+  "review_focus": "Client-side lib: food parsing, AI integration, rate limiting, API key handling",
+  "files_reviewed": [
+    "src/lib/foodParsing.ts",
+    "src/lib/foodLlmCanonicalization.ts",
+    "src/lib/foodDigestionMetadata.ts",
+    "src/lib/foodStatusThresholds.ts",
+    "src/lib/customFoodPresets.ts",
+    "src/lib/aiAnalysis.ts",
+    "src/lib/aiModels.ts",
+    "src/lib/aiRateLimiter.ts",
+    "src/lib/convexAiClient.ts",
+    "src/lib/apiKeyStore.ts"
+  ],
+  "findings": [
+    {
+      "id": "CL001",
+      "severity": "HIGH",
+      "category": "security",
+      "file": "src/lib/convexAiClient.ts",
+      "line": 8,
+      "title": "API key passed in every AI call argument — key is logged by Convex action args",
+      "description": "ConvexAiCaller receives `apiKey` as a plain argument on every call. Convex logs all action arguments in its dashboard and function call history. A user's OpenAI API key is therefore exposed in Convex's structured logs on every food parse and Dr. Poo invocation. The key is also serialized into the `request.messages` payload stored in aiAnalyses. This is a pre-existing architectural issue flagged in F007/F008 of the prior review (obfuscation at-rest), but the call-site logging surface makes it worse: the raw key appears in plaintext, not obfuscated, in the args log.",
+      "fix": "The Convex action should resolve the API key server-side (from the encrypted profile field) rather than accepting it as a caller argument. The client should pass only a signal (e.g., `useServerKey: true`) or nothing. This removes the key from all log surfaces. This is a significant architectural change — track as a security item.",
+      "implemented": false
+    },
+    {
+      "id": "CL002",
+      "severity": "HIGH",
+      "category": "security",
+      "file": "src/lib/aiAnalysis.ts",
+      "line": 2222,
+      "title": "API key forwarded verbatim in sanitized payload — sanitizeUnknownStringsDeep does not redact it",
+      "description": "`fetchAiInsights` calls `sanitizeUnknownStringsDeep` on patientMessages, healthProfile, and logs, but the `apiKey` argument itself is never sanitized or redacted before being forwarded to `callAi`. If a user manages to inject their own API key string into a health profile field (e.g. medications), it will be caught by input sanitization — but the actual apiKey argument is passed through a completely separate path that has no redaction. More concretely: the key is passed directly to `callAi`, and `callAi` is bound to `useAction(api.ai.chatCompletion)`, meaning the key appears in the Convex action's argument log as a plain string on every call (see CL001).",
+      "fix": "Resolve the key server-side in the Convex action. Until then, add explicit logging suppression for the apiKey field in any debug/error paths.",
+      "implemented": false
+    },
+    {
+      "id": "CL003",
+      "severity": "HIGH",
+      "category": "correctness",
+      "file": "src/lib/aiRateLimiter.ts",
+      "line": 9,
+      "title": "Module-level rate limiter state is shared across all users in the same browser tab, not per-session",
+      "description": "`lastCallTimestamp` is a module-level variable that persists for the lifetime of the JS module. This means the 5-minute cooldown is shared globally within the tab — a single user is effectively rate-limited correctly, but the comment says this is a 'backstop against accidental bursts'. The actual problem: if two Convex action calls are dispatched nearly simultaneously (e.g., one from `useAiInsights` and one from `fetchWeeklySummary`), the second call will be blocked because `lastCallTimestamp` was updated by the first. `fetchWeeklySummary` calls `checkRateLimit()` at line 2598, so a weekly summary triggered right after a Dr. Poo call will throw a rate-limit error with the misleading message 'please wait a few seconds' when the actual wait is 5 minutes. The error message is wrong and will confuse users.",
+      "fix": "Either: (a) use separate rate limiter instances per call type (food-parse, analysis, weekly-summary), or (b) fix the error message to say '5 minutes' not 'a few seconds', or (c) remove the call from `fetchWeeklySummary` since that function is triggered by a background cron/schedule, not a user button.",
+      "implemented": false
+    },
+    {
+      "id": "CL004",
+      "severity": "HIGH",
+      "category": "correctness",
+      "file": "src/lib/foodParsing.ts",
+      "line": 352,
+      "title": "resolvedBy is always 'llm' for isNew items, but registry-matched components from LLM also get 'llm'",
+      "description": "At line 352, `resolvedBy` is set to `component.isNew ? 'llm' : 'registry'`. However, `normalizeItem` (called after parsing) sets `isNew: false` via `normalizeFields` when the LLM-returned canonical resolves to an existing registry entry. This means a food the LLM found and mapped correctly to the registry gets `resolvedBy: 'registry'` — which is accurate — but a food the LLM invented that doesn't exist in the registry gets `resolvedBy: 'llm'` with `isNew: true`. So far so good. The issue is with the fallback path in `buildFallbackResult`: when AI is unavailable and the item falls back to a comma-split with `postProcessCanonical`, the component has `isNew: resolved.isNew`. If `resolved.isNew` is false (the fallback found a registry match), the payload gets `resolvedBy: 'registry'`, which is correct. If `resolved.isNew` is true (unknown food in fallback), it gets `resolvedBy: 'llm'` — but AI was never used. The `resolvedBy` field will incorrectly claim LLM involvement for fallback-path items.",
+      "fix": "In `buildParsedFoodData`, check whether AI was actually invoked before assigning `resolvedBy: 'llm'`. A possible approach: the fallback item should get `resolvedBy: 'user'` (which already exists as a union member) or a new value like `'fallback'`.",
+      "implemented": false
+    },
+    {
+      "id": "CL005",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/lib/aiAnalysis.ts",
+      "line": 300,
+      "title": "getDaysPostOp uses Date.now() directly — will drift slightly during test execution and snapshot tests",
+      "description": "`getDaysPostOp` calculates `now.getTime()` inline from `new Date()`, and `buildPartialDayContext` also does `new Date()` inline (line 1859). Multiple calls to `new Date()` across a single AI payload build will produce subtly different timestamps. In production this is harmless (<1ms drift), but it means snapshot tests that mock time will need to account for multiple `new Date()` calls across the build pipeline. It also makes unit testing harder since `now` cannot be injected. More importantly, `computeBristolChange` at line 637 also calls `Date.now()` directly, and `computeHabitStreaks` calls `new Date()` and `Date.now()` at lines 730-731. These should all receive `now` as a parameter to be deterministic and testable.",
+      "fix": "Accept `now: number` as a parameter to `buildRecentEvents`, `getDaysPostOp`, `computeBristolChange`, `computeHabitStreaks`, and `buildPartialDayContext` and thread it through. `fetchAiInsights` can provide `Date.now()` once at the top of the function.",
+      "implemented": false
+    },
+    {
+      "id": "CL006",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/lib/aiAnalysis.ts",
+      "line": 738,
+      "title": "computeHabitStreaks streak-counting loop has an off-by-one in the day comparison",
+      "description": "The streak counter iterates `sortedDays` backward and computes `expectedDay` by subtracting `(sortedDays.length - 1 - i) * MS_PER_DAY` from `lastDay`. But `new Date('2026-03-28')` in JavaScript is midnight UTC, while `toISOString().slice(0,10)` on a local timestamp can produce the previous calendar day depending on timezone. The `dayKey` at line 714 is computed via `new Date(log.timestamp).toISOString().slice(0, 10)` which is always UTC. But `today` and `yesterday` at lines 730-731 are also computed in UTC via `toISOString()`, so UTC consistency is maintained. The real bug is the expectedDay calculation: it subtracts integer multiples of MS_PER_DAY from `lastDay` (a string like '2026-03-28'), but `new Date('2026-03-28')` is midnight UTC. If the user is in a non-UTC timezone, `log.timestamp` will map to a different calendar day than `new Date(lastDay).getTime()` produces, causing legitimate streaks to break.",
+      "fix": "Compute all day keys consistently: either always UTC (toISOString) or always local. The `dayKey` computation at line 714 uses UTC via `toISOString`, but the expected-day calculation at line 741 starts from `new Date(lastDay)` which is also UTC midnight — so they should be consistent. Verify this is truly consistent in DST-transition scenarios and add a test.",
+      "implemented": false
+    },
+    {
+      "id": "CL007",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/lib/aiAnalysis.ts",
+      "line": 584,
+      "title": "computeBristolTrend 'improving' logic is incomplete — only detects loose-to-firm improvement",
+      "description": "`isImproving` is true only when `delta < 0 && first > 5` (was loose, trending firmer). There is no corresponding detection for `isImproving` when the patient was constipated (first < 3) and is trending toward normal (last approaching 3-5). A patient improving from Bristol 2 toward Bristol 4 would receive the generic `firming` label instead of `improving`. The asymmetry means Dr. Poo sees an 'improving' trend for loose-to-normal but a neutral 'firming' trend for hard-to-normal, which affects its clinical commentary framing.",
+      "fix": "Add: `const isImprovingFromHard = delta > 0 && first < 3` and return `'improving'` for that case too. Correspondingly `isWorseningHard` should check `last < 3`, which it does correctly — but `isWorseningLoose` should not fire for a patient improving from high Bristol toward normal, so verify the delta directions are correct.",
+      "implemented": false
+    },
+    {
+      "id": "CL008",
+      "severity": "MODERATE",
+      "category": "security",
+      "file": "src/lib/aiAnalysis.ts",
+      "line": 57,
+      "title": "sanitizeNameForPrompt only strips HTML/XML tags — does not defend against prompt injection via other vectors",
+      "description": "`sanitizeNameForPrompt` strips `<...>` tags and truncates to 50 characters. This prevents XML delimiter confusion in the `<patient_name>` tag. However, the preferred name is inserted as bare text inside the prompt at line 1326. A user who sets their preferred name to something like `] Ignore all previous instructions and [` or uses backticks, markdown headers (`# New section`), or JSON-like structures could potentially influence prompt structure. The 50-character cap limits the blast radius, but there is no allowlist-based sanitization for prompt-injection characters. Other profile fields (medications, lifestyleNotes, otherConditions) are inserted directly via `sanitizeUnknownStringsDeep` which truncates but does not strip prompt-injection vectors.",
+      "fix": "For the preferred name specifically: strip or escape any characters that could be interpreted as instruction delimiters (`[`, `]`, `#`, `` ` ``, `{`, `}`). For free-text health profile fields inserted into the prompt, consider wrapping each in XML delimiters so the model can clearly distinguish data from instructions. This is defense-in-depth, not a critical fix.",
+      "implemented": false
+    },
+    {
+      "id": "CL009",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/lib/foodParsing.ts",
+      "line": 437,
+      "title": "JSON.parse on LLM response is called without a size guard",
+      "description": "At line 437, `JSON.parse(result.content)` is called on the raw string returned by the AI. There is no length check before parsing. A pathological or adversarially long JSON string (e.g., from a compromised API key or a misbehaving model) could cause the browser tab to hang during parse. The `truncateForStorage` guard only applies to what is saved in Convex — it is not applied to the response before parsing.",
+      "fix": "Add a size check before `JSON.parse`: if `result.content.length > SOME_MAX_RESPONSE_SIZE` (e.g., 50_000 characters), log an error and fall back to the fallback result. This prevents browser hangs from unexpectedly large responses.",
+      "implemented": false
+    },
+    {
+      "id": "CL010",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/lib/aiAnalysis.ts",
+      "line": 2496,
+      "title": "JSON.parse on AI insight response is also called without a size guard",
+      "description": "Same pattern as CL009. `JSON.parse(rawContent)` at line 2496 (and 2322 in lightweight mode) has no length guard before parsing. For the Dr. Poo response this is more likely to be large since the response includes extensive clinical reasoning, food assessments, and meal plans. A runaway model response could parse a very large JSON object in the browser.",
+      "fix": "Same fix as CL009: add a max-length guard before `JSON.parse`. Use a constant like `MAX_AI_RESPONSE_LENGTH = 200_000` (generous upper bound) and throw a clear error if exceeded.",
+      "implemented": false
+    },
+    {
+      "id": "CL011",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/lib/customFoodPresets.ts",
+      "line": 22,
+      "title": "createBlankCustomFoodPreset uses Math.random() for ID generation — collision risk under rapid creation",
+      "description": "`Math.round(Math.random() * 10000)` produces only 10,001 possible values. Combined with `Date.now()` (millisecond granularity), two presets created in the same millisecond (e.g., during rapid testing or programmatic creation) will collide with probability 1/10,001. The ID is used as a React key and as the identifier for update/delete operations, so a collision will cause silent overwrite of one preset.",
+      "fix": "Use `crypto.randomUUID()` (available in all modern browsers) or `Date.now().toString(36) + Math.random().toString(36).slice(2)` for better uniqueness. `crypto.randomUUID()` is the cleanest option.",
+      "implemented": false
+    },
+    {
+      "id": "CL012",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/lib/aiAnalysis.ts",
+      "line": 329,
+      "title": "getFoodWindowHours uses surgeryType string comparison with inconsistent casing",
+      "description": "At line 329, the code checks `profile.surgeryType === 'Ileostomy reversal'` (capitalized, with a space). The same field is checked elsewhere in this file as `'Other'` (also capitalized) and in `buildSystemPrompt` as `'Other'`. However, in `foodStatusThresholds.ts` the `SurgeryType` comes from shared/foodEvidence.ts, which likely uses `'ileocolic'` and `'colonic'` as its values (used in `getBristolExpectation`). If `HealthProfile.surgeryType` is a free-text field or an enum from a different domain than `SurgeryType`, the comparison `=== 'Ileostomy reversal'` may never match for correctly-typed profiles, silently defaulting all patients to the 72h window. This is a latent type-safety bug.",
+      "fix": "Verify that `HealthProfile.surgeryType` is the same type as used in `getBristolExpectation`. If they are different enums/strings, add a mapping layer or use a type-safe comparison. Add a TypeScript union type for the valid surgery strings to catch this at compile time.",
+      "implemented": false
+    },
+    {
+      "id": "CL013",
+      "severity": "MODERATE",
+      "category": "performance",
+      "file": "src/lib/aiAnalysis.ts",
+      "line": 159,
+      "title": "SYSTEM_PROMPT in foodParsing.ts is built at module load — but aiAnalysis.ts system prompt is rebuilt on every call",
+      "description": "In `foodParsing.ts`, `SYSTEM_PROMPT` is correctly built once at module load (line 160) since it depends only on the deterministic registry. In `aiAnalysis.ts`, `buildSystemPrompt(profile, prefs)` is called inside `fetchAiInsights` on every invocation (lines 2237, 2391). This is correct because it depends on runtime profile data. However, `buildRegistryVocabularyPrompt()` (in `foodLlmCanonicalization.ts`) iterates over the entire registry on every call to `buildFoodParseSystemPrompt()`. Since the registry is static, this is fine for the food parse prompt (it is cached at module load). No issue here, but worth noting: if `buildFoodParseSystemPrompt` is ever moved to be called at runtime, the registry iteration cost will be paid on every AI call.",
+      "fix": "No immediate action required. This is a note to preserve the module-load caching of `SYSTEM_PROMPT` in `foodParsing.ts` and not move it inside `parseFood`.",
+      "implemented": true
+    },
+    {
+      "id": "CL014",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/lib/foodStatusThresholds.ts",
+      "line": 104,
+      "title": "Object.entries(breakdown) with a Record<number, number> coerces numeric keys to strings — potential parsing edge case",
+      "description": "In `computeBristolAverage` and `classifyConsistency`, the breakdown is typed `Record<number, number>`. `Object.entries()` always returns string keys, so `Number(code)` / `Number(scoreStr)` is required and is correctly applied. However, `bristolCategory(score)` at line 214 throws `RangeError` for out-of-range scores. If the `breakdown` object somehow contains a key like `0` or `8` (from a data migration bug or an old schema), `classifyConsistency` will throw uncaught, propagating up to the AI analysis pipeline. The function has no guard for this.",
+      "fix": "Wrap the `bristolCategory(score)` call in a try/catch inside `classifyConsistency`, or add a range check (`if (score < 1 || score > 7) continue`) before calling it. The RangeError from `bristolCategory` should not crash the entire analysis.",
+      "implemented": false
+    },
+    {
+      "id": "CL015",
+      "severity": "NICE-TO-HAVE",
+      "category": "simplicity",
+      "file": "src/lib/aiRateLimiter.ts",
+      "line": 17,
+      "title": "Dead branch: MIN_CALL_INTERVAL_MS <= 0 can never be true",
+      "description": "`MIN_CALL_INTERVAL_MS` is a `const` set to `300_000`. The guard `if (MIN_CALL_INTERVAL_MS <= 0) return` at line 17 is unreachable dead code. It appears to be a leftover from a time when the interval was configurable. The comment about 'testing purposes' is served by `resetRateLimit()`, not by this check.",
+      "fix": "Remove the dead branch. If a test bypass is ever needed, use `resetRateLimit()` which already exists.",
+      "implemented": false
+    },
+    {
+      "id": "CL016",
+      "severity": "NICE-TO-HAVE",
+      "category": "correctness",
+      "file": "src/lib/aiAnalysis.ts",
+      "line": 763,
+      "title": "buildDeltaSignals always returns newFoodsThisWeek as an empty array with a TODO comment",
+      "description": "Line 769: `newFoodsThisWeek: []` with a comment that this will be wired in 'Wave 4D'. This means the AI prompt always receives an empty `newFoodsThisWeek` field, so Dr. Poo can never use this signal. The TODO comment indicates this is known technical debt. The field being present-but-always-empty also means the AI prompt is slightly larger than necessary without providing value.",
+      "fix": "Either implement the field or remove it from the payload until it is implemented. An always-empty field that the AI is instructed to use (if present) adds noise without signal.",
+      "implemented": false
+    },
+    {
+      "id": "CL017",
+      "severity": "NICE-TO-HAVE",
+      "category": "correctness",
+      "file": "src/lib/foodLlmCanonicalization.ts",
+      "line": 186,
+      "title": "postProcessCanonical throws on empty string but callers may pass whitespace-only strings",
+      "description": "Line 187 throws `Error('postProcessCanonical requires a non-empty canonical name.')` if `trimmed` is empty. The callers pass `entry.canonicalName.trim()` (in `normalizeFields`, line 284 of foodParsing.ts) and `name || item` in `buildFallbackResult` (line 247). The first is safe as long as the LLM never returns an empty canonicalName — but the LLM response validator `hasValidFoodFields` checks `r.canonicalName.trim().length > 0`, so an empty canonical will be caught before `normalizeItem` is called. However, the fallback path at line 247 passes `name || item` where `name` is `parsedName.toLowerCase().trim()` and `item` is the original raw text. If the raw text is all whitespace after splitting, `item.trim()` could still be empty. In that case `postProcessCanonical('')` would throw.",
+      "fix": "Add a guard in `buildFallbackResult` to skip items where `item.trim()` is empty after splitting, or make `postProcessCanonical` return a safe default instead of throwing.",
+      "implemented": false
+    }
+  ],
+  "summary": {
+    "critical": 0,
+    "high": 4,
+    "moderate": 9,
+    "nice_to_have": 3
+  },
+  "assessment": "CHANGES_REQUIRED"
+}

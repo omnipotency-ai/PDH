@@ -1,0 +1,223 @@
+{
+  "branch": "feat/sprint-2.5+",
+  "reviewed_at": "2026-03-28T00:00:00Z",
+  "files_reviewed": [
+    "src/components/track/quick-capture/QuickCapture.tsx",
+    "src/components/track/quick-capture/QuickCaptureTile.tsx",
+    "src/components/track/quick-capture/AddHabitDrawer.tsx",
+    "src/components/track/quick-capture/DurationEntryPopover.tsx",
+    "src/components/track/quick-capture/HabitDetailSheet.tsx",
+    "src/components/track/quick-capture/UnitAwareInput.tsx",
+    "src/components/track/quick-capture/WeightEntryDrawer.tsx",
+    "src/components/track/quick-capture/WeightTrendChart.tsx",
+    "src/components/track/quick-capture/constants.ts",
+    "src/components/track/quick-capture/index.ts",
+    "src/components/track/quick-capture/weightUtils.ts"
+  ],
+  "findings": [
+    {
+      "id": "F001",
+      "severity": "HIGH",
+      "category": "correctness",
+      "file": "src/components/track/quick-capture/weightUtils.ts",
+      "line": 9,
+      "title": "sanitizeDecimalInput: multi-dot normalization discards decimals incorrectly",
+      "description": "When the input contains more than one dot, the code collapses `parts.slice(1)` by joining without a separator. For example, '10.5.2' produces '10' + '52' = '1052' rather than '10.52'. The decimal point is dropped and the trailing digit is concatenated to the integer part. The fix is `parts[0] + '.' + parts.slice(1).join('')` — but that is exactly what the code does, except the slice starts at index 1 and joins with an empty string, so the decimal point is the one added explicitly between parts[0] and the join. Re-reading: the line is `${parts[0]}.${parts.slice(1).join('')}` — parts.slice(1) on ['10','5','2'] gives ['5','2'], joined gives '52', result is '10.52'. That part is actually correct. HOWEVER: the second check `if (parts.length === 2 && parts[1].length > 1)` only truncates to 1 decimal digit when the original input already had exactly one dot. After the first branch normalises a multi-dot string to one dot, `parts` is still the OLD split array and `parts.length` is still > 2, so the second `if` never fires and `sanitized` is returned with potentially more than 1 decimal digit (e.g. '10.52'). The caller ends up with 2 decimal digits silently. Weight entries should round to 1 decimal. This is a subtle state bug: `parts` is computed once from the original `value`, not re-split from `sanitized`.",
+      "fix": "Re-split `sanitized` before the second length check, or combine the two passes:\n```ts\nexport function sanitizeDecimalInput(value: string): string {\n  const stripped = value.replace(/[^\\d.]/g, '');\n  const dotIndex = stripped.indexOf('.');\n  if (dotIndex === -1) return stripped;\n  const integer = stripped.slice(0, dotIndex);\n  const decimal = stripped.slice(dotIndex + 1).replace(/\\./g, '').slice(0, 1);\n  return `${integer}.${decimal}`;\n}\n```",
+      "implemented": false
+    },
+    {
+      "id": "F002",
+      "severity": "HIGH",
+      "category": "correctness",
+      "file": "src/components/track/quick-capture/WeightEntryDrawer.tsx",
+      "line": 100,
+      "title": "imperial_uk entry popover pre-fills stones/pounds but not entryValue; subsequent metric switch leaves stale state",
+      "description": "In `populateEntryState`, when `unitSystem === 'imperial_uk'`, the function sets `entryStones` and `entryPounds` then returns early without touching `entryValue`. If the user switches unit system mid-session (unitSystem changes), `populateEntryState` is called again via `useCallback`, but `entryValue` retains its previous metric value. If the user then submits while `unitSystem` is metric, `parseEntryWeightKg` uses the stale metric `entryValue` string from a previous stone/pound session. Conversely switching from metric to imperial_uk leaves the old metric string in `entryValue` which `parseWeightKg` ignores — that path is safe. The bug only manifests metric→imperial_uk→metric without re-opening the popover, which is an edge case, but the state is never explicitly cleared.",
+      "fix": "In `populateEntryState`, always reset `entryValue` to '' when taking the imperial_uk branch:\n```ts\nsetEntryValue('');\nsetEntryStones(String(stones));\nsetEntryPounds(String(pounds));\n```",
+      "implemented": false
+    },
+    {
+      "id": "F003",
+      "severity": "HIGH",
+      "category": "correctness",
+      "file": "src/components/track/quick-capture/WeightEntryDrawer.tsx",
+      "line": 136,
+      "title": "parseWeightKg silently accepts pounds >= 14 only when stones is also non-zero",
+      "description": "The validation `if (stones < 0 || pounds < 0 || pounds >= 14) return null` correctly rejects out-of-range pounds (e.g. 15 lb). However, the user could enter stones=0 and pounds=28 — the check `pounds >= 14` would catch that and return null, which is correct. But `Math.round(pounds)` is applied AFTER the bounds check, meaning the check compares the raw parsed float. If the user types '13.7' in the pounds field, `sanitizeWholeNumberInput` in UnitAwareInput already strips non-digits, so only whole numbers reach here — that is safe. The real concern is that stones is `Math.round(stones)` but the validation runs before rounding: a user typing '14.6' in the stones field would pass the `stones < 0` check as a positive float, then be rounded to 15. This is low-impact given the sanitiser, but a defensive code ordering issue.",
+      "fix": "Apply Math.round before bounds checking:\n```ts\nconst stonesRounded = Math.round(Number(opts.stones));\nconst poundsRounded = Math.round(Number(opts.pounds));\nif (!Number.isFinite(stonesRounded) || !Number.isFinite(poundsRounded)) return null;\nif (stonesRounded < 0 || poundsRounded < 0 || poundsRounded >= 14) return null;\nreturn stonesAndPoundsToKg(stonesRounded, poundsRounded) || null;\n```",
+      "implemented": false
+    },
+    {
+      "id": "F004",
+      "severity": "HIGH",
+      "category": "correctness",
+      "file": "src/components/track/quick-capture/WeightTrendChart.tsx",
+      "line": 139,
+      "title": "Progress-toward-goal calculation is wrong when the user is gaining weight to reach goal",
+      "description": "The formula `(achievedDelta / totalDelta) * 100` assumes the user is always losing weight (target < starting). If a post-surgery user is recovering and needs to gain weight (target > starting), `totalDelta` is positive and `achievedDelta` is also positive — the math works correctly in that direction. But if the user has already passed their target (overshot), `achievedDelta > totalDelta`, the clamp to [0, 100] caps it at 100%, silently hiding the overshoot. More seriously: if `startingWeightKg` is null (not set in health profile), the block is skipped entirely and `progressPercent` stays null, so no bar renders — this is safe. However, if `startingWeightKg` equals `latestKg` exactly (day of surgery weigh-in), `achievedDelta === 0` and the bar shows 0% which is correct. The directional assumption is documented nowhere; the label 'Progress to goal' is ambiguous for weight-gain goals.",
+      "fix": "This is primarily a UX clarity issue. Add a comment documenting the bidirectional support and consider labeling the bar differently for gain vs loss goals. The math itself is correct for the symmetric case but the clamping hides meaningful overshoot data.",
+      "implemented": false
+    },
+    {
+      "id": "F005",
+      "severity": "MODERATE",
+      "category": "duplication",
+      "file": "src/components/track/quick-capture/DurationEntryPopover.tsx",
+      "line": "25-48",
+      "title": "TINT_BY_PROGRESS_COLOR and TINT_CLASSES are duplicated from QuickCaptureTile and constants.ts",
+      "description": "The same TINT_BY_PROGRESS_COLOR and TINT_CLASSES objects appear in three places: DurationEntryPopover.tsx (lines 28-48), QuickCaptureTile.tsx (lines 18-37), and constants.ts. The constants.ts file exists specifically to hold these shared values and even exports them, but DurationEntryPopover and QuickCaptureTile each define their own local copies instead of importing from constants.ts. Any change to a tint color must be made in three places.",
+      "fix": "Remove the local definitions in DurationEntryPopover.tsx and QuickCaptureTile.tsx and import from constants.ts:\n```ts\nimport { TINT_BY_PROGRESS_COLOR, TINT_CLASSES } from './constants';\n```",
+      "implemented": false
+    },
+    {
+      "id": "F006",
+      "severity": "MODERATE",
+      "category": "accessibility",
+      "file": "src/components/track/quick-capture/DurationEntryPopover.tsx",
+      "line": 176,
+      "title": "X (hide) button icon missing aria-hidden in DurationEntryPopover",
+      "description": "The hide button's X icon at line 176 (`<X className=\"h-3 w-3\" />`) lacks `aria-hidden=\"true\"`. The parent button already has a descriptive `aria-label`, so the icon is purely decorative and should be hidden from screen readers. Compare to QuickCaptureTile.tsx line 105 which correctly adds `aria-hidden=\"true\"` to the same icon. Inconsistency, and screen readers will announce both the button label and the icon name.",
+      "fix": "Add `aria-hidden=\"true\"` to the X icon in DurationEntryPopover.",
+      "implemented": false
+    },
+    {
+      "id": "F007",
+      "severity": "MODERATE",
+      "category": "accessibility",
+      "file": "src/components/track/quick-capture/DurationEntryPopover.tsx",
+      "line": 183,
+      "title": "3-dot desktop menu button breakpoint inconsistency: md:flex vs xl:flex",
+      "description": "In QuickCaptureTile.tsx (line 112) the desktop 3-dot button uses `md:flex`. In DurationEntryPopover.tsx (line 183) it uses `xl:flex`. In WeightEntryDrawer.tsx (line 316) it also uses `xl:flex`. This means on medium-to-large screens (md through lg), the 3-dot context menu appears on standard tiles but not on duration or weight tiles. Users lose access to the long-press menu equivalent on those tiles at those breakpoints unless they use a touch device.",
+      "fix": "Align breakpoints across all tile variants. If `md:flex` is intentional for QuickCaptureTile, apply it consistently to DurationEntryPopover and WeightEntryDrawer.",
+      "implemented": false
+    },
+    {
+      "id": "F008",
+      "severity": "MODERATE",
+      "category": "accessibility",
+      "file": "src/components/track/quick-capture/WeightTrendChart.tsx",
+      "line": 151,
+      "title": "SVG chart has role=img but no meaningful description for data points",
+      "description": "The SVG has `role=\"img\"` and `aria-label=\"Weight trend chart\"` which is correct for treating it as a single image. However, the interactive data point circles also have `aria-label=\"Data point: {date}\"` but no weight value in the label. A screen reader user gets no information about the actual weight on that date. Additionally, mouse-hover tooltips are not keyboard-accessible — there is no focus handler on the data points. The biome-ignore comment on line 245 suppresses a legitimate accessibility warning about static element interactions.",
+      "fix": "Change circle aria-labels to include the weight value: `aria-label={\\`${point.date}: ${formatWeight(point.valueKg, displayWeightUnit)}\\`}`. For keyboard accessibility, consider making the circles focusable with `tabIndex={0}` and `onFocus`/`onKeyDown` handlers, or use a table as the accessible alternative to the chart.",
+      "implemented": false
+    },
+    {
+      "id": "F009",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/components/track/quick-capture/HabitDetailSheet.tsx",
+      "line": 221,
+      "title": "weeklyActivitySessions uses Date.now() equivalent (new Date()) inside useMemo without a stable dependency",
+      "description": "The `weeklyActivitySessions` memo computes `startOfWeek(new Date(), ...)` to get the current week's start timestamp. `new Date()` is called at render time, not on a stable dependency. If the app is open across a week boundary (e.g. open Sunday night, still open Monday), the memo's `weekStart` value becomes stale and will not re-compute until the component re-renders for another reason. The memo dependencies are `[movementHabit, habitLogs, habit.id]` — none of which change at midnight on Sunday. A user could see incorrect 'This week: X / Y' counts for up to hours after the week rolls over.",
+      "fix": "This is acceptable for a v1 app since the user would typically re-open the sheet. Document the limitation with a comment. If correctness is important, add a `useCurrentWeekStart()` hook that returns a value that updates at midnight or simply re-mount the component.",
+      "implemented": false
+    },
+    {
+      "id": "F010",
+      "severity": "MODERATE",
+      "category": "accessibility",
+      "file": "src/components/track/quick-capture/HabitDetailSheet.tsx",
+      "line": 518,
+      "title": "Native checkbox for sleep nudge uses accent-color CSS but no visible focus ring",
+      "description": "The sleep nudge toggle at line 518 is a bare `<input type=\"checkbox\">` styled only with `accent-[var(--section-quick)]`. Native checkboxes do render a browser focus ring, but the ring style varies greatly across browsers and operating systems and may be invisible on some themes. The rest of the UI uses custom `focus-visible:ring-2` patterns for consistency. This is an inconsistency that could fail WCAG 2.4.7 (focus visible) on some platforms.",
+      "fix": "Wrap the checkbox in a styled component or add `className=\"... focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[var(--ring)]\"` to the input.",
+      "implemented": false
+    },
+    {
+      "id": "F011",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/components/track/quick-capture/AddHabitDrawer.tsx",
+      "line": 324,
+      "title": "unit field for 'fluid' custom habit type is hardcoded to 'ml' regardless of user unit system",
+      "description": "In `handleCreateCustom` (line 329), custom fluid habits are always created with `unit: 'ml'`. The quick increment default is also `1000` (ml). For users with `imperial_us` unit system, fluid quick-captures display in fl oz (via getDisplayFluidUnit), but the underlying habit config's `quickIncrement` and any stored values are raw ml. The Label at line 507 correctly shows the display unit for the quick increment field, but the value the user types is treated as ml (not fl oz) when building the habit. A US user typing '32' (fl oz) would get a `quickIncrement` of 32 ml, not 946 ml.",
+      "fix": "Convert the typed `quickIncrement` from the display fluid unit to ml when building the habit for fluid types:\n```ts\nconst rawIncrement = parsePositiveNumber(customDraft.quickIncrement);\nconst quickIncrementMl =\n  selectedType === 'fluid' && unitSystem !== 'metric' && rawIncrement != null\n    ? flOzToMl(rawIncrement)\n    : rawIncrement;\n```",
+      "implemented": false
+    },
+    {
+      "id": "F012",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/components/track/quick-capture/AddHabitDrawer.tsx",
+      "line": 537,
+      "title": "Daily target for fluid custom habit is also stored in raw ml but labeled in display unit",
+      "description": "Companion issue to F011. The daily target input for fluid habits is labeled with the display unit (line 532: `Daily target (${fluidUnit})`), so a US user types fl oz. But `parsePositiveNumber(customDraft.dailyTarget)` produces the number as typed and it is passed to `createCustomHabit` as-is. A US user typing '64' (fl oz / 2 quarts) would get a dailyTarget of 64 ml, not 1893 ml.",
+      "fix": "Apply the same fl oz→ml conversion to dailyTarget for fluid habits (same pattern as F011 fix).",
+      "implemented": false
+    },
+    {
+      "id": "F013",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/components/track/quick-capture/WeightEntryDrawer.tsx",
+      "line": 51,
+      "title": "latestWeightKg falls back to healthProfile.currentWeight which may be a stale manually-entered value",
+      "description": "The `latestWeightKg` derivation (line 51-54) prefers the most recent weight log, then falls back to `healthProfile.currentWeight`, then `healthProfile.startingWeight`. The fallback to `healthProfile.currentWeight` populates the entry popover with a potentially stale manual value that was set at onboarding. If the user has never logged a weigh-in but set a starting weight, the popover will pre-fill with `startingWeight`. This is reasonable as a UX convenience but could mislead the user into thinking they already have a logged data point. The tile also shows 'Tap to log' only when `latestWeightKg == null` (line 342), but if `healthProfile.startingWeight` is set, `latestWeightKg` is non-null and the tile displays the starting weight as if it were a log entry.",
+      "fix": "Separate display concerns: use only `weightLogs`-derived values for the tile display and for delta calculations, and use the health profile as a pre-fill hint only inside the popover. Or make the fallback order explicit in a comment.",
+      "implemented": false
+    },
+    {
+      "id": "F014",
+      "severity": "MODERATE",
+      "category": "simplicity",
+      "file": "src/components/track/quick-capture/HabitDetailSheet.tsx",
+      "line": 231,
+      "title": "makeNumberSaveHandler creates a new closure on every render, nested inside the component body",
+      "description": "The `makeNumberSaveHandler` function is defined inside `HabitDetailSheetInner` on every render. It is a factory function that returns another function — each call allocates two closures. The three save handlers derived from it (`handleSaveGoal`, `handleSaveIncrement`, `handleSaveWeeklyFrequency`) are re-created on every render even when their inputs have not changed. Because they are passed to `onBlur` and `onKeyDown` inline, this causes new function references on every render, which is acceptable for DOM event handlers but reveals that the architecture could be simpler. The pattern using `React.RefObject<string>` as a mutable ref passed to a factory is unusual and obscures what is happening. The `clearLabel` passed to `handleSaveIncrement` is an empty string — if `onClear` is never supplied, the empty string toast would fire if the draft is cleared, but `onClear` is undefined so `opts.onClear` is falsy and the branch is unreachable. Dead default value.",
+      "fix": "Extract `makeNumberSaveHandler` to module scope (outside the component) since it has no closure dependencies on component state — it only takes `opts` as a parameter. This eliminates the per-render allocations and makes the code easier to read.",
+      "implemented": false
+    },
+    {
+      "id": "F015",
+      "severity": "MODERATE",
+      "category": "accessibility",
+      "file": "src/components/track/quick-capture/QuickCaptureTile.tsx",
+      "line": 164,
+      "title": "aria-live region wraps the entire progress text container, not just the changing text span",
+      "description": "The `aria-live=\"polite\"` attribute is on the wrapper `div` at line 164 (`<div className=\"relative h-4 min-w-0 overflow-hidden\" aria-live=\"polite\">`). This means screen readers announce all children of that div when any of them change — including the outgoing animation span which has `aria-hidden=\"true\"`. While aria-hidden should suppress the outgoing text, the live region itself re-announces on every progressText change, including non-meaningful updates (e.g. same value re-rendered). This can create noisy announcements when tiles update frequently.",
+      "fix": "Move `aria-live=\"polite\"` to only the span containing the current progress text, and ensure it has `aria-atomic=\"true\"` to announce the full value:",
+      "implemented": false
+    },
+    {
+      "id": "F016",
+      "severity": "NICE-TO-HAVE",
+      "category": "correctness",
+      "file": "src/components/track/quick-capture/DurationEntryPopover.tsx",
+      "line": 130,
+      "title": "hours-minutes mode uses `Number(draft) || 0` which silently accepts non-numeric strings as 0",
+      "description": "Lines 130-131: `const hours = Number(hoursDraft) || 0; const mins = Number(minsDraft) || 0;`. The `|| 0` fallback means an invalid string like 'abc' becomes 0 silently. The validation `totalMinutes <= 0` would then catch a zero-total case, but if the user types 'abc' for hours and '30' for minutes, they get 30 minutes silently. This is inconsistent with the minutes-only mode which uses `Number.isFinite` validation. The UnitAwareInput sanitiser strips non-digits so this is largely a defence-in-depth issue.",
+      "fix": "Use explicit parsing: `const hours = hoursDraft.trim() === '' ? 0 : Number(hoursDraft); const mins = minsDraft.trim() === '' ? 0 : Number(minsDraft);` and validate with `Number.isFinite`.",
+      "implemented": false
+    },
+    {
+      "id": "F017",
+      "severity": "NICE-TO-HAVE",
+      "category": "accessibility",
+      "file": "src/components/track/quick-capture/WeightEntryDrawer.tsx",
+      "line": 331,
+      "title": "Weight tile aria-label hardcodes interaction instructions rather than using aria-description",
+      "description": "The main weight tile button has `aria-label={\\`${habitName} quick capture. Tap to log weight, long press for settings\\`}`. Embedding instructions in aria-label is discouraged; the label should identify the control and instructions should be in aria-describedby. The 'long press for settings' instruction is also only relevant on touch devices — desktop users use the 3-dot button. Screen reader users on desktop will hear irrelevant touch instructions.",
+      "fix": "Use `aria-label={habitName}` and `aria-description=\"Tap to log weight\"` (or use a visually-hidden description element with aria-describedby). Omit touch-specific instructions for non-touch contexts.",
+      "implemented": false
+    },
+    {
+      "id": "F018",
+      "severity": "NICE-TO-HAVE",
+      "category": "simplicity",
+      "file": "src/components/track/quick-capture/WeightTrendChart.tsx",
+      "line": 111,
+      "title": "toY function is recomputed in the render body when chart data already contains pre-computed y values",
+      "description": "The `toY` function is re-derived in the component render body (line 112-114) from `chart.yMax` and `yRange`, even though `computeChartData` already stored computed `y` values in each `ChartPoint`. The re-derived `toY` is used only for the target weight line (line 112 is never called for data points which use `chart.targetY`). This is harmless but the `toY` definition is dead code — `chart.targetY` is already computed by `computeChartData` and used directly. The local `toY` at line 112 is never actually called.",
+      "fix": "Remove the dead `toY` re-definition in the render body (lines 111-114). Use `chart.targetY` directly, which is what the code already does.",
+      "implemented": false
+    }
+  ],
+  "summary": {
+    "critical": 0,
+    "high": 4,
+    "moderate": 10,
+    "nice_to_have": 3
+  }
+}

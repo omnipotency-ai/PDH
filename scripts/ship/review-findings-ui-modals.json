@@ -1,0 +1,128 @@
+{
+  "branch": "codex/chore/food-registry",
+  "reviewed_at": "2026-03-16T10:30:00Z",
+  "review_scope": "Commit dc18279 — FoodMatchingModal, RawInputEditModal, FoodSubRow, Track.tsx",
+  "files_reviewed": [
+    "src/components/track/FoodMatchingModal.tsx",
+    "src/components/track/RawInputEditModal.tsx",
+    "src/components/track/today-log/editors/FoodSubRow.tsx",
+    "src/pages/Track.tsx"
+  ],
+  "findings": [
+    {
+      "id": "FM-001",
+      "severity": "HIGH",
+      "category": "performance",
+      "file": "src/components/track/FoodMatchingModal.tsx",
+      "line": 95,
+      "title": "Convex subscription churn — every distinct search keystroke creates a new live subscription",
+      "description": "useQuery creates a live Convex subscription for each distinct set of arguments. With deferredSearchQuery updating on each trim-distinct keystroke, the modal accumulates subscriptions during a search session. useDeferredValue helps batch React renders but does NOT prevent Convex from opening a subscription per distinct query string. Additionally, the default limit of 160 when no search query and no bucket are active is large for a scrollable list in a modal.",
+      "fix": "Add a debounce hook (300ms) between the raw search query and the value passed to useQuery. This collapses rapid keystrokes into a single subscription. Also consider reducing the default limit from 160 to 50-80.",
+      "implemented": false
+    },
+    {
+      "id": "FM-002",
+      "severity": "HIGH",
+      "category": "quality",
+      "file": "src/components/track/FoodMatchingModal.tsx",
+      "line": 117,
+      "title": "useEffect overrides user's manual canonical selection when server data updates",
+      "description": "The effect on lines 117-121 runs whenever defaultCandidateCanonical changes. If the user has manually selected a different canonical from the search list, and then the server-side matchCandidates data updates (causing defaultCandidateCanonical to change), this effect silently overwrites the user's explicit selection. This is a UX bug.",
+      "fix": "Track whether the user has made an explicit selection using a ref (e.g., const userHasSelected = useRef(false)). Set it to true in user-initiated setSelectedCanonical calls, reset it in resetItemState. Guard this effect with if (!userHasSelected.current).",
+      "implemented": false
+    },
+    {
+      "id": "FM-003",
+      "severity": "MODERATE",
+      "category": "quality",
+      "file": "src/components/track/FoodMatchingModal.tsx",
+      "line": 134,
+      "title": "Loading spinner always shows on modal open before first Convex response",
+      "description": "serverSearchOptions is undefined until the first Convex response arrives. The modal always shows a loading spinner in the listbox on open, even when candidate options from the item data are already displayed above.",
+      "fix": "Only show the loading indicator when the user has actually typed a search query: const isSearchLoading = deferredSearchQuery.length > 0 && serverSearchOptions === undefined;",
+      "implemented": false
+    },
+    {
+      "id": "FM-004",
+      "severity": "MODERATE",
+      "category": "accessibility",
+      "file": "src/components/track/FoodMatchingModal.tsx",
+      "line": 310,
+      "title": "Candidate option buttons lack ARIA selection semantics",
+      "description": "The candidate option buttons (lines 310-349) are plain <button> elements without role='option' or aria-selected, unlike the listbox options further down (line 458). Screen reader users cannot distinguish selected from unselected candidates.",
+      "fix": "Add aria-pressed={isSelected} to candidate buttons, or wrap in a listbox container with role='option' on each.",
+      "implemented": false
+    },
+    {
+      "id": "FM-005",
+      "severity": "MODERATE",
+      "category": "accessibility",
+      "file": "src/components/track/FoodMatchingModal.tsx",
+      "line": 370,
+      "title": "Bucket filter buttons lack accessible active state",
+      "description": "Bucket filter buttons indicate active state only through visual CSS classes. Screen reader users cannot tell which bucket is selected.",
+      "fix": "Add aria-pressed={isActive} to each bucket button.",
+      "implemented": false
+    },
+    {
+      "id": "FM-006",
+      "severity": "MODERATE",
+      "category": "quality",
+      "file": "src/components/track/RawInputEditModal.tsx",
+      "line": 85,
+      "title": "processLog mutation removed — docstring still claims server reprocessing is triggered",
+      "description": "The explicit processLog mutation call was removed. The docstring (lines 5-9) still says the pipeline is re-triggered from Stage 1. If processLog was the only reprocessing mechanism, items: [] alone may not trigger it, making the Reprocessing toast misleading.",
+      "fix": "Verify that updating the log with items: [] triggers server-side reprocessing. Update the docstring to reflect the actual mechanism.",
+      "implemented": false
+    },
+    {
+      "id": "FM-007",
+      "severity": "LOW",
+      "category": "quality",
+      "file": "src/components/track/today-log/editors/FoodSubRow.tsx",
+      "line": 560,
+      "title": "Potential stale index access on entry.data.items[matchingItemIndex]",
+      "description": "If items are reprocessed between when matchingItemIndex was set and when this renders, the index could be out of bounds, yielding undefined passed as item to FoodMatchingModal.",
+      "fix": "Add a guard: only render FoodMatchingModal when entry.data.items[matchingItemIndex] != null.",
+      "implemented": false
+    },
+    {
+      "id": "FM-008",
+      "severity": "LOW",
+      "category": "quality",
+      "file": "src/pages/Track.tsx",
+      "line": 292,
+      "title": "useFoodLlmMatching hook removed — dead code left behind",
+      "description": "The hook was removed from Track.tsx but the file src/hooks/useFoodLlmMatching.ts still exists. If LLM matching is now server-side, the hook file is dead code.",
+      "fix": "Delete src/hooks/useFoodLlmMatching.ts if LLM matching is fully server-side. If still needed, document why it was removed from Track.",
+      "implemented": false
+    },
+    {
+      "id": "FM-009",
+      "severity": "LOW",
+      "category": "quality",
+      "file": "src/pages/Track.tsx",
+      "line": 161,
+      "title": "useEffect dependency array uses Date prototype method references that never change",
+      "description": "The timer useEffect has [now.getMilliseconds, now.getSeconds] which are always the same function references. The effect runs once on mount, which is correct, but the deps are misleading.",
+      "fix": "Use an empty dependency array [] with the eslint-disable to honestly reflect intent.",
+      "implemented": false
+    }
+  ],
+  "summary": {
+    "critical": 0,
+    "high": 2,
+    "moderate": 4,
+    "low": 3,
+    "nice_to_have": 0
+  },
+  "positive_observations": [
+    "Good use of useDeferredValue for search query batching at the React render level",
+    "Proper lazy loading of FoodMatchingModal via React.lazy in both FoodSubRow and Track.tsx",
+    "Consistent error handling with getErrorMessage across all async operations",
+    "Clean separation of candidate options (server-provided) from full registry search (user-driven)",
+    "Proper use of Convex 'skip' to avoid unnecessary subscriptions when modal is closed",
+    "Good accessibility baseline with role='listbox', role='option', aria-selected on main search results",
+    "Architecturally sound move from client-side static FOOD_REGISTRY filtering to server-side searchFoods query"
+  ]
+}

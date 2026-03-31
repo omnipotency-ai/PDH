@@ -1,0 +1,185 @@
+{
+  "branch": "codex/chore/food-registry",
+  "reviewed_at": "2026-03-16T10:15:00Z",
+  "review_scope": "Commit dc18279 — convex/schema.ts, convex/validators.ts, convex/foodLlmMatching.ts, convex/foodParsing.ts, src/types/domain.ts",
+  "files_reviewed": [
+    "convex/schema.ts",
+    "convex/validators.ts",
+    "convex/foodLlmMatching.ts",
+    "convex/foodParsing.ts",
+    "src/types/domain.ts"
+  ],
+  "findings": [
+    {
+      "id": "F001",
+      "severity": "HIGH",
+      "category": "convex",
+      "file": "convex/foodParsing.ts",
+      "line": 223,
+      "title": "listFoodEmbeddings does unbounded .collect() fetching full embedding vectors",
+      "description": "listFoodEmbeddings (lines 223-227) calls ctx.db.query('foodEmbeddings').collect() with no filter or pagination. This fetches every row including the full 1536-dimension float64 embedding arrays into memory. As the food registry grows, this will become expensive and will eventually hit Convex query result size limits. The data is only used by ensureFoodEmbeddings to check which rows are stale (comparing canonicalName and embeddingSourceHash).",
+      "fix": "Fetch only the fields needed for the staleness check. Since Convex does not support field projections, create a separate lightweight table or add a dedicated internalQuery that returns only {canonicalName, embeddingSourceHash} pairs (by mapping the results before returning). Alternatively, maintain a separate metadata table without the embedding column for version tracking.",
+      "implemented": false
+    },
+    {
+      "id": "F002",
+      "severity": "HIGH",
+      "category": "quality",
+      "file": "convex/foodParsing.ts",
+      "line": 954,
+      "title": "Unsafe double type-assertion `as unknown as ProcessedFoodItem[]` bypasses all type safety",
+      "description": "Lines 954 and 1037 cast data.items (typed as Array<Record<string, unknown>>) through `as unknown as ProcessedFoodItem[]`. This completely bypasses TypeScript's type system. If stored data has a different shape due to legacy items, partial writes, or schema migration gaps, the code will silently read malformed data. processEvidence then writes these items back and creates ingredientExposures from them, so a shape mismatch could corrupt the evidence pipeline.",
+      "fix": "Add a runtime shape validation function that checks required fields (canonicalName, userSegment, parsedName, quantity, unit) exist with correct types before processing. Alternatively, use a Zod schema that mirrors ProcessedFoodItem for runtime validation.",
+      "implemented": false
+    },
+    {
+      "id": "F003",
+      "severity": "HIGH",
+      "category": "quality",
+      "file": "convex/foodParsing.ts",
+      "line": 948,
+      "title": "processEvidence patches the log document twice; second patch overwrites the first",
+      "description": "processEvidence patches the log at line 949 (setting evidenceProcessedAt), then returns early if items are empty (line 952), or patches again at line 973 (setting items + evidenceProcessedAt). The first patch is immediately overwritten by the second when items exist. This is wasteful (two DB writes in one mutation) and the control flow is fragile — the early return on line 952 depends on the first patch already having persisted evidenceProcessedAt.",
+      "fix": "Remove the first patch (lines 949-951). Check for empty items before any patches. Do a single patch at the end that atomically sets both evidenceProcessedAt and the updated items.",
+      "implemented": false
+    },
+    {
+      "id": "F004",
+      "severity": "HIGH",
+      "category": "security",
+      "file": "convex/foodParsing.ts",
+      "line": 898,
+      "title": "applyLlmResults is a no-op stub but matchUnresolvedItems still calls it — silent data loss",
+      "description": "The applyLlmResults mutation (line 898-933) has an empty handler body. However, foodLlmMatching.ts line 527 still calls internal.foodParsing.applyLlmResults with real resolved/unresolved items. The matchUnresolvedItems action is still a public action callable from the client. This means: (1) a user triggers LLM matching, (2) OpenAI processes the request and returns results, (3) the results are silently discarded by the no-op handler. The user sees no error but their food items are never resolved. This is silent data loss.",
+      "fix": "Either (a) remove the matchUnresolvedItems action export from foodLlmMatching.ts to prevent the client from calling the dead path, or (b) have the no-op handler throw an explicit error so the client knows the path is deprecated, or (c) restore the handler if the legacy path is still needed during migration.",
+      "implemented": false
+    },
+    {
+      "id": "F005",
+      "severity": "HIGH",
+      "category": "quality",
+      "file": "convex/foodParsing.ts",
+      "line": 57,
+      "title": "STATIC_MATCHER_CONTEXT initialized with empty aliases used in resolveItem fallback",
+      "description": "STATIC_MATCHER_CONTEXT (line 57) is created at module load with an empty alias array. It is used in resolveItem (line 1069) as a fallback to look up document metadata (bucketKey, bucketLabel) when the item has no matchCandidates. Since user-learned aliases are not included, the documentMap may not contain entries that were only reachable through alias resolution, causing selectedCandidate to be undefined and losing bucket metadata on manual resolution.",
+      "fix": "In resolveItem, fetch the user's learned aliases and create a fresh matcher context (as processLogInternal does at line 807) instead of using the static alias-free context.",
+      "implemented": false
+    },
+    {
+      "id": "F006",
+      "severity": "MODERATE",
+      "category": "quality",
+      "file": "convex/validators.ts",
+      "line": 282,
+      "title": "Duplicated validator definitions between validators.ts and schema.ts",
+      "description": "foodGroup, foodLine, zone unions are defined inline in schema.ts (lines 58-88) for foodEmbeddings/foodAliases AND as named validators in validators.ts (lines 282-327). These must be kept in sync manually. Adding a food group to one but not the other causes a silent divergence between the schema and the runtime validators used in foodItemValidator.",
+      "fix": "Import and reuse the named validators from validators.ts in schema.ts for the foodAliases and foodEmbeddings table definitions, matching the existing pattern where logDataValidator and other validators are already imported.",
+      "implemented": false
+    },
+    {
+      "id": "F007",
+      "severity": "MODERATE",
+      "category": "quality",
+      "file": "convex/foodParsing.ts",
+      "line": 86,
+      "title": "WriteProcessedFoodItem duplicates ProcessedFoodItem with subtle type differences",
+      "description": "WriteProcessedFoodItem (line 86) and ProcessedFoodItem (line 63) are nearly identical but differ subtly: WriteProcessedFoodItem omits 'user' from the resolver union in matchCandidates, and uses inline types where ProcessedFoodItem uses imported FoodMatchCandidate. The serializeProcessedItem function (line 586) manually maps between them. Adding a field to one but not the other is a likely maintenance mistake.",
+      "fix": "Derive WriteProcessedFoodItem from ProcessedFoodItem using utility types, or eliminate it and use Convex's Infer<> utility type from the writeProcessedItems validator definition.",
+      "implemented": false
+    },
+    {
+      "id": "F008",
+      "severity": "MODERATE",
+      "category": "quality",
+      "file": "src/types/domain.ts",
+      "line": 398,
+      "title": "FoodItem matchCandidates/bucketOptions types are large inline duplicates of validators.ts shapes",
+      "description": "The matchCandidates type (lines 398-421) and bucketOptions type (lines 422-427) inside FoodItem are full inline object types that duplicate the shapes defined in validators.ts (foodMatchCandidateValidator, foodMatchBucketValidator) and foodParsing.ts (ProcessedFoodItem). This is three independent locations that must stay synchronized. The 11-member foodLine union is spelled out in full in all three places.",
+      "fix": "Extract shared TypeScript types (FoodMatchCandidate, FoodMatchBucketOption) into shared/foodTypes.ts and import them in domain.ts, foodParsing.ts, and have validators.ts be the canonical source for Convex validator shapes.",
+      "implemented": false
+    },
+    {
+      "id": "F009",
+      "severity": "MODERATE",
+      "category": "performance",
+      "file": "convex/foodParsing.ts",
+      "line": 271,
+      "title": "upsertFoodEmbeddings processes all rows sequentially in one mutation transaction",
+      "description": "upsertFoodEmbeddings (lines 271-287) iterates over all rows doing a DB query + insert/patch for each. If the full registry needs seeding (initial deploy or registry schema change), this could be hundreds of sequential DB operations in one mutation. Convex mutations have execution time and read/write limits.",
+      "fix": "Add a batch size guard. If the input exceeds a threshold (e.g., 50 rows), chunk the work across multiple scheduled mutations. For typical incremental updates (a few stale rows), the current approach is fine.",
+      "implemented": false
+    },
+    {
+      "id": "F010",
+      "severity": "MODERATE",
+      "category": "security",
+      "file": "convex/foodParsing.ts",
+      "line": 395,
+      "title": "searchFoods public query accepts limit up to 200 — excessive for UI autocomplete",
+      "description": "The searchFoods query (lines 395-418) clamps the limit to 200. This is a public query callable from the client. For a food search autocomplete dropdown, 200 results is far more than needed and increases payload size and client processing time unnecessarily.",
+      "fix": "Lower the max limit to 20-30, which is sufficient for autocomplete/dropdown UI. If a specific use case needs more, create a separate paginated query.",
+      "implemented": false
+    },
+    {
+      "id": "F011",
+      "severity": "MODERATE",
+      "category": "convex",
+      "file": "convex/schema.ts",
+      "line": 81,
+      "title": "foodEmbeddings.embeddingSourceHash is optional in schema but required in upsertFoodEmbeddings args",
+      "description": "In schema.ts line 81, embeddingSourceHash is v.optional(v.string()), but in upsertFoodEmbeddings args (line 266), it is v.string() (required). This means the schema allows rows without the hash, but the upsert function always requires it. If seed data or a migration creates rows without the hash, ensureFoodEmbeddings will fail to detect them as stale because getFoodDocumentsNeedingEmbeddingRefresh compares against undefined hashes.",
+      "fix": "Either make embeddingSourceHash required in the schema (breaking change requiring migration), or handle undefined hashes in getFoodDocumentsNeedingEmbeddingRefresh by treating them as always-stale.",
+      "implemented": false
+    },
+    {
+      "id": "F012",
+      "severity": "LOW",
+      "category": "quality",
+      "file": "convex/foodLlmMatching.ts",
+      "line": 505,
+      "title": "recoveryStage type narrowed from number to 1|2|3 — correct improvement",
+      "description": "The single-line change narrows recoveryStage from `number | null` to `1 | 2 | 3 | null`, matching the actual domain constraint. Runtime behavior is unchanged since getFoodZone already returns 1|2|3|null.",
+      "fix": "No action needed. Positive change.",
+      "implemented": true
+    },
+    {
+      "id": "F013",
+      "severity": "LOW",
+      "category": "quality",
+      "file": "convex/foodParsing.ts",
+      "line": 569,
+      "title": "Inconsistent indentation in toPendingItem function body",
+      "description": "Lines 569-582 have extra leading spaces on the spread expressions compared to the surrounding code (lines 558-568). This appears to be a merge or paste artifact.",
+      "fix": "Run `bun run format` to normalize.",
+      "implemented": false
+    },
+    {
+      "id": "F014",
+      "severity": "LOW",
+      "category": "quality",
+      "file": "convex/foodParsing.ts",
+      "line": 131,
+      "title": "FoodLogData interface duplicates domain.ts FoodLogData with different item types",
+      "description": "The local FoodLogData interface (line 131-138) uses `items: Array<Record<string, unknown>>` while domain.ts FoodLogData (line 439) uses `items: FoodItem[]`. Having two interfaces with the same name but different item types in the same project increases confusion and makes the `as unknown as` casts at lines 954/1037 feel necessary when they should not be.",
+      "fix": "Rename the local interface to RawFoodLogData or ServerFoodLogData to distinguish it from the domain type. Or import and use the domain type directly with proper runtime validation.",
+      "implemented": false
+    }
+  ],
+  "summary": {
+    "critical": 0,
+    "high": 5,
+    "moderate": 6,
+    "nice_to_have": 3
+  },
+  "positive_observations": [
+    "Auth is correctly handled via requireAuth(ctx) at function boundaries in all public mutations and queries (processLog, resolveItem, searchFoods).",
+    "Ownership checks are present: processLog verifies log.userId === userId before scheduling the internal action.",
+    "The LLM prompt architecture in foodLlmMatching.ts correctly separates user data into a structured JSON user message rather than interpolating into the system prompt, preventing prompt injection.",
+    "OpenAI API key validation with a regex pattern prevents obviously malformed keys from reaching the API.",
+    "The embedding score normalization (line 689) correctly clamps to [0,1] range.",
+    "resolveItem validates canonicalName against isCanonicalFood before accepting user resolution, preventing arbitrary strings from entering the evidence pipeline.",
+    "The evidence window pattern (6-hour delay via scheduler) is a sound design for batch evidence creation.",
+    "Convex validators are used throughout for runtime arg validation on all internal and public functions.",
+    "The embedding staleness check via embeddingSourceHash is a good design — it allows incremental refresh when registry metadata changes without rebuilding all embeddings."
+  ]
+}

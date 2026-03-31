@@ -1,0 +1,195 @@
+{
+  "branch": "feat/sprint-2.5+",
+  "reviewed_at": "2026-03-28T00:00:00Z",
+  "review_focus": "Hook correctness, dependency arrays, cleanup, and stale closures",
+  "files_reviewed": [
+    "src/hooks/useHabitLog.ts",
+    "src/hooks/useHabitStreaks.ts",
+    "src/hooks/useLongPress.ts",
+    "src/hooks/useMappedAssessments.ts",
+    "src/hooks/usePanelTime.ts",
+    "src/hooks/usePendingReplies.ts",
+    "src/hooks/useProfile.ts",
+    "src/hooks/useQuickCapture.ts",
+    "src/hooks/useTimePicker.ts",
+    "src/hooks/useTransitMapData.ts",
+    "src/hooks/useTransitMapGeometry.ts",
+    "src/hooks/useTransitMapZoom.ts",
+    "src/hooks/useUnresolvedFoodQueue.ts",
+    "src/hooks/useUnresolvedFoodToast.ts",
+    "src/hooks/useWeeklySummaryAutoTrigger.ts"
+  ],
+  "findings": [
+    {
+      "id": "FH001",
+      "severity": "HIGH",
+      "category": "convex",
+      "file": "src/hooks/usePendingReplies.ts",
+      "line": 19,
+      "title": "Date.now() passed as a mutation arg from the client — timestamp can be spoofed",
+      "description": "addReply() sends { content, timestamp: Date.now() } to the addUserMessage mutation. The mutation accepts this client-supplied timestamp verbatim. A user (or a broken clock) can write any timestamp into the conversations table, poisoning any time-range query that relies on it. The mutation's args already accept timestamp: v.number() with no server-side sanity check.",
+      "fix": "Let the mutation set its own timestamp via Date.now() on the server side (inside the mutation handler), or validate that the client-supplied value is within an acceptable range of the server's current time. Do not trust the client for any timestamp used as a data boundary.",
+      "implemented": false
+    },
+    {
+      "id": "FH002",
+      "severity": "HIGH",
+      "category": "convex",
+      "file": "src/hooks/usePendingReplies.ts",
+      "line": 15,
+      "title": "Raw ctx.auth.getUserIdentity() used in addUserMessage mutation — legacy auth pattern",
+      "description": "The addUserMessage mutation (convex/conversations.ts line 15) calls ctx.auth.getUserIdentity() directly rather than using requireAuth(ctx) from convex/lib/auth.ts. CLAUDE.md flags this as a HIGH legacy pattern that needs migrating. The hook calls this mutation, so any caller inherits the weaker auth path.",
+      "fix": "Replace the raw getUserIdentity() call in convex/conversations.ts addUserMessage with requireAuth(ctx), consistent with the rest of the codebase.",
+      "implemented": false
+    },
+    {
+      "id": "FH003",
+      "severity": "HIGH",
+      "category": "correctness",
+      "file": "src/hooks/useTransitMapGeometry.ts",
+      "line": 596,
+      "title": "Module-level cache (_staticCache, _browserCache) is never invalidated",
+      "description": "Both _staticCache and _browserCache are module-level singletons that are set once and never cleared. This is intentional for production, but it means that in test environments, hot-module replacement (HMR), or storybook, stale geometry from a previous registry version is silently returned for the remainder of the process lifetime. If STATION_SPECS or LINE_PATHS is updated at runtime (e.g. during development), callers will never see the new values without a full page reload.",
+      "fix": "This is acceptable in production. Add a comment making the limitation explicit, and expose a resetGeometryCache() function for test environments. Alternatively, wrap the caches in a WeakRef-keyed structure so tests can clear them.",
+      "implemented": false
+    },
+    {
+      "id": "FH004",
+      "severity": "HIGH",
+      "category": "correctness",
+      "file": "src/hooks/useTransitMapGeometry.ts",
+      "line": 660,
+      "title": "interpolateStationsBrowser appends a hidden SVG to document.body but does not clean up on error",
+      "description": "The browser interpolation function appends a temporary SVG element to document.body for path length calculations. It removes the element at line 695 on the happy path. If any exception is thrown between appendChild (line 665) and removeChild (line 695), the SVG is leaked into the DOM permanently. getTotalLength() can throw on malformed paths.",
+      "fix": "Wrap the DOM mutation section in a try/finally block and call removeChild in the finally clause.",
+      "implemented": false
+    },
+    {
+      "id": "FH005",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/hooks/useWeeklySummaryAutoTrigger.ts",
+      "line": 107,
+      "title": "getCompletedPeriodBounds() is called at render time, so startMs/endMs change at midnight",
+      "description": "getCompletedPeriodBounds() calls getLastHalfWeekBoundary() which calls new Date() internally. This means startMs, endMs, and periodLabel are recomputed on every render, not just on actual boundary crossings. If the component re-renders at exactly the half-week boundary, startMs changes mid-session, which causes useConversationsByDateRange, useSuggestionsByDateRange, and useSyncedLogsByRange to resubscribe to a new range and can trigger re-generation for the new period before the previous one is confirmed saved.",
+      "fix": "Memoize startMs, endMs, and periodLabel with useMemo (possibly with a 1-minute or boundary-aligned refresh). This keeps the Convex subscriptions stable between renders.",
+      "implemented": false
+    },
+    {
+      "id": "FH006",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/hooks/useWeeklySummaryAutoTrigger.ts",
+      "line": 130,
+      "title": "generate() closes over startMs/endMs from render scope, not from refs",
+      "description": "generate is defined with useCallback and lists startMs, endMs, and periodLabel in its dep array, meaning it is recreated whenever those values change. However, the function also reads conversationsRef/logsRef which are updated on every render. If a re-render changes startMs (see FH005), a new generate() is created and the useEffect fires again. The generatedForPeriodRef guard prevents double-fire only for the same startMs value — a new startMs will pass the guard and fire a second generation.",
+      "fix": "If startMs is memoized (FH005 fix), this is largely resolved. Additionally, store startMs and endMs in refs inside generate so they cannot drift between render and async completion.",
+      "implemented": false
+    },
+    {
+      "id": "FH007",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/hooks/useHabitLog.ts",
+      "line": 248,
+      "title": "useStore.getState() called inside an async callback to guard duplicate habitLog writes — race condition",
+      "description": "handleLogSleepQuickCapture reads useStore.getState().habitLogs to check for duplicate entries (lines 249-264, 266-280) after awaiting addSyncedLog. Between the await and the read, another render could have already added the habit log. The guard pattern works in the synchronous case but is not reliable across an async gap because Zustand state can change between the await resumption and the .getState() call.",
+      "fix": "Generate the habitLog id before the async call and use that pre-generated id to do a definitive idempotency check (or remove the duplicate guard and let the store deduplicate by id). Alternatively, move the addHabitLog call to before the await, accepting that the optimistic local state is written first.",
+      "implemented": false
+    },
+    {
+      "id": "FH008",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/hooks/useHabitLog.ts",
+      "line": 111,
+      "title": "handleLogFluid: timestamp parameter defaults to Date.now() at call time, not capture time",
+      "description": "The function signature has timestamp = Date.now() as a default. When callers omit the timestamp, the value is Date.now() at the moment handleLogFluid is invoked, not the panel's capture time. This is inconsistent with the rest of the hook which uses captureNow() (backed by captureTimestampRef) for all other logging operations. A backdated log that calls handleLogFluid without an explicit timestamp will silently record the current wall-clock time.",
+      "fix": "Change the default to captureNow() or require callers to always pass an explicit timestamp. The latter is safer because it makes the decision explicit at every call site.",
+      "implemented": false
+    },
+    {
+      "id": "FH009",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/hooks/useTimePicker.ts",
+      "line": 55,
+      "title": "getTimestampMs always resolves to today's date regardless of the selected date",
+      "description": "toTodayTimestampMs() creates new Date() and applies hours/minutes to it, anchoring the result to the current calendar date. This hook is used in panels that also have a date picker (e.g. usePanelTime). If a user backdates to yesterday via the date field in usePanelTime but uses useTimePicker for the time, the time portion resolves to today, producing an incorrect timestamp.",
+      "fix": "useTimePicker should accept an optional base date parameter, or the consumer should use usePanelTime (which handles both date and time together) rather than combining both hooks. Document this limitation clearly in the JSDoc.",
+      "implemented": false
+    },
+    {
+      "id": "FH010",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/hooks/useTransitMapZoom.ts",
+      "line": 101,
+      "title": "useTransitMapZoom initialises state from geometry.zoomLevels.overview — stale if geometry reference changes",
+      "description": "useState is initialised once with geometry.zoomLevels.overview on mount. If the geometry prop reference changes (e.g. in tests or if the cache is ever cleared), the currentZoom state still holds the old ZoomLevel object and transformStyle will be computed from stale coordinates. The subsequent zoom callbacks do update correctly because they read geometry from the closure, but the initial state does not follow.",
+      "fix": "This is low-risk in production because geometry is cached. However, add a useEffect that resets currentZoom to geometry.zoomLevels.overview if geometry changes identity, guarded by a ref to avoid the reset on every render.",
+      "implemented": false
+    },
+    {
+      "id": "FH011",
+      "severity": "MODERATE",
+      "category": "simplicity",
+      "file": "src/hooks/useTransitMapData.ts",
+      "line": 69,
+      "title": "firstSeenAt is hardcoded to lastTrialAt with a TODO — type definition and data model are misaligned",
+      "description": "Two identical TODO comments (lines 69-73 and 94-98) acknowledge that firstSeenAt is always set to lastTrialAt because FoodStat lacks a firstSeenAt field. This means the field is structurally required by TransitStation but carries no real data. Every consumer that displays 'first seen' will show the same date as 'last trial'. The correct fix is known but not tracked as a work queue item.",
+      "fix": "Either (a) add firstSeenAt to FoodStat/analyzeLogs output and derive it from the earliest log, or (b) make firstSeenAt optional in TransitStation and remove the dummy value. Add a WQ item to track this.",
+      "implemented": false
+    },
+    {
+      "id": "FH012",
+      "severity": "MODERATE",
+      "category": "simplicity",
+      "file": "src/hooks/useTransitMapGeometry.ts",
+      "line": 584,
+      "title": "lineGroup() duplicated verbatim in useTransitMapZoom.ts as lineToGroup()",
+      "description": "The mapping from FoodLine to FoodGroup is implemented twice: lineGroup() in useTransitMapGeometry.ts and lineToGroup() in useTransitMapZoom.ts. They are identical except for the return value when the line is in the seasoning corridor (lineToGroup handles it exhaustively; lineGroup just falls through to return 'seasoning'). This duplication will diverge if a new FoodLine is added.",
+      "fix": "Export a single lineToGroup() (the exhaustive version) from a shared utility (e.g. shared/foodRegistry.ts) and import it in both hook files. Remove the duplicate.",
+      "implemented": false
+    },
+    {
+      "id": "FH013",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/hooks/useUnresolvedFoodQueue.ts",
+      "line": 27,
+      "title": "foodData cast to FoodLogData without type guard — can panic on malformed data",
+      "description": "Line 27 does `const foodData = log.data as FoodLogData`. SyncedLog.data is typed loosely, and the cast bypasses any runtime check. If log.data.items is undefined (e.g. a log saved by an older schema version before items was required), the `for` loop on line 32 will throw a TypeError at runtime.",
+      "fix": "Add a guard: `if (!Array.isArray(foodData?.items)) continue;` before the inner loop.",
+      "implemented": false
+    },
+    {
+      "id": "FH014",
+      "severity": "NICE-TO-HAVE",
+      "category": "simplicity",
+      "file": "src/hooks/useHabitStreaks.ts",
+      "line": 28,
+      "title": "last7DaysRange computes via noon-anchored Date construction — unnecessarily indirect",
+      "description": "The range is computed by constructing a Date at T12:00:00, then calling formatLocalDateKey to extract the YYYY-MM-DD string again. Noon anchoring is used to avoid DST boundary issues, which is sound, but the indirection obscures intent. A direct string-manipulation approach (subtract 6 days from a date key) would be equally safe and more readable.",
+      "fix": "Minor readability improvement only. Consider extracting an addDaysToDateKey(key, n) utility in dateUtils.ts that works on date key strings directly.",
+      "implemented": false
+    },
+    {
+      "id": "FH015",
+      "severity": "NICE-TO-HAVE",
+      "category": "simplicity",
+      "file": "src/hooks/useQuickCapture.ts",
+      "line": 133,
+      "title": "detailDaySummaries is hardcoded to an empty array",
+      "description": "The return value always has detailDaySummaries: []. The JSDoc comment explains this is computed in Track.tsx from useHabitStreaks, but the type contract of QuickCaptureResult still declares the field. Any consumer not in Track.tsx that reads detailDaySummaries will silently receive an empty array and show nothing without an error.",
+      "fix": "Either remove detailDaySummaries from QuickCaptureResult and have consumers derive it directly, or accept it as a parameter and thread it through. Documenting the current workaround in the return type itself (e.g. as a comment or optional) would at minimum avoid silent failures.",
+      "implemented": false
+    }
+  ],
+  "summary": {
+    "critical": 0,
+    "high": 4,
+    "moderate": 9,
+    "nice_to_have": 2
+  }
+}

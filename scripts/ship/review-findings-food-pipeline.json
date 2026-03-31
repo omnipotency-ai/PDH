@@ -1,0 +1,189 @@
+{
+  "branch": "feat/sprint-2.5+",
+  "reviewed_at": "2026-03-28T00:00:00Z",
+  "files_reviewed": [
+    "convex/foodParsing.ts",
+    "convex/foodLlmMatching.ts",
+    "convex/foodRequests.ts",
+    "convex/foodLibrary.ts",
+    "convex/foodAssessments.ts",
+    "convex/ingredientExposures.ts",
+    "convex/ingredientOverrides.ts",
+    "convex/ingredientProfiles.ts",
+    "convex/ingredientProfileProjection.ts",
+    "convex/ingredientNutritionApi.ts"
+  ],
+  "findings": [
+    {
+      "id": "F001",
+      "severity": "HIGH",
+      "category": "convex",
+      "file": "convex/foodParsing.ts",
+      "line": 1617,
+      "title": "resolveItem mutation does not create ingredientExposure when evidence window has closed",
+      "description": "applyLlmResults (line 1481) has explicit logic: if evidenceProcessedAt is already set, it inserts ingredientExposures directly because processEvidence will not re-run. resolveItem has the same architectural situation — a user can manually resolve an item after the 6-hour window — but it contains no such exposure-creation path at all. Any food resolved by the user after the evidence window closes will be silently missing from ingredientExposures and will therefore not appear in allIngredients, transit correlation, or the evidence engine. This is a data correctness bug.",
+      "fix": "After the ctx.db.patch that writes the updated items in resolveItem, add the same pattern used in applyLlmResults: check if data.evidenceProcessedAt != null, and if so, insert an ingredientExposure row for the resolved item. Copy the pattern directly from lines 1485-1516 of applyLlmResults.",
+      "implemented": false
+    },
+    {
+      "id": "F002",
+      "severity": "HIGH",
+      "category": "convex",
+      "file": "convex/foodParsing.ts",
+      "line": 981,
+      "title": "Date.now() called inside internalMutation (non-deterministic)",
+      "description": "Convex mutations must be deterministic — the runtime can replay them. Date.now() is a side effect. It appears at lines 981, 1080, 1164, 1514, 1533, and 1607 inside internalMutations (upsertFoodEmbeddings, upsertLearnedAlias, applyLlmResults, processEvidence). Because these are called from actions and the scheduler, replays with a different clock value would produce different data.",
+      "fix": "Accept the timestamp as an argument from the calling action, or (if Convex supports it in your SDK version) use ctx.db.system time. The cleanest pattern: have the action compute Date.now() once and pass it into the mutation as an arg. This makes the mutation deterministic while keeping a single, consistent timestamp per operation.",
+      "implemented": false
+    },
+    {
+      "id": "F003",
+      "severity": "HIGH",
+      "category": "convex",
+      "file": "convex/foodLibrary.ts",
+      "line": 203,
+      "title": "Date.now() inside mutation handlers (non-deterministic)",
+      "description": "Same issue as F002. updateEntry (line 203) and mergeDuplicates (line 517) call Date.now() directly inside mutation handlers. mergeDuplicates also calls it implicitly via the recomputeAt pattern which is computed inside the same transaction.",
+      "fix": "Same approach as F002 — accept timestamp as a mutation arg, computed by the calling site before the mutation is invoked.",
+      "implemented": false
+    },
+    {
+      "id": "F004",
+      "severity": "HIGH",
+      "category": "convex",
+      "file": "convex/foodLlmMatching.ts",
+      "line": 241,
+      "title": "fuzzyPreMatch labels items as resolvedBy: 'llm' when they were matched by Fuse.js",
+      "description": "fuzzyPreMatch (line 241) sets resolvedBy: 'llm' on items it resolves via Fuse.js fuzzy matching — before any LLM is invoked. These items are then combined with actual LLM results (line 675) and written via applyLlmResults with resolvedBy: 'llm'. The provenance is wrong: the user will see an item as 'llm-resolved' when it was actually resolved by local fuzzy matching. This misleads the user and makes debugging harder. matchStrategy should at least be 'fuzzy', not 'llm'.",
+      "fix": "Add a 'fuzzy' resolvedBy value to the LlmResolvedItem type (or use a separate FuzzyResolvedItem type), and set resolvedBy: 'fuzzy' in fuzzyPreMatch. Alternatively, set matchStrategy: 'fuzzy' within the item shape. The applyLlmResults mutation arg currently hardcodes resolvedBy: 'llm' for all items passed to it — split the writeback to distinguish the two sources, or pass resolvedBy as part of the resolved item payload.",
+      "implemented": false
+    },
+    {
+      "id": "F005",
+      "severity": "HIGH",
+      "category": "convex",
+      "file": "convex/foodLibrary.ts",
+      "line": 125,
+      "title": "addEntry and addBatch accept client-controlled createdAt timestamp",
+      "description": "addEntry (line 125) and addBatch (line 237) accept a createdAt: v.number() arg from the caller. A client can pass any timestamp — past or future — which corrupts the ordering semantics used throughout foodLibrary for deduplication (earliest-wins). Since this is a mutation (not a data-import admin tool), the server should own the timestamp.",
+      "fix": "Remove createdAt from the mutation args. Set it to Date.now() (or ideally a timestamp passed from a calling action) server-side. If import scenarios need client-controlled timestamps, add a separate admin-only internal mutation for that purpose.",
+      "implemented": false
+    },
+    {
+      "id": "F006",
+      "severity": "HIGH",
+      "category": "convex",
+      "file": "convex/foodParsing.ts",
+      "line": 1046,
+      "title": "embedAliasInternal fetches all food embeddings (up to 1000 vectors) for a single alias staleness check",
+      "description": "embedAliasInternal calls listFoodEmbeddings which returns ALL foodEmbedding rows (up to 1000 full documents including 1536-dim float arrays) just to check whether one specific alias is already embedded. This is a ~4MB+ read per alias embedding request. The same inefficiency exists in ensureFoodEmbeddings (line 954) but that function's comment acknowledges it. For alias embedding it is wholly unnecessary — a targeted index query by canonicalName + sourceText + sourceType would suffice.",
+      "fix": "Add a targeted internalQuery that accepts aliasText and canonicalName and queries foodEmbeddings using the by_canonicalName index, then filters in memory for the matching alias row. This replaces the full-table fetch with a bounded single-canonical fetch.",
+      "implemented": false
+    },
+    {
+      "id": "F007",
+      "severity": "MODERATE",
+      "category": "convex",
+      "file": "convex/foodAssessments.ts",
+      "line": 16,
+      "title": "All queries in foodAssessments use raw ctx.auth.getUserIdentity() instead of requireAuth(ctx)",
+      "description": "CLAUDE.md and the project auth convention specify that requireAuth(ctx) from convex/lib/auth.ts is the canonical auth pattern. foodAssessments.ts (and foodLibrary.ts, ingredientExposures.ts, ingredientOverrides.ts, ingredientProfiles.ts, ingredientNutritionApi.ts) all use the legacy ctx.auth.getUserIdentity() pattern directly. This is a consistency violation — if requireAuth ever adds additional checks (e.g. email verification, account suspension), these files will silently bypass them.",
+      "fix": "Replace all instances of `const identity = await ctx.auth.getUserIdentity(); if (identity === null) throw new Error('Not authenticated'); const userId = identity.subject;` with `const { userId } = await requireAuth(ctx);` throughout all affected files.",
+      "implemented": false
+    },
+    {
+      "id": "F008",
+      "severity": "MODERATE",
+      "category": "convex",
+      "file": "convex/foodLibrary.ts",
+      "line": 636,
+      "title": "mergeDuplicates scans ALL user logs unbounded when updateFoodLogs is enabled",
+      "description": "When updateFoodLogs !== false (the default), mergeDuplicates queries all logs for the user via .collect() (line 640) with no limit. With years of logged entries this could be thousands of rows. Combined with the many other .collect() calls in this mutation (assessments, exposures, overrides, profiles, library), mergeDuplicates is a Convex transaction budget risk — it can exceed the document read limit and fail silently or throw a runtime error.",
+      "fix": "Consider paginating the log scan or running it as an action (which is not transactional but handles large datasets). For the mutation-based path, add a documented hard limit (e.g. .take(2000)) and surface a truncation warning in the result object. Alternatively, extract the food-log update step into a separate scheduled action.",
+      "implemented": false
+    },
+    {
+      "id": "F009",
+      "severity": "MODERATE",
+      "category": "convex",
+      "file": "convex/foodLlmMatching.ts",
+      "line": 542,
+      "title": "matchUnresolvedItems accepts an arbitrary model string with no validation",
+      "description": "The model arg (line 548, v.optional(v.string())) is passed directly to OpenAI as the model name with no validation. A caller could specify a premium model (e.g. 'gpt-4o') that costs significantly more than the intended 'gpt-4.1-nano', or a non-existent model string that causes a confusing error response.",
+      "fix": "Use a v.union(v.literal('gpt-4.1-nano'), v.literal('gpt-4o-mini'), ...) validator for the model arg, or omit it from the public API and use only the module-level DEFAULT_MODEL constant.",
+      "implemented": false
+    },
+    {
+      "id": "F010",
+      "severity": "MODERATE",
+      "category": "convex",
+      "file": "convex/foodAssessments.ts",
+      "line": 41,
+      "title": "allFoods query does an unbounded .collect() over all user assessments",
+      "description": "allFoods fetches every foodAssessment for the user via .collect() with no limit (line 54). The comment acknowledges ~444 docs currently. This query is used for the food library UI and is subscribed to as a useQuery hook. As assessments grow (multiple per food per AI analysis), the payload grows proportionally — every subscription update re-reads and re-transmits all rows. This will degrade as data accumulates over months.",
+      "fix": "The existing foodTrialSummary table appears designed to replace this pattern for UI display. Prefer querying foodTrialSummary (which is a pre-computed summary per food) instead of allFoods from raw assessments. If allFoods must remain, add a documented limit (e.g. .take(1000)) and include isTruncated in the return shape.",
+      "implemented": false
+    },
+    {
+      "id": "F011",
+      "severity": "MODERATE",
+      "category": "security",
+      "file": "convex/ingredientOverrides.ts",
+      "line": 47,
+      "title": "note field in ingredientOverrides.upsert has no length or content sanitization",
+      "description": "The note field is accepted as v.optional(v.string()) with no length cap and no call to sanitizeOptionalText or equivalent. A user could submit a very large string. foodRequests.ts (which has a similar note field) correctly calls sanitizeOptionalText with a 500-char limit. The inconsistency suggests this was overlooked.",
+      "fix": "Apply sanitizeOptionalText(args.note, 'Note', 1000, { preserveNewlines: true }) before writing to the DB, consistent with foodRequests.ts and the existing pattern in the codebase.",
+      "implemented": false
+    },
+    {
+      "id": "F012",
+      "severity": "MODERATE",
+      "category": "convex",
+      "file": "convex/ingredientNutritionApi.ts",
+      "line": 50,
+      "title": "searchOpenFoodFacts has no max length cap on the query string",
+      "description": "The query arg is validated as v.string() with only a minimum length check (>= 2 chars). A very long query string is sent directly to the OpenFoodFacts API URL as a search_terms param. This is a SSRF-adjacent concern — while the target URL is hardcoded, an arbitrarily long query string could cause issues at the HTTP layer and represents unnecessary unbounded input acceptance.",
+      "fix": "Add an explicit max length check: `if (query.length > 200) { throw new Error('Search query too long'); }` before constructing the URL. 200 characters is generous for any realistic food search.",
+      "implemented": false
+    },
+    {
+      "id": "F013",
+      "severity": "MODERATE",
+      "category": "convex",
+      "file": "convex/foodLibrary.ts",
+      "line": 230,
+      "title": "addBatch has no limit on the number of entries per call",
+      "description": "addBatch accepts v.array(...) of entries with no cap. Each entry triggers a .collect() query (line 254) inside the mutation. A caller submitting 500 entries would issue 500 indexed reads within a single Convex transaction, likely exceeding the document read budget and failing the entire operation.",
+      "fix": "Add a max batch size validation at the start of the handler: `if (args.entries.length > 50) { throw new Error('Batch size exceeds maximum of 50'); }`. If larger imports are needed, use an action that calls the mutation in chunks.",
+      "implemented": false
+    },
+    {
+      "id": "F014",
+      "severity": "NICE-TO-HAVE",
+      "category": "quality",
+      "file": "convex/foodParsing.ts",
+      "line": 103,
+      "title": "TODO comment: WriteProcessedFoodItem should be derived from validator via Infer<>",
+      "description": "Line 103 has an explicit TODO: 'derive from validator using Infer<> to keep in sync'. The current setup has a manually maintained WriteProcessedFoodItem type that must stay in sync with the writeProcessedItems validator. These will inevitably diverge.",
+      "fix": "Use the Convex Infer<> pattern to derive the type directly from the validator, eliminating the manual duplication.",
+      "implemented": false
+    },
+    {
+      "id": "F015",
+      "severity": "NICE-TO-HAVE",
+      "category": "quality",
+      "file": "convex/foodParsing.ts",
+      "line": 730,
+      "title": "TODO comment in getServerOpenAiApiKey about whether missing key should hard-fail",
+      "description": "Line 733 has a TODO: 'decide whether missing OPENAI_API_KEY should hard-fail the semantic layer instead of allowing fuzzy-only matching in development'. This decision is outstanding and could silently degrade matching quality in a production deployment that forgets to set the env var.",
+      "fix": "Make the decision explicit. If this is production-only code, log a clear warning or surface a health-check failure. At minimum remove the TODO and document the chosen behaviour in a comment.",
+      "implemented": false
+    }
+  ],
+  "summary": {
+    "critical": 0,
+    "high": 6,
+    "moderate": 7,
+    "nice_to_have": 2
+  }
+}

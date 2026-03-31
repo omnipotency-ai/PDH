@@ -1,0 +1,268 @@
+{
+  "branch": "feat/sprint-2.5+",
+  "reviewed_at": "2026-03-28T00:00:00Z",
+  "files_reviewed": [
+    "convex/schema.ts",
+    "convex/validators.ts",
+    "convex/auth.config.ts",
+    "convex/lib/auth.ts",
+    "convex/lib/apiKeys.ts",
+    "convex/lib/inputSafety.ts",
+    "convex/lib/knownFoods.ts",
+    "convex/profiles.ts",
+    "convex/logs.ts",
+    "convex/migrations.ts",
+    "convex/seedTestData.ts",
+    "convex/testFixtures.ts"
+  ],
+  "findings": [
+    {
+      "id": "F001",
+      "severity": "HIGH",
+      "category": "convex",
+      "file": "convex/logs.ts",
+      "line": 320,
+      "title": "Date.now() inside a mutation",
+      "description": "rebuildIngredientExposuresForFoodLog uses Date.now() to set createdAt on ingredientExposure rows (line 320). Convex mutations are deterministic by design — using Date.now() breaks replays and makes the createdAt value inconsistent between the first execution and any replay. The timestamp already exists on the parent log row as args.timestamp; createdAt should derive from that, not from wall-clock time.",
+      "fix": "Replace `createdAt: Date.now()` with `createdAt: args.timestamp` (the log's own timestamp, which is already passed in). For a true 'record created at' audit timestamp, accept it as a parameter from the calling mutation rather than reading wall-clock time inside the handler.",
+      "implemented": false
+    },
+    {
+      "id": "F002",
+      "severity": "HIGH",
+      "category": "convex",
+      "file": "convex/lib/apiKeys.ts",
+      "line": 255,
+      "title": "Date.now() inside a mutation (storeApiKey)",
+      "description": "storeApiKey calls Date.now() at line 255 and deleteApiKey calls it at line 329. Both functions are called from mutations. This is a side effect inside deterministic code — Convex will re-execute the mutation on replay with a different Date.now() value, producing a different updatedAt than the originally committed document. This is the same anti-pattern as F001.",
+      "fix": "Accept updatedAt as a parameter passed in from the top-level mutation handler, which itself should receive the timestamp from the client args (or use a scheduler-provided value). That way the value is part of the mutation's argument record and is replay-stable.",
+      "implemented": false
+    },
+    {
+      "id": "F003",
+      "severity": "HIGH",
+      "category": "convex",
+      "file": "convex/logs.ts",
+      "line": 1049,
+      "title": "Date.now() inside replaceProfile and patchProfile mutations",
+      "description": "replaceProfile (line 1049) and patchProfile (line 1152) both call Date.now() directly inside the mutation handler for updatedAt. Same determinism problem as F001/F002.",
+      "fix": "Accept updatedAt as a client-provided arg, or derive it once at the top of the call chain in a way that is stable across replays (e.g. from a scheduler-provided value or client timestamp).",
+      "implemented": false
+    },
+    {
+      "id": "F004",
+      "severity": "HIGH",
+      "category": "auth",
+      "file": "convex/profiles.ts",
+      "line": 31,
+      "title": "Raw ctx.auth.getUserIdentity() calls instead of requireAuth()",
+      "description": "profiles.ts uses raw ctx.auth.getUserIdentity() calls (lines 31, 50, 66) instead of the canonical requireAuth() helper from convex/lib/auth.ts. The CLAUDE.md notes this as a HIGH legacy pattern that needs migrating. The same pattern is used pervasively across logs.ts (40+ call sites) and migrations.ts. The requireAuth wrapper exists precisely to centralize this logic — bypassing it means any future change (logging, error format, token validation) must be applied to every call site manually.",
+      "fix": "Replace all inline `const identity = await ctx.auth.getUserIdentity(); if (identity === null) throw new Error(...)` blocks with `const { userId } = await requireAuth(ctx)`. This is especially critical in the public-facing profiles.ts mutations.",
+      "implemented": false
+    },
+    {
+      "id": "F005",
+      "severity": "HIGH",
+      "category": "convex",
+      "file": "convex/logs.ts",
+      "line": 741,
+      "title": "listAll query is unbounded — collect() on all user logs",
+      "description": "The listAll query (line 741) calls .collect() with no limit, fetching every log document for the authenticated user. As the user accumulates months of data this will grow without bound. Convex queries with .collect() are memory-capped but will return increasingly large payloads and cause expensive reactive re-subscriptions. The work queue item WQ-087 already tracks this as a known issue, but it is present in the reviewed code and is a real correctness hazard.",
+      "fix": "Add a default and maximum limit (e.g., 5000 like listByRange), or paginate. If callers genuinely need all records, require them to call listByRange in time-window batches. Remove the subscriber or replace the call site with a paginated pattern.",
+      "implemented": false
+    },
+    {
+      "id": "F006",
+      "severity": "HIGH",
+      "category": "convex",
+      "file": "convex/logs.ts",
+      "line": 762,
+      "title": "count query uses collect() for counting — full table scan",
+      "description": "The count query (lines 762-774) loads every log document for the user via .collect() just to return `.length`. This is an O(n) read that gets more expensive over time. On a user with 10,000 logs it reads all 10,000 documents to return a single integer. Convex does not have a native COUNT aggregate yet, but the pattern is still wasteful.",
+      "fix": "If callers only need a count, maintain a denormalized counter in the profile document (incremented on add, decremented on remove). If that's too complex for the current sprint, at minimum add a take(1) check or document clearly that count() should not be called in real-time subscriptions.",
+      "implemented": false
+    },
+    {
+      "id": "F007",
+      "severity": "HIGH",
+      "category": "convex",
+      "file": "convex/logs.ts",
+      "line": 807,
+      "title": "listFoodLogs filters in-memory after collect() — full scan with client-side filter",
+      "description": "listFoodLogs (lines 807-828) fetches all logs for the user via .collect() then filters by type === 'food' in JavaScript. For a user with 2,000 habit, digestion, and fluid logs, all of those documents are read and serialized just to be discarded. The logs table has no index on [userId, type] to support server-side filtering.",
+      "fix": "Add an index to the schema: `.index('by_userId_type_timestamp', ['userId', 'type', 'timestamp'])` and rewrite the query to use it. Short-term mitigation: use .take() with a reasonable upper bound instead of .collect(), and accept that old logs may be cut off.",
+      "implemented": false
+    },
+    {
+      "id": "F008",
+      "severity": "HIGH",
+      "category": "data-integrity",
+      "file": "convex/validators.ts",
+      "line": 394,
+      "title": "bristolCode is v.number() with no range enforcement",
+      "description": "The digestiveLogDataValidator accepts bristolCode as v.number() with no range validation. The CLAUDE.md explicitly states the Bristol scale is strictly 1-7. A client submitting bristolCode: 0, -1, or 99 will pass schema validation and be stored. Downstream code (transit calculations, AI prompts, weekly digest) assumes valid Bristol codes and will silently produce incorrect results.",
+      "fix": "Replace `v.number()` with `v.union(v.literal(1), v.literal(2), v.literal(3), v.literal(4), v.literal(5), v.literal(6), v.literal(7))` — the same pattern used for recoveryStage. Add a mutation-level guard that throws if the value is out of range for the interim period while old data is still being written.",
+      "implemented": false
+    },
+    {
+      "id": "F009",
+      "severity": "HIGH",
+      "category": "data-integrity",
+      "file": "convex/logs.ts",
+      "line": 1719,
+      "title": "importBackup writes log data with an unsafe cast — schema validation may silently coerce",
+      "description": "importBackup (line 1719) casts backup log data as `typeof logDataValidator.type` and inserts it directly. The comment says 'Convex schema validator will reject structurally invalid data at write time' — but logDataValidator is a union, and Convex picks the first matching branch. A malformed backup row could match the wrong union branch (e.g. a digestion log with a food validator shape) and be stored with incorrect semantics. This is especially risky because the data has already been sanitized by sanitizeUnknownStringsDeep, which strips unknown fields, potentially producing a partial object that accidentally matches a different union branch.",
+      "fix": "Before insertion, validate the type field and run the appropriate sub-validator explicitly rather than relying on the union's automatic dispatch. Alternatively, run the existing migration normalizers (normalizeFoodData, normalizeDigestionData, etc.) on backup rows before insertion.",
+      "implemented": false
+    },
+    {
+      "id": "F010",
+      "severity": "MODERATE",
+      "category": "convex",
+      "file": "convex/migrations.ts",
+      "line": 595,
+      "title": "stripCalibrations and normalizeProfileHabits migrations use unbounded collect()",
+      "description": "stripCalibrations (line 595) and normalizeProfileHabits (line 619) both call ctx.db.query('profiles').collect() with no pagination. For a small current user base this is fine, but these are stored as public internalMutation functions. If run against a large dataset they will hit Convex's per-mutation memory limit and fail partway through, potentially leaving the migration in a partially applied state with no resumption cursor.",
+      "fix": "Convert to paginated batch mutations following the same pattern as migrateLegacyLogsBatch: accept a cursor argument and return a continueCursor + isDone, so callers can loop until done. This is essential before any of these run against production data at scale.",
+      "implemented": false
+    },
+    {
+      "id": "F011",
+      "severity": "MODERATE",
+      "category": "convex",
+      "file": "convex/migrations.ts",
+      "line": 1242,
+      "title": "normalizeLegacyTopLevelLogTypesV1 uses unbounded collect() on the logs table",
+      "description": "normalizeLegacyTopLevelLogTypesV1 (line 1242) calls ctx.db.query('logs').collect() — all logs across all users with no pagination. Same risk as F010 but against the largest table in the system.",
+      "fix": "Convert to paginated batch using the same approach as migrateLegacyLogsBatch.",
+      "implemented": false
+    },
+    {
+      "id": "F012",
+      "severity": "MODERATE",
+      "category": "data-integrity",
+      "file": "convex/schema.ts",
+      "line": 41,
+      "title": "foodAliases table has no unique constraint on (userId, normalizedAlias)",
+      "description": "The foodAliases table indexes by (userId, normalizedAlias) but does not enforce uniqueness. If two concurrent mutations insert an alias for the same (userId, normalizedAlias) pair — e.g. from a retry storm or duplicate request — both rows will succeed and the index will contain two results for the same lookup key. The application logic in the lookup path calls .first() which will silently pick one, but the duplicate is permanent waste.",
+      "fix": "Before inserting a new alias, always query by_userId_normalizedAlias and skip or upsert if a row already exists. Consider adding a note to the schema comment documenting this invariant since Convex has no UNIQUE constraint primitive.",
+      "implemented": false
+    },
+    {
+      "id": "F013",
+      "severity": "MODERATE",
+      "category": "data-integrity",
+      "file": "convex/schema.ts",
+      "line": 332,
+      "title": "profiles table has no unique constraint on userId — duplicate profiles are a known production problem",
+      "description": "The schema allows multiple profiles per userId. The apiKeys.ts file has a whole consolidation mechanism (consolidateProfiles) to handle this race condition. This is treating a symptom rather than the cause. If the insert-then-check pattern in storeApiKey still has a window for races, a retry could produce a third profile row before consolidation runs. There is no mechanism preventing arbitrary profile duplication at the schema level.",
+      "fix": "The consolidation logic is correct as a mitigation, but document the invariant expectation clearly: replaceProfile should always use .replace() not .insert() after the first write. Consider adding an integrity check mutation that can be run to detect and fix profile count > 1 situations.",
+      "implemented": false
+    },
+    {
+      "id": "F014",
+      "severity": "MODERATE",
+      "category": "security",
+      "file": "convex/lib/apiKeys.ts",
+      "line": 88,
+      "title": "Legacy base64 API keys decoded without authentication — silent plaintext exposure",
+      "description": "decryptLegacyApiKey (line 88-90) simply calls atob() on the stored value — it is not encrypted, just base64-encoded. Any process that can read the profiles table (e.g. a compromised internal query) gets the OpenAI API key in plaintext. The comment says legacy rows 'continue to work until the user saves their key again', but there is no migration to force re-encryption of legacy rows. These plaintext keys may persist indefinitely.",
+      "fix": "Add a migration that detects legacy (non-prefixed) encryptedApiKey values and re-encrypts them transparently. Run it as part of the next deploy. Until then, log a warning (server-side only, not to the client) when a legacy key is decrypted so you know legacy rows still exist.",
+      "implemented": false
+    },
+    {
+      "id": "F015",
+      "severity": "MODERATE",
+      "category": "convex",
+      "file": "convex/lib/apiKeys.ts",
+      "line": 27,
+      "title": "Module-level mutable cache in apiKeys.ts — shared state across function invocations",
+      "description": "cachedEncryptionSecret and cachedEncryptionKey are module-level mutable variables (lines 27-28). In Convex's serverless execution model, module-level state is shared across invocations within the same worker instance but not across worker restarts. Caching the derived CryptoKey is a reasonable optimization, but the cache invalidation check (cachedEncryptionSecret === secret) compares the raw secret string with ===, which is correct. However, cachedEncryptionKey is a Promise, not a CryptoKey — if the promise rejects (e.g. on first call due to a misconfigured secret), cachedEncryptionKey remains a rejected Promise. Subsequent calls will return that rejected promise immediately rather than retrying.",
+      "fix": "Reset cachedEncryptionKey to null in the rejection handler: `cachedEncryptionKey = asyncFn().catch(err => { cachedEncryptionKey = null; throw err; })`. This ensures a transient failure doesn't permanently poison the cache.",
+      "implemented": false
+    },
+    {
+      "id": "F016",
+      "severity": "MODERATE",
+      "category": "security",
+      "file": "convex/validators.ts",
+      "line": 395,
+      "title": "episodesCount accepts v.string() — unvalidated freeform in a number field",
+      "description": "digestiveLogDataValidator (line 401) accepts episodesCount as v.union(v.number(), v.string()). A string is accepted to handle the legacy case where this was a freeform input. However there is no length cap on the string, and it gets stored in the DB and potentially serialized into AI prompts. A malicious client could inject a multi-kilobyte string or prompt-injection content in this field.",
+      "fix": "Either drop the v.string() branch (migrating old data) or add a maxLength assertion in the mutation handler for this field. At minimum, run it through sanitizePlainText with a short limit (e.g. 20 chars) before storage.",
+      "implemented": false
+    },
+    {
+      "id": "F017",
+      "severity": "MODERATE",
+      "category": "simplicity",
+      "file": "convex/logs.ts",
+      "line": 119,
+      "title": "normalizeStoredAiModel silently discards gpt-5.2 to gpt-5.4",
+      "description": "normalizeStoredAiModel (lines 119-121) maps any value that is not 'gpt-5-mini' to 'gpt-5.4'. The aiPreferencesValidator now has three valid literals: 'gpt-5-mini', 'gpt-5.4', 'gpt-5.2'. This means a stored 'gpt-5.2' preference is silently overwritten to 'gpt-5.4' every time the profile is read and re-normalized. Users who explicitly chose 'gpt-5.2' will have their preference silently changed.",
+      "fix": "Update normalizeStoredAiModel to explicitly handle all three valid values: `if (value === 'gpt-5-mini' || value === 'gpt-5.4' || value === 'gpt-5.2') return value; return 'gpt-5.4'`.",
+      "implemented": false
+    },
+    {
+      "id": "F018",
+      "severity": "MODERATE",
+      "category": "data-integrity",
+      "file": "convex/seedTestData.ts",
+      "line": 424,
+      "title": "seedTestData mutation uses Date.now() and is not idempotent",
+      "description": "seedTestData (line 424) uses Date.now() inside an internalMutation to compute timestamps. Calling this mutation twice will insert duplicate data with slightly different timestamps. There is no guard that checks whether seed data already exists for the userId before inserting. For a dev tool this is tolerable, but it makes the mutation fragile if run accidentally against a populated test user.",
+      "fix": "Add a guard at the start: check if any log already exists for the userId (take(1)) and return early with a clear message if so. Using Date.now() for seed data timestamps is acceptable since this is a dev-only internal mutation (not subject to production replay concerns), but document that explicitly.",
+      "implemented": false
+    },
+    {
+      "id": "F019",
+      "severity": "MODERATE",
+      "category": "data-integrity",
+      "file": "convex/logs.ts",
+      "line": 985,
+      "title": "batchUpdateFoodItems skips silently on ownership mismatch",
+      "description": "batchUpdateFoodItems (lines 984-987) silently continues (with `continue`) if a record is not found or if record.userId !== userId. This means a partial batch update — where some items succeed and some are silently skipped due to ownership issues — is returned as { updated: N } with no indication of which items failed. Callers cannot distinguish 'all items updated' from 'some items silently skipped because they belonged to another user'.",
+      "fix": "Return skipped item IDs in the response, or throw on ownership mismatch rather than silently skipping. Silent skipping on auth mismatch obscures potential bugs (e.g. a client sending the wrong IDs) and makes debugging harder.",
+      "implemented": false
+    },
+    {
+      "id": "F020",
+      "severity": "NICE-TO-HAVE",
+      "category": "convex",
+      "file": "convex/lib/auth.ts",
+      "line": 9,
+      "title": "requireAuth() exists but is used in only 8 files — 60+ sites still use raw getUserIdentity()",
+      "description": "The requireAuth helper is well-designed and correctly returns { userId }. However it is only used in 8 files while 60+ call sites across the codebase use raw ctx.auth.getUserIdentity() inline. This is a known debt item (noted in CLAUDE.md) but the inconsistency means future changes to auth handling (error messages, logging, token claims extraction) must be applied to every inline call site.",
+      "fix": "Systematically migrate all inline getUserIdentity() patterns to requireAuth(). This is mechanical — each replacement is a one-liner. Prioritize public mutations in logs.ts, profiles.ts, and conversations.ts first.",
+      "implemented": false
+    },
+    {
+      "id": "F021",
+      "severity": "NICE-TO-HAVE",
+      "category": "data-integrity",
+      "file": "convex/schema.ts",
+      "line": 384,
+      "title": "waitlistEntries has no index on subscribedAt — ordering queries will full-scan",
+      "description": "The waitlistEntries table only has an index on email. Any admin query that lists entries in subscription order (e.g. to show the first 100 signups) will full-scan the table. This is low priority while the waitlist is small but will become a problem at scale.",
+      "fix": "Add `.index('by_subscribedAt', ['subscribedAt'])` to the waitlistEntries table definition.",
+      "implemented": false
+    },
+    {
+      "id": "F022",
+      "severity": "NICE-TO-HAVE",
+      "category": "simplicity",
+      "file": "convex/validators.ts",
+      "line": 104,
+      "title": "foodAssessmentVerdictValidator is a subset of foodAssessments.verdict in schema — divergence risk",
+      "description": "foodAssessmentVerdictValidator (lines 104-110) defines 4 values: safe, watch, avoid, trial_next. But the foodAssessments table schema (schema.ts lines 205-212) defines 6 values including 'culprit' and 'next_to_try'. These two validators represent the same concept (food verdict) but have different allowed values. If code uses the wrong one for validation, verdicts like 'culprit' would be rejected at the structuredFoodAssessmentValidator level even though they are valid in the DB schema.",
+      "fix": "Consolidate to a single source of truth. Either extend foodAssessmentVerdictValidator to include all 6 values (or the schema-level 6 values should drive both validators). Add a comment linking the two definitions so they are kept in sync.",
+      "implemented": false
+    }
+  ],
+  "summary": {
+    "critical": 0,
+    "high": 9,
+    "moderate": 8,
+    "nice_to_have": 3
+  }
+}

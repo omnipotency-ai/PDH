@@ -1,0 +1,148 @@
+{
+  "branch": "codex/chore/food-registry",
+  "reviewed_at": "2026-03-16T10:30:00Z",
+  "review_focus": "Test quality review of 5 test files from commit dc18279",
+  "files_reviewed": [
+    "shared/__tests__/foodCanonicalization.test.ts",
+    "shared/__tests__/foodMatching.test.ts",
+    "convex/__tests__/foodPipelineBranches.test.ts",
+    "convex/foodParsing.test.ts",
+    "src/hooks/__tests__/useTransitMapData.test.ts"
+  ],
+  "findings": [
+    {
+      "id": "TR-001",
+      "severity": "HIGH",
+      "category": "test-quality",
+      "file": "convex/__tests__/foodPipelineBranches.test.ts",
+      "line": 440,
+      "title": "Expired-item test reverses a documented design decision without updating the design doc",
+      "description": "The test 'BUG BASELINE: rejects re-matching expired items (should allow)' was changed from asserting rejects.toThrow('already resolved') to asserting success. The memory file feedback_expired_items_ux.md explicitly states: 'Never allow resolveItem on expired items — the guard is correct.' The resolveItem mutation was also changed to exclude 'expired' from the alreadyResolved check (line 1048 of foodParsing.ts). This is a deliberate reversal of a documented design decision without updating the design doc. Either the design decision has changed (and the doc must be updated) or this is a regression in the guard logic.",
+      "fix": "If the decision has genuinely changed, update feedback_expired_items_ux.md to reflect that expired items are now re-matchable via resolveItem. Also rename the test — 'BUG BASELINE' is misleading now that it asserts success. If the decision has NOT changed, revert the resolveItem guard and the test.",
+      "implemented": false
+    },
+    {
+      "id": "TR-002",
+      "severity": "HIGH",
+      "category": "test-coverage",
+      "file": "shared/__tests__/foodMatching.test.ts",
+      "line": 68,
+      "title": "routeFoodMatchConfidence only tests the 'high' branch — medium and low are untested",
+      "description": "routeFoodMatchConfidence has three code paths (high: >=0.86 with gap/token/alias checks, medium: >=0.56, low: fallthrough) plus a special null-candidate early return. The test suite only exercises the happy path where an exact canonical name ('toast') routes to 'high'. The medium branch, the low branch with a weak candidate, and the low branch with zero candidates are all untested. These branches control whether the UI shows auto-accept, a disambiguation modal, or a manual-entry prompt.",
+      "fix": "Add tests for: (1) routeFoodMatchConfidence with an empty candidates array, asserting level='low' and topCandidate=null; (2) a fuzzy query returning a moderate-confidence match to exercise the 'medium' route; (3) a gibberish query producing a weak match to exercise the 'low' route with a non-null topCandidate.",
+      "implemented": false
+    },
+    {
+      "id": "TR-003",
+      "severity": "HIGH",
+      "category": "test-coverage",
+      "file": "shared/__tests__/foodMatching.test.ts",
+      "line": 1,
+      "title": "No unhappy-path tests for preprocessMealText",
+      "description": "preprocessMealText is only tested with a well-formed English/Spanish sentence. Missing coverage for: empty string input, whitespace-only input, input with only delimiters ('with, y,'), single-word input with no delimiters, and input with emoji (users logging food on mobile frequently use emoji). These are realistic inputs for a free-form food logging text field.",
+      "fix": "Add edge case tests: preprocessMealText('') should return []; preprocessMealText('   ') should return []; preprocessMealText('toast') should return a single phrase; preprocessMealText(',,,') should handle gracefully without crashing.",
+      "implemented": false
+    },
+    {
+      "id": "TR-004",
+      "severity": "MODERATE",
+      "category": "test-quality",
+      "file": "shared/__tests__/foodMatching.test.ts",
+      "line": 64,
+      "title": "Embedding hash test is tautological — only proves two different strings hash differently",
+      "description": "The test asserts getFoodEmbeddingSourceHash('A') !== getFoodEmbeddingSourceHash('B'). This is trivially true for any non-degenerate hash function and does not test the properties that actually matter: (1) determinism (same input always produces the same hash), (2) that the hash is derived from the specific embedding text built for a canonical name, or (3) that the hash format is stable across versions.",
+      "fix": "Replace or supplement with: (1) a determinism test: expect(getFoodEmbeddingSourceHash('X')).toBe(getFoodEmbeddingSourceHash('X')); (2) a snapshot test: expect(getFoodEmbeddingSourceHash('Food: toast')).toMatchInlineSnapshot() to catch accidental algorithm changes.",
+      "implemented": false
+    },
+    {
+      "id": "TR-005",
+      "severity": "MODERATE",
+      "category": "test-coverage",
+      "file": "shared/__tests__/foodMatching.test.ts",
+      "line": 1,
+      "title": "8 of 14 exported functions from foodMatching.ts are completely untested",
+      "description": "The module exports 14 public functions. The test file covers 6: preprocessMealText, createFoodMatcherContext, fuzzySearchFoodCandidates, searchFoodDocuments, getFoodEmbeddingSourceHash, routeFoodMatchConfidence. Untested: stripFoodAccents, normalizeFoodMatchText, splitMealIntoFoodPhrases, findExactAliasCandidate, mergeFoodMatchCandidates, buildBucketOptions, buildFoodSearchDocuments, isStructurallyAmbiguousPhrase. mergeFoodMatchCandidates (dedup, confidence blending) and buildBucketOptions (grouping logic) contain non-trivial logic that deserves direct coverage.",
+      "fix": "Prioritize direct tests for: mergeFoodMatchCandidates (same canonical from alias+fuzzy resolvers, verify dedup and score blending), buildBucketOptions (multiple canonicals grouped into one bucket), isStructurallyAmbiguousPhrase (test the regex patterns and the 5-word threshold).",
+      "implemented": false
+    },
+    {
+      "id": "TR-006",
+      "severity": "MODERATE",
+      "category": "test-quality",
+      "file": "convex/__tests__/foodPipelineBranches.test.ts",
+      "line": 497,
+      "title": "Learned alias search test is a potential false positive — does not verify the alias was persisted",
+      "description": "The test 'makes learned aliases visible in the manual search query' resolves an item then queries searchFoods. But it never verifies the learnedFoodAliases table was written to. If 'kelitos' fuzzy-matches to 'sweet biscuit' by some other path, the test passes for the wrong reason. Additionally, the assertion only checks results[0]?.canonicalName without verifying the match came through the alias resolver.",
+      "fix": "Add an intermediate assertion querying the learnedFoodAliases table via t.run to confirm the alias row exists. Also assert that the result's resolver field (if exposed) indicates alias origin.",
+      "implemented": false
+    },
+    {
+      "id": "TR-007",
+      "severity": "MODERATE",
+      "category": "test-quality",
+      "file": "convex/foodParsing.test.ts",
+      "line": 173,
+      "title": "Embedding refresh test uses positional array destructuring, making it fragile to registry order changes",
+      "description": "The test destructures buildFoodSearchDocuments([]) as [firstDocument, secondDocument] and uses them positionally. If the registry iteration order changes, the test silently tests different foods or breaks confusingly. The toEqual([secondDocument]) assertion compares the entire object by value, so any new field added to FoodSearchDocument will break this test even if refresh logic is correct.",
+      "fix": "Use named lookups: const docs = buildFoodSearchDocuments([]); const toastDoc = docs.find(d => d.canonicalName === 'toast')!; Or assert on canonicalName only: expect(refreshableDocuments.map(d => d.canonicalName)).toEqual([secondDocument!.canonicalName]).",
+      "implemented": false
+    },
+    {
+      "id": "TR-008",
+      "severity": "MODERATE",
+      "category": "test-coverage",
+      "file": "shared/__tests__/foodCanonicalization.test.ts",
+      "line": 496,
+      "title": "Digestion metadata test only checks 3 fields on 3 foods — no negative case for foods without metadata",
+      "description": "The test checks dryTexture, totalResidue, and lactoseRisk on crispy cracker, clear broth, and kefir. It does not test: what getFoodEntry returns for a food with no digestion metadata (should not crash or return unexpected defaults), the shape of the returned object, or other digestion fields that exist in the schema.",
+      "fix": "Add: expect(getFoodEntry('some-food-without-digestion')?.dryTexture).toBeUndefined(). Consider a toMatchObject assertion on one complete digestion metadata object to lock down the shape.",
+      "implemented": false
+    },
+    {
+      "id": "TR-009",
+      "severity": "MODERATE",
+      "category": "test-quality",
+      "file": "src/hooks/__tests__/useTransitMapData.test.ts",
+      "line": 239,
+      "title": "Transit map digestion test hardcodes registry data values, coupling test to registry content",
+      "description": "The test asserts crispyCracker?.digestion?.dryTexture === 'yes' and highFatRisk === 'low'. These values are correct only as long as the registry entry does not change. This test is testing registry data, not transit map logic. If the metadata values are adjusted, this test fails with an opaque error.",
+      "fix": "Import the registry entry directly and assert the station matches it: expect(station.digestion).toEqual(pickFoodDigestionMetadata(getFoodEntry('crispy cracker'))). This makes the test self-updating and focuses it on the transit map's data threading, not the registry content.",
+      "implemented": false
+    },
+    {
+      "id": "TR-010",
+      "severity": "NICE-TO-HAVE",
+      "category": "test-quality",
+      "file": "shared/__tests__/foodCanonicalization.test.ts",
+      "line": 167,
+      "title": "Brand-name alias tests serve as regression anchors but lack a framing comment",
+      "description": "Tests like 'Quelitas' -> 'crispy cracker' and 'TUC' -> 'crispy cracker' are snapshot-style tests of specific alias mappings. They are useful for catching unintended changes but will break if aliases are reorganized. Their purpose as deliberate regression anchors is not documented.",
+      "fix": "Add a comment at the top of the brand-name alias block: '// Regression anchors — update when registry aliases are intentionally reorganized.'",
+      "implemented": false
+    },
+    {
+      "id": "TR-011",
+      "severity": "NICE-TO-HAVE",
+      "category": "test-setup",
+      "file": "convex/__tests__/foodPipelineBranches.test.ts",
+      "line": 490,
+      "title": "Learned alias test does not verify item state before resolveItem — potential flakiness",
+      "description": "The test calls vi.runAllTimers() and finishInProgressScheduledFunctions() after adding the log, then immediately calls resolveItem. It does not assert that itemIndex 0 exists and is in the expected unresolved state. If the pipeline scheduling behavior changes, the precondition could fail silently, causing a confusing downstream error.",
+      "fix": "Add an intermediate assertion before resolveItem verifying the item exists with the expected unresolved state (e.g., resolvedBy undefined or canonicalName undefined). This also serves as documentation of the precondition.",
+      "implemented": false
+    }
+  ],
+  "summary": {
+    "critical": 0,
+    "high": 3,
+    "moderate": 6,
+    "nice_to_have": 2
+  },
+  "positive_observations": [
+    "The mutation-to-action correction for processLogInternal is consistent — all three error-path tests and the processEvidence re-run test were updated to use t.action() matching the actual internalAction definition in the source.",
+    "The foodCanonicalization tests provide thorough coverage of alias resolution with clear, descriptive test names that read like a specification of the registry's contract.",
+    "The buildTransitNetworkForTest helper in useTransitMapData properly threads the new digestion metadata through pickFoodDigestionMetadata, keeping the test faithful to production code paths.",
+    "The embedding refresh helper test covers both the 'missing row' and 'stale hash' cases in a single readable test, demonstrating understanding of the refresh algorithm.",
+    "The processLogInternal error-path tests (deleted log, non-food log, no-rawInput legacy log) are valuable defensive tests that verify the pipeline silently returns rather than throwing for edge cases."
+  ]
+}

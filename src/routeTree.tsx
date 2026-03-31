@@ -1,0 +1,559 @@
+import { SignInButton, UserButton } from "@clerk/clerk-react";
+import {
+  createRootRoute,
+  createRoute,
+  createRouter,
+  Link,
+  Outlet,
+  redirect,
+  useRouterState,
+} from "@tanstack/react-router";
+import { Authenticated, AuthLoading, Unauthenticated, useQuery } from "convex/react";
+import { LayoutDashboard, NotebookPen, Settings } from "lucide-react";
+import React, { lazy, type ReactNode, Suspense, useEffect, useRef, useState } from "react";
+import ModeToggle from "@/components/mode-toggle";
+import {
+  NavigationMenu,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+} from "@/components/ui/navigation-menu";
+import { Toaster } from "@/components/ui/sonner";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { ApiKeyProvider } from "@/contexts/ApiKeyContext";
+import {
+  type PatchProfileArgs,
+  ProfileProvider,
+  useProfileContext,
+} from "@/contexts/ProfileContext";
+import { SyncedLogsProvider } from "@/contexts/SyncedLogsContext";
+import { migrateLegacyStorage } from "@/lib/migrateLegacyStorage";
+import { cn } from "@/lib/utils";
+import { api } from "../convex/_generated/api";
+import TrackPage from "./pages/Track";
+
+const PatternsPage = lazy(() => import("./pages/Patterns"));
+const SettingsPage = lazy(() => import("./pages/Settings"));
+const UiMigrationLabPage = lazy(() => import("./pages/UiMigrationLab"));
+const ArchivePage = lazy(() => import("./pages/secondary_pages/Archive"));
+const MenuPage = lazy(() => import("./pages/secondary_pages/Menu"));
+
+const LandingPage = lazy(() => import("@/pages/LandingPage"));
+const TermsPage = lazy(() => import("./pages/secondary_pages/TermsPage"));
+const PrivacyPage = lazy(() => import("./pages/secondary_pages/PrivacyPage"));
+const ApiKeyGuidePage = lazy(() => import("./pages/secondary_pages/ApiKeyGuidePage"));
+
+const NAV_ITEMS = [
+  {
+    to: "/",
+    label: "Track",
+    icon: NotebookPen,
+    activeTone: "text-teal-600 dark:text-teal-400",
+    activeGlow: "from-teal-500/60 to-teal-400/0",
+    activeBorder: "border-b-teal-500 dark:border-b-teal-400",
+  },
+  {
+    to: "/patterns",
+    label: "Patterns",
+    icon: LayoutDashboard,
+    activeTone: "text-rose-600 dark:text-rose-400",
+    activeGlow: "from-rose-500/60 to-rose-400/0",
+    activeBorder: "border-b-rose-500 dark:border-b-rose-400",
+  },
+  {
+    to: "/settings",
+    label: "Settings",
+    icon: Settings,
+    activeTone: "text-violet-600 dark:text-violet-400",
+    activeGlow: "from-violet-500/60 to-violet-400/0",
+    activeBorder: "border-b-violet-500 dark:border-b-violet-400",
+  },
+] as const;
+
+const AUTH_LOADING_TIMEOUT_MS = 8000;
+
+interface ErrorBoundaryProps {
+  children: ReactNode;
+  label: string;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+}
+
+class RouteErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: unknown) {
+    console.error("Route render error:", error);
+  }
+
+  private handleReset = () => {
+    this.setState({ hasError: false });
+  };
+
+  render() {
+    if (!this.state.hasError) return this.props.children;
+    return (
+      <div className="mx-auto my-8 max-w-xl rounded-2xl border border-[var(--red)]/40 bg-[var(--surface-1)] p-5">
+        <h2 className="text-base font-bold text-[var(--text)]">{this.props.label} crashed</h2>
+        <p className="mt-1 text-sm text-[var(--text-muted)]">
+          The page hit an unexpected error. You can retry without losing the rest of the app.
+        </p>
+        <div className="mt-3 flex gap-2">
+          <button
+            type="button"
+            onClick={this.handleReset}
+            className="rounded-lg bg-[var(--surface-0)] px-3 py-1.5 text-xs font-semibold text-[var(--text)]"
+          >
+            Retry
+          </button>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-semibold text-[var(--text-muted)]"
+          >
+            Reload app
+          </button>
+        </div>
+      </div>
+    );
+  }
+}
+
+function withBoundary(label: string, node: ReactNode) {
+  return <RouteErrorBoundary label={label}>{node}</RouteErrorBoundary>;
+}
+
+function AuthLoadingFallback() {
+  const [timedOut, setTimedOut] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setTimedOut(true), AUTH_LOADING_TIMEOUT_MS);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  if (!timedOut) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-sm text-[var(--text-muted)]">Loading...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-screen items-center justify-center px-6">
+      <div className="max-w-md space-y-3 rounded-2xl border border-[var(--orange)]/30 bg-[var(--surface-1)] p-5">
+        <h2 className="text-base font-semibold text-[var(--text)]">Auth is unavailable</h2>
+        <p className="text-sm text-[var(--text-muted)]">
+          Sign-in is taking too long to load. Retry or continue to the public home page.
+        </p>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--text)] hover:bg-[var(--surface-2)]"
+          >
+            Retry
+          </button>
+          <Link
+            to="/home"
+            className="rounded-lg bg-[var(--teal)] px-3 py-1.5 text-sm font-medium text-white hover:brightness-110"
+          >
+            Open home
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GlobalHeader() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  return (
+    <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-[rgba(255,255,255,0.7)] backdrop-blur-xl backdrop-saturate-150 dark:bg-[rgba(12,20,32,0.7)]">
+      <div className="mx-auto w-full max-w-[1760px] px-4 py-2.5">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+          {/* Logo area */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link to="/home" className="flex items-center gap-2.5">
+                <img
+                  src="/icons/icon-72x72.png"
+                  alt="Caca Traca"
+                  width={64}
+                  height={64}
+                  className="h-16 w-16 drop-shadow-[0_0_8px_rgba(45,212,191,0.4)]"
+                />
+                <div className="hidden lg:block">
+                  <p className="bg-gradient-to-r from-[var(--teal)] to-[var(--section-food)] bg-clip-text font-display text-lg font-extrabold tracking-tight text-transparent">
+                    Caca Traca
+                  </p>
+                  <p className="text-[10px] font-medium uppercase tracking-widest text-[var(--text-faint)]">
+                    Anastomosis Food Re-Integration Tracker
+                  </p>
+                </div>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className={pathname === "/" ? "" : "hidden"}>
+              Back to website home
+            </TooltipContent>
+          </Tooltip>
+
+          {/* Navigation */}
+          <div className="flex justify-center">
+            <NavigationMenu viewport={false} className="max-w-none">
+              <NavigationMenuList className="gap-1.5">
+                {NAV_ITEMS.map((item) => {
+                  const Icon = item.icon;
+                  const isActive =
+                    item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
+
+                  return (
+                    <NavigationMenuItem key={item.to}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <NavigationMenuLink
+                            asChild
+                            active={isActive}
+                            className={cn(
+                              "group relative inline-flex h-10 w-auto flex-row items-center gap-2 border-b-2 border-transparent px-4 py-2 font-semibold tracking-wide transition-all duration-200",
+                              isActive
+                                ? cn("text-[var(--text)]", item.activeBorder)
+                                : "text-[var(--text-muted)] hover:-translate-y-px hover:text-[var(--text)]",
+                            )}
+                          >
+                            <Link to={item.to} aria-label={item.label}>
+                              <Icon
+                                className={cn(
+                                  "h-4 w-4 transition-colors",
+                                  isActive ? item.activeTone : "group-hover:text-[var(--text)]",
+                                )}
+                                aria-hidden="true"
+                              />
+                              <span className="hidden md:inline" aria-hidden="true">
+                                {item.label}
+                              </span>
+                              {/* Active gradient glow underneath */}
+                              {isActive && (
+                                <span
+                                  className={cn(
+                                    "absolute bottom-0 left-1/2 h-px w-3/4 -translate-x-1/2 bg-gradient-to-r opacity-60",
+                                    item.activeGlow,
+                                  )}
+                                  aria-hidden="true"
+                                />
+                              )}
+                            </Link>
+                          </NavigationMenuLink>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="md:hidden">
+                          {item.label}
+                        </TooltipContent>
+                      </Tooltip>
+                    </NavigationMenuItem>
+                  );
+                })}
+              </NavigationMenuList>
+            </NavigationMenu>
+          </div>
+
+          <div className="flex items-center justify-end gap-3">
+            <div className="rounded-lg transition-colors hover:bg-white/[0.06]">
+              <ModeToggle />
+            </div>
+            <UserButton />
+          </div>
+        </div>
+      </div>
+
+      {/* Gradient separator at the bottom of the header */}
+      <div
+        className="h-px w-full opacity-40"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent, var(--teal), var(--orange), var(--teal), transparent)",
+        }}
+        aria-hidden="true"
+      />
+    </header>
+  );
+}
+
+/**
+ * Runs the one-time legacy IDB-to-cloud migration on first mount.
+ * Must be rendered inside ProfileProvider (needs patchProfile).
+ * Renders nothing — purely a side-effect component.
+ */
+function LegacyMigration() {
+  const { patchProfile } = useProfileContext();
+  const cloudProfile = useQuery(api.logs.getProfile);
+  const migrated = useRef(false);
+
+  useEffect(() => {
+    if (migrated.current || cloudProfile === undefined) return;
+    migrated.current = true;
+
+    migrateLegacyStorage(cloudProfile, (updates) => patchProfile(updates as PatchProfileArgs))
+      .then((didMigrate) => {
+        if (didMigrate) {
+          console.log("[Migration] Legacy storage migrated to cloud");
+        }
+      })
+      .catch((err: unknown) => {
+        console.error("[Migration] Failed:", err);
+      });
+  }, [cloudProfile, patchProfile]);
+
+  return null;
+}
+
+function AppLayout() {
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
+  const requiresSyncedLogs =
+    pathname === "/" ||
+    pathname.startsWith("/patterns") ||
+    pathname.startsWith("/settings") ||
+    pathname.startsWith("/menu") ||
+    pathname.startsWith("/archive");
+
+  return (
+    <div className="relative min-h-screen">
+      <Authenticated>
+        <ApiKeyProvider>
+          <ProfileProvider>
+            <LegacyMigration />
+            <GlobalHeader />
+            <main className="relative z-10 mx-auto w-full max-w-[1760px] px-4 py-4 pb-8">
+              {requiresSyncedLogs ? (
+                <SyncedLogsProvider>
+                  <Outlet />
+                </SyncedLogsProvider>
+              ) : (
+                <Outlet />
+              )}
+            </main>
+          </ProfileProvider>
+        </ApiKeyProvider>
+      </Authenticated>
+      <Unauthenticated>
+        <div className="flex min-h-screen flex-col items-center justify-center gap-6">
+          <img
+            src="/icons/icon-72x72.png"
+            alt="Caca Traca"
+            width={72}
+            height={72}
+            className="drop-shadow-[0_0_8px_rgba(45,212,191,0.4)]"
+          />
+          <h1 className="bg-gradient-to-r from-[var(--teal)] to-[var(--section-food)] bg-clip-text font-display text-2xl font-extrabold tracking-tight text-transparent">
+            Caca Traca
+          </h1>
+          <p className="text-sm text-[var(--text-muted)]">Sign in to access the app</p>
+          <SignInButton mode="modal">
+            <button
+              type="button"
+              className="rounded-xl bg-[var(--teal)] px-6 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:brightness-110"
+            >
+              Sign in
+            </button>
+          </SignInButton>
+          <Link
+            to="/home"
+            className="text-xs text-[var(--text-faint)] hover:text-[var(--text-muted)] transition-colors"
+          >
+            Back to home
+          </Link>
+        </div>
+      </Unauthenticated>
+      <AuthLoading>
+        <AuthLoadingFallback />
+      </AuthLoading>
+    </div>
+  );
+}
+
+const rootRoute = createRootRoute({
+  component: () => (
+    <>
+      <Outlet />
+      <Toaster position="top-center" duration={4000} richColors expand visibleToasts={5} />
+    </>
+  ),
+});
+
+const homeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/home",
+  component: () => (
+    <Suspense fallback={null}>
+      <LandingPage />
+    </Suspense>
+  ),
+});
+
+const termsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/terms",
+  component: () => (
+    <Suspense fallback={null}>
+      <TermsPage />
+    </Suspense>
+  ),
+});
+
+const privacyRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/privacy",
+  component: () => (
+    <Suspense fallback={null}>
+      <PrivacyPage />
+    </Suspense>
+  ),
+});
+
+const apiKeyGuideRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/api-key-guide",
+  component: () => (
+    <Suspense fallback={null}>
+      <ApiKeyGuidePage />
+    </Suspense>
+  ),
+});
+
+const habitsRedirectRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/habits",
+  beforeLoad: () => {
+    throw redirect({ to: "/" });
+  },
+});
+
+const calibrationRedirectRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/calibration",
+  beforeLoad: () => {
+    throw redirect({ to: "/settings" });
+  },
+});
+
+// Extend the window type to include the Clerk singleton set by @clerk/clerk-react.
+// session is null when explicitly signed out, an object when signed in,
+// and undefined while Clerk is still initializing.
+type ClerkGlobal = { session: Record<string, unknown> | null | undefined };
+
+const appLayoutRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  id: "app-layout",
+  component: AppLayout,
+  beforeLoad: () => {
+    // Clerk sets window.Clerk once it has initialized. If it is not yet set,
+    // auth is still loading — do not redirect; AppLayout handles AuthLoading correctly.
+    // If Clerk is loaded and session is null, the user is not authenticated: redirect to /home.
+    const clerk = (window as Window & { Clerk?: ClerkGlobal }).Clerk;
+    if (clerk !== undefined && clerk.session === null) {
+      throw redirect({ to: "/home" });
+    }
+  },
+});
+
+const indexRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/",
+  component: () => withBoundary("Track", <TrackPage />),
+});
+
+const patternsRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/patterns",
+  component: () =>
+    withBoundary(
+      "Patterns",
+      <Suspense fallback={null}>
+        <PatternsPage />
+      </Suspense>,
+    ),
+});
+
+const settingsRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/settings",
+  component: () =>
+    withBoundary(
+      "Settings",
+      <Suspense fallback={null}>
+        <SettingsPage />
+      </Suspense>,
+    ),
+});
+
+const archiveRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/archive",
+  component: () =>
+    withBoundary(
+      "Archive",
+      <Suspense fallback={null}>
+        <ArchivePage />
+      </Suspense>,
+    ),
+});
+
+const menuRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/menu",
+  component: () =>
+    withBoundary(
+      "Menu",
+      <Suspense fallback={null}>
+        <MenuPage />
+      </Suspense>,
+    ),
+});
+
+const uiMigrationLabRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/ui-migration-lab",
+  component: () =>
+    withBoundary(
+      "UI Migration Lab",
+      <Suspense fallback={null}>
+        <UiMigrationLabPage />
+      </Suspense>,
+    ),
+});
+
+export const routeTree = rootRoute.addChildren([
+  homeRoute,
+  termsRoute,
+  privacyRoute,
+  apiKeyGuideRoute,
+  habitsRedirectRoute,
+  calibrationRedirectRoute,
+  appLayoutRoute.addChildren([
+    indexRoute,
+    patternsRoute,
+    settingsRoute,
+    archiveRoute,
+    menuRoute,
+    uiMigrationLabRoute,
+  ]),
+]);
+
+export const router = createRouter({ routeTree });
+
+declare module "@tanstack/react-router" {
+  interface Register {
+    router: typeof router;
+  }
+}
