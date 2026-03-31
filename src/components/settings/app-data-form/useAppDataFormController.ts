@@ -62,8 +62,8 @@ export function useAppDataFormController({
   clearLocalData,
   exportBackup,
   importBackup,
-  healthProfile,
-  setHealthProfile,
+  healthProfile: _healthProfile,
+  setHealthProfile: _setHealthProfile,
   patchProfile,
 }: UseAppDataFormControllerArgs) {
   const [profileStatus, setProfileStatus] = useState("");
@@ -80,7 +80,7 @@ export function useAppDataFormController({
   const handleExport = async (type: "backup-json" | "logs-csv") => {
     try {
       const backup = await exportBackup();
-      const filenameBase = `kaka-tracker-${formatLocalDateKey(new Date())}`;
+      const filenameBase = `pdh-${formatLocalDateKey(new Date())}`;
 
       let blob: Blob;
       if (type === "backup-json") {
@@ -198,20 +198,6 @@ export function useAppDataFormController({
     }
   };
 
-  // Default to false while profile loads; the ReproductiveHealthSection is
-  // gated behind a healthProfile null-check in AppDataForm, so this value
-  // will never actually be shown or interacted with while null.
-  const reproEnabled = healthProfile?.reproductiveHealth.trackingEnabled ?? false;
-  const toggleReproTracking = (checked: boolean) => {
-    if (!healthProfile) return;
-    setHealthProfile({
-      reproductiveHealth: {
-        ...healthProfile.reproductiveHealth,
-        trackingEnabled: checked,
-      },
-    });
-  };
-
   return {
     profileStatus,
     isDeletingData,
@@ -225,8 +211,6 @@ export function useAppDataFormController({
     showFactoryResetConfirm,
     setShowFactoryResetConfirm,
     confirmFactoryReset,
-    reproEnabled,
-    toggleReproTracking,
     handleExport,
     handleImportBackup,
     handleResetFactorySettings,

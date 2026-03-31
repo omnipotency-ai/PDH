@@ -20,9 +20,7 @@ import {
   type aiResponseValidator,
   fluidPresetsValidator,
   foodPersonalisationValidator,
-  habitConfigValidator,
   habitsValidator,
-  habitTypeValidator,
   healthProfileValidator,
   logDataValidator,
   sleepGoalValidator,
@@ -36,7 +34,6 @@ const logTypeValidator = v.union(
   v.literal("activity"),
   v.literal("digestion"),
   v.literal("weight"),
-  v.literal("reproductive"),
 );
 
 const KNOWN_HABIT_TYPES = new Set<string>([
@@ -331,7 +328,7 @@ async function rebuildIngredientExposuresForFoodLog(
       ...(preparation !== undefined && { preparation }),
       ...(recoveryStage !== undefined && { recoveryStage }),
       ...(spiceLevel !== undefined && { spiceLevel }),
-      createdAt: Date.now(),
+      createdAt: args.timestamp,
     });
     inserted += 1;
   }
@@ -792,6 +789,11 @@ export const listByRange = query({
   },
   handler: async (ctx, args) => {
     const { userId } = await requireAuth(ctx);
+    if (args.startMs > args.endMs) {
+      throw new Error(
+        `listByRange: startMs (${args.startMs}) must be <= endMs (${args.endMs})`,
+      );
+    }
     const safeLimit = Math.min(Math.max(args.limit ?? 5000, 1), 20000);
     const rows = await ctx.db
       .query("logs")
@@ -810,28 +812,6 @@ export const listByRange = query({
       type: row.type,
       data: row.data,
     }));
-  },
-});
-
-export const listFoodLogs = query({
-  args: {},
-  handler: async (ctx) => {
-    const { userId } = await requireAuth(ctx);
-    // Safety cap to prevent unbounded reads. Proper pagination tracked as WQ-087.
-    const rows = await ctx.db
-      .query("logs")
-      .withIndex("by_userId_timestamp", (q) => q.eq("userId", userId))
-      .order("asc")
-      .take(5000);
-
-    return rows
-      .filter((row) => row.type === "food")
-      .map((row) => ({
-        id: row._id,
-        timestamp: row.timestamp,
-        type: row.type,
-        data: row.data,
-      }));
   },
 });
 
@@ -988,8 +968,7 @@ export const batchUpdateFoodItems = mutation({
         continue;
       }
       if (record.userId !== userId) {
-        skipped++;
-        continue;
+        throw new Error("Not authorized");
       }
       if (record.type !== "food") {
         skipped++;
@@ -1042,9 +1021,7 @@ export const replaceProfile = mutation({
     aiPreferences: v.optional(aiPreferencesValidator),
     foodPersonalisation: v.optional(foodPersonalisationValidator),
     transitCalibration: v.optional(transitCalibrationValidator),
-    // Transitional: callers should pass Date.now() for deterministic replay.
-    // Falls back to Date.now() for backward compatibility with existing callers.
-    now: v.optional(v.number()),
+    now: v.number(),
   },
   handler: async (ctx, args) => {
     const { userId } = await requireAuth(ctx);
@@ -1057,7 +1034,7 @@ export const replaceProfile = mutation({
       .withIndex("by_userId", (q) => q.eq("userId", userId))
       .first();
 
-    const updatedAt = args.now ?? Date.now();
+    const updatedAt = args.now;
     // Normalize once on write so reactive reads can return habits as-stored.
     const normalizedHabits = normalizeStoredProfileHabits(
       sanitizeUnknownStringsDeep(args.habits, {
@@ -1149,9 +1126,7 @@ export const patchProfile = mutation({
     aiPreferences: v.optional(aiPreferencesValidator),
     foodPersonalisation: v.optional(foodPersonalisationValidator),
     transitCalibration: v.optional(transitCalibrationValidator),
-    // Transitional: callers should pass Date.now() for deterministic replay.
-    // Falls back to Date.now() for backward compatibility with existing callers.
-    now: v.optional(v.number()),
+    now: v.number(),
   },
   handler: async (ctx, args) => {
     const { userId } = await requireAuth(ctx);
@@ -1161,7 +1136,7 @@ export const patchProfile = mutation({
       .withIndex("by_userId", (q) => q.eq("userId", userId))
       .first();
 
-    const updatedAt = args.now ?? Date.now();
+    const updatedAt = args.now;
 
     // Build updates from non-undefined args only
     const updates: Record<string, unknown> = { updatedAt };
@@ -1314,8 +1289,7 @@ type BackupLogType =
   | "habit"
   | "activity"
   | "digestion"
-  | "weight"
-  | "reproductive";
+  | "weight";
 
 const BACKUP_LOG_TYPES = new Set<string>([
   "food",
@@ -1324,7 +1298,6 @@ const BACKUP_LOG_TYPES = new Set<string>([
   "activity",
   "digestion",
   "weight",
-  "reproductive",
 ] as const);
 
 type BackupFoodVerdict =
@@ -1344,10 +1317,10 @@ const BACKUP_FOOD_VERDICTS = new Set<string>([
   "trial_next",
 ] as const);
 
-/** Validate a string as a known log type, defaulting to "food". */
-function asBackupLogType(value: string | undefined): BackupLogType {
+/** Validate a string as a known log type. Returns null for unknown types — callers must skip null entries. */
+function asBackupLogType(value: string | undefined): BackupLogType | null {
   if (value && BACKUP_LOG_TYPES.has(value)) return value as BackupLogType;
-  return "food";
+  return null;
 }
 
 /** Validate a string as a known food verdict, defaulting to "watch". */
@@ -1708,23 +1681,33 @@ export const importBackup = mutation({
     const logIdMap = new Map<string, Id<"logs">>();
     const aiAnalysisIdMap = new Map<string, Id<"aiAnalyses">>();
 
+    let logsInserted = 0;
+    let logsSkippedUnknownType = 0;
     for (const row of payload.data.logs) {
       const type = asString(row.type);
       const validatedType = asBackupLogType(type);
+      if (validatedType === null) {
+        console.warn(
+          `restoreFromBackup: skipping log row with unknown type "${type ?? "(missing)"}"`,
+        );
+        logsSkippedUnknownType++;
+        continue;
+      }
       const nextId = await ctx.db.insert("logs", {
         userId,
         timestamp: asNumber(row.timestamp) ?? payload.exportedAt,
         type: validatedType,
         // Log data has a complex union shape (food | fluid | habit | activity |
-        // digestion | weight | reproductive). Backup rows may contain legacy
-        // field shapes that normalizeBackupPayload doesn't deep-validate.
+        // digestion | weight). Backup rows may contain legacy field shapes
+        // that normalizeBackupPayload doesn't deep-validate.
         // The Convex schema validator will reject structurally invalid data at
         // write time, so this cast is a bridge, not a bypass.
         data: (row.data ?? {}) as typeof logDataValidator.type,
       });
       logIdMap.set(row.id, nextId);
+      logsInserted++;
     }
-    insertedCounts.logs = payload.data.logs.length;
+    insertedCounts.logs = logsInserted;
 
     for (const row of payload.data.aiAnalyses) {
       const rowError = asString(row.error);
@@ -2058,6 +2041,7 @@ export const importBackup = mutation({
       deleted,
       importedAt: payload.exportedAt,
       inserted: insertedCounts,
+      ...(logsSkippedUnknownType > 0 && { logsSkippedUnknownType }),
     };
   },
 });
@@ -2230,6 +2214,3 @@ export const getLogOwner = internalQuery({
     return { userId: log.userId, itemsVersion };
   },
 });
-
-// Re-export for use in sync.ts and other files that import from logs
-export { habitConfigValidator, habitTypeValidator };

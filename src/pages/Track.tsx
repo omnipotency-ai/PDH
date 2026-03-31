@@ -1,5 +1,5 @@
 import { addDays, format, startOfDay } from "date-fns";
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AiInsightsSection } from "@/components/track/dr-poo/AiInsightsSection";
 
@@ -14,11 +14,8 @@ const FoodMatchingModal = lazy(() =>
 import {
   type BowelFormState,
   BowelSection,
-  CycleHormonalSection,
-  type CycleLogFormState,
   FluidSection,
   FoodSection,
-  ObservationWindow,
 } from "@/components/track/panels";
 import { QuickCapture } from "@/components/track/quick-capture";
 import { HabitDetailSheet } from "@/components/track/quick-capture/HabitDetailSheet";
@@ -26,7 +23,6 @@ import { TodayStatusRow } from "@/components/track/TodayStatusRow";
 import { TodayLog } from "@/components/track/today-log";
 import { ConfettiBurst } from "@/components/ui/Confetti";
 import { useResponsiveShellMode } from "@/components/ui/responsive-shell";
-import { useProfileContext } from "@/contexts/ProfileContext";
 import { useSyncedLogsContext } from "@/contexts/SyncedLogsContext";
 import { useAiInsights } from "@/hooks/useAiInsights";
 import { useBaselineAverages } from "@/hooks/useBaselineAverages";
@@ -35,12 +31,8 @@ import { useDayStats } from "@/hooks/useDayStats";
 import { useFoodLlmMatching } from "@/hooks/useFoodLlmMatching";
 import { useFoodParsing } from "@/hooks/useFoodParsing";
 import { useHabitStreaks } from "@/hooks/useHabitStreaks";
-import {
-  // useAiPreferences, // TEMPORARILY DISABLED: Dr Poo auto-analysis on BM log
-  useHabits,
-  useHealthProfile,
-  useUnitSystem,
-} from "@/hooks/useProfile";
+import { useLiveClock } from "@/hooks/useLiveClock";
+import { useHabits, useUnitSystem } from "@/hooks/useProfile";
 import { useQuickCapture } from "@/hooks/useQuickCapture";
 import { useUnresolvedFoodQueue } from "@/hooks/useUnresolvedFoodQueue";
 import { useUnresolvedFoodToast } from "@/hooks/useUnresolvedFoodToast";
@@ -48,7 +40,6 @@ import { useWeeklySummaryAutoTrigger } from "@/hooks/useWeeklySummaryAutoTrigger
 import { bristolToConsistency, normalizeEpisodesCount } from "@/lib/analysis";
 import { formatLocalDateKey } from "@/lib/dateUtils";
 import { getErrorMessage } from "@/lib/errors";
-import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import type { HabitConfig } from "@/lib/habitTemplates";
 import { isSleepHabit } from "@/lib/habitTemplates";
 import { normalizeFluidItemName } from "@/lib/normalizeFluidName";
@@ -96,19 +87,8 @@ export default function TrackPage() {
   const { habits } = useHabits();
   const addHabitLog = useStore((state) => state.addHabitLog);
   const removeHabitLog = useStore((state) => state.removeHabitLog);
-  const { healthProfile } = useHealthProfile();
-  const { patchProfile } = useProfileContext();
-  const reproductiveTrackingEnabled = healthProfile?.reproductiveHealth?.trackingEnabled ?? false;
   const { unitSystem } = useUnitSystem();
   const weightUnit = getDisplayWeightUnit(unitSystem);
-  // TEMPORARILY DISABLED: Dr Poo auto-analysis on BM log
-  // const { aiPreferences } = useAiPreferences();
-
-  // Ref for healthProfile so callbacks can read the latest value
-  const healthProfileRef = useRef(healthProfile);
-  healthProfileRef.current = healthProfile;
-
-  // TEMPORARILY DISABLED: Dr Poo auto-analysis on BM log
   const { sendNow } = useAiInsights();
 
   // Auto-generate weekly summary when a Sunday 18:00 boundary passes
@@ -119,29 +99,12 @@ export default function TrackPage() {
 
   const { celebration, celebrateLog, celebrateGoalComplete, clearCelebration } = useCelebration();
 
-  const [now, setNow] = useState(() => new Date());
+  // useLiveClock fires once per minute, aligned to the clock minute.
+  // On each tick we derive a fresh `now` from Date so all downstream
+  // computations (todayStart, selectedDate, formatted header) stay current.
+  useLiveClock();
+  const now = new Date();
   const [dayOffset, setDayOffset] = useState(0);
-
-  // Update `now` every minute for date/time display + day boundary detection.
-  // Uses a self-correcting timer that aligns to the next clock minute to avoid drift.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Intentionally runs once on mount to start the self-correcting clock timer. Adding `now` would cause infinite re-renders.
-  useEffect(() => {
-    let id: ReturnType<typeof setTimeout>;
-
-    const tick = () => {
-      const current = new Date();
-      setNow(current);
-      // Schedule next tick at the top of the next minute
-      const msUntilNextMinute = (60 - current.getSeconds()) * 1000 - current.getMilliseconds();
-      id = setTimeout(tick, Math.max(msUntilNextMinute, 1000));
-    };
-
-    // First tick: align to top of next minute
-    const msUntilNextMinute = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
-    id = setTimeout(tick, Math.max(msUntilNextMinute, 1000));
-
-    return () => clearTimeout(id);
-  }, []);
 
   const todayStart = useMemo(() => startOfDay(now).getTime(), [now]);
   const todayEnd = todayStart + MS_PER_DAY;
@@ -157,15 +120,6 @@ export default function TrackPage() {
   const selectedLogs = useMemo(
     () => logs.filter((log) => log.timestamp >= selectedStart && log.timestamp < selectedEnd),
     [logs, selectedStart, selectedEnd],
-  );
-
-  // Feature-gated: when reproductiveHealth flag is off, always hide reproductive logs
-  const visibleSelectedLogs = useMemo(
-    () =>
-      FEATURE_FLAGS.reproductiveHealth && reproductiveTrackingEnabled
-        ? selectedLogs
-        : selectedLogs.filter((log) => log.type !== "reproductive"),
-    [reproductiveTrackingEnabled, selectedLogs],
   );
 
   // --- Habit aggregate data for streaks, detail sheet, and coaching ---
@@ -340,39 +294,6 @@ export default function TrackPage() {
         notes: state.notes.trim(),
       },
     });
-    // TEMPORARILY DISABLED: Dr Poo auto-analysis on BM log
-    // triggerAnalysis({
-    //   bristolScore: state.bristolCode,
-    //   autoSendEnabled: (aiPreferences.reportTriggerMode ?? "auto") === "auto",
-    // });
-    afterSave();
-  };
-
-  const handleLogCycle = async (state: CycleLogFormState) => {
-    await addSyncedLog({
-      timestamp: Date.now(),
-      type: "reproductive",
-      data: {
-        entryType: "cycle",
-        periodStartDate: state.periodStartDate,
-        bleedingStatus: state.bleedingStatus,
-        ...(state.symptoms.length > 0 && { symptoms: state.symptoms }),
-        ...(state.notes.trim() && { notes: state.notes.trim() }),
-      },
-    });
-
-    if (healthProfileRef.current) {
-      void patchProfile({
-        healthProfile: {
-          ...healthProfileRef.current,
-          reproductiveHealth: {
-            ...healthProfileRef.current.reproductiveHealth,
-            lastPeriodStartDate: state.periodStartDate,
-          },
-        },
-      });
-    }
-
     afterSave();
   };
 
@@ -440,27 +361,6 @@ export default function TrackPage() {
       });
 
       const nextTimestamp = timestamp ?? log.timestamp;
-
-      if (
-        log.type === "reproductive" &&
-        "entryType" in data &&
-        String(data.entryType ?? "") === "cycle" &&
-        "periodStartDate" in data &&
-        typeof data.periodStartDate === "string" &&
-        data.periodStartDate.trim().length > 0
-      ) {
-        if (healthProfileRef.current) {
-          void patchProfile({
-            healthProfile: {
-              ...healthProfileRef.current,
-              reproductiveHealth: {
-                ...healthProfileRef.current.reproductiveHealth,
-                lastPeriodStartDate: data.periodStartDate.trim(),
-              },
-            },
-          });
-        }
-      }
 
       if (log.type === "fluid") {
         const nextFluidData = data as FluidLogData;
@@ -577,7 +477,7 @@ export default function TrackPage() {
 
   const todayLog = (
     <TodayLog
-      logs={visibleSelectedLogs}
+      logs={selectedLogs}
       habits={habits}
       weightUnit={weightUnit}
       constrainHeight={isDesktop}
@@ -594,7 +494,7 @@ export default function TrackPage() {
   );
 
   return (
-    <div className="mx-auto max-w-440 pb-8">
+    <div className="mx-auto max-w-110 pb-8">
       <header className="mb-3">
         <div className="grid grid-cols-1 items-baseline gap-5 md:grid-cols-2 xl:grid-cols-[3fr_4fr_3fr]">
           <div className="flex flex-wrap items-baseline gap-4">
@@ -602,15 +502,13 @@ export default function TrackPage() {
               Track
             </h1>
             <p className="font-monaco text-xs uppercase tracking-[0.2em] text-teal-600 dark:text-teal-400 shrink-0">
-              {format(now, "E · d MMMM · hh:mm")}
+              {format(now, "E · d MMMM · HH:mm")}
             </p>
           </div>
           <div className="flex justify-center">{todayStatusRow}</div>
           {isDesktop && <div />}
         </div>
       </header>
-      {/* ── Mobile only: full-width top section ── */}
-      {isMobile && <div className="space-y-3 mb-5">{quickCapture}</div>}
 
       <div className="stagger-reveal grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-[3fr_4fr_3fr] xl:items-start">
         {/* ── Column 1: Input forms ── */}
@@ -618,26 +516,15 @@ export default function TrackPage() {
           <FoodSection onLogFood={handleLogFood} />
           <FluidSection onLogFluid={handleLogFluid} />
           <BowelSection onSave={handleLogBowel} />
-          <ObservationWindow logs={logs} />
-          {FEATURE_FLAGS.reproductiveHealth && <CycleHormonalSection onSave={handleLogCycle} />}
+          {quickCapture}
           {!isDesktop && aiInsightsSection}
         </section>
 
-        {/* ── Tablet (md): Column 2 = QuickCapture + Insights + TodayLog ── */}
-        {isTablet && (
-          <section className="space-y-5 min-w-0">
-            {quickCapture}
-            {todayLog}
-          </section>
-        )}
+        {/* ── Tablet (md): Column 2 = TodayLog ── */}
+        {isTablet && <section className="space-y-5 min-w-0">{todayLog}</section>}
 
-        {/* ── Desktop (xl): Column 2 = QuickCapture + Insights + AiInsights ── */}
-        {isDesktop && (
-          <section className="space-y-5 min-w-0">
-            {quickCapture}
-            {aiInsightsSection}
-          </section>
-        )}
+        {/* ── Desktop (xl): Column 2 = AiInsights ── */}
+        {isDesktop && <section className="space-y-5 min-w-0">{aiInsightsSection}</section>}
 
         {/* ── Mobile: TodayLog below inputs ── */}
         {isMobile && <aside className="space-y-5 min-w-0">{todayLog}</aside>}

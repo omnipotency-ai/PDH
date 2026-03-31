@@ -1,13 +1,13 @@
-# Caca Traca — Vision & v1.0 Scope
+# PDH — Vision & v1.0 Scope
 
 ## Purpose
 
-Caca Traca is a digestive recovery tracker for patients who have undergone
+PDH is a digestive recovery tracker for patients who have undergone
 reconnective surgery (ostomy reversal). During recovery, patients must
 systematically identify which foods their body can tolerate by logging
 meals, fluids, habits, and bowel movements, then correlating inputs with
 digestive outcomes over time. This process is tedious and easy to abandon.
-Caca Traca makes it manageable by providing structured logging, automated
+PDH makes it manageable by providing structured logging, automated
 food-digestion correlation, and AI-generated coaching insights — all
 designed to be usable by someone who is recovering, fatigued, and likely
 dealing with ADHD-adjacent executive function challenges.
@@ -149,7 +149,7 @@ No SSR — the app is a client-side SPA deployed to Vercel.
 
 ## What Success Looks Like
 
-A recovering patient installs Caca Traca, logs their meals and bowel
+A recovering patient installs PDH, logs their meals and bowel
 movements daily with minimal friction, and within two to four weeks
 has a clear picture of which foods are safe, which are risky, and
 which to avoid. The AI coaching reinforces patterns they might miss

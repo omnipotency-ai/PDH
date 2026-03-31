@@ -163,8 +163,8 @@
       "file": "src/components/settings/app-data-form/useAppDataFormController.ts",
       "line": 79,
       "title": "Export filename uses 'kaka-tracker' — appears to be a placeholder product name",
-      "description": "The export filename base is hardcoded as `kaka-tracker-${date}`. The product is named 'Caca Traca'. If this is intentional it should be documented; if it is an early placeholder it should be updated to match the product name or made a config constant.",
-      "fix": "Define `const EXPORT_FILENAME_BASE = 'caca-traca'` (or whatever the canonical slug is) as a module-level constant, and use it in the filename construction.",
+      "description": "The export filename base is hardcoded as `kaka-tracker-${date}`. The product is named 'PDH'. If this is intentional it should be documented; if it is an early placeholder it should be updated to match the product name or made a config constant.",
+      "fix": "Define `const EXPORT_FILENAME_BASE = 'PDH'` (or whatever the canonical slug is) as a module-level constant, and use it in the filename construction.",
       "implemented": false
     },
     {

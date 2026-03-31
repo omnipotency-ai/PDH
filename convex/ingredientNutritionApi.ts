@@ -31,7 +31,10 @@ function asStringArray(value: unknown): string[] {
   return out;
 }
 
-function readNutrient(nutriments: Record<string, unknown>, keys: string[]): number | null {
+function readNutrient(
+  nutriments: Record<string, unknown>,
+  keys: string[],
+): number | null {
   for (const key of keys) {
     const value = asNumber(nutriments[key]);
     if (value !== null) return value;
@@ -61,17 +64,30 @@ export const searchOpenFoodFacts = action({
     url.searchParams.set("page_size", String(limit));
     url.searchParams.set(
       "fields",
-      ["code", "product_name", "brands", "ingredients_text", "categories_tags", "nutriments"].join(
-        ",",
-      ),
+      [
+        "code",
+        "product_name",
+        "brands",
+        "ingredients_text",
+        "categories_tags",
+        "nutriments",
+      ].join(","),
     );
 
-    const response = await fetch(url.toString(), {
-      method: "GET",
-      headers: {
-        "User-Agent": "caca-traca/1.0 (ingredient nutrition lookup)",
-      },
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10_000);
+    let response: Response;
+    try {
+      response = await fetch(url.toString(), {
+        method: "GET",
+        headers: {
+          "User-Agent": "PDH/1.0 (ingredient nutrition lookup)",
+        },
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
       throw new Error(`OpenFoodFacts lookup failed (${response.status}).`);
@@ -101,8 +117,14 @@ export const searchOpenFoodFacts = action({
           nutritionPer100g: {
             kcal: readNutrient(nutriments, ["energy-kcal_100g", "energy-kcal"]),
             fatG: readNutrient(nutriments, ["fat_100g", "fat"]),
-            saturatedFatG: readNutrient(nutriments, ["saturated-fat_100g", "saturated-fat"]),
-            carbsG: readNutrient(nutriments, ["carbohydrates_100g", "carbohydrates"]),
+            saturatedFatG: readNutrient(nutriments, [
+              "saturated-fat_100g",
+              "saturated-fat",
+            ]),
+            carbsG: readNutrient(nutriments, [
+              "carbohydrates_100g",
+              "carbohydrates",
+            ]),
             sugarsG: readNutrient(nutriments, ["sugars_100g", "sugars"]),
             fiberG: readNutrient(nutriments, ["fiber_100g", "fiber"]),
             proteinG: readNutrient(nutriments, ["proteins_100g", "proteins"]),

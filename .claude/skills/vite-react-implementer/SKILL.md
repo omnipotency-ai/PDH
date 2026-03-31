@@ -1,6 +1,6 @@
 ---
 name: vite-react-implementer
-description: Project-specific patterns and conventions for implementing features in the Caca Traca codebase (React + Vite + Convex + Zustand). Read this before implementing any feature to understand schema patterns, hook conventions, store shape, food pipeline, transit map domain, and key file locations.
+description: Project-specific patterns and conventions for implementing features in the PDH codebase (React + Vite + Convex + Zustand). Read this before implementing any feature to understand schema patterns, hook conventions, store shape, food pipeline, transit map domain, and key file locations.
 ---
 
 # Vite React Implementer — Project Context

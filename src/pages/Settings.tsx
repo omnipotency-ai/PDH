@@ -1,8 +1,7 @@
-import { Database, HeartPulse, Palette, Sliders, Upload, Venus } from "lucide-react";
+import { Database, HeartPulse, Palette, Sliders, Upload } from "lucide-react";
 import { AppDataForm } from "@/components/settings/AppDataForm";
 import { HealthForm } from "@/components/settings/HealthForm";
 import { PersonalisationForm } from "@/components/settings/PersonalisationForm";
-import { ReproForm } from "@/components/settings/ReproForm";
 import { SettingsTile } from "@/components/settings/SettingsTile";
 import { TrackingForm } from "@/components/settings/TrackingForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,14 +14,11 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer";
 import { useHabits, useHealthProfile, useSleepGoal } from "@/hooks/useProfile";
-import { FEATURE_FLAGS } from "@/lib/featureFlags";
 
 export default function SettingsPage() {
   const { healthProfile } = useHealthProfile();
   const { sleepGoal } = useSleepGoal();
   const { habits } = useHabits();
-
-  const reproEnabled = healthProfile?.reproductiveHealth.trackingEnabled ?? false;
 
   // Summary values for mobile tiles
   const surgeryLabel = healthProfile
@@ -39,14 +35,6 @@ export default function SettingsPage() {
   })();
   const healthSummary = [surgeryLabel, ...(computedBmi ? [`BMI ${computedBmi}`] : [])].join(" · ");
 
-  const cycleDays = healthProfile?.reproductiveHealth.averageCycleLengthDays ?? 28;
-  const pregnancyLabel =
-    healthProfile?.reproductiveHealth.pregnancyStatus === "pregnant"
-      ? "Pregnant"
-      : healthProfile?.reproductiveHealth.pregnancyStatus === "postpartum"
-        ? "Postpartum"
-        : "Not pregnant";
-  const reproSummary = `Cycle: ${cycleDays}d · ${pregnancyLabel}`;
   const trackingSummary = `${habits.length} habits · ${sleepGoal.targetHours}h sleep`;
   const appdataSummary = "Synced via Convex";
 
@@ -82,22 +70,6 @@ export default function SettingsPage() {
               <HealthForm />
             </CardContent>
           </Card>
-
-          {FEATURE_FLAGS.reproductiveHealth && reproEnabled && (
-            <Card className="settings-panel settings-panel-repro">
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-3 text-base text-[var(--text)]">
-                  <span className="settings-card-media settings-card-media-repro">
-                    <img src="/reproductive-health-img.png" alt="Reproductive health section" />
-                  </span>
-                  <span className="leading-tight">Reproductive Health</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ReproForm />
-              </CardContent>
-            </Card>
-          )}
 
           <Card className="settings-panel settings-panel-personalisation">
             <CardHeader className="pb-2">
@@ -179,33 +151,6 @@ export default function SettingsPage() {
               </div>
             </DrawerContent>
           </Drawer>
-
-          {FEATURE_FLAGS.reproductiveHealth && reproEnabled && (
-            <Drawer>
-              <DrawerTrigger asChild>
-                <SettingsTile
-                  color="repro"
-                  icon={Venus}
-                  title="Reproductive"
-                  summary={reproSummary}
-                />
-              </DrawerTrigger>
-              <DrawerContent className="settings-drawer">
-                <DrawerHeader>
-                  <DrawerTitle className="flex items-center gap-2">
-                    <Venus className="h-4 w-4 text-[var(--section-repro)]" />
-                    Reproductive Health
-                  </DrawerTitle>
-                  <DrawerDescription className="sr-only">
-                    Reproductive health tracking settings
-                  </DrawerDescription>
-                </DrawerHeader>
-                <div className="overflow-y-auto px-4 pb-6">
-                  <ReproForm />
-                </div>
-              </DrawerContent>
-            </Drawer>
-          )}
 
           <Drawer>
             <DrawerTrigger asChild>

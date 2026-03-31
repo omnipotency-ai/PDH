@@ -1,6 +1,6 @@
 # Bristol Stool Scale Classification — Evidence-Based Reference
 
-> Generated 2026-03-10. Research for Caca Traca food safety classification algorithm.
+> Generated 2026-03-10. Research for PDH food safety classification algorithm.
 
 ## Bristol Scale Classifications for Post-Anastomosis Recovery
 
@@ -133,7 +133,7 @@ When preparation is ambiguous (e.g. "chicken + olive oil" — fried or drizzled?
 
 ### Key Finding
 
-**No existing app defines formal classification thresholds for food safety scoring in GI recovery.** Caca Traca's Bayesian evidence system with transit calibration, modifier adjustments, and multi-food penalty is more sophisticated than any commercially available tool.
+**No existing app defines formal classification thresholds for food safety scoring in GI recovery.** PDH's Bayesian evidence system with transit calibration, modifier adjustments, and multi-food penalty is more sophisticated than any commercially available tool.
 
 ## Sources
 

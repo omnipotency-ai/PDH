@@ -7,7 +7,6 @@ import type {
   HabitLogData,
   LogDataMap,
   LogType,
-  ReproductiveLog,
   WeightLog,
 } from "@/types/domain";
 
@@ -64,11 +63,6 @@ export type WeightGroup = {
   entries: WeightLog[];
   sortKey: number;
 };
-export type ReproductiveGroup = {
-  kind: "reproductive";
-  entries: ReproductiveLog[];
-  sortKey: number;
-};
 export type DisplayItem =
   | IndividualItem
   | CounterHabitGroup
@@ -77,8 +71,7 @@ export type DisplayItem =
   | FoodLogGroup
   | SleepGroup
   | ActivityGroup
-  | WeightGroup
-  | ReproductiveGroup;
+  | WeightGroup;
 
 // ── Component prop types ──────────────────────────────────────────────
 export interface TodayLogProps {
@@ -107,6 +100,8 @@ export interface LogEntryProps {
 }
 
 export interface DraftItem {
+  /** Stable key for React list rendering — generated once when the item is created. */
+  id: string;
   name: string;
   quantity: string;
   unit: string;

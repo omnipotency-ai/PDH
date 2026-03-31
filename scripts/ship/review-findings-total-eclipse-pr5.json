@@ -1,0 +1,223 @@
+{
+  "branch": "total-eclipse",
+  "pr": 5,
+  "reviewed_at": "2026-03-31T00:00:00Z",
+  "files_reviewed": [
+    "src/routeTree.tsx",
+    "src/pages/Track.tsx",
+    "src/pages/Patterns.tsx",
+    "src/pages/Settings.tsx",
+    "src/store.ts",
+    "src/types/domain.ts",
+    "src/index.css",
+    "src/lib/featureFlags.ts",
+    "src/lib/apiKeyStore.ts",
+    "src/lib/syncCore.ts",
+    "src/lib/__tests__/sync.test.ts"
+  ],
+  "findings": [
+    {
+      "id": "F001",
+      "severity": "HIGH",
+      "category": "correctness",
+      "file": "src/pages/Track.tsx",
+      "line": 534,
+      "title": "12-hour clock format drops AM/PM indicator",
+      "description": "The time format string is 'E · d MMMM · hh:mm'. The 'hh' token produces 12-hour clock hours (01–12) but there is no 'a' (AM/PM) modifier. At 2:30 PM the display will show '02:30', indistinguishable from 2:30 AM. For a medical app where timestamps on bowel-movement and food logs are clinically significant, this is a meaningful correctness issue — not a cosmetic one.",
+      "fix": "Change the format string to include the AM/PM indicator: `format(now, \"E · d MMMM · hh:mm a\")`, or switch to 24-hour time with `HH:mm`.",
+      "implemented": false
+    },
+    {
+      "id": "F002",
+      "severity": "HIGH",
+      "category": "code-quality",
+      "file": "src/types/domain.ts",
+      "line": 54,
+      "title": "Full reproductive health type hierarchy retained despite the feature being stripped",
+      "description": "This PR's stated purpose is to strip reproductive health. Yet `ReproductiveHealthSettings`, `PregnancyStatus`, `MenopauseStatus`, `ReproductiveCyclePhase` and all their related string-literal union types (lines 54–61) are still exported from domain.ts. The `HealthProfile` interface still embeds `reproductiveHealth: ReproductiveHealthSettings` (line 239). The `DEFAULT_HEALTH_PROFILE` in store.ts still initialises a full `reproductiveHealth` object (lines 105–129 of store.ts). These are not passively harmless: they are serialised into every user's Convex cloud profile document, meaning the schema continues to carry and transmit reproductive health data even after the UI is removed.",
+      "fix": "Remove the `reproductiveHealth` field from `HealthProfile`, remove the `ReproductiveHealthSettings` interface and all related type aliases from domain.ts, and remove the `reproductiveHealth` initialiser from `DEFAULT_HEALTH_PROFILE` in store.ts. If a migration is needed to clean existing Convex documents, plan it separately.",
+      "implemented": false
+    },
+    {
+      "id": "F003",
+      "severity": "HIGH",
+      "category": "code-quality",
+      "file": "src/store.ts",
+      "line": 105,
+      "title": "DEFAULT_HEALTH_PROFILE initialises a complete reproductive health sub-object",
+      "description": "Even though no Settings UI exposes reproductive health any more, `DEFAULT_HEALTH_PROFILE` initialises a 20-field `reproductiveHealth` object (lines 105–129). Any call that spreads or merges this default will silently write these fields to Convex. This is a consequence of F002 not yet being cleaned up, but it has independent impact: it inflates every new user's stored profile.",
+      "fix": "Remove the `reproductiveHealth` key from `DEFAULT_HEALTH_PROFILE` in tandem with the domain.ts cleanup described in F002.",
+      "implemented": false
+    },
+    {
+      "id": "F004",
+      "severity": "HIGH",
+      "category": "code-quality",
+      "file": "src/index.css",
+      "line": 691,
+      "title": "Dead CSS for .glass-card-repro and .settings-panel-repro retained",
+      "description": "The CSS file defines token variables (`--section-repro`, `--section-repro-muted`, `--section-repro-border`, `--section-repro-glow`) in both light and dark theme blocks, the `.glass-card-repro` class (line 691), and the `.settings-panel-repro` class (lines 832–837). After the feature strip these classes are only referenced in two settings-component files (`SettingsTile.tsx`, `SettingsSelect.tsx`) which still reference them — confirming the settings components also need a cleanup pass. The CSS is dead weight that also signals an incomplete removal.",
+      "fix": "Remove the `--section-repro-*` token variables from both theme blocks, `.glass-card-repro`, `.settings-panel-repro`, and their light-theme variants from index.css. Coordinate with the cleanup of `SettingsTile.tsx` and `SettingsSelect.tsx`.",
+      "implemented": false
+    },
+    {
+      "id": "F005",
+      "severity": "HIGH",
+      "category": "code-quality",
+      "file": "src/index.css",
+      "line": 1123,
+      "title": "Dead @keyframes for transit map retained in CSS",
+      "description": "Two keyframe animations that were exclusively for the deleted transit map feature — `station-pulse` (line 1123) and `you-are-here-pulse` (line 1137) — remain in index.css with their source comments explicitly stating they belong to the transit map. Since the transit map page is deleted, these keyframes are dead code.",
+      "fix": "Delete the `@keyframes station-pulse` and `@keyframes you-are-here-pulse` blocks from index.css.",
+      "implemented": false
+    },
+    {
+      "id": "F006",
+      "severity": "MODERATE",
+      "category": "code-quality",
+      "file": "src/routeTree.tsx",
+      "line": 36,
+      "title": "UiMigrationLab route still registered in production router",
+      "description": "The route `/ui-migration-lab` and its lazy import (`UiMigrationLabPage`) remain in routeTree.tsx (lines 36, 435–445). This route is listed in the router's addChildren call (line 454), which means it is accessible to any authenticated user who knows the URL. If the page is a development/debugging artifact (its name strongly suggests so), it should not be reachable in production.",
+      "fix": "Either gate the route behind a `FEATURE_FLAGS` flag and only register it in development builds, or delete the route, import, and page file entirely. If it must remain for migration purposes, add a comment explaining its temporary nature and an owner/deadline.",
+      "implemented": false
+    },
+    {
+      "id": "F007",
+      "severity": "MODERATE",
+      "category": "code-quality",
+      "file": "src/lib/featureFlags.ts",
+      "line": 11,
+      "title": "FEATURE_FLAGS is an empty object — the module serves no purpose in its current state",
+      "description": "`FEATURE_FLAGS` is exported as `{} as const`. With no flags defined, every import of this module is dead code. F006 above demonstrates a case where a feature flag should exist but doesn't. The module is fine as an architecture pattern, but having it empty while unexpanded routes exist is a tension.",
+      "fix": "Either add the `uiMigrationLab` flag here (e.g. `uiMigrationLab: import.meta.env.DEV`) and use it to gate F006, or add a comment explaining that new flags go here so reviewers understand it is intentionally empty.",
+      "implemented": false
+    },
+    {
+      "id": "F008",
+      "severity": "MODERATE",
+      "category": "code-quality",
+      "file": "src/pages/Track.tsx",
+      "line": 526,
+      "title": "Custom Tailwind class max-w-440 is not defined anywhere",
+      "description": "`className=\"mx-auto max-w-440 pb-8\"` uses `max-w-440` which does not correspond to any Tailwind v4 built-in utility, is not defined in index.css, and is not in any @theme block. Tailwind v4 will silently generate nothing for this class if it cannot infer it. The Track page will have no enforced maximum width, causing it to stretch edge-to-edge on wide screens. The class appears in `dist/assets/index-CEAEtV4Y.css`, suggesting it was previously defined elsewhere but has been lost.",
+      "fix": "Define the utility in index.css (e.g., `@layer utilities { .max-w-440 { max-width: 110rem; } }`) or replace it with the nearest standard Tailwind value such as `max-w-screen-2xl` (96rem) or `max-w-[110rem]` as an arbitrary value.",
+      "implemented": false
+    },
+    {
+      "id": "F009",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/pages/Track.tsx",
+      "line": 95,
+      "title": "Commented-out Dr Poo auto-analysis code creates misleading dead code fragments",
+      "description": "Lines 95–99 show `sendNow` is extracted from `useAiInsights()` and labelled 'TEMPORARILY DISABLED: Dr Poo auto-analysis on BM log'. The hook call and destructure are live (triggering subscription), but the actual trigger code (`triggerAnalysis`) is commented out at lines 321–325. This means the hook is subscribed but only `sendNow` (the manual trigger) is used. If the intent is that `useAiInsights` runs only for manual triggers, the inline comment is misleading and leaves readers uncertain whether there is an active subscription side-effect. Additionally, `useAiPreferences` is imported-then-commented out (line 35–37) which pollutes the import block.",
+      "fix": "If the auto-analysis is genuinely disabled, remove the commented-out import block for `useAiPreferences` (line 35–37) and the commented `triggerAnalysis` block (lines 321–325). Leave a tracked work-queue item for re-enabling it, not inline TODO comments.",
+      "implemented": false
+    },
+    {
+      "id": "F010",
+      "severity": "MODERATE",
+      "category": "accessibility",
+      "file": "src/routeTree.tsx",
+      "line": 220,
+      "title": "Navigation link icon and label are both aria-hidden — link has no accessible name on mobile",
+      "description": "In `GlobalHeader`, each nav link `<Link>` has `aria-label={item.label}` on the link element (line 220). However, the icon element has `aria-hidden=\"true\"` (line 227) and the text `<span>` also has `aria-hidden=\"true\"` (line 228). On desktop (`md:inline`) the label is visible and the `aria-label` on the `<Link>` provides the accessible name. On mobile the span is `hidden` and the icon is `aria-hidden`, but the `<Link>` still has its `aria-label`, so it should work. The real issue is that the `NavigationMenuLink` wraps the `<Link>` — the link itself has the label but is nested inside another interactive element (`NavigationMenuLink asChild`). Depending on how shadcn's `asChild` composition renders, the screen reader might encounter nested interactive elements, which is invalid HTML and confusing to assistive technology.",
+      "fix": "Verify the rendered DOM for the nav links. If `NavigationMenuLink asChild` passes through to the `Link` cleanly (as intended), confirm with a quick accessibility audit. If nesting is the outcome, restructure so the `<Link>` is the outermost interactive element.",
+      "implemented": false
+    },
+    {
+      "id": "F011",
+      "severity": "MODERATE",
+      "category": "performance",
+      "file": "src/pages/Track.tsx",
+      "line": 483,
+      "title": "Shared JSX elements computed every render without memoization",
+      "description": "Lines 483–522 compute `todayStatusRow`, `quickCapture`, `aiInsightsSection`, and `todayLog` as plain JSX variables on every render of `TrackPage`. These are not `useMemo`-wrapped. TrackPage is a large component with many state variables; any one of them (e.g. `now` updating every minute via the timer) will re-compute these entire subtrees on each tick, even though their props haven't changed.",
+      "fix": "Wrap each of these shared element variables in `useMemo` with their relevant prop dependencies, or extract them into separate child components with stable prop references. Given the number of hooks in TrackPage, consider whether a further breakdown into smaller components would reduce the re-render surface area.",
+      "implemented": false
+    },
+    {
+      "id": "F012",
+      "severity": "MODERATE",
+      "category": "code-quality",
+      "file": "src/types/domain.ts",
+      "line": 304,
+      "title": "TODO comment for meal schedule config left in production types",
+      "description": "Line 187 (in the `DEFAULT_AI_PREFERENCES` definition block) contains: `// TODO: expose these as user-configurable defaults in the onboarding flow.` TODOs embedded in type/constant files are invisible to project management tooling and can persist indefinitely. This one has been here since the domain types were authored.",
+      "fix": "Remove the inline TODO and create a tracked work-queue item in docs/WORK-QUEUE.md instead.",
+      "implemented": false
+    },
+    {
+      "id": "F013",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/lib/syncCore.ts",
+      "line": 108,
+      "title": "sanitizeLogData casts sanitized data with 'as FoodLogData' after deep sanitization — structural integrity not verified",
+      "description": "`sanitizeUnknownStringsDeep(data)` returns `unknown` and each switch branch immediately casts the result (e.g. `const d = sanitized as FoodLogData`). The deep sanitizer trims strings but does not validate field presence or types. If `data` arrives malformed (e.g. a food log missing `items`, or a digestion log with a non-numeric `bristolCode`), the cast will succeed at the TypeScript level and the resulting `ConvexLogData` object will pass to the Convex mutation where the server validator will reject it — producing an opaque error rather than a clear client-side failure. The server will catch it, but the client error will be generic.",
+      "fix": "Add lightweight structural assertions before each cast (e.g. `if (!Array.isArray((data as FoodLogData).items)) throw new Error('food log missing items array')` or use a zod/valibot schema). Alternatively, accept that the server is the canonical validation layer and document this explicitly in the function's JSDoc.",
+      "implemented": false
+    },
+    {
+      "id": "F014",
+      "severity": "LOW",
+      "category": "code-quality",
+      "file": "src/lib/apiKeyStore.ts",
+      "line": 3,
+      "title": "Storage key name 'PDH-openai-key' will break if the provider changes",
+      "description": "The IDB key is named `PDH-openai-key` but the app supports multiple AI models (Gemini etc. per `src/types/domain.ts` `AiModel` type). If the user switches to a non-OpenAI model and the key name stays as-is, a future migration or provider refactor must know to rename or migrate this key — the name becomes misleading and potentially a maintenance trap.",
+      "fix": "Rename to a provider-agnostic key such as `PDH-ai-api-key`. This is a one-time IDB migration (or a new key with fallback read of the old key).",
+      "implemented": false
+    },
+    {
+      "id": "F015",
+      "severity": "LOW",
+      "category": "code-quality",
+      "file": "src/pages/Patterns.tsx",
+      "line": 386,
+      "title": "TodayLabel duplicates the self-correcting clock timer pattern already in Track.tsx",
+      "description": "The `TodayLabel` component (lines 386–407) implements its own self-correcting clock timer (`setTimeout` + recursive `tick`) that is identical in logic to the one in `TrackPage` (lines 114–131). This is exact code duplication of a non-trivial pattern. A bug or improvement to the timer logic would need to be applied in two places.",
+      "fix": "Extract the clock logic to a shared hook, e.g. `useCurrentTime(formatFn?)` in `src/hooks/useCurrentTime.ts`, and use it in both components.",
+      "implemented": false
+    },
+    {
+      "id": "F016",
+      "severity": "LOW",
+      "category": "code-quality",
+      "file": "src/pages/Patterns.tsx",
+      "line": 381,
+      "title": "Stale comment references removed feature",
+      "description": "Line 381 reads: `// ── FoodEntryPoints removed — replaced by FoodSafetyGrid (Bug #20) ──────────`. This comment documents a historical change that has already been made. It no longer communicates anything actionable and adds noise to the file.",
+      "fix": "Remove the comment. Historical context like this belongs in git commit messages or ADRs, not inline code.",
+      "implemented": false
+    },
+    {
+      "id": "F017",
+      "severity": "LOW",
+      "category": "accessibility",
+      "file": "src/index.css",
+      "line": 1649,
+      "title": "prefers-reduced-motion media query does not cover stagger-reveal and aurora background animations",
+      "description": "The `@media (prefers-reduced-motion: reduce)` block at line 1649 disables several animations, but it misses `stagger-reveal` (which uses `fadeSlideUp` on every child element), `aurora-shift` (the continuously animating background gradient on `body::after`), and `card-glow-pulse`. Users with vestibular disorders who have reduced motion enabled will still experience the aurora background looping at 12s intervals and every page transition triggering stagger animations.",
+      "fix": "Add `stagger-reveal > *`, `body::after`, and `.animate-aurora` to the reduced-motion override block: `@media (prefers-reduced-motion: reduce) { .stagger-reveal > * { animation: none; } body::after { animation: none; } }`",
+      "implemented": false
+    },
+    {
+      "id": "F018",
+      "severity": "LOW",
+      "category": "code-quality",
+      "file": "src/lib/__tests__/sync.test.ts",
+      "line": 163,
+      "title": "Test uses unsafe type assertion to inspect result shape",
+      "description": "Several test assertions cast result to `{ items: unknown[] }` or `{ items: Array<{ canonicalName?: string; unit: string | null }> }` using inline type assertions (e.g. lines 163, 205). While acceptable in tests, these widened casts mean the test will not catch a rename or shape change in the return type of `sanitizeLogData`. The test would still pass even if the returned shape changed.",
+      "fix": "Use typed expectations by importing `ConvexLogData` (or the food/fluid-specific subtypes) and asserting the result satisfies the type. Consider `expect(result).toMatchObject({ items: [...] })` patterns that are more robust.",
+      "implemented": false
+    }
+  ],
+  "summary": {
+    "high": 5,
+    "moderate": 7,
+    "low": 6
+  }
+}

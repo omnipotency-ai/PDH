@@ -8,18 +8,7 @@ import { BOWEL_LOG_LABELS } from "@/components/track/panels/bowelConstants";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { getErrorMessage } from "@/lib/errors";
 import { getHabitIcon } from "@/lib/habitIcons";
-import {
-  REPRODUCTIVE_BLEEDING_OPTIONS,
-  REPRODUCTIVE_SYMPTOM_OPTIONS,
-} from "@/lib/reproductiveHealth";
-import type {
-  DigestiveLogData,
-  FluidLogData,
-  FoodLogData,
-  ReproductiveBleedingStatus,
-  ReproductiveLogData,
-  ReproductiveSymptom,
-} from "@/types/domain";
+import type { DigestiveLogData, FluidLogData, FoodLogData } from "@/types/domain";
 import {
   applyDateTimeToTimestamp,
   findHabitConfigForHabitLog,
@@ -29,7 +18,6 @@ import {
   getLogIcon,
   getLogNotes,
   getLogTitle,
-  getReproductiveSymptoms,
   titleCaseToken as titleCase,
   truncatePreviewText,
 } from "../helpers";
@@ -60,17 +48,6 @@ export function LogEntry({ log, habits, onDelete, onSave }: LogEntryProps) {
   const [draftEffort, setDraftEffort] = useState("");
   const [draftVolume, setDraftVolume] = useState("");
   const [draftAccident, setDraftAccident] = useState(false);
-  const [draftReproPeriodStartDate, setDraftReproPeriodStartDate] = useState(() =>
-    log.type === "reproductive" ? log.data.periodStartDate : "",
-  );
-  const [draftReproBleedingStatus, setDraftReproBleedingStatus] =
-    useState<ReproductiveBleedingStatus>(() => {
-      if (log.type !== "reproductive") return "none";
-      return log.data.bleedingStatus;
-    });
-  const [draftReproSymptoms, setDraftReproSymptoms] = useState<ReproductiveSymptom[]>(() =>
-    log.type === "reproductive" ? getReproductiveSymptoms(log) : [],
-  );
 
   // For habit logs, resolve icon per-habit; otherwise use the generic icon
   const habitConfig = log.type === "habit" ? findHabitConfigForHabitLog(habits, log.data) : null;
@@ -98,6 +75,8 @@ export function LogEntry({ log, habits, onDelete, onSave }: LogEntryProps) {
     try {
       setDeleting(true);
       await onDelete(log.id);
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to delete entry."));
     } finally {
       setDeleting(false);
       setConfirmDelete(false);
@@ -116,6 +95,7 @@ export function LogEntry({ log, habits, onDelete, onSave }: LogEntryProps) {
   const initFoodDraftItems = useCallback((): DraftItem[] => {
     if (log.type !== "food") return [];
     return log.data.items.map((item) => ({
+      id: crypto.randomUUID(),
       name: String(item?.parsedName ?? item?.name ?? item?.rawName ?? item?.userSegment ?? ""),
       quantity:
         item?.quantity != null && Number.isFinite(Number(item.quantity))
@@ -141,11 +121,6 @@ export function LogEntry({ log, habits, onDelete, onSave }: LogEntryProps) {
       setDraftEffort(String(log.data.effortTag ?? ""));
       setDraftVolume(String(log.data.volumeTag ?? ""));
       setDraftAccident(Boolean(log.data.accident));
-    }
-    if (log.type === "reproductive") {
-      setDraftReproPeriodStartDate(log.data.periodStartDate);
-      setDraftReproBleedingStatus(log.data.bleedingStatus);
-      setDraftReproSymptoms(getReproductiveSymptoms(log));
     }
     setEditing(true);
   }, [log, initFoodDraftItems]);
@@ -227,16 +202,6 @@ export function LogEntry({ log, habits, onDelete, onSave }: LogEntryProps) {
           windowMinutes: log.data.windowMinutes,
         }),
       } satisfies DigestiveLogData;
-    } else if (log.type === "reproductive") {
-      nextData = {
-        entryType: "cycle",
-        periodStartDate: draftReproPeriodStartDate,
-        bleedingStatus: draftReproBleedingStatus,
-        ...(draftReproSymptoms.length > 0 && {
-          symptoms: draftReproSymptoms,
-        }),
-        ...(notes.length > 0 && { notes }),
-      } satisfies ReproductiveLogData;
     } else {
       // habit, activity, weight — pass through unchanged
       nextData = { ...log.data };
@@ -311,6 +276,7 @@ export function LogEntry({ log, habits, onDelete, onSave }: LogEntryProps) {
           type="button"
           onClick={handleToggleExpand}
           aria-expanded={digestionExpanded}
+          aria-controls={`digestion-detail-${log.id}`}
           className="flex w-full items-start gap-3 px-3 py-2.5 text-left"
         >
           <Icon className={`mt-0.5 h-4 w-4 flex-shrink-0 ${color}`} />
@@ -371,6 +337,7 @@ export function LogEntry({ log, habits, onDelete, onSave }: LogEntryProps) {
         <AnimatePresence>
           {digestionExpanded && (
             <motion.div
+              id={`digestion-detail-${log.id}`}
               initial="collapsed"
               animate="expanded"
               exit="collapsed"
@@ -409,6 +376,8 @@ export function LogEntry({ log, habits, onDelete, onSave }: LogEntryProps) {
                       key={code}
                       type="button"
                       onClick={() => setDraftBristol(code)}
+                      aria-label={`Type ${code}`}
+                      aria-pressed={draftBristol === code}
                       className="flex h-7 w-7 items-center justify-center rounded-md text-xs font-bold transition-colors"
                       style={
                         draftBristol === code ? digestionSelectedChipStyle : digestionIdleChipStyle
@@ -525,7 +494,7 @@ export function LogEntry({ log, habits, onDelete, onSave }: LogEntryProps) {
                 <div className="flex items-center gap-2 pt-1">
                   <button
                     type="button"
-                    onClick={saveEditing}
+                    onClick={() => void saveEditing()}
                     disabled={saving}
                     className="rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
                     style={digestionSelectedChipStyle}
@@ -537,7 +506,7 @@ export function LogEntry({ log, habits, onDelete, onSave }: LogEntryProps) {
                       <span className="text-xs text-[var(--color-text-secondary)]">Delete?</span>
                       <button
                         type="button"
-                        onClick={handleDelete}
+                        onClick={() => void handleDelete()}
                         disabled={deleting}
                         className="min-h-[28px] rounded-lg bg-red-500/20 px-2.5 py-1 text-xs font-semibold text-red-400 hover:bg-red-500/30"
                       >
@@ -570,6 +539,8 @@ export function LogEntry({ log, habits, onDelete, onSave }: LogEntryProps) {
     );
   }
 
+  const notesText = getLogNotes(log);
+
   return (
     <div className="log-entry flex items-start gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-[var(--section-log-muted)]">
       <Icon className={`mt-0.5 h-4 w-4 flex-shrink-0 ${color}`} />
@@ -597,7 +568,7 @@ export function LogEntry({ log, habits, onDelete, onSave }: LogEntryProps) {
             {log.type === "food" && (
               <div className="space-y-1.5">
                 {draftItems.map((draft, i) => (
-                  <div key={`draft-${i}`} className="flex items-center gap-1">
+                  <div key={draft.id} className="flex items-center gap-1">
                     <input
                       type="number"
                       value={draft.quantity}
@@ -634,7 +605,7 @@ export function LogEntry({ log, habits, onDelete, onSave }: LogEntryProps) {
                     {draftItems.length > 1 && (
                       <button
                         type="button"
-                        onClick={() => setDraftItems(draftItems.filter((_, j) => j !== i))}
+                        onClick={() => setDraftItems(draftItems.filter((d) => d.id !== draft.id))}
                         className="flex h-6 w-6 items-center justify-center rounded text-[var(--color-text-tertiary)] hover:text-red-400"
                       >
                         <X className="h-3 w-3" />
@@ -653,83 +624,6 @@ export function LogEntry({ log, habits, onDelete, onSave }: LogEntryProps) {
                 onChange={(e) => setDraftPrimary(e.target.value)}
                 className="w-full rounded-md border border-[var(--color-border-default)] bg-[var(--color-bg-overlay)] px-2 py-1 text-sm text-[var(--color-text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--section-log)]"
                 placeholder="Fluid"
-              />
-            )}
-
-            {/* Reproductive / cycle log: full editing */}
-            {log.type === "reproductive" && (
-              <div className="space-y-2 rounded-md border border-[var(--color-border-default)] bg-[var(--color-bg-overlay)] p-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <label className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-[var(--color-text-tertiary)]">
-                    Start date
-                    <input
-                      type="date"
-                      value={draftReproPeriodStartDate}
-                      onChange={(e) => setDraftReproPeriodStartDate(e.target.value)}
-                      className="rounded border border-[var(--color-border-default)] bg-[var(--color-bg-overlay)] px-2 py-1 text-xs text-[var(--color-text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--section-log)]"
-                    />
-                  </label>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-1">
-                  <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--color-text-tertiary)]">
-                    Bleeding
-                  </span>
-                  {REPRODUCTIVE_BLEEDING_OPTIONS.map((option) => {
-                    const active = draftReproBleedingStatus === option.value;
-                    return (
-                      <button
-                        key={option.value}
-                        type="button"
-                        onClick={() => setDraftReproBleedingStatus(option.value)}
-                        className={`rounded-md px-2 py-1 text-[11px] transition-colors ${
-                          active
-                            ? "bg-[var(--section-log)] text-white"
-                            : "border border-[var(--color-border-default)] text-[var(--color-text-tertiary)] hover:bg-[var(--section-log-muted)]"
-                        }`}
-                      >
-                        {option.label}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div className="flex flex-wrap gap-1">
-                  {REPRODUCTIVE_SYMPTOM_OPTIONS.map((option) => {
-                    const selected = draftReproSymptoms.includes(option.value);
-                    return (
-                      <button
-                        key={option.value}
-                        type="button"
-                        onClick={() =>
-                          setDraftReproSymptoms((current) =>
-                            current.includes(option.value)
-                              ? current.filter((value) => value !== option.value)
-                              : [...current, option.value],
-                          )
-                        }
-                        className={`rounded-full px-2 py-0.5 text-[10px] transition-colors ${
-                          selected
-                            ? "bg-[var(--section-log)]/15 text-[var(--section-log)] ring-1 ring-[var(--section-log)]/40"
-                            : "border border-[var(--color-border-default)] text-[var(--color-text-tertiary)] hover:bg-[var(--section-log-muted)]"
-                        }`}
-                      >
-                        {option.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {log.type === "reproductive" && (
-              <textarea
-                value={draftNotes}
-                maxLength={400}
-                onChange={(e) => setDraftNotes(e.target.value)}
-                className="w-full resize-none rounded-md border border-[var(--color-border-default)] bg-[var(--color-bg-overlay)] px-2 py-1 text-xs text-[var(--color-text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--section-log)]"
-                rows={2}
-                placeholder="Add notes"
               />
             )}
           </div>
@@ -762,35 +656,17 @@ export function LogEntry({ log, habits, onDelete, onSave }: LogEntryProps) {
                 {detail ? `  ${detail}` : ""}
               </TooltipContent>
             </Tooltip>
-            {getLogNotes(log) && (
+            {notesText && (
               <Tooltip>
-                {log.type === "reproductive" ? (
-                  <TooltipTrigger
-                    render={
-                      <p
-                        className="mt-0.5 text-xs italic text-[var(--color-text-tertiary)]"
-                        style={{
-                          display: "-webkit-box",
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: "vertical",
-                          overflow: "hidden",
-                        }}
-                      />
-                    }
-                  >
-                    {truncatePreviewText(getLogNotes(log), 52)}
-                  </TooltipTrigger>
-                ) : (
-                  <TooltipTrigger
-                    render={
-                      <p className="mt-0.5 truncate text-xs italic text-[var(--color-text-tertiary)]" />
-                    }
-                  >
-                    {truncatePreviewText(getLogNotes(log))}
-                  </TooltipTrigger>
-                )}
+                <TooltipTrigger
+                  render={
+                    <p className="mt-0.5 truncate text-xs italic text-[var(--color-text-tertiary)]" />
+                  }
+                >
+                  {truncatePreviewText(notesText)}
+                </TooltipTrigger>
                 <TooltipContent side="top" className="max-w-[56ch] text-sm leading-snug">
-                  {getLogNotes(log)}
+                  {notesText}
                 </TooltipContent>
               </Tooltip>
             )}
@@ -804,7 +680,7 @@ export function LogEntry({ log, habits, onDelete, onSave }: LogEntryProps) {
             <span className="text-xs text-[var(--color-text-secondary)]">Sure?</span>
             <button
               type="button"
-              onClick={handleDelete}
+              onClick={() => void handleDelete()}
               disabled={deleting}
               className="min-h-[36px] rounded-lg bg-red-500/20 px-2.5 py-1 text-xs font-semibold text-red-400 hover:bg-red-500/30"
             >
@@ -822,7 +698,7 @@ export function LogEntry({ log, habits, onDelete, onSave }: LogEntryProps) {
           <>
             <button
               type="button"
-              onClick={saveEditing}
+              onClick={() => void saveEditing()}
               disabled={saving}
               className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--section-log)] hover:bg-[var(--section-log-muted)] disabled:opacity-50"
               aria-label="Save"

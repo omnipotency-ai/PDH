@@ -31,7 +31,6 @@ export default defineSchema({
       v.literal("activity"),
       v.literal("digestion"),
       v.literal("weight"),
-      v.literal("reproductive"),
     ),
     data: logDataValidator,
   })
@@ -381,6 +380,8 @@ export default defineSchema({
     .index("by_userId", ["userId"])
     .index("by_status", ["status"]),
 
+  // waitlistEntries is retained for data preservation (existing user signups)
+  // and is NOT an active feature. Do not add new writes to this table.
   waitlistEntries: defineTable({
     name: v.string(),
     email: v.string(),

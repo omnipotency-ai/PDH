@@ -3,7 +3,6 @@ export {
   FluidSubRow,
   FoodSubRow,
   HabitSubRow,
-  ReproductiveSubRow,
   WeightSubRow,
 } from "./editors";
 export { groupLogEntries } from "./grouping";
@@ -13,7 +12,6 @@ export {
   EventHabitRow,
   FluidGroupRow,
   FoodGroupRow,
-  ReproductiveGroupRow,
   WeightGroupRow,
 } from "./groups";
 export {
@@ -29,10 +27,6 @@ export {
   getLogIcon,
   getLogNotes,
   getLogTitle,
-  getReproductiveBleedingLabel,
-  getReproductiveDaysSincePeriodStart,
-  getReproductiveStatTooltip,
-  getReproductiveSymptoms,
   hasItems,
   hasNotes,
   titleCaseToken,
@@ -51,7 +45,6 @@ export type {
   HabitLogData,
   IndividualItem,
   LogUpdateData,
-  ReproductiveGroup,
   SleepGroup,
   TodayLogProps,
   WeightGroup,

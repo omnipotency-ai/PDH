@@ -1,6 +1,6 @@
 import { type HabitConfig, isCheckboxHabit } from "@/lib/habitTemplates";
 import type { SyncedLog } from "@/lib/sync";
-import type { FluidLog, FoodLog, ReproductiveLog, WeightLog } from "@/types/domain";
+import type { FluidLog, FoodLog, WeightLog } from "@/types/domain";
 import type { DisplayItem } from "./types";
 
 function sumFluidMl(entries: FluidLog[]): number {
@@ -40,7 +40,6 @@ export function groupLogEntries(sorted: SyncedLog[], habits: HabitConfig[]): Dis
   const foodEntries: FoodLog[] = [];
   const fluidEntries: FluidLog[] = [];
   const weightEntries: WeightLog[] = [];
-  const reproductiveEntries: ReproductiveLog[] = [];
   const sleepActivityEntries: SyncedLog[] = [];
   const activityEntries: SyncedLog[] = [];
   // Plain object is cheaper than Map for small string-keyed collections
@@ -64,22 +63,6 @@ export function groupLogEntries(sorted: SyncedLog[], habits: HabitConfig[]): Dis
 
     if (log.type === "weight") {
       weightEntries.push(log);
-      continue;
-    }
-
-    if (log.type === "reproductive") {
-      const entryType = String(log.data?.entryType ?? "").toLowerCase();
-      if (entryType === "cycle") {
-        reproductiveEntries.push(log);
-        continue;
-      }
-      // Non-cycle reproductive entries (e.g. symptom-only, cervical, ovulation)
-      // are not yet supported in the grouped view. Show them as individual items
-      // so they remain visible rather than being silently dropped.
-      if (process.env.NODE_ENV === "development") {
-        console.warn(`[grouping] Unhandled reproductive entryType: "${entryType}"`, log.id);
-      }
-      items.push({ kind: "individual", log, sortKey: log.timestamp });
       continue;
     }
 
@@ -110,7 +93,11 @@ export function groupLogEntries(sorted: SyncedLog[], habits: HabitConfig[]): Dis
     // TypeScript narrows `log` to `never` here since all known types are handled above,
     // so we cast to SyncedLog to access `.timestamp`.
     const unknownLog: SyncedLog = log as SyncedLog;
-    items.push({ kind: "individual", log: unknownLog, sortKey: unknownLog.timestamp });
+    items.push({
+      kind: "individual",
+      log: unknownLog,
+      sortKey: unknownLog.timestamp,
+    });
   }
 
   // Create food group
@@ -142,6 +129,10 @@ export function groupLogEntries(sorted: SyncedLog[], habits: HabitConfig[]): Dis
       habits.find((h) => h.id === key) ??
       habits.find((h) => firstData?.name && h.name === firstData.name) ??
       null;
+    // Legacy fallback: if no matched HabitConfig exists (e.g. the habit was deleted or
+    // imported from an old backup), infer event vs counter from the raw log fields.
+    // `habitType` and `action` were written by older versions of the log schema and are
+    // no longer populated by current mutations — this branch handles historical records only.
     const isEvent =
       matchedHabit !== null
         ? isCheckboxHabit(matchedHabit)
@@ -194,14 +185,6 @@ export function groupLogEntries(sorted: SyncedLog[], habits: HabitConfig[]): Dis
       kind: "weight",
       entries: weightEntries,
       sortKey: maxTimestamp(weightEntries),
-    });
-  }
-
-  if (reproductiveEntries.length > 0) {
-    items.push({
-      kind: "reproductive",
-      entries: reproductiveEntries,
-      sortKey: maxTimestamp(reproductiveEntries),
     });
   }
 

@@ -23,7 +23,7 @@ createRoot(rootElement).render(
   <StrictMode>
     <ClerkProvider publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string}>
       <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
-        <ThemeProvider defaultTheme="dark" storageKey="kaka-tracker-theme">
+        <ThemeProvider defaultTheme="dark" storageKey="pdh-theme">
           <TooltipProvider>
             <App />
           </TooltipProvider>

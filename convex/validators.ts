@@ -90,16 +90,6 @@ export const foodPersonalisationValidator = v.object({
 // Run the normalizeProfileHabits migration to fix any pre-normalization docs.
 export const storedProfileHabitsValidator = v.array(habitConfigValidator);
 
-// ── AI model validators ─────────────────────────────────────────────────────
-// Allowed OpenAI models that can be sent to chatCompletion.
-// Keep in sync with src/lib/aiModels.ts INSIGHT_MODEL_OPTIONS + BACKGROUND_MODEL.
-export const allowedModelsValidator = v.union(
-  v.literal("gpt-5.4"),
-  v.literal("gpt-5-mini"),
-  // Legacy alias — still accepted for backward compatibility with stored preferences.
-  v.literal("gpt-5.2"),
-);
-
 // ── AI Analysis validators ───────────────────────────────────────────────────
 // These match the AiNutritionistInsight domain type in src/types/domain.ts.
 // Run the normalizeAiInsightData migration before deploying if existing
@@ -445,75 +435,7 @@ const weightLogDataValidator = v.object({
   weightKg: v.number(),
 });
 
-const reproductiveLogDataValidator = v.object({
-  entryType: v.literal("cycle"),
-  periodStartDate: v.string(),
-  bleedingStatus: v.union(
-    v.literal("none"),
-    v.literal("spotting"),
-    v.literal("light"),
-    v.literal("medium"),
-    v.literal("heavy"),
-  ),
-  symptoms: v.optional(
-    v.array(
-      v.union(
-        v.literal("cramps"),
-        v.literal("bloating"),
-        v.literal("nausea"),
-        v.literal("constipation"),
-        v.literal("diarrhea"),
-        v.literal("headache"),
-        v.literal("fatigue"),
-      ),
-    ),
-  ),
-  notes: v.optional(v.string()),
-});
-
 // ── Health profile validators ──────────────────────────────────────────────
-
-export const reproductiveHealthValidator = v.object({
-  trackingEnabled: v.boolean(),
-  cycleTrackingEnabled: v.boolean(),
-  lastPeriodStartDate: v.string(),
-  currentCyclePhase: v.optional(
-    v.union(
-      v.literal("unknown"),
-      v.literal("menstrual"),
-      v.literal("follicular"),
-      v.literal("ovulatory"),
-      v.literal("luteal"),
-    ),
-  ),
-  cycleSymptomSeverity: v.optional(v.union(v.number(), v.null())),
-  averageCycleLengthDays: v.union(v.number(), v.null()),
-  averagePeriodLengthDays: v.union(v.number(), v.null()),
-  symptomsBeforePeriodDays: v.optional(v.union(v.number(), v.null())),
-  symptomsAfterPeriodDays: v.optional(v.union(v.number(), v.null())),
-  pregnancyStatus: v.union(
-    v.literal("not_pregnant"),
-    v.literal("pregnant"),
-    v.literal("postpartum"),
-  ),
-  pregnancyWeeks: v.optional(v.union(v.number(), v.null())),
-  dueDate: v.string(),
-  postpartumSinceDate: v.string(),
-  breastfeeding: v.optional(v.boolean()),
-  oralContraceptive: v.optional(v.boolean()),
-  contraceptiveNotes: v.optional(v.string()),
-  pregnancyMedicationNotes: v.optional(v.string()),
-  menopauseStatus: v.union(
-    v.literal("not_applicable"),
-    v.literal("perimenopause"),
-    v.literal("menopause"),
-    v.literal("unsure"),
-  ),
-  menopauseHrt: v.optional(v.boolean()),
-  menopauseHrtNotes: v.optional(v.string()),
-  menopauseThyroidIssues: v.optional(v.boolean()),
-  hormonalMedicationNotes: v.string(),
-});
 
 const usageFrequencyValidator = v.union(
   v.literal("more_than_once_per_day"),
@@ -593,7 +515,6 @@ export const healthProfileValidator = v.object({
   recreationalDepressantsFrequency: v.optional(usageFrequencyValidator),
   recreationalDepressantsYears: v.optional(v.union(v.number(), v.null())),
   lifestyleNotes: v.optional(v.string()),
-  reproductiveHealth: reproductiveHealthValidator,
 });
 
 // ── Log data validators ────────────────────────────────────────────────────
@@ -605,5 +526,4 @@ export const logDataValidator = v.union(
   habitLogDataValidator,
   activityLogDataValidator,
   weightLogDataValidator,
-  reproductiveLogDataValidator,
 );

@@ -28,14 +28,7 @@ export type {
 import type { SleepGoal } from "../lib/streaks";
 import type { UnitSystem } from "../lib/units";
 
-export type LogType =
-  | "food"
-  | "fluid"
-  | "digestion"
-  | "habit"
-  | "activity"
-  | "weight"
-  | "reproductive";
+export type LogType = "food" | "fluid" | "digestion" | "habit" | "activity" | "weight";
 
 export type SurgeryType =
   | "Colectomy with ileostomy"
@@ -58,23 +51,6 @@ export type UsageFrequency =
   | "a_few_times_per_year"
   | "about_once_per_year_or_less";
 export type UsageFrequencyChoice = UsageFrequency | "";
-export type ReproductiveBleedingStatus = "none" | "spotting" | "light" | "medium" | "heavy";
-export type ReproductiveSymptom =
-  | "cramps"
-  | "bloating"
-  | "nausea"
-  | "constipation"
-  | "diarrhea"
-  | "headache"
-  | "fatigue";
-export type PregnancyStatus = "not_pregnant" | "pregnant" | "postpartum";
-export type MenopauseStatus = "not_applicable" | "perimenopause" | "menopause" | "unsure";
-export type ReproductiveCyclePhase =
-  | "unknown"
-  | "menstrual"
-  | "follicular"
-  | "ovulatory"
-  | "luteal";
 
 export const HEALTH_GI_CONDITION_OPTIONS = [
   "Short bowel syndrome",
@@ -200,7 +176,7 @@ export const DR_POO_PRESETS: Record<
 //   Breakfast 7–9am → 08:00, Mid-morning snack 10–11am → 10:30,
 //   Lunch 12–2pm → 13:00, Afternoon snack 3–4pm → 15:30,
 //   Dinner 5–7pm → 18:00, Evening snack 8–9pm → 20:30.
-// TODO: expose these as user-configurable defaults in the onboarding flow.
+// Tracked in work queue: expose these as user-configurable defaults in the onboarding flow.
 export const DEFAULT_AI_PREFERENCES: AiPreferences = {
   preferredName: "",
   locationTimezone: "",
@@ -252,32 +228,6 @@ export interface HealthProfile {
   recreationalDepressantsFrequency: UsageFrequencyChoice;
   recreationalDepressantsYears: number | null;
   lifestyleNotes: string;
-  reproductiveHealth: ReproductiveHealthSettings;
-}
-
-export interface ReproductiveHealthSettings {
-  trackingEnabled: boolean;
-  cycleTrackingEnabled: boolean;
-  lastPeriodStartDate: string;
-  currentCyclePhase: ReproductiveCyclePhase;
-  cycleSymptomSeverity: number | null;
-  averageCycleLengthDays: number | null;
-  averagePeriodLengthDays: number | null;
-  symptomsBeforePeriodDays: number | null;
-  symptomsAfterPeriodDays: number | null;
-  pregnancyStatus: PregnancyStatus;
-  pregnancyWeeks: number | null;
-  dueDate: string;
-  postpartumSinceDate: string;
-  breastfeeding: boolean;
-  oralContraceptive: boolean;
-  contraceptiveNotes: string;
-  pregnancyMedicationNotes: string;
-  menopauseStatus: MenopauseStatus;
-  menopauseHrt: boolean;
-  menopauseHrtNotes: string;
-  menopauseThyroidIssues: boolean;
-  hormonalMedicationNotes: string;
 }
 
 export interface DrPooReply {
@@ -453,14 +403,6 @@ export interface WeightLogData {
   weightKg: number;
 }
 
-export interface ReproductiveLogData {
-  entryType: "cycle";
-  periodStartDate: string;
-  bleedingStatus: ReproductiveBleedingStatus;
-  symptoms?: ReproductiveSymptom[];
-  notes?: string;
-}
-
 /** Maps LogType to its corresponding data shape */
 export interface LogDataMap {
   food: FoodLogData;
@@ -469,7 +411,6 @@ export interface LogDataMap {
   habit: HabitLogData;
   activity: ActivityLogData;
   weight: WeightLogData;
-  reproductive: ReproductiveLogData;
 }
 
 /** Discriminated union of all log entry types with properly typed data */
@@ -495,10 +436,6 @@ export type ActivityLog = LogEntry & {
   data: ActivityLogData;
 };
 export type WeightLog = LogEntry & { type: "weight"; data: WeightLogData };
-export type ReproductiveLog = LogEntry & {
-  type: "reproductive";
-  data: ReproductiveLogData;
-};
 
 // ── Baseline averages ─────────────────────────────────────────────────────────
 

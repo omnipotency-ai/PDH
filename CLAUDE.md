@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Project Overview
 
-Caca Traca is an anastomosis food reintegration tracker for post reconnective surgery. It logs food, fluid, habits, activities, and digestion events, then correlates them with digestive outcomes using Bristol Stool Scale ratings.
+PDH is an anastomosis food reintegration tracker for post reconnective surgery. It logs food, fluid, habits, activities, and digestion events, then correlates them with digestive outcomes using Bristol Stool Scale ratings.
 
 ## Product Context & Goals
 

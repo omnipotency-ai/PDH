@@ -16,7 +16,6 @@ import {
   ArtificialIntelligenceSection,
   CloudProfileSection,
   DataManagementSection,
-  ReproductiveHealthSection,
   UnitsSection,
   useAppDataFormController,
 } from "./app-data-form";
@@ -101,8 +100,6 @@ export function AppDataForm() {
     showFactoryResetConfirm,
     setShowFactoryResetConfirm,
     confirmFactoryReset,
-    reproEnabled,
-    toggleReproTracking,
     handleExport,
     handleImportBackup,
     handleResetFactorySettings,
@@ -119,25 +116,6 @@ export function AppDataForm() {
 
   return (
     <div className="space-y-4">
-      {/* SET-F003: block form sections until healthProfile has loaded from Convex.
-          Populating inputs with DEFAULT_HEALTH_PROFILE while null would cause
-          mutations to fire with stale defaults. */}
-      {healthProfile ? (
-        <>
-          <ReproductiveHealthSection
-            reproEnabled={reproEnabled}
-            onToggleReproTracking={toggleReproTracking}
-          />
-
-          <Separator className="bg-[var(--section-appdata-border)]" />
-        </>
-      ) : (
-        <div className="flex items-center gap-2 text-xs text-[var(--text-faint)]">
-          <span className="inline-block h-3 w-3 animate-spin rounded-full border border-current border-t-transparent" />
-          Loading profile…
-        </div>
-      )}
-
       <UnitsSection unitSystem={unitSystem} onUnitSystemChange={setUnitSystem} />
 
       <Separator />
@@ -158,7 +136,11 @@ export function AppDataForm() {
 
       {/* State-driven factory reset confirmation replaces window.confirm */}
       {showFactoryResetConfirm && (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-[var(--text)]">
+        <div
+          role="alertdialog"
+          aria-live="assertive"
+          className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-[var(--text)]"
+        >
           <p className="mb-2 font-medium text-amber-300">Reset all settings to factory defaults?</p>
           <p className="mb-3 text-[var(--text-muted)]">
             Your logged data will not be deleted, but all preferences (habits, units, AI settings,
@@ -185,7 +167,11 @@ export function AppDataForm() {
 
       {/* SET-F004: state-driven import confirmation replaces window.confirm */}
       {pendingImportFile && (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-[var(--text)]">
+        <div
+          role="alertdialog"
+          aria-live="assertive"
+          className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-[var(--text)]"
+        >
           <p className="mb-2 font-medium text-amber-300">
             Import &quot;{pendingImportFile.name}&quot;?
           </p>

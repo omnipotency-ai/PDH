@@ -1,3 +1,0 @@
-# Ralph Progress — Audit Remediation 2026-02-28
-# Branch: ralph/audit-remediation-2026-02-28
-# Stories: 38 (Phase 1: 7, Phase 2: 16, Phase 3: 9, Phase 4: 6)

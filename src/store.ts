@@ -47,9 +47,6 @@ export const isActivityLog = createLogTypeGuard("activity");
 /** Type guard for weight logs */
 export const isWeightLog = createLogTypeGuard("weight");
 
-/** Type guard for reproductive logs */
-export const isReproductiveLog = createLogTypeGuard("reproductive");
-
 // ---------------------------------------------------------------------------
 // Re-exported types (consumed by other modules via "@/store")
 // ---------------------------------------------------------------------------
@@ -105,30 +102,6 @@ export const DEFAULT_HEALTH_PROFILE: HealthProfile = {
   recreationalDepressantsFrequency: "",
   recreationalDepressantsYears: null,
   lifestyleNotes: "",
-  reproductiveHealth: {
-    trackingEnabled: false,
-    cycleTrackingEnabled: true,
-    lastPeriodStartDate: "",
-    currentCyclePhase: "unknown",
-    cycleSymptomSeverity: null,
-    averageCycleLengthDays: 28,
-    averagePeriodLengthDays: 5,
-    symptomsBeforePeriodDays: null,
-    symptomsAfterPeriodDays: null,
-    pregnancyStatus: "not_pregnant",
-    pregnancyWeeks: null,
-    dueDate: "",
-    postpartumSinceDate: "",
-    breastfeeding: false,
-    oralContraceptive: false,
-    contraceptiveNotes: "",
-    pregnancyMedicationNotes: "",
-    menopauseStatus: "not_applicable",
-    menopauseHrt: false,
-    menopauseHrtNotes: "",
-    menopauseThyroidIssues: false,
-    hormonalMedicationNotes: "",
-  },
 };
 
 // ---------------------------------------------------------------------------

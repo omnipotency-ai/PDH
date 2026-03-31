@@ -378,70 +378,12 @@ describe("buildPartialDayContext", () => {
 // ─── buildUserMessage partialDayContext integration ────────────────────────
 
 describe("buildUserMessage", () => {
-  const MINIMAL_PROFILE: HealthProfile = {
-    gender: "",
-    ageYears: null,
-    surgeryType: "Other",
-    surgeryTypeOther: "",
-    surgeryDate: "",
-    height: null,
-    startingWeight: null,
-    currentWeight: null,
-    targetWeight: null,
-    comorbidities: [],
-    otherConditions: "",
-    medications: "",
-    supplements: "",
-    allergies: "",
-    intolerances: "",
-    dietaryHistory: "",
-    smokingStatus: "",
-    smokingCigarettesPerDay: null,
-    smokingYears: null,
-    alcoholUse: "",
-    alcoholAmountPerSession: "",
-    alcoholFrequency: "",
-    alcoholYearsAtCurrentLevel: null,
-    recreationalDrugUse: "",
-    recreationalCategories: [],
-    recreationalStimulantsFrequency: "",
-    recreationalStimulantsYears: null,
-    recreationalDepressantsFrequency: "",
-    recreationalDepressantsYears: null,
-    lifestyleNotes: "",
-    reproductiveHealth: {
-      trackingEnabled: false,
-      cycleTrackingEnabled: false,
-      lastPeriodStartDate: "",
-      currentCyclePhase: "unknown",
-      cycleSymptomSeverity: null,
-      averageCycleLengthDays: null,
-      averagePeriodLengthDays: null,
-      symptomsBeforePeriodDays: null,
-      symptomsAfterPeriodDays: null,
-      pregnancyStatus: "not_pregnant",
-      pregnancyWeeks: null,
-      dueDate: "",
-      postpartumSinceDate: "",
-      breastfeeding: false,
-      oralContraceptive: false,
-      contraceptiveNotes: "",
-      pregnancyMedicationNotes: "",
-      menopauseStatus: "not_applicable",
-      menopauseHrt: false,
-      menopauseHrtNotes: "",
-      menopauseThyroidIssues: false,
-      hormonalMedicationNotes: "",
-    },
-  };
-
   const EMPTY_RECENT_EVENTS: RecentEventsResult = {
     foodLogs: [],
     bowelEvents: [],
     habitLogs: [],
     fluidLogs: [],
     activityLogs: [],
-    reproductiveLogs: [],
   };
 
   it("includes partialDayContext in the output JSON", () => {
@@ -452,7 +394,7 @@ describe("buildUserMessage", () => {
       foodContext: {},
       hasPreviousResponse: false,
       patientMessages: [],
-      profile: MINIMAL_PROFILE,
+
       suggestionHistory: [],
       weeklyContext: [],
     });
@@ -473,7 +415,7 @@ describe("buildUserMessage", () => {
       foodContext: {},
       hasPreviousResponse: false,
       patientMessages: [],
-      profile: MINIMAL_PROFILE,
+
       suggestionHistory: [],
       weeklyContext: [],
     });
@@ -493,7 +435,7 @@ describe("buildUserMessage", () => {
       foodContext: { activeFoodTrials: [], recentSafe: ["toast"] },
       hasPreviousResponse: false,
       patientMessages: [],
-      profile: MINIMAL_PROFILE,
+
       suggestionHistory: [],
       weeklyContext: [],
     });
@@ -519,7 +461,7 @@ describe("buildUserMessage", () => {
       foodContext: {},
       hasPreviousResponse: false,
       patientMessages: [],
-      profile: MINIMAL_PROFILE,
+
       suggestionHistory: [],
       weeklyContext: [],
     });
@@ -564,30 +506,6 @@ describe("getFoodWindowHours", () => {
     recreationalDepressantsFrequency: "",
     recreationalDepressantsYears: null,
     lifestyleNotes: "",
-    reproductiveHealth: {
-      trackingEnabled: false,
-      cycleTrackingEnabled: false,
-      lastPeriodStartDate: "",
-      currentCyclePhase: "unknown",
-      cycleSymptomSeverity: null,
-      averageCycleLengthDays: null,
-      averagePeriodLengthDays: null,
-      symptomsBeforePeriodDays: null,
-      symptomsAfterPeriodDays: null,
-      pregnancyStatus: "not_pregnant",
-      pregnancyWeeks: null,
-      dueDate: "",
-      postpartumSinceDate: "",
-      breastfeeding: false,
-      oralContraceptive: false,
-      contraceptiveNotes: "",
-      pregnancyMedicationNotes: "",
-      menopauseStatus: "not_applicable",
-      menopauseHrt: false,
-      menopauseHrtNotes: "",
-      menopauseThyroidIssues: false,
-      hormonalMedicationNotes: "",
-    },
   };
 
   it("returns 48h for ileostomy reversal", () => {
@@ -612,18 +530,6 @@ describe("getFoodWindowHours", () => {
     expect(getFoodWindowHours(BASE_PROFILE)).toBe(72);
   });
 
-  it("adds 24h for pregnancy", () => {
-    const profile = {
-      ...BASE_PROFILE,
-      surgeryType: "Ileostomy reversal" as const,
-      reproductiveHealth: {
-        ...BASE_PROFILE.reproductiveHealth,
-        pregnancyStatus: "pregnant" as const,
-      },
-    };
-    expect(getFoodWindowHours(profile)).toBe(72); // 48 + 24
-  });
-
   it("adds 24h for opioid medications", () => {
     const profile = {
       ...BASE_PROFILE,
@@ -644,10 +550,6 @@ describe("getFoodWindowHours", () => {
     const profile = {
       ...BASE_PROFILE,
       medications: "opioid pain medication, iron supplements",
-      reproductiveHealth: {
-        ...BASE_PROFILE.reproductiveHealth,
-        pregnancyStatus: "pregnant" as const,
-      },
     };
     // 72 + 24 = 96, capped at 96
     expect(getFoodWindowHours(profile)).toBe(96);
@@ -812,30 +714,6 @@ const BASE_PROFILE: HealthProfile = {
   recreationalDepressantsFrequency: "",
   recreationalDepressantsYears: null,
   lifestyleNotes: "",
-  reproductiveHealth: {
-    trackingEnabled: false,
-    cycleTrackingEnabled: false,
-    lastPeriodStartDate: "",
-    currentCyclePhase: "unknown",
-    cycleSymptomSeverity: null,
-    averageCycleLengthDays: null,
-    averagePeriodLengthDays: null,
-    symptomsBeforePeriodDays: null,
-    symptomsAfterPeriodDays: null,
-    pregnancyStatus: "not_pregnant",
-    pregnancyWeeks: null,
-    dueDate: "",
-    postpartumSinceDate: "",
-    breastfeeding: false,
-    oralContraceptive: false,
-    contraceptiveNotes: "",
-    pregnancyMedicationNotes: "",
-    menopauseStatus: "not_applicable",
-    menopauseHrt: false,
-    menopauseHrtNotes: "",
-    menopauseThyroidIssues: false,
-    hormonalMedicationNotes: "",
-  },
 };
 
 /** Create a minimal food LogEntry for testing. */
@@ -1006,35 +884,6 @@ describe("getFoodWindowHours (edge cases)", () => {
         medications: "paracetamol, omeprazole",
       }),
     ).toBe(72);
-  });
-
-  it("applies pregnancy modifier with ileostomy reversal base (48 + 24 = 72)", () => {
-    expect(
-      getFoodWindowHours({
-        ...BASE_PROFILE,
-        surgeryType: "Ileostomy reversal",
-        reproductiveHealth: {
-          ...BASE_PROFILE.reproductiveHealth,
-          pregnancyStatus: "pregnant",
-        },
-      }),
-    ).toBe(72);
-  });
-
-  it("caps at 96h even with multiple modifiers on ileostomy reversal", () => {
-    // Base 48 + 24 (modifier) = 72, capped at 96
-    // But iron + pregnancy both trigger hasSlowTransitModifier which adds only ONE 24h
-    expect(
-      getFoodWindowHours({
-        ...BASE_PROFILE,
-        surgeryType: "Ileostomy reversal",
-        medications: "iron, opioid",
-        reproductiveHealth: {
-          ...BASE_PROFILE.reproductiveHealth,
-          pregnancyStatus: "pregnant",
-        },
-      }),
-    ).toBe(72); // 48 + 24 (single modifier) — hasSlowTransitModifier is boolean
   });
 
   it("applies single +24h modifier even when both opioid and iron are present", () => {
@@ -1744,7 +1593,6 @@ describe("buildRecentEvents", () => {
     expect(result.habitLogs).toEqual([]);
     expect(result.fluidLogs).toEqual([]);
     expect(result.activityLogs).toEqual([]);
-    expect(result.reproductiveLogs).toEqual([]);
   });
 
   it("filters out unknown_food items from food logs", () => {

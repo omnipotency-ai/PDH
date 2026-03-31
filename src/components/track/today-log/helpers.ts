@@ -1,18 +1,9 @@
 import { format } from "date-fns";
-import {
-  Activity,
-  Droplets,
-  Footprints,
-  HeartPulse,
-  Moon,
-  Soup,
-  Venus,
-  Weight,
-} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { Activity, Droplets, Footprints, HeartPulse, Moon, Soup, Weight } from "lucide-react";
 import type { HabitConfig } from "@/lib/habitTemplates";
-import { calculateCycleDay, REPRODUCTIVE_BLEEDING_OPTIONS } from "@/lib/reproductiveHealth";
 import type { SyncedLog } from "@/lib/sync";
-import type { FoodItem, FoodLog, ReproductiveLog, ReproductiveSymptom } from "@/types/domain";
+import type { FoodItem, FoodLog } from "@/types/domain";
 import type { HabitLogData } from "./types";
 
 // ── Food item resolution status ─────────────────────────────────────────────
@@ -95,7 +86,7 @@ export function getDefaultPortionHint(item: FoodItem): string | null {
 
 /** Type guard for logs that have notes */
 export function hasNotes(log: SyncedLog): log is SyncedLog & { data: { notes?: string } } {
-  return log.type === "digestion" || log.type === "reproductive";
+  return log.type === "digestion";
 }
 
 /** Type guard for logs that have items array */
@@ -105,12 +96,11 @@ export function hasItems(log: SyncedLog): log is SyncedLog & {
   return log.type === "food" || log.type === "fluid";
 }
 
-export function getLogIcon(log: SyncedLog): typeof Soup {
+export function getLogIcon(log: SyncedLog): LucideIcon {
   if (log.type === "food") return Soup;
   if (log.type === "fluid") return Droplets;
   if (log.type === "digestion") return HeartPulse;
   if (log.type === "weight") return Weight;
-  if (log.type === "reproductive") return Venus;
   if (log.type === "activity") {
     const at = String(log.data?.activityType ?? "").toLowerCase();
     if (at === "sleep") return Moon;
@@ -125,7 +115,6 @@ export function getLogColor(log: SyncedLog): string {
   if (log.type === "fluid") return "text-sky-600 dark:text-sky-400";
   if (log.type === "digestion") return "text-[var(--section-bowel)]";
   if (log.type === "weight") return "text-indigo-600 dark:text-indigo-400";
-  if (log.type === "reproductive") return "text-[var(--section-summary)]";
   if (log.type === "activity") {
     const at = String(log.data?.activityType ?? "").toLowerCase();
     if (at === "sleep") return "text-indigo-600 dark:text-indigo-400";
@@ -220,7 +209,6 @@ export function getLogTitle(log: SyncedLog, habits: HabitConfig[]): string {
     return titleCaseToken(at);
   }
   if (log.type === "weight") return "Weight Check-in";
-  if (log.type === "reproductive") return "Reproductive Health";
   return "Entry";
 }
 
@@ -283,19 +271,6 @@ export function getLogDetail(log: SyncedLog): string | null {
   if (log.type === "weight") {
     const kg = log.data.weightKg;
     return Number.isFinite(kg) ? `${kg.toFixed(1)} kg` : null;
-  }
-  if (log.type === "reproductive") {
-    const bleedingStatus = log.data.bleedingStatus;
-    const periodStartDate = log.data.periodStartDate;
-    const symptoms = getReproductiveSymptoms(log).map(titleCaseToken);
-    const label =
-      bleedingStatus.length > 0
-        ? `${bleedingStatus.charAt(0).toUpperCase()}${bleedingStatus.slice(1)}`
-        : "Cycle";
-    const parts = [label];
-    if (periodStartDate) parts.push(`start ${periodStartDate}`);
-    if (symptoms.length > 0) parts.push(symptoms.join(", "));
-    return parts.join(" · ");
   }
   return null;
 }
@@ -363,35 +338,10 @@ export function titleCaseToken(value: string): string {
     .replace(/\b\w/g, (match) => match.toUpperCase());
 }
 
-export function getReproductiveSymptoms(log: ReproductiveLog): ReproductiveSymptom[] {
-  return log.data.symptoms ?? [];
-}
-
 /** Safely extract notes from any log type that supports it */
 export function getLogNotes(log: SyncedLog): string {
-  if (log.type === "digestion" || log.type === "reproductive") {
+  if (log.type === "digestion") {
     return String(log.data.notes ?? "");
   }
   return "";
-}
-
-export function getReproductiveBleedingLabel(value: unknown): string {
-  const raw = String(value ?? "none").trim();
-  const match = REPRODUCTIVE_BLEEDING_OPTIONS.find((opt) => opt.value === raw);
-  return match?.label ?? "None";
-}
-
-export function getReproductiveDaysSincePeriodStart(entry: ReproductiveLog): number | null {
-  const start = entry.data.periodStartDate;
-  if (!start) return null;
-  const cycleDay = calculateCycleDay(start, new Date(entry.timestamp));
-  if (cycleDay === null) return null;
-  return Math.max(0, cycleDay - 1);
-}
-
-export function getReproductiveStatTooltip(entry: ReproductiveLog): string | null {
-  const days = getReproductiveDaysSincePeriodStart(entry);
-  const start = entry.data.periodStartDate;
-  if (days === null || !start) return null;
-  return `${days} day${days === 1 ? "" : "s"} since period start (${start})`;
 }

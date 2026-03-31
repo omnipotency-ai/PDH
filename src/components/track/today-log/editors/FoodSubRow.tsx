@@ -227,6 +227,7 @@ export function FoodSubRow({ entry }: { key?: string | number; entry: FoodLog })
   const initDraftItems = useCallback((): DraftItem[] => {
     const items = entry.data.items;
     return items.map((item) => ({
+      id: crypto.randomUUID(),
       name: String(item?.parsedName ?? item?.name ?? item?.rawName ?? item?.userSegment ?? ""),
       quantity:
         item?.quantity != null && Number.isFinite(Number(item.quantity))
@@ -288,7 +289,7 @@ export function FoodSubRow({ entry }: { key?: string | number; entry: FoodLog })
     () => (
       <>
         {draftItems.map((draft, i) => (
-          <div key={`draft-${i}`} className="flex items-center gap-1">
+          <div key={draft.id} className="flex items-center gap-1">
             <input
               type="number"
               value={draft.quantity}
@@ -325,7 +326,7 @@ export function FoodSubRow({ entry }: { key?: string | number; entry: FoodLog })
             {draftItems.length > 1 && (
               <button
                 type="button"
-                onClick={() => setDraftItems(draftItems.filter((_, j) => j !== i))}
+                onClick={() => setDraftItems(draftItems.filter((d) => d.id !== draft.id))}
                 className="flex h-6 w-6 items-center justify-center rounded text-[var(--color-text-tertiary)] hover:text-red-400"
               >
                 <X className="h-3 w-3" />

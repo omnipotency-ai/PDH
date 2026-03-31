@@ -16,7 +16,6 @@ import type {
   HabitLogData,
   LogDataMap,
   LogType,
-  ReproductiveLogData,
   WeightLogData,
 } from "@/types/domain";
 import type { api } from "../../convex/_generated/api";
@@ -64,7 +63,6 @@ const VALID_LOG_TYPES: ReadonlySet<string> = new Set<LogType>([
   "habit",
   "activity",
   "weight",
-  "reproductive",
 ]);
 
 /**
@@ -107,6 +105,30 @@ export function toConvexFoodItem(
  * Convex re-validates at the server, so if a field is missing or has the
  * wrong shape, the server will reject it.
  */
+/**
+ * Assert that a sanitized value is a plain object (not null, not an array).
+ * Throws with a descriptive message if the check fails so the error surfaces
+ * clearly rather than producing a confusing downstream crash.
+ */
+function assertObject(value: unknown, context: string): asserts value is Record<string, unknown> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(
+      `[sanitizeLogData] Expected plain object for ${context}, got ${Array.isArray(value) ? "array" : String(value === null ? "null" : typeof value)}`,
+    );
+  }
+}
+
+/**
+ * Assert that a required field is present (not undefined) on a sanitized object.
+ * Throws if the field is absent so missing discriminant fields are caught early
+ * at the client boundary rather than silently sent to Convex as undefined.
+ */
+function assertField(obj: Record<string, unknown>, field: string, context: string): void {
+  if (!(field in obj) || obj[field] === undefined) {
+    throw new Error(`[sanitizeLogData] Missing required field "${field}" in ${context} log data`);
+  }
+}
+
 export function sanitizeLogData(type: LogType, data: LogPayloadData): ConvexLogData {
   const sanitized = sanitizeUnknownStringsDeep(data);
 
@@ -116,6 +138,8 @@ export function sanitizeLogData(type: LogType, data: LogPayloadData): ConvexLogD
   // are never sent from the client, so we don't include them.
   switch (type) {
     case "food": {
+      assertObject(sanitized, "food");
+      assertField(sanitized, "items", "food");
       const d = sanitized as FoodLogData;
       // Map items to fix null→undefined for canonicalName (domain allows null,
       // Convex validator does not).
@@ -128,10 +152,14 @@ export function sanitizeLogData(type: LogType, data: LogPayloadData): ConvexLogD
       } satisfies ConvexLogData;
     }
     case "fluid": {
+      assertObject(sanitized, "fluid");
+      assertField(sanitized, "items", "fluid");
       const d = sanitized as FluidLogData;
       return { items: d.items } satisfies ConvexLogData;
     }
     case "digestion": {
+      assertObject(sanitized, "digestion");
+      assertField(sanitized, "bristolCode", "digestion");
       const d = sanitized as DigestiveLogData;
       return {
         bristolCode: d.bristolCode,
@@ -152,6 +180,10 @@ export function sanitizeLogData(type: LogType, data: LogPayloadData): ConvexLogD
       } satisfies ConvexLogData;
     }
     case "habit": {
+      assertObject(sanitized, "habit");
+      assertField(sanitized, "habitId", "habit");
+      assertField(sanitized, "name", "habit");
+      assertField(sanitized, "habitType", "habit");
       const d = sanitized as HabitLogData;
       return {
         habitId: d.habitId,
@@ -162,6 +194,8 @@ export function sanitizeLogData(type: LogType, data: LogPayloadData): ConvexLogD
       } satisfies ConvexLogData;
     }
     case "activity": {
+      assertObject(sanitized, "activity");
+      assertField(sanitized, "activityType", "activity");
       const d = sanitized as ActivityLogData;
       return {
         activityType: d.activityType,
@@ -172,18 +206,10 @@ export function sanitizeLogData(type: LogType, data: LogPayloadData): ConvexLogD
       } satisfies ConvexLogData;
     }
     case "weight": {
+      assertObject(sanitized, "weight");
+      assertField(sanitized, "weightKg", "weight");
       const d = sanitized as WeightLogData;
       return { weightKg: d.weightKg } satisfies ConvexLogData;
-    }
-    case "reproductive": {
-      const d = sanitized as ReproductiveLogData;
-      return {
-        entryType: d.entryType,
-        periodStartDate: d.periodStartDate,
-        bleedingStatus: d.bleedingStatus,
-        ...(d.symptoms !== undefined && { symptoms: d.symptoms }),
-        ...(d.notes !== undefined && { notes: d.notes }),
-      } satisfies ConvexLogData;
     }
   }
 }
@@ -228,13 +254,6 @@ export function toValidatedSyncedLog(row: ConvexLogRow): SyncedLog | null {
       return { id, timestamp, type, data: data as LogDataMap["activity"] };
     case "weight":
       return { id, timestamp, type, data: data as LogDataMap["weight"] };
-    case "reproductive":
-      return {
-        id,
-        timestamp,
-        type,
-        data: data as LogDataMap["reproductive"],
-      };
   }
 }
 

@@ -202,8 +202,8 @@
       "file": "src/components/landing/LandingFooter.tsx",
       "line": 53,
       "title": "Copyright notice missing copyright symbol",
-      "description": "Line 53 renders `{year} Caca Traca. All rights reserved.` without a copyright symbol (©). This is a legal/presentation issue: the standard copyright notice format is `© 2026 Caca Traca. All rights reserved.`",
-      "fix": "Change the text to `© {year} Caca Traca. All rights reserved.` (HTML entity `&copy;` or Unicode `\\u00A9`).",
+      "description": "Line 53 renders `{year} PDH. All rights reserved.` without a copyright symbol (©). This is a legal/presentation issue: the standard copyright notice format is `© 2026 PDH. All rights reserved.`",
+      "fix": "Change the text to `© {year} PDH. All rights reserved.` (HTML entity `&copy;` or Unicode `\\u00A9`).",
       "implemented": false
     },
     {

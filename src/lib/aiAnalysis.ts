@@ -3,9 +3,7 @@ import { checkRateLimit } from "@/lib/aiRateLimiter";
 import type { AllowedAiModel, ConvexAiCaller } from "@/lib/convexAiClient";
 import { debugWarn } from "@/lib/debugLog";
 import { getErrorMessage } from "@/lib/errors";
-import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { INPUT_SAFETY_LIMITS, sanitizeUnknownStringsDeep } from "@/lib/inputSafety";
-import { calculateCycleDay, calculateGestationalAgeFromDueDate } from "@/lib/reproductiveHealth";
 import { MS_PER_DAY, MS_PER_HOUR } from "@/lib/timeConstants";
 import type {
   AiNutritionistInsight,
@@ -51,11 +49,18 @@ const MAX_PREFERRED_NAME_LENGTH = 50;
 
 /**
  * Sanitize a user-provided name before inserting it into an LLM prompt.
- * Strips XML/HTML tags to prevent prompt injection, then truncates to a
- * safe length. The caller wraps the result in `<patient_name>` XML delimiters.
+ * Strips Unicode BiDi control characters (U+200E–U+200F, U+202A–U+202E,
+ * U+2066–U+2069) and XML/HTML tags to prevent prompt injection, then
+ * truncates to a safe length. The caller wraps the result in `<patient_name>`
+ * XML delimiters.
  */
 function sanitizeNameForPrompt(name: string): string {
-  const stripped = name.replace(/<[^>]*>/g, "").trim();
+  // Strip Unicode BiDi control characters before any other processing.
+  // These can be used to manipulate how text is rendered or parsed in LLM prompts.
+  // Ranges: LRM/RLM (U+200E–U+200F), LRE/RLE/PDF/LRO/RLO (U+202A–U+202E),
+  //         LRI/RLI/FSI/PDI (U+2066–U+2069).
+  const withoutBidi = name.replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, "");
+  const stripped = withoutBidi.replace(/<[^>]*>/g, "").trim();
   if (stripped.length <= MAX_PREFERRED_NAME_LENGTH) return stripped;
   return stripped.slice(0, MAX_PREFERRED_NAME_LENGTH);
 }
@@ -277,16 +282,6 @@ interface ActivityLog {
   feeling: string | null;
 }
 
-interface ReproductiveLog {
-  timestamp: number;
-  time: string;
-  entryType: "cycle";
-  periodStartDate: string;
-  bleedingStatus: string;
-  symptoms: string[];
-  notes: string;
-}
-
 function formatTime(timestamp: number): string {
   return new Date(timestamp).toLocaleString("en-GB", {
     weekday: "short",
@@ -329,7 +324,6 @@ export function getFoodWindowHours(profile: HealthProfile): number {
   const baseWindow = profile.surgeryType === "Ileostomy reversal" ? 48 : 72;
 
   const hasSlowTransitModifier = (() => {
-    if (profile.reproductiveHealth?.pregnancyStatus === "pregnant") return true;
     const meds = (profile.medications ?? "").toLowerCase();
     if (meds.includes("opioid") || meds.includes("iron")) return true;
     return false;
@@ -347,7 +341,6 @@ interface LogCutoffs {
   fluid: number;
   activity: number;
   weight: number;
-  reproductive: number;
 }
 
 /** Build per-log-type cutoff map using variable windows. */
@@ -363,7 +356,6 @@ function buildCutoffs(profile: HealthProfile, now: number): LogCutoffs {
     fluid: now - defaultWindowMs,
     activity: now - defaultWindowMs,
     weight: now - defaultWindowMs,
-    reproductive: now - defaultWindowMs,
   };
 }
 
@@ -458,23 +450,6 @@ function mapActivityLogs(logs: Array<LogEntry & { type: "activity" }>): Activity
     });
 }
 
-function mapReproductiveLogs(logs: Array<LogEntry & { type: "reproductive" }>): ReproductiveLog[] {
-  return logs
-    .filter((log) => log.data.entryType === "cycle")
-    .sort((a, b) => a.timestamp - b.timestamp)
-    .map((log) => ({
-      timestamp: log.timestamp,
-      time: formatTime(log.timestamp),
-      entryType: "cycle" as const,
-      periodStartDate: String(log.data.periodStartDate ?? "").trim(),
-      bleedingStatus: String(log.data.bleedingStatus ?? "").trim(),
-      symptoms: Array.isArray(log.data.symptoms)
-        ? log.data.symptoms.map((s) => String(s ?? "").trim()).filter(Boolean)
-        : [],
-      notes: String(log.data.notes ?? "").trim(),
-    }));
-}
-
 /** Return type for log context builders. */
 export interface RecentEventsResult {
   foodLogs: FoodLog[];
@@ -482,7 +457,6 @@ export interface RecentEventsResult {
   habitLogs: HabitLog[];
   fluidLogs: FluidLog[];
   activityLogs: ActivityLog[];
-  reproductiveLogs: ReproductiveLog[];
 }
 
 /**
@@ -534,20 +508,12 @@ export function buildRecentEvents(logs: LogEntry[], profile: HealthProfile): Rec
     ),
   );
 
-  const reproductiveLogs = mapReproductiveLogs(
-    logs.filter(
-      (log): log is LogEntry & { type: "reproductive" } =>
-        log.type === "reproductive" && log.timestamp >= cutoffs.reproductive,
-    ),
-  );
-
   return {
     foodLogs,
     bowelEvents,
     habitLogs,
     fluidLogs,
     activityLogs,
-    reproductiveLogs,
   };
 }
 
@@ -1069,7 +1035,7 @@ function buildLengthDirective(length: OutputLength): string {
 - clinicalReasoning: 2–3 short sentences max. Skip background the patient already knows.
 - Reasoning fields: 1 short sentence each. No elaboration.
 - Suggestions: max 2. One line each.
-- didYouKnow: 1 sentence max, or omit if nothing novel.
+- educationalInsight: 1 sentence max, or omit if nothing novel.
 - Omit pleasantries, preambles, and filler. No educational digressions. Just the facts and actions.
 - If the patient asked a direct question, answer it directly, then stop.
 - Exception: always include safety warnings in full, even in concise mode.`;
@@ -1079,7 +1045,7 @@ function buildLengthDirective(length: OutputLength): string {
 - clinicalReasoning: 4–6 sentences with enough reasoning to be useful.
 - Reasoning fields: 1–2 sentences each with context.
 - Suggestions: up to configured max. Be helpful without being verbose.
-- didYouKnow: 2–3 sentences. Include one educational insight the patient may not know.
+- educationalInsight: 2–3 sentences. Include one educational insight the patient may not know.
 - This is the default balanced length. Be helpful without being verbose.`;
     case "detailed":
       return `LENGTH: COMPREHENSIVE. This is the detailed mode — the patient wants to understand the science and reasoning.
@@ -1087,14 +1053,13 @@ function buildLengthDirective(length: OutputLength): string {
 - clinicalReasoning: 6–10 sentences with full physiological rationale. Include mechanism of action, relevant anatomy, and how the data points connect. Use markdown bold for key findings and italics for caveats.
 - Reasoning fields: multi-sentence with physiological rationale and educational context.
 - Suggestions: up to configured max. Each suggestion should include a brief explanation of WHY it helps.
-- didYouKnow: 3–5 sentences. Include a genuinely educational insight with physiological explanation. Teach the patient something about their body.
+- educationalInsight: 3–5 sentences. Include a genuinely educational insight with physiological explanation. Teach the patient something about their body.
 - Include section headings where helpful. Cross-reference between food, fluid, and bowel data explicitly.
 - The patient chose detailed because they want depth. Do not hold back on educational content.`;
   }
 }
 
 function buildSystemPrompt(profile: HealthProfile, prefs: AiPreferences): string {
-  const reproductiveHealth = profile.reproductiveHealth;
   const surgeryLabel =
     profile.surgeryType === "Other" && profile.surgeryTypeOther
       ? profile.surgeryTypeOther
@@ -1190,106 +1155,6 @@ function buildSystemPrompt(profile: HealthProfile, prefs: AiPreferences): string
   const lifestyleNotesLine = lifestyleNotesValue ? `- Lifestyle notes: ${lifestyleNotesValue}` : "";
   const dietaryHistoryLine = dietaryHistoryValue ? `- Dietary history: ${dietaryHistoryValue}` : "";
 
-  const reproductiveLines: string[] = [];
-  // Feature-gated: reproductive health is out of v1 scope (ADR-0008)
-  if (FEATURE_FLAGS.reproductiveHealth && reproductiveHealth?.trackingEnabled) {
-    reproductiveLines.push("- Reproductive/cycle tracking: enabled (optional, patient-controlled)");
-    if (reproductiveHealth.cycleTrackingEnabled) {
-      const cycleParts: string[] = [];
-      if (reproductiveHealth.lastPeriodStartDate) {
-        cycleParts.push(`last period start ${reproductiveHealth.lastPeriodStartDate}`);
-      }
-      if (
-        reproductiveHealth.currentCyclePhase &&
-        reproductiveHealth.currentCyclePhase !== "unknown"
-      ) {
-        cycleParts.push(`current phase ${reproductiveHealth.currentCyclePhase}`);
-      }
-      if (reproductiveHealth.averageCycleLengthDays) {
-        cycleParts.push(`typical cycle ${reproductiveHealth.averageCycleLengthDays}d`);
-      }
-      if (reproductiveHealth.averagePeriodLengthDays) {
-        cycleParts.push(`typical bleed ${reproductiveHealth.averagePeriodLengthDays}d`);
-      }
-      if (reproductiveHealth.symptomsBeforePeriodDays != null) {
-        cycleParts.push(
-          `symptoms usually begin ${reproductiveHealth.symptomsBeforePeriodDays}d before period`,
-        );
-      }
-      if (reproductiveHealth.symptomsAfterPeriodDays != null) {
-        cycleParts.push(
-          `symptoms usually settle ${reproductiveHealth.symptomsAfterPeriodDays}d after period start`,
-        );
-      }
-      if (reproductiveHealth.cycleSymptomSeverity != null) {
-        cycleParts.push(`symptom severity ${reproductiveHealth.cycleSymptomSeverity}/10`);
-      }
-      if (cycleParts.length > 0) {
-        reproductiveLines.push(`- Cycle profile: ${cycleParts.join(" | ")}`);
-      }
-    }
-    const pregnancyStatus = reproductiveHealth.pregnancyStatus ?? "not_pregnant";
-    if (pregnancyStatus === "pregnant") {
-      const pregnancyParts = ["Pregnant"];
-      const gestationalAge = reproductiveHealth.dueDate
-        ? calculateGestationalAgeFromDueDate(reproductiveHealth.dueDate)
-        : null;
-      if (gestationalAge) {
-        pregnancyParts.push(`${gestationalAge.week}w${gestationalAge.day}d`);
-        pregnancyParts.push(`trimester ${gestationalAge.trimester}`);
-      } else if (reproductiveHealth.pregnancyWeeks != null) {
-        pregnancyParts.push(`${reproductiveHealth.pregnancyWeeks} weeks`);
-      }
-      if (reproductiveHealth.dueDate) {
-        pregnancyParts.push(`due ${reproductiveHealth.dueDate}`);
-      }
-      reproductiveLines.push(`- Pregnancy status: ${pregnancyParts.join(" | ")}`);
-    } else if (pregnancyStatus === "postpartum") {
-      const postpartumParts = ["Postpartum"];
-      if (reproductiveHealth.postpartumSinceDate) {
-        postpartumParts.push(`since ${reproductiveHealth.postpartumSinceDate}`);
-      }
-      if (reproductiveHealth.breastfeeding) {
-        postpartumParts.push("breastfeeding");
-      }
-      reproductiveLines.push(`- Pregnancy status: ${postpartumParts.join(" | ")}`);
-    } else {
-      const notPregnantParts = ["Not pregnant"];
-      if (reproductiveHealth.oralContraceptive) {
-        notPregnantParts.push("oral contraceptive: yes");
-      }
-      reproductiveLines.push(`- Pregnancy status: ${notPregnantParts.join(" | ")}`);
-    }
-
-    const contraceptionNotes = (reproductiveHealth.contraceptiveNotes ?? "").trim();
-    if (contraceptionNotes) {
-      reproductiveLines.push(`- Contraception notes: ${contraceptionNotes}`);
-    }
-    const pregnancyMedicationNotes = (reproductiveHealth.pregnancyMedicationNotes ?? "").trim();
-    if (pregnancyMedicationNotes) {
-      reproductiveLines.push(
-        `- Pregnancy/postpartum medication notes: ${pregnancyMedicationNotes}`,
-      );
-    }
-    if (reproductiveHealth.menopauseStatus !== "not_applicable") {
-      const menopauseParts = [`status ${reproductiveHealth.menopauseStatus}`];
-      if (reproductiveHealth.menopauseHrt) {
-        menopauseParts.push("HRT: yes");
-      }
-      if (reproductiveHealth.menopauseThyroidIssues) {
-        menopauseParts.push("thyroid issues: yes");
-      }
-      reproductiveLines.push(`- Menopause: ${menopauseParts.join(" | ")}`);
-    }
-    const menopauseHrtNotes = (reproductiveHealth.menopauseHrtNotes ?? "").trim();
-    const hormonalNotesFallback = (reproductiveHealth.hormonalMedicationNotes ?? "").trim();
-    if (menopauseHrtNotes) {
-      reproductiveLines.push(`- Menopause/HRT notes: ${menopauseHrtNotes}`);
-    } else if (hormonalNotesFallback) {
-      reproductiveLines.push(`- Hormonal contraception/HRT: ${hormonalNotesFallback}`);
-    }
-  }
-
   const profileSection = [
     `- Surgery: ${surgeryLabel} ${surgeryDateLabel} — Days post-op dynamically calculated and included in each payload`,
     demographicsLine,
@@ -1305,7 +1170,6 @@ function buildSystemPrompt(profile: HealthProfile, prefs: AiPreferences): string
     recreationalDetailLine,
     lifestyleNotesLine,
     dietaryHistoryLine,
-    ...reproductiveLines,
     `- Location/timezone: ${prefs.locationTimezone || "Not specified"} (6-meal schedule: ${buildMealScheduleText(prefs)})`,
   ]
     .filter(Boolean)
@@ -1371,8 +1235,6 @@ Process every incoming payload through these principles IN ORDER:
 ### 1. Assess the modifiers — what is the gut doing RIGHT NOW?
 
 Before looking at any food-to-output correlation, first read the habit logs, fluid logs, activity logs, and sleep data. These are the modifiers that speed up or slow down gut motility:
-
-If reproductive/cycle data is provided (menstrual cycle phase, bleeding, pregnancy, perimenopause/menopause, hormonal contraception/HRT), treat it as OPTIONAL context that can modify motility, bloating, nausea, reflux, constipation, or diarrhea. Use specific, neutral language and never make assumptions beyond the provided data.
 
 **Accelerants** (shorten transit, increase urgency):
 - Nicotine / cigarettes
@@ -1806,7 +1668,7 @@ export function buildPartialDayContext(
     }),
     timeSinceLastBowelMovement:
       hoursSinceLastBm !== null
-        ? `${hoursSinceLastBm} hours`
+        ? `${hoursSinceLastBm} ${hoursSinceLastBm === 1 ? "hour" : "hours"}`
         : "No bowel movements recorded in the data window.",
     ...(inTransitItems.length > 0 && {
       foodsCurrentlyInTransit: inTransitItems.map(
@@ -1828,7 +1690,6 @@ interface BuildUserMessageParams {
   foodContext: Record<string, unknown>;
   hasPreviousResponse: boolean;
   patientMessages: DrPooReply[];
-  profile: HealthProfile;
   suggestionHistory: SuggestionHistoryEntry[];
   weeklyContext: WeeklyDigestInput[];
   previousWeeklySummary?: PreviousWeeklySummary;
@@ -1845,7 +1706,6 @@ export function buildUserMessage(params: BuildUserMessageParams): string {
     foodContext,
     hasPreviousResponse,
     patientMessages,
-    profile,
     suggestionHistory,
     weeklyContext,
     previousWeeklySummary,
@@ -1853,8 +1713,7 @@ export function buildUserMessage(params: BuildUserMessageParams): string {
     baselineAverages,
   } = params;
 
-  const { foodLogs, bowelEvents, habitLogs, fluidLogs, activityLogs, reproductiveLogs } =
-    recentEvents;
+  const { foodLogs, bowelEvents, habitLogs, fluidLogs, activityLogs } = recentEvents;
 
   const now = new Date();
   const currentTime = now.toLocaleString("en-GB", {
@@ -1864,68 +1723,6 @@ export function buildUserMessage(params: BuildUserMessageParams): string {
     hour: "2-digit",
     minute: "2-digit",
   });
-
-  const reproductiveHealth = profile.reproductiveHealth;
-  // Feature-gated: reproductive health is out of v1 scope (ADR-0008)
-  const reproductiveTrackingEnabled = Boolean(
-    FEATURE_FLAGS.reproductiveHealth && reproductiveHealth?.trackingEnabled,
-  );
-  const gestationalAge =
-    reproductiveHealth?.pregnancyStatus === "pregnant" && reproductiveHealth.dueDate
-      ? calculateGestationalAgeFromDueDate(reproductiveHealth.dueDate)
-      : null;
-  const currentCycleDay =
-    reproductiveHealth?.trackingEnabled &&
-    reproductiveHealth.cycleTrackingEnabled &&
-    reproductiveHealth.lastPeriodStartDate
-      ? calculateCycleDay(reproductiveHealth.lastPeriodStartDate)
-      : null;
-  const latestReproductiveLog =
-    reproductiveLogs.length > 0 ? reproductiveLogs[reproductiveLogs.length - 1] : null;
-
-  const reproductiveHealthContext = reproductiveTrackingEnabled
-    ? {
-        cycleTrackingEnabled: reproductiveHealth.cycleTrackingEnabled,
-        ...(reproductiveHealth.lastPeriodStartDate && {
-          lastPeriodStartDate: reproductiveHealth.lastPeriodStartDate,
-        }),
-        ...(currentCycleDay !== null && { currentCycleDay }),
-        ...(reproductiveHealth.averageCycleLengthDays && {
-          averageCycleLengthDays: reproductiveHealth.averageCycleLengthDays,
-        }),
-        ...(reproductiveHealth.averagePeriodLengthDays && {
-          averagePeriodLengthDays: reproductiveHealth.averagePeriodLengthDays,
-        }),
-        pregnancyStatus: reproductiveHealth.pregnancyStatus,
-        ...(reproductiveHealth.dueDate && {
-          dueDate: reproductiveHealth.dueDate,
-        }),
-        ...(gestationalAge && {
-          gestationalAge: {
-            week: gestationalAge.week,
-            day: gestationalAge.day,
-            trimester: gestationalAge.trimester,
-            daysUntilDue: gestationalAge.daysUntilDue,
-          },
-        }),
-        ...(reproductiveHealth.postpartumSinceDate && {
-          postpartumSinceDate: reproductiveHealth.postpartumSinceDate,
-        }),
-        menopauseStatus: reproductiveHealth.menopauseStatus,
-        ...(reproductiveHealth.hormonalMedicationNotes.trim() && {
-          hormonalMedicationNotes: reproductiveHealth.hormonalMedicationNotes.trim(),
-        }),
-        ...(latestReproductiveLog && {
-          latestCycleLogSummary: {
-            time: latestReproductiveLog.time,
-            bleedingStatus: latestReproductiveLog.bleedingStatus,
-            ...(latestReproductiveLog.symptoms.length > 0 && {
-              symptoms: latestReproductiveLog.symptoms,
-            }),
-          },
-        }),
-      }
-    : null;
 
   const partialDayContext = buildPartialDayContext(foodLogs, bowelEvents, now);
 
@@ -1945,9 +1742,6 @@ export function buildUserMessage(params: BuildUserMessageParams): string {
     },
     deltas: deltaSignals,
     foodContext,
-    ...(reproductiveTrackingEnabled &&
-      reproductiveLogs.length > 0 && { cycleHormonalLogs: reproductiveLogs }),
-    ...(reproductiveHealthContext && { reproductiveHealthContext }),
     ...(patientMessages.length > 0
       ? {
           patientMessages: patientMessages.map((r) => ({
@@ -2366,17 +2160,12 @@ export async function fetchAiInsights(
   // Build recent events with variable windows per log type
   const recentEvents = buildRecentEvents(safeLogs, safeHealthProfile);
 
-  // Feature-gated: reproductive health is out of v1 scope (ADR-0008)
-  const includeReproductiveInPrompt = Boolean(
-    FEATURE_FLAGS.reproductiveHealth && safeHealthProfile.reproductiveHealth?.trackingEnabled,
-  );
   const inputLogCount =
     recentEvents.foodLogs.length +
     recentEvents.bowelEvents.length +
     recentEvents.habitLogs.length +
     recentEvents.fluidLogs.length +
-    recentEvents.activityLogs.length +
-    (includeReproductiveInPrompt ? recentEvents.reproductiveLogs.length : 0);
+    recentEvents.activityLogs.length;
 
   // Destructure enhanced context (Layer 1-3 data)
   const foodTrials = safeEnhancedContext?.foodTrials ?? [];
@@ -2448,7 +2237,6 @@ export async function fetchAiInsights(
       foodContext: foodContextObj,
       hasPreviousResponse,
       patientMessages: safePatientMessages,
-      profile: safeHealthProfile,
       suggestionHistory,
       weeklyContext,
       ...(safeEnhancedContext?.previousWeeklySummary !== undefined && {
@@ -2597,10 +2385,27 @@ export async function fetchWeeklySummary(
 }> {
   checkRateLimit();
 
-  const safeInput = sanitizeUnknownStringsDeep(input, {
+  const sanitized = sanitizeUnknownStringsDeep(input, {
     maxStringLength: INPUT_SAFETY_LIMITS.aiPayloadString,
     path: "ai.weeklySummaryInput",
-  }) as WeeklySummaryInput;
+  });
+
+  // Basic runtime shape validation before the cast — sanitizeUnknownStringsDeep
+  // returns `unknown`, so verify the expected top-level keys are present.
+  if (
+    typeof sanitized !== "object" ||
+    sanitized === null ||
+    !("weekOf" in sanitized) ||
+    !("conversationMessages" in sanitized) ||
+    !("suggestions" in sanitized) ||
+    !("bowelNotes" in sanitized)
+  ) {
+    throw new Error(
+      "Weekly summary input failed shape validation after sanitization — expected keys missing.",
+    );
+  }
+
+  const safeInput = sanitized as WeeklySummaryInput;
 
   const messages: Array<{
     role: "system" | "user" | "assistant";

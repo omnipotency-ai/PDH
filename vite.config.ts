@@ -22,8 +22,8 @@ export default defineConfig(({}) => {
         ],
         manifest: {
           id: "/",
-          name: "Caca Traca",
-          short_name: "Caca Traca",
+          name: "PDH",
+          short_name: "PDH",
           description:
             "The intelligent food and digestion tracker for ileostomy and colostomy reversal recovery.",
           theme_color: "#080c14",
@@ -64,36 +64,10 @@ export default defineConfig(({}) => {
               sizes: "192x192",
               type: "image/png",
             },
-            {
-              src: "/icons/icon-384x384.png",
-              sizes: "384x384",
-              type: "image/png",
-            },
-            {
-              src: "/icons/icon-512x512.png",
-              sizes: "512x512",
-              type: "image/png",
-            },
-          ],
-          screenshots: [
-            {
-              src: "/tracking-mobile-view.png",
-              sizes: "381x811",
-              type: "image/png",
-              form_factor: "narrow",
-              label: "Meal and symptom tracking view",
-            },
-            {
-              src: "/patterns-mobile.png",
-              sizes: "484x896",
-              type: "image/png",
-              form_factor: "narrow",
-              label: "Patterns and insights view",
-            },
           ],
         },
         workbox: {
-          globPatterns: ["**/*.{js,css,html,ico,svg}"],
+          globPatterns: ["**/*.{js,css,html,ico,svg,png}"],
           navigateFallback: "index.html",
           runtimeCaching: [
             {

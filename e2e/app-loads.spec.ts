@@ -5,7 +5,7 @@ test.describe("App loads authenticated", () => {
     await page.goto("/");
 
     // Should see the main app header with logo (may be multiple, check first)
-    await expect(page.getByRole("img", { name: "Caca Traca" }).first()).toBeVisible();
+    await expect(page.getByRole("img", { name: "PDH" }).first()).toBeVisible();
 
     // Should NOT see sign-in button (that appears on the unauthenticated state)
     await expect(page.getByRole("button", { name: "Sign in" })).not.toBeVisible();

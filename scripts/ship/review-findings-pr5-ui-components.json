@@ -1,0 +1,212 @@
+{
+  "branch": "total-eclipse",
+  "pr": 5,
+  "reviewed_at": "2026-03-31T00:00:00Z",
+  "files_reviewed": [
+    "src/components/settings/AppDataForm.tsx",
+    "src/components/settings/app-data-form/CloudProfileSection.tsx",
+    "src/components/settings/app-data-form/index.ts",
+    "src/components/settings/app-data-form/useAppDataFormController.ts",
+    "src/components/track/panels/index.ts",
+    "src/components/track/today-log/TodayLog.tsx",
+    "src/components/track/today-log/editors/EditableEntryRow.tsx",
+    "src/components/track/today-log/editors/index.ts",
+    "src/components/track/today-log/grouping.ts",
+    "src/components/track/today-log/groups/index.ts",
+    "src/components/track/today-log/helpers.ts",
+    "src/components/track/today-log/index.ts",
+    "src/components/track/today-log/rows/LogEntry.tsx",
+    "src/components/track/today-log/types.ts"
+  ],
+  "findings": [
+    {
+      "id": "F001",
+      "severity": "HIGH",
+      "category": "correctness",
+      "file": "src/components/track/today-log/rows/LogEntry.tsx",
+      "line": 74,
+      "title": "handleDelete swallows errors silently — no user feedback on failure",
+      "description": "The handleDelete function uses try/finally but has no catch block. If onDelete rejects (e.g. network failure, Convex mutation error), the error is silently consumed and the user receives no feedback. They will see the confirm UI disappear as if the delete succeeded, but the entry will still exist in the log. This is a correctness issue with real user impact for a medical-grade logging app where unintended data loss or false confirmation of a delete could be harmful.",
+      "fix": "Add a catch block that shows a toast, matching the pattern already used in saveEditing:\n\n```ts\nconst handleDelete = async () => {\n  try {\n    setDeleting(true);\n    await onDelete(log.id);\n  } catch (err: unknown) {\n    toast.error(getErrorMessage(err, 'Failed to delete entry.'));\n  } finally {\n    setDeleting(false);\n    setConfirmDelete(false);\n  }\n};\n```\n\nNote: The companion EditableEntryRow.tsx (line 258–264) already correctly wraps its delete in try/catch/finally. LogEntry.tsx does not, creating an inconsistency.",
+      "implemented": false
+    },
+    {
+      "id": "F002",
+      "severity": "HIGH",
+      "category": "correctness",
+      "file": "src/components/track/today-log/rows/LogEntry.tsx",
+      "line": 490,
+      "title": "Async onClick handlers passed without void wrapper — unhandled promise rejections in event handlers",
+      "description": "saveEditing (an async function) and handleDelete are passed directly as onClick handlers (lines 490, 502, 674, 692). React event handlers are synchronous by design and do not await returned Promises. While the functions have their own internal try/catch, assigning an async function directly to onClick produces an unhandled Promise in the event system and will trigger an 'Unhandled Promise Rejection' warning in strict mode or future React versions.\n\nThis pattern is inconsistent with EditableEntryRow.tsx where the keyboard Enter handlers correctly use `void handleSave()`, but the direct onClick assignment is also missing the void wrapper there (line 165).",
+      "fix": "Wrap async handlers with void or an arrow function:\n\n```tsx\n// Option A: void wrapper (preferred for clarity)\nonClick={() => void saveEditing()}\nonClick={() => void handleDelete()}\n\n// Option B: inline async arrow (acceptable)\nonClick={async () => { await saveEditing(); }}\n```\n\nApply consistently across all async onClick assignments in both LogEntry.tsx and EditableEntryRow.tsx.",
+      "implemented": false
+    },
+    {
+      "id": "F003",
+      "severity": "MODERATE",
+      "category": "code-quality",
+      "file": "src/components/settings/app-data-form/useAppDataFormController.ts",
+      "line": 83,
+      "title": "Export filename uses stale internal codename 'kaka-tracker'",
+      "description": "The export filename base is hardcoded as `kaka-tracker-${date}` (e.g. kaka-tracker-2026-03-31-backup.json). This is the old internal codename. If this app is being prepared for public release (the CLAUDE.md says 'this is a future public product'), the exported backup files will expose a name that does not match the product. The app is named 'PDH' and the storage key is 'caca-custom-food-presets-v1', but the export filename uses a third name ('kaka-tracker'). This inconsistency is confusing and should be resolved before public launch.",
+      "fix": "Either derive the filename from a single central app name constant, or decide on the public product name and update this string accordingly:\n\n```ts\n// In a central constants file:\nexport const APP_FILENAME_SLUG = \"pdh\"; // or whatever the final name is\n\n// In useAppDataFormController:\nconst filenameBase = `${APP_FILENAME_SLUG}-${formatLocalDateKey(new Date())}`;\n```",
+      "implemented": false
+    },
+    {
+      "id": "F004",
+      "severity": "MODERATE",
+      "category": "code-quality",
+      "file": "src/components/track/today-log/rows/LogEntry.tsx",
+      "line": 562,
+      "title": "Array index used as React key for draft food items",
+      "description": "Food item draft rows use `key={\\`draft-${i}\\`}` where `i` is the array index (line 562). This is the classic index-as-key anti-pattern: when items are removed from the middle of the list, React will reuse DOM nodes by index rather than by identity, causing stale input state to leak between items. A user deleting the first of three food items could see the third item's values shift into the second's input fields.",
+      "fix": "Assign a stable ID when draft items are initialised from the log (in initFoodDraftItems). Since FoodItem doesn't have a guaranteed unique ID, use the index only at initialisation time by incorporating content as part of the key:\n\n```ts\nreturn log.data.items.map((item, i) => ({\n  id: `draft-${i}-${String(item?.parsedName ?? item?.name ?? i)}`,\n  name: ...,\n  quantity: ...,\n  unit: ...,\n}));\n\n// Then in the render:\n{draftItems.map((draft) => (\n  <div key={draft.id} ...>\n```\n\nThis is imperfect but substantially better than a pure index key.",
+      "implemented": false
+    },
+    {
+      "id": "F005",
+      "severity": "MODERATE",
+      "category": "performance",
+      "file": "src/components/track/today-log/TodayLog.tsx",
+      "line": 104,
+      "title": "toggleGroup is not memoised — creates a new function reference on every render",
+      "description": "The toggleGroup function (line 104) is defined as a plain arrow function inside the component body, so it gets a new reference on every render. It is passed as `onToggle` to group row components (CounterHabitRow, EventHabitRow, FoodGroupRow, FluidGroupRow, ActivityGroupRow, WeightGroupRow) via inline `() => toggleGroup(key)` lambdas, meaning onToggle always gets a new reference regardless. If any of those group rows are memoised with React.memo, they will re-render unnecessarily on every parent render. Given this is a scroll area containing potentially many entries, unnecessary re-renders compound.\n\nNote: the autoEditContextValue and actionsValue are correctly memoised with useMemo (lines 97, 170), making this inconsistency more visible.",
+      "fix": "Memoize toggleGroup with useCallback:\n\n```ts\nconst toggleGroup = useCallback((key: string) => {\n  setExpandedGroups((prev) => {\n    const next = new Set(prev);\n    if (next.has(key)) next.delete(key);\n    else next.add(key);\n    return next;\n  });\n}, []); // no deps — uses functional updater form\n```\n\nNote that the inline lambdas passed to onToggle (e.g. `() => toggleGroup('food')`) will still create new references per render. If group rows are ever memoised, those lambdas should also be pre-bound or the onToggle signature should accept the key as a separate prop.",
+      "implemented": false
+    },
+    {
+      "id": "F006",
+      "severity": "MODERATE",
+      "category": "accessibility",
+      "file": "src/components/track/today-log/TodayLog.tsx",
+      "line": 139,
+      "title": "Day-navigation buttons have no aria-label — screen reader users cannot navigate by day",
+      "description": "The previous-day button (line 139) and next-day button (line 158) have visible text (prevDayLabel / nextDayLabel) but no aria-label or aria-describedby. For screen readers, 'Yesterday' or 'Monday' as a standalone button label is ambiguous — the user cannot tell these are navigation controls. The surrounding section also lacks an aria-label or role='navigation'.\n\nThis is a medical-grade logging app where CLAUDE.md explicitly states 'Accessibility is Mandatory'. Day navigation is a core interaction.",
+      "fix": "Add descriptive aria-labels:\n\n```tsx\n<button\n  type=\"button\"\n  onClick={onPreviousDay}\n  aria-label={`Go to previous day (${prevDayLabel})`}\n  className=\"...\"\n>\n  {prevDayLabel}\n</button>\n\n<button\n  type=\"button\"\n  onClick={dayOffset === -1 ? onJumpToToday : onNextDay}\n  aria-label={`Go to next day (${nextDayLabel})`}\n  className=\"...\"\n>\n  {nextDayLabel}\n</button>\n```\n\nConsider wrapping the date navigation row in a `<nav aria-label=\"Date navigation\">` element.",
+      "implemented": false
+    },
+    {
+      "id": "F007",
+      "severity": "MODERATE",
+      "category": "accessibility",
+      "file": "src/components/settings/AppDataForm.tsx",
+      "line": 138,
+      "title": "Factory reset and import confirmation UI has no role or aria-live — destructive actions are silent to assistive technology",
+      "description": "The factory reset confirmation block (line 138–162) and the import confirmation block (line 165–192) appear conditionally via state. Neither block uses role='alertdialog', aria-live, or aria-modal. Screen reader users may not notice these confirmations have appeared, meaning they could accidentally skip past a destructive action prompt. Since both blocks contain Yes/Cancel pairs for irreversible operations (factory reset and import-overwrite), this is an accessibility gap on high-stakes UI.",
+      "fix": "Add role='alertdialog' and aria-live='assertive' to the confirmation containers:\n\n```tsx\n{showFactoryResetConfirm && (\n  <div\n    role=\"alertdialog\"\n    aria-live=\"assertive\"\n    aria-label=\"Confirm factory reset\"\n    className=\"rounded-xl border ...\"\n  >\n    ...\n  </div>\n)}\n```\n\nAlternatively, use a proper modal (the existing DeleteConfirmDrawer pattern) for consistency.",
+      "implemented": false
+    },
+    {
+      "id": "F008",
+      "severity": "MODERATE",
+      "category": "accessibility",
+      "file": "src/components/track/today-log/rows/LogEntry.tsx",
+      "line": 271,
+      "title": "Digestion entry expand button has no aria-controls — aria-expanded is incomplete without it",
+      "description": "The digestion row toggle button at line 271 has aria-expanded={digestionExpanded} which is correct, but it has no aria-controls attribute pointing to the expandable content panel. Without aria-controls, screen readers cannot reliably announce the expand/collapse relationship or navigate to the expanded content. WCAG 2.1 success criterion 4.1.2 (Name, Role, Value) requires the programmatic relationship between trigger and controlled region to be exposed.",
+      "fix": "Add an id to the expandable motion.div and reference it:\n\n```tsx\nconst expandedId = `digestion-detail-${log.id}`;\n\n<button\n  type=\"button\"\n  onClick={handleToggleExpand}\n  aria-expanded={digestionExpanded}\n  aria-controls={expandedId}\n  className=\"...\"\n>\n\n<motion.div\n  id={expandedId}\n  ...\n>\n```",
+      "implemented": false
+    },
+    {
+      "id": "F009",
+      "severity": "MODERATE",
+      "category": "accessibility",
+      "file": "src/components/track/today-log/rows/LogEntry.tsx",
+      "line": 397,
+      "title": "Bristol Scale chip buttons have no accessible label — screen readers read only the number",
+      "description": "The Bristol Scale chip buttons (line 369–382) render only the code number (1–7) as their visible label. Screen reader users will hear 'button, 1', 'button, 2', etc. without any context that these represent stool consistency types. The Bristol Stool Scale has clinical meaning (B1=hard lumps through B7=watery) that is entirely lost to assistive technology.",
+      "fix": "Add aria-label with the descriptive name:\n\n```tsx\nconst BRISTOL_LABELS: Record<number, string> = {\n  1: 'Type 1 – Separate hard lumps',\n  2: 'Type 2 – Lumpy sausage',\n  3: 'Type 3 – Sausage with cracks',\n  4: 'Type 4 – Smooth sausage',\n  5: 'Type 5 – Soft blobs',\n  6: 'Type 6 – Fluffy pieces',\n  7: 'Type 7 – Watery',\n};\n\n<button\n  aria-label={BRISTOL_LABELS[code]}\n  aria-pressed={draftBristol === code}\n  ...\n>\n  {code}\n</button>\n```\n\nUsing aria-pressed is also more semantically correct than the current toggle chip pattern, which lacks state exposure.",
+      "implemented": false
+    },
+    {
+      "id": "F010",
+      "severity": "MODERATE",
+      "category": "code-quality",
+      "file": "src/components/track/today-log/rows/LogEntry.tsx",
+      "line": 650,
+      "title": "getLogNotes(log) called three times in the display branch — redundant calls",
+      "description": "In the non-editing display branch (around line 650–661), getLogNotes(log) is called three times: once as the condition for rendering the Tooltip, once as the truncated preview text, and once as the full tooltip content. While getLogNotes is cheap (it's just a string extraction), it still re-evaluates the same log object three times in the same render pass. More importantly, it creates an inconsistency risk: if the function were ever made more complex (e.g. combining notes from multiple fields), the three calls could theoretically diverge if log were updated mid-render (not currently possible but a maintenance hazard).",
+      "fix": "Compute once and reuse:\n\n```tsx\nconst notesText = getLogNotes(log);\n// ... then use notesText everywhere in the render\n{notesText && (\n  <Tooltip>\n    <TooltipTrigger ...>{truncatePreviewText(notesText)}</TooltipTrigger>\n    <TooltipContent ...>{notesText}</TooltipContent>\n  </Tooltip>\n)}\n```\n\nThis already happens correctly in the digestion expanded path (line 244) but not in the non-digestion display path.",
+      "implemented": false
+    },
+    {
+      "id": "F011",
+      "severity": "MODERATE",
+      "category": "code-quality",
+      "file": "src/components/track/today-log/helpers.ts",
+      "line": 2,
+      "title": "Venus icon removed from import but 'stacked-2' editLayout variant is now undocumented",
+      "description": "This is a documentation gap left by the reproductive health removal. The JSDoc comment for editLayout in EditableEntryRow.tsx (line 56–58) previously documented 'stacked-2' as '(ReproductiveSubRow)'. The PR updates this to just 'space-y-2 with border/bg' but removes the concrete example of which editor uses it. This makes the API of EditableEntryRow harder to understand for future maintainers — it is now unclear whether 'stacked-2' is actively used anywhere in the codebase.",
+      "fix": "Grep for stacked-2 usage and either update the JSDoc with an accurate example, or remove the variant if it is no longer used:\n\n```ts\n/**\n * - \"stacked-2\": space-y-2 with border/bg wrapper — used by [EditorName]\n */\n```\n\nIf stacked-2 has no remaining callers, remove the variant to reduce dead code surface.",
+      "implemented": false
+    },
+    {
+      "id": "F012",
+      "severity": "MODERATE",
+      "category": "correctness",
+      "file": "src/components/track/today-log/grouping.ts",
+      "line": 135,
+      "title": "Fallback habit type detection references legacy 'habitType' and 'action' fields",
+      "description": "The grouping logic at lines 135–140 falls back to checking firstData?.habitType and firstData?.action when a habit config match is not found. These look like legacy field names from an older schema version. If these fields no longer appear in the Convex schema or domain types (they are present in domain.ts lines 425 and 480, so not entirely dead), this code is reading from potentially stale data shapes.\n\nMore critically, the check at line 138 (`String(firstData?.action ?? '').toLowerCase() === 'check'`) is checking for the string 'check' as a signal that a habit is an event/checkbox type. If that field is not populated on current records, this fallback silently fails to group the habit correctly and shows counter rows instead of event rows.",
+      "fix": "Add a comment explaining which schema version each fallback targets, and whether these fields are still written to. If habitType and action are no longer written by the current mutation code, add a comment noting these are legacy read-only fallbacks and consider removing them once all historic data has migrated.",
+      "implemented": false
+    },
+    {
+      "id": "F013",
+      "severity": "LOW",
+      "category": "code-quality",
+      "file": "src/components/settings/app-data-form/CloudProfileSection.tsx",
+      "line": 31,
+      "title": "Privacy Policy link removed — no internal /privacy route reference remains, but disclosure is now weaker",
+      "description": "The diff removes the link to the internal `/privacy` route, replacing it with only the external GDPR rights link. The text now reads 'Your rights under GDPR' with no pointer to the product's own privacy policy. For a GDPR-aware product storing medical data (digestive health, which is sensitive health data under GDPR Article 9), the absence of a privacy policy link weakens the user's informed consent flow. This may be intentional (the /privacy route may have been deleted as part of this PR's landing page removal), but it leaves a gap.",
+      "fix": "If a /privacy route will exist in the final product, restore the link (or a placeholder). If no policy exists yet, add a TODO comment noting this is required before public launch. Do not ship a health data product to EU users without a privacy policy link in the settings UI.",
+      "implemented": false
+    },
+    {
+      "id": "F014",
+      "severity": "LOW",
+      "category": "code-quality",
+      "file": "src/components/track/today-log/TodayLog.tsx",
+      "line": 115,
+      "title": "Hard-coded 'Daily Log' title for past days — could be more informative",
+      "description": "The title logic at line 115 returns 'Today's Log' for dayOffset 0, 'Yesterday's Log' for dayOffset -1, and the generic 'Daily Log' for any earlier offset. The centerLabel (line 118) already shows the formatted date for past days. The combination of 'Daily Log' as the section title and the formatted date below is redundant and slightly confusing — the title carries no additional information beyond 'Daily Log' for anything further than yesterday.",
+      "fix": "This is a minor UX improvement. Consider using 'Daily Log — {format(selectedDate, \"EEE, MMM d\")}' as the title for any offset beyond -1, matching the centerLabel, so the heading is always informative:\n\n```ts\nconst title =\n  dayOffset === 0 ? \"Today's Log\"\n  : dayOffset === -1 ? \"Yesterday's Log\"\n  : `Log for ${format(selectedDate, 'EEE, MMM d')}`;\n```",
+      "implemented": false
+    },
+    {
+      "id": "F015",
+      "severity": "LOW",
+      "category": "code-quality",
+      "file": "src/components/track/today-log/helpers.ts",
+      "line": 98,
+      "title": "getLogIcon return type annotation uses typeof Soup — fragile coupling to a specific icon",
+      "description": "The return type of getLogIcon is annotated as `typeof Soup` (line 98). Soup is a lucide-react icon component, and all lucide icons share the same component shape. However, annotating the return type as typeof Soup couples the signature to a specific icon rather than the shared Lucide icon type. If a Lucide icon's internal shape changes, this annotation will break. More importantly, it misleads readers into thinking only Soup can be returned.",
+      "fix": "Import and use the LucideIcon type from lucide-react:\n\n```ts\nimport type { LucideIcon } from 'lucide-react';\n\nexport function getLogIcon(log: SyncedLog): LucideIcon {\n```",
+      "implemented": false
+    },
+    {
+      "id": "F016",
+      "severity": "LOW",
+      "category": "accessibility",
+      "file": "src/components/track/today-log/rows/LogEntry.tsx",
+      "line": 343,
+      "title": "Digestion fieldset uses both 'border-none' and 'm-0' inline styles — fieldset reset is incomplete",
+      "description": "The fieldset at line 343 has className that includes 'border-none p-0 m-0' and a separate style attribute. Tailwind's 'border-none' maps to 'border-style: none' but does not reset 'border-width' or 'border-color' in all browsers. Some browsers (Firefox in particular) render default fieldset borders even with border-none. More importantly, the class order ('border-none p-0 m-0 px-3 pb-3 pt-1') applies px-3/pb-3/pt-1 after p-0, which is correct, but the m-0 before no explicit margin overrides is harmless — overall this is messy.\n\nThis is minor, but in a component that will be visible to users on medical data, visual consistency across browsers matters.",
+      "fix": "Use a clean fieldset reset that explicitly covers all default browser styling:\n\n```tsx\n<fieldset className=\"ml-7 max-w-[46ch] space-y-2 border-0 p-0 px-3 pb-3 pt-1\">\n```\n\nOr replace the fieldset with a div and move the legend to an sr-only span — fieldsets are most valuable when native form submission is used, which is not the case here.",
+      "implemented": false
+    }
+  ],
+  "summary": {
+    "critical": 0,
+    "high": 2,
+    "moderate": 9,
+    "low": 5,
+    "notes": [
+      "Reproductive health removal is clean — no stale references remain in the 14 reviewed files.",
+      "CycleHormonalSection and ObservationWindow removals from panels/index.ts are correctly executed.",
+      "ReproductiveGroup type, ReproductiveSubRow, ReproductiveGroupRow all correctly removed from their respective index files and types.ts.",
+      "transitCalibration in useAppDataFormController confirmFactoryReset is NOT a dead feature reference — it maps to a live Convex-backed profile field and is correctly reset.",
+      "The stacked-2 editLayout variant and spacious displayPadding in EditableEntryRow still exist in code but have no documented remaining callers — this warrants a follow-up grep before the next sprint."
+    ]
+  }
+}

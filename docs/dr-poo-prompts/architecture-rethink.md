@@ -12,7 +12,7 @@ What if the app had a real conversational AI at its core — not a "generate a r
 
 ## The Vision
 
-Imagine opening Caca Traca. Instead of a dashboard with a "Get Insights" button, you see:
+Imagine opening PDH. Instead of a dashboard with a "Get Insights" button, you see:
 
 1. **A chat thread** — Dr. Poo is there, like WhatsApp. He sees your logs in real-time. When you log a meal, he might say nothing. When you log a Bristol 7 after a new food trial, he proactively says: "That chicken breast at 2pm is looking suspicious — it's 5 hours post-meal, right in the transit window given your 3 coffees today. Let's watch the next one."
 
@@ -227,4 +227,4 @@ This way:
 
 **Then prototype School B's chat UI** as a parallel experiment. Add a simple chat thread alongside the existing report. Let the model respond conversationally to one patient question. See how it feels. If it's dramatically better (and based on the GPT Store comparison, it will be), commit to the migration.
 
-**The hybrid approach** (conversation during day → structured summary at end) is the most likely endpoint. It gives the patient the best experience while preserving the structured data layer that makes Caca Traca an app, not just a chatbot.
+**The hybrid approach** (conversation during day → structured summary at end) is the most likely endpoint. It gives the patient the best experience while preserving the structured data layer that makes PDH an app, not just a chatbot.

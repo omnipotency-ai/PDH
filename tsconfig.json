@@ -17,5 +17,5 @@
     "noEmit": true,
     "strict": true
   },
-  "exclude": ["caca-traca-design-language-workspace"]
+  "exclude": ["PDH-design-language-workspace"]
 }

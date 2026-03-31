@@ -2,7 +2,7 @@
 
 **Purpose:** Template for a dedicated session to walk through every entry in `shared/foodRegistry.ts` and verify correctness. Work through the registry top-to-bottom (Zone 1A → 1B → 2 → 3), one entry at a time.
 
-**File to audit:** `/Users/peterjamesblizzard/projects/caca_traca/shared/foodRegistry.ts`
+**File to audit:** `/Users/peterjamesblizzard/projects/PDH/shared/foodRegistry.ts`
 
 ---
 

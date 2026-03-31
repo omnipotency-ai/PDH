@@ -53,7 +53,9 @@ export interface EditableEntryRowProps {
    * single flex row (default) or uses a multi-row layout with space-y.
    * - "inline": single flex row with gap-1 (HabitSubRow, ActivitySubRow, WeightSubRow)
    * - "stacked": space-y-1 wrapper, date/time in their own row (FluidSubRow, FoodSubRow)
-   * - "stacked-2": space-y-2 with border/bg (ReproductiveSubRow)
+   * - "stacked-2": space-y-2 with border/bg — used by editors that need extra visual
+   *   separation, e.g. a digestion detail editor embedded inside a group row.
+   *   TODO: audit current callers and remove if unused.
    */
   editLayout?: "inline" | "stacked" | "stacked-2";
 
@@ -61,7 +63,7 @@ export interface EditableEntryRowProps {
    * Controls the padding of the outer display wrapper.
    * - "compact" (default): py-1 — used by most single-line editors
    * - "normal": py-1.5 — used by FoodSubRow
-   * - "spacious": py-2 — used by ReproductiveSubRow
+   * - "spacious": py-2
    */
   displayPadding?: "compact" | "normal" | "spacious";
 
@@ -255,14 +257,16 @@ export function EditableEntryRow({
             <button
               type="button"
               className="rounded p-1 text-xs text-red-400 hover:bg-red-400/10"
-              onClick={async () => {
-                try {
-                  await onDelete(entryId);
-                  setConfirmDelete(false);
-                } catch (err: unknown) {
-                  toast.error(getErrorMessage(err, "Failed to delete entry."));
-                }
-              }}
+              onClick={() =>
+                void (async () => {
+                  try {
+                    await onDelete(entryId);
+                    setConfirmDelete(false);
+                  } catch (err: unknown) {
+                    toast.error(getErrorMessage(err, "Failed to delete entry."));
+                  }
+                })()
+              }
             >
               Yes
             </button>

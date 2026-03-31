@@ -2,7 +2,7 @@
 
 **Research date:** 2026-03-17
 **Verified accurate as of:** 2026-03-17
-**Context:** Research conducted for Caca Traca (anastomosis food reintegration tracker) Sprint 2.5, Wave 1.
+**Context:** Research conducted for PDH (anastomosis food reintegration tracker) Sprint 2.5, Wave 1.
 **Purpose:** Evaluate LLM model pricing for food matching feature (BYOK, client-initiated)
 **Use case:** Binary matching -- LLM either matches user food input to a registry canonical or returns "not found." No confidence scores.
 

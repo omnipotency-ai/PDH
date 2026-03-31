@@ -27,12 +27,11 @@ export function CloudProfileSection({ isLoading }: CloudProfileSectionProps) {
           rest but is not end-to-end encrypted, so cloud storage is for portability, not for storing
           secrets.
         </p>
+        {/* TODO (pre-launch): Restore a Privacy Policy link here once the policy page exists.
+            The link was removed because the policy page is not yet published. It must be
+            reinstated before public launch to comply with GDPR transparency requirements. */}
         <p className="text-[10px] text-[var(--text-faint)]">
-          For more information, see our{" "}
-          <a href="/privacy" className="underline hover:text-[var(--text-muted)]">
-            Privacy Policy
-          </a>{" "}
-          and your rights under{" "}
+          Your rights under{" "}
           <a
             href="https://commission.europa.eu/law/law-topic/data-protection_en"
             target="_blank"

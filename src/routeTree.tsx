@@ -5,7 +5,6 @@ import {
   createRouter,
   Link,
   Outlet,
-  redirect,
   useRouterState,
 } from "@tanstack/react-router";
 import { Authenticated, AuthLoading, Unauthenticated, useQuery } from "convex/react";
@@ -37,11 +36,6 @@ const SettingsPage = lazy(() => import("./pages/Settings"));
 const UiMigrationLabPage = lazy(() => import("./pages/UiMigrationLab"));
 const ArchivePage = lazy(() => import("./pages/secondary_pages/Archive"));
 const MenuPage = lazy(() => import("./pages/secondary_pages/Menu"));
-
-const LandingPage = lazy(() => import("@/pages/LandingPage"));
-const TermsPage = lazy(() => import("./pages/secondary_pages/TermsPage"));
-const PrivacyPage = lazy(() => import("./pages/secondary_pages/PrivacyPage"));
-const ApiKeyGuidePage = lazy(() => import("./pages/secondary_pages/ApiKeyGuidePage"));
 
 const NAV_ITEMS = [
   {
@@ -153,23 +147,15 @@ function AuthLoadingFallback() {
       <div className="max-w-md space-y-3 rounded-2xl border border-[var(--orange)]/30 bg-[var(--surface-1)] p-5">
         <h2 className="text-base font-semibold text-[var(--text)]">Auth is unavailable</h2>
         <p className="text-sm text-[var(--text-muted)]">
-          Sign-in is taking too long to load. Retry or continue to the public home page.
+          Sign-in is taking too long to load. Try reloading the page.
         </p>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => window.location.reload()}
-            className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--text)] hover:bg-[var(--surface-2)]"
-          >
-            Retry
-          </button>
-          <Link
-            to="/home"
-            className="rounded-lg bg-[var(--teal)] px-3 py-1.5 text-sm font-medium text-white hover:brightness-110"
-          >
-            Open home
-          </Link>
-        </div>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--text)] hover:bg-[var(--surface-2)]"
+        >
+          Retry
+        </button>
       </div>
     </div>
   );
@@ -185,17 +171,17 @@ function GlobalHeader() {
           {/* Logo area */}
           <Tooltip>
             <TooltipTrigger asChild>
-              <Link to="/home" className="flex items-center gap-2.5">
+              <Link to="/" className="flex items-center gap-2.5">
                 <img
                   src="/icons/icon-72x72.png"
-                  alt="Caca Traca"
+                  alt="PDH"
                   width={64}
                   height={64}
                   className="h-16 w-16 drop-shadow-[0_0_8px_rgba(45,212,191,0.4)]"
                 />
                 <div className="hidden lg:block">
                   <p className="bg-gradient-to-r from-[var(--teal)] to-[var(--section-food)] bg-clip-text font-display text-lg font-extrabold tracking-tight text-transparent">
-                    Caca Traca
+                    PDH
                   </p>
                   <p className="text-[10px] font-medium uppercase tracking-widest text-[var(--text-faint)]">
                     Anastomosis Food Re-Integration Tracker
@@ -204,7 +190,7 @@ function GlobalHeader() {
               </Link>
             </TooltipTrigger>
             <TooltipContent side="bottom" className={pathname === "/" ? "" : "hidden"}>
-              Back to website home
+              Home
             </TooltipContent>
           </Tooltip>
 
@@ -350,13 +336,13 @@ function AppLayout() {
         <div className="flex min-h-screen flex-col items-center justify-center gap-6">
           <img
             src="/icons/icon-72x72.png"
-            alt="Caca Traca"
+            alt="PDH"
             width={72}
             height={72}
             className="drop-shadow-[0_0_8px_rgba(45,212,191,0.4)]"
           />
           <h1 className="bg-gradient-to-r from-[var(--teal)] to-[var(--section-food)] bg-clip-text font-display text-2xl font-extrabold tracking-tight text-transparent">
-            Caca Traca
+            PDH
           </h1>
           <p className="text-sm text-[var(--text-muted)]">Sign in to access the app</p>
           <SignInButton mode="modal">
@@ -367,12 +353,6 @@ function AppLayout() {
               Sign in
             </button>
           </SignInButton>
-          <Link
-            to="/home"
-            className="text-xs text-[var(--text-faint)] hover:text-[var(--text-muted)] transition-colors"
-          >
-            Back to home
-          </Link>
         </div>
       </Unauthenticated>
       <AuthLoading>
@@ -391,80 +371,11 @@ const rootRoute = createRootRoute({
   ),
 });
 
-const homeRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/home",
-  component: () => (
-    <Suspense fallback={null}>
-      <LandingPage />
-    </Suspense>
-  ),
-});
-
-const termsRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/terms",
-  component: () => (
-    <Suspense fallback={null}>
-      <TermsPage />
-    </Suspense>
-  ),
-});
-
-const privacyRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/privacy",
-  component: () => (
-    <Suspense fallback={null}>
-      <PrivacyPage />
-    </Suspense>
-  ),
-});
-
-const apiKeyGuideRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/api-key-guide",
-  component: () => (
-    <Suspense fallback={null}>
-      <ApiKeyGuidePage />
-    </Suspense>
-  ),
-});
-
-const habitsRedirectRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/habits",
-  beforeLoad: () => {
-    throw redirect({ to: "/" });
-  },
-});
-
-const calibrationRedirectRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/calibration",
-  beforeLoad: () => {
-    throw redirect({ to: "/settings" });
-  },
-});
-
-// Extend the window type to include the Clerk singleton set by @clerk/clerk-react.
-// session is null when explicitly signed out, an object when signed in,
-// and undefined while Clerk is still initializing.
-type ClerkGlobal = { session: Record<string, unknown> | null | undefined };
-
 const appLayoutRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: "app-layout",
   component: AppLayout,
-  beforeLoad: () => {
-    // Clerk sets window.Clerk once it has initialized. If it is not yet set,
-    // auth is still loading — do not redirect; AppLayout handles AuthLoading correctly.
-    // If Clerk is loaded and session is null, the user is not authenticated: redirect to /home.
-    const clerk = (window as Window & { Clerk?: ClerkGlobal }).Clerk;
-    if (clerk !== undefined && clerk.session === null) {
-      throw redirect({ to: "/home" });
-    }
-  },
+  // No beforeLoad redirect — unauthenticated users see the sign-in prompt via AppLayout.
 });
 
 const indexRoute = createRoute({
@@ -521,32 +432,30 @@ const menuRoute = createRoute({
     ),
 });
 
-const uiMigrationLabRoute = createRoute({
-  getParentRoute: () => appLayoutRoute,
-  path: "/ui-migration-lab",
-  component: () =>
-    withBoundary(
-      "UI Migration Lab",
-      <Suspense fallback={null}>
-        <UiMigrationLabPage />
-      </Suspense>,
-    ),
-});
+const devOnlyRoutes = import.meta.env.DEV
+  ? [
+      createRoute({
+        getParentRoute: () => appLayoutRoute,
+        path: "/ui-migration-lab",
+        component: () =>
+          withBoundary(
+            "UI Migration Lab",
+            <Suspense fallback={null}>
+              <UiMigrationLabPage />
+            </Suspense>,
+          ),
+      }),
+    ]
+  : [];
 
 export const routeTree = rootRoute.addChildren([
-  homeRoute,
-  termsRoute,
-  privacyRoute,
-  apiKeyGuideRoute,
-  habitsRedirectRoute,
-  calibrationRedirectRoute,
   appLayoutRoute.addChildren([
     indexRoute,
     patternsRoute,
     settingsRoute,
     archiveRoute,
     menuRoute,
-    uiMigrationLabRoute,
+    ...devOnlyRoutes,
   ]),
 ]);
 

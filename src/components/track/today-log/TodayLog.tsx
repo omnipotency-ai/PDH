@@ -2,7 +2,6 @@ import { addDays, format } from "date-fns";
 import { NotebookPen } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { AutoEditProvider } from "./AutoEditContext";
 import { groupLogEntries } from "./grouping";
 import {
@@ -11,7 +10,6 @@ import {
   EventHabitRow,
   FluidGroupRow,
   FoodGroupRow,
-  ReproductiveGroupRow,
   WeightGroupRow,
 } from "./groups";
 import { LogEntry } from "./rows";
@@ -47,9 +45,6 @@ function findGroupKeyForLogId(
         break;
       case "weight":
         if (item.entries.some((e) => e.id === logId)) return "weight";
-        break;
-      case "reproductive":
-        if (item.entries.some((e) => e.id === logId)) return "reproductive";
         break;
     }
   }
@@ -106,14 +101,14 @@ export function TodayLog({
     }),
     [autoEditId, handleAutoEditHandled],
   );
-  const toggleGroup = (key: string) => {
+  const toggleGroup = useCallback((key: string) => {
     setExpandedGroups((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
       else next.add(key);
       return next;
     });
-  };
+  }, []);
 
   const canMoveForward = dayOffset < 0;
   const title =
@@ -144,6 +139,7 @@ export function TodayLog({
         <button
           type="button"
           onClick={onPreviousDay}
+          aria-label="Go to previous day"
           className="text-xs font-medium text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--section-log)]"
         >
           {prevDayLabel}
@@ -163,6 +159,7 @@ export function TodayLog({
           <button
             type="button"
             onClick={dayOffset === -1 ? onJumpToToday : onNextDay}
+            aria-label="Go to next day"
             className="text-xs font-medium text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--section-log)]"
           >
             {nextDayLabel}
@@ -275,17 +272,6 @@ export function TodayLog({
                         weightUnit={weightUnit}
                         expanded={expandedGroups.has("weight")}
                         onToggle={() => toggleGroup("weight")}
-                      />
-                    );
-                  case "reproductive":
-                    // Feature-gated: reproductive health is out of v1 scope (ADR-0008)
-                    if (!FEATURE_FLAGS.reproductiveHealth) return null;
-                    return (
-                      <ReproductiveGroupRow
-                        key="reproductive-group"
-                        group={item}
-                        expanded={expandedGroups.has("reproductive")}
-                        onToggle={() => toggleGroup("reproductive")}
                       />
                     );
                   default:

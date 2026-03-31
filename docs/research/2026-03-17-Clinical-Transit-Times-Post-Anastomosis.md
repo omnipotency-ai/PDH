@@ -3,7 +3,7 @@
 > **Research date:** 2026-03-17
 > **Verified accurate as of:** 2026-03-17
 > **Method:** Multi-query web research triangulating clinical studies, reviews, and reference databases.
-> **Context:** Research conducted for Caca Traca (anastomosis food reintegration tracker) Sprint 2.5, Wave 1.
+> **Context:** Research conducted for PDH (anastomosis food reintegration tracker) Sprint 2.5, Wave 1.
 > **Confidence note:** Post-surgical transit data is sparse — most studies measure early recovery (days 1-3) rather than the weeks-to-months trajectory. Ranges below reflect best available evidence; where data is thin, this is stated explicitly.
 
 ---
@@ -389,7 +389,7 @@ Many people believe food can exit the body within 1 hour of eating. This is phys
 
 ## 7. Practical Recommendations for App Default Values
 
-Based on all the above research, here are the recommended defaults for Caca Traca:
+Based on all the above research, here are the recommended defaults for PDH:
 
 ### 7A. Transit Time Window Defaults
 

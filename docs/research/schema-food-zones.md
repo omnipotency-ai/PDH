@@ -122,7 +122,7 @@ If you want **ultra‑conservative Zone 1**, you could push all fruit to Zone 2 
 
 ***
 
-## Dry‑texture check (Caca Traca specific)
+## Dry‑texture check (PDH specific)
 
 Zone 1 should **exclude** foods that are intrinsically dry and require a lot of chewing, even if low‑residue on paper (e.g. plain toast, crackers by themselves). [embracingostomylife](https://embracingostomylife.org/wp-content/uploads/2025/12/UOAA-Post-op-nutritional-guidelines.pdf)
 Where you *do* use them (e.g. crackers, bread), they should be **soaked** in broth/milk until soft, so `dry_texture: no`. [uhb.nhs](https://www.uhb.nhs.uk/media/mzemzk2v/pi_dietetics_nutrition-a-guide-to-eating-if-you-have-an-iieostomy.pdf)

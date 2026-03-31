@@ -18,10 +18,8 @@ import {
   sortingEqual,
 } from "@/components/patterns/database";
 import { HeroStrip } from "@/components/patterns/hero";
-import TransitMap from "@/components/patterns/transit-map/TransitMap";
-import TransitMapContainer from "@/components/patterns/transit-map/TransitMapContainer";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAnalyzedFoodStats } from "@/hooks/useAnalyzedFoodStats";
+import { useLiveClock } from "@/hooks/useLiveClock";
 import { useMappedAssessments } from "@/hooks/useMappedAssessments";
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -30,10 +28,6 @@ const SMART_VIEWS_STORAGE_KEY = "patterns-smart-views-v1";
 const FILTER_STATE_STORAGE_KEY = "patterns-filter-state-v1";
 const ALL_VIEW_ID = "all";
 const DEFAULT_SORTING: SortingState = [{ id: "lastTested", desc: true }];
-const PRIMARY_PATTERN_TAB = "database";
-const SECONDARY_PATTERN_TAB = "transit-map";
-const TRANSIT_REGISTRY_TAB = "registry-network";
-const TRANSIT_GUIDE_TAB = "model-guide";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -385,26 +379,11 @@ function DatabaseTabContent({ rows }: { rows: FoodDatabaseRow[] }) {
   );
 }
 
-// ── FoodEntryPoints removed — replaced by FoodSafetyGrid (Bug #20) ──────────
-
 // ── Today Label (isolated timer to avoid full-page re-renders) ──────────────
 
 function TodayLabel() {
-  const [label, setLabel] = useState(() => format(new Date(), "EEEE · MMM d, yyyy · h:mm a"));
-
-  useEffect(() => {
-    let id: ReturnType<typeof setTimeout>;
-    const tick = () => {
-      const current = new Date();
-      setLabel(format(current, "EEEE · MMM d, yyyy · h:mm a"));
-      const msUntilNextMinute = (60 - current.getSeconds()) * 1000 - current.getMilliseconds();
-      id = setTimeout(tick, Math.max(msUntilNextMinute, 1000));
-    };
-    const now = new Date();
-    const msUntilNextMinute = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
-    id = setTimeout(tick, Math.max(msUntilNextMinute, 1000));
-    return () => clearTimeout(id);
-  }, []);
+  useLiveClock();
+  const label = format(new Date(), "EEEE · MMM d, yyyy · h:mm a");
 
   return (
     <p className="font-mono text-xs uppercase tracking-[0.2em] text-(--section-summary) shrink-0">
@@ -485,79 +464,18 @@ export default function PatternsPage() {
       {/* Hero strip — always visible at top */}
       <HeroStrip />
 
-      <Tabs defaultValue={PRIMARY_PATTERN_TAB} className="gap-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-[var(--text-faint)]">
-              Explore
-            </p>
-            <p className="text-sm text-[var(--text-muted)]">
-              Start in the database, then switch to the transit map for the metro view.
-            </p>
-          </div>
-          <TabsList className="grid w-full grid-cols-2 rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-1 sm:w-auto">
-            <TabsTrigger
-              value={PRIMARY_PATTERN_TAB}
-              className="rounded-lg px-4 py-2 font-mono text-xs uppercase tracking-[0.18em] text-[var(--text-muted)] data-[active]:bg-[var(--surface-2)] data-[active]:text-[var(--text)]"
-            >
-              Database
-            </TabsTrigger>
-            <TabsTrigger
-              value={SECONDARY_PATTERN_TAB}
-              className="rounded-lg px-4 py-2 font-mono text-xs uppercase tracking-[0.18em] text-[var(--text-muted)] data-[active]:bg-[var(--surface-2)] data-[active]:text-[var(--text)]"
-            >
-              Transit Map
-            </TabsTrigger>
-          </TabsList>
+      <section>
+        <div className="mb-3">
+          <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-[var(--text-faint)]">
+            Explore
+          </p>
+          <p className="text-sm text-[var(--text-muted)]">
+            Browse your food database to see trial history, outcomes, and AI assessments.
+          </p>
         </div>
 
-        <TabsContent value={PRIMARY_PATTERN_TAB} forceMount>
-          <DatabaseTabContent rows={databaseRows} />
-        </TabsContent>
-
-        <TabsContent value={SECONDARY_PATTERN_TAB}>
-          <div
-            data-slot="patterns-transit-map-panel"
-            className="overflow-hidden rounded-[1.25rem] border border-[var(--border)] bg-[var(--surface-1)] shadow-[0_24px_80px_rgba(15,23,42,0.18)]"
-          >
-            <Tabs defaultValue={TRANSIT_REGISTRY_TAB} className="gap-0">
-              <div className="flex flex-col gap-3 border-b border-[var(--border)] px-5 py-4 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-[var(--text-faint)]">
-                    Transit views
-                  </p>
-                  <p className="mt-1 text-sm text-[var(--text-muted)]">
-                    The live network reads from the registry and evidence. The model guide keeps the
-                    original visual reference untouched.
-                  </p>
-                </div>
-                <TabsList className="grid w-full grid-cols-2 rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-1 sm:w-auto">
-                  <TabsTrigger
-                    value={TRANSIT_REGISTRY_TAB}
-                    className="rounded-lg px-4 py-2 font-mono text-xs uppercase tracking-[0.18em] text-[var(--text-muted)] data-[active]:bg-[var(--surface-2)] data-[active]:text-[var(--text)]"
-                  >
-                    Live network
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value={TRANSIT_GUIDE_TAB}
-                    className="rounded-lg px-4 py-2 font-mono text-xs uppercase tracking-[0.18em] text-[var(--text-muted)] data-[active]:bg-[var(--surface-2)] data-[active]:text-[var(--text)]"
-                  >
-                    Model guide
-                  </TabsTrigger>
-                </TabsList>
-              </div>
-
-              <TabsContent value={TRANSIT_REGISTRY_TAB} forceMount className="p-4">
-                <TransitMapContainer foodStats={analysis.foodStats} />
-              </TabsContent>
-
-              <TabsContent value={TRANSIT_GUIDE_TAB}>
-                <TransitMap />
-              </TabsContent>
-            </Tabs>
-          </div>
-        </TabsContent>
-      </Tabs>
+        <DatabaseTabContent rows={databaseRows} />
+      </section>
     </div>
   );
 }

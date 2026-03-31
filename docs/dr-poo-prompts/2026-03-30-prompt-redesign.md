@@ -2,7 +2,7 @@
 
 > Date: 2026-03-30
 > Status: PROPOSAL
-> Context: Peter's decision that Caca Traca is a personal app (Omnigut = public version)
+> Context: Peter's decision that PDH is a personal app (Omnigut = public version)
 
 ---
 
@@ -299,7 +299,7 @@ Just a short paragraph. No JSON structure. Rendered directly in the chat.
 
 ## Part 5: The Big Question You're Not Asking
 
-### Can Caca Traca actually help Peter tolerate more foods?
+### Can PDH actually help Peter tolerate more foods?
 
 The research answer: **Yes, but not how the app currently frames it.**
 

@@ -6,7 +6,6 @@ import type {
   FoodItem,
   FoodLogData,
   HabitLogData,
-  ReproductiveLogData,
   WeightLogData,
 } from "@/types/domain";
 import type { ConvexLogRow } from "../sync";
@@ -316,39 +315,6 @@ describe("sanitizeLogData", () => {
     });
   });
 
-  describe("reproductive type", () => {
-    it("produces correct output with all fields", () => {
-      const data: ReproductiveLogData = {
-        entryType: "cycle",
-        periodStartDate: "2026-03-01",
-        bleedingStatus: "medium",
-        symptoms: ["cramps", "bloating"],
-        notes: "day 2",
-      };
-      const result = sanitizeLogData("reproductive", data);
-      expect(result).toHaveProperty("entryType", "cycle");
-      expect(result).toHaveProperty("periodStartDate", "2026-03-01");
-      expect(result).toHaveProperty("bleedingStatus", "medium");
-      expect(result).toHaveProperty("symptoms");
-      expect((result as { symptoms: string[] }).symptoms).toEqual(["cramps", "bloating"]);
-      expect(result).toHaveProperty("notes", "day 2");
-    });
-
-    it("omits optional fields when undefined", () => {
-      const data: ReproductiveLogData = {
-        entryType: "cycle",
-        periodStartDate: "2026-03-01",
-        bleedingStatus: "none",
-      };
-      const result = sanitizeLogData("reproductive", data);
-      expect(result).toHaveProperty("entryType", "cycle");
-      expect(result).toHaveProperty("periodStartDate", "2026-03-01");
-      expect(result).toHaveProperty("bleedingStatus", "none");
-      expect(result).not.toHaveProperty("symptoms");
-      expect(result).not.toHaveProperty("notes");
-    });
-  });
-
   describe("sanitization", () => {
     it("sanitizes string fields in food data (trims whitespace, strips control chars)", () => {
       const data: FoodLogData = {
@@ -473,24 +439,6 @@ describe("toValidatedSyncedLog", () => {
       expect(result.type).toBe("weight");
       expect(result.data).toBe(weightData);
     });
-
-    it("converts a reproductive log row (descoped but handled)", () => {
-      const reproData: ReproductiveLogData = {
-        entryType: "cycle",
-        periodStartDate: "2026-03-01",
-        bleedingStatus: "light",
-      };
-      const row = makeRow({
-        id: "repro-1",
-        type: "reproductive",
-        data: reproData,
-      });
-      const result = toValidatedSyncedLog(row);
-      expect(result).not.toBeNull();
-      if (result === null) throw new Error("expected result");
-      expect(result.type).toBe("reproductive");
-      expect(result.data).toBe(reproData);
-    });
   });
 
   describe("invalid log rows", () => {
@@ -576,23 +524,6 @@ describe("toSyncedLogs", () => {
     expect(result[0].id).toBe("valid-1");
     expect(result[1].id).toBe("valid-2");
     expect(warnSpy).toHaveBeenCalledOnce();
-  });
-
-  it("handles reproductive type rows without crashing", () => {
-    const rows: ConvexLogRow[] = [
-      makeRow({
-        id: "repro-1",
-        type: "reproductive",
-        data: {
-          entryType: "cycle",
-          periodStartDate: "2026-03-01",
-          bleedingStatus: "none",
-        },
-      }),
-    ];
-    const result = toSyncedLogs(rows);
-    expect(result).toHaveLength(1);
-    expect(result[0].type).toBe("reproductive");
   });
 
   it("preserves row order from input", () => {
