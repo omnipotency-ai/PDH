@@ -37,7 +37,7 @@ Logging friction is the #1 UX blocker. The current food input is a single text f
 
 ### Existing app design language
 
-The app already has a mature dark theme (teal/cyan primary, pink/magenta secondary, dark card backgrounds with subtle borders). The app uses chip-based selection extensively (Bristol scale, urgency, effort, volume, fluid types, quick capture cards).
+The app already has a mature dark theme ( ntailwing colours from sky, emerald, teal, orange, red, pink, violet and indigo, dark card backgrounds with subtle borders). The app uses chip-based selection extensively (Bristol scale, urgency, effort, volume, fluid types, quick capture cards).
 
 ## Architecture
 
@@ -59,31 +59,36 @@ The wireframes show an AI-powered suggestion section on the proposed Home page w
 
 ```
 ┌─────────────────────────────────────────────┐
-│  [mic] [camera] [  Search foods...       ]  │  ← Input bar
+│  [mic] [  Search foods...] [  Log Food  ] │  ← Commit button← Input bar
 ├─────────────────────────────────────────────┤
 │  [Breakfast] [Lunch] [Dinner] [Snacks]      │  ← Meal slot chips
 ├─────────────────────────────────────────────┤
 │                                             │
 │  Recipe/food chips for selected slot        │  ← Chip selection area
-│  (scrollable, shows favourites + recents)   │
+│  (shows limited favourites + recents)       │
 │                                             │
 ├─────────────────────────────────────────────┤
-│  Staging area (aggregated ingredients)      │  ← Cart / review area
-│  ┌──────┐ ┌────────┐ ┌──────┐              │
-│  │6 toast│ │3 eggs  │ │butter│  ...         │
-│  └──────┘ └────────┘ └──────┘              │
+│  Staging area  can be a modal or a slideout (aggregated ingredients)      │  ← Cart / review area
+│  ┌──────┐
+│  │6 toast│
+│  └──────┘
+│  ┌────────┐
+│  │3 eggs  │
+│  └────────┘
+│  ┌──────┐
+│  │butter│
+│  └──────┘
+│  ...         │
 │                                             │
 │  Kcal: 450  P: 28g  C: 52g  F: 18g         │  ← Running nutrition total
 ├─────────────────────────────────────────────┤
-│                              [  Log Food  ] │  ← Commit button
-└─────────────────────────────────────────────┘
 ```
 
 ### Components
 
 #### 1. Input Bar
 
-A search field with smart autocomplete and input mode icons.
+A search field with smart autocomplete.
 
 **Search behaviour:**
 
@@ -95,8 +100,7 @@ A search field with smart autocomplete and input mode icons.
 
 **Input mode icons:**
 
-- **Mic** — voice input (uses device voice; not in-app speech recognition)
-- **Camera** — nutrition label scanning (see Nutrition Capture section below)
+- **Mic** — voice input
 - **Barcode** — product barcode scan to look up or create a food in the registry
 - **AI** — free-text "sort it out" mode (sends text to AI for parsing)
 
@@ -127,7 +131,7 @@ Shows recipes and individual foods as tappable chips for the selected meal slot.
 
 #### 4. Staging Area
 
-The cart. Shows aggregated ingredients with quantities. Always visible once items have been added.
+The cart. Shows aggregated ingredients with quantities.
 
 **Key behaviours:**
 
@@ -135,7 +139,7 @@ The cart. Shows aggregated ingredients with quantities. Always visible once item
 - **Tap to decrement:** Tap an item in staging to reduce quantity by 1 (or by its default unit)
 - **Tap chip to increment:** Tap the food chip again to add another unit
 - **Remove:** When quantity reaches 0, the item disappears from staging
-- **Nutrition row:** Running total of kcal, protein, carbs, fat displayed below the staging items
+- **Nutrition row:** Running total of kcal, protein, carbs, fat displayed below the staging items plus fiber and sugar
 
 **Visual pattern:** Items displayed as removable chips/pills (reference: Musemind filter chips with X dismiss). Each chip shows food name + quantity.
 
@@ -150,32 +154,41 @@ Commits everything in the staging area to the database. Single tap. Can also use
 
 ### Water & Liquids
 
-Water has its own quick-action via the droplet icon (visible in the input bar area). All other liquids (coffee, hot chocolate, tea, juice) are logged as food — they appear in the chip selection area and go through the same staging flow. Only water gets special treatment as hydration tracking.
+Water has its own quick-action via the droplet icon (visible in the input bar area). All other liquids (coffee, hot chocolate, tea, juice) are logged as food — they appear in the chip selection area and go through the same staging flow. Only water gets special treatment as hydration tracking but all liquids add to the hydraton totals
 
-## Recipes
+## Recipes (composites in `foodLibrary`)
 
 ### What is a Recipe?
 
-A named combination of ingredients with default portions. Recipes are the primary quick-log mechanism.
+A named combination of ingredients with default portions. Recipes are the primary quick-log mechanism. **Recipes are `foodLibrary` composites** — the existing `foodLibrary` table already stores composites (e.g., "scrambled eggs on toast" with `type: "composite"` and an `ingredients` array). The table just needs to be extended with optional fields for portions, slot defaults, frequency, and favourites. No new table is needed.
 
 ```typescript
-// Meal slots — schema value is lowercase singular, display label is title case
-// (e.g., schema: "snack", display: "Snacks")
 type MealSlot = "breakfast" | "lunch" | "dinner" | "snack";
 
-interface Recipe {
-  // Convex ID — stored in a NEW `recipes` table (see note below)
-  _id: Id<"recipes">;
-  userId: string;
-  name: string; // "Scrambled eggs on toast"
-  ingredients: RecipeIngredient[]; // Default ingredients (expanded on add to staging)
-  slotDefaults: {
-    // Optional portion overrides per slot — falls back to `ingredients` if not set
+// Current foodLibrary schema (already exists):
+//   userId, canonicalName, type ("ingredient" | "composite"), ingredients: string[], createdAt
+//
+// New optional fields to add (widen-migrate-narrow):
+
+interface FoodLibraryExtensions {
+  // Structured ingredients with quantities (composites only).
+  // Falls back to the existing flat `ingredients: string[]` if not set.
+  structuredIngredients?: RecipeIngredient[];
+
+  // Optional portion overrides per meal slot.
+  // Falls back to `structuredIngredients` if no slot-specific override.
+  slotDefaults?: {
     [slot in MealSlot]?: RecipeIngredient[];
   };
-  slots: MealSlot[]; // Which slots this recipe appears in
-  frequency: number; // Auto-incremented on each log
-  isFavourite: boolean; // User-pinned to top of slot
+
+  // Which meal slots this composite appears in (for filtering chips)
+  slots?: MealSlot[];
+
+  // Auto-incremented on each log (for frequency-based chip ordering)
+  frequency?: number;
+
+  // User-pinned to top of its slot
+  isFavourite?: boolean;
 }
 
 interface RecipeIngredient {
@@ -185,7 +198,7 @@ interface RecipeIngredient {
 }
 ```
 
-**Relationship to `foodLibrary`:** Recipes are a **new `recipes` table**, not an extension of `foodLibrary`. The `foodLibrary` table stores canonical food definitions and composite ingredient lists (for the LLM parsing pipeline). Recipes are a user-facing layer on top: they reference canonical food names from the registry but add portions, slot defaults, frequency, and favourites. The two tables serve different purposes and should not be merged. Existing `foodLibrary` composites remain unchanged.
+**Why not a new table:** The `foodLibrary` composites and "recipes" are the same concept — a named group of ingredients. The composites are currently unused by any UI, so there is no existing consumer to conflict with. Extending the existing table avoids duplicating data and keeps the food model in one place.
 
 ### Example Recipes
 
@@ -229,7 +242,6 @@ interface RecipeIngredient {
 - Recipes can be edited (add/remove ingredients, change defaults)
 - Recipes can be assigned to meal slots
 - Recipes can be marked as favourites (pinned to top of their slot)
-- No recipe management UI needed in v1 — build recipes through logging, edit through a simple detail view
 
 ## Nutrition Label Capture
 
@@ -256,35 +268,17 @@ See `cal-ai-1.png` — photo at top, parsed nutrition below, serving stepper, Fi
 
 Rare after initial setup. User buys the same products weekly from the same supermarkets. ~15-20 products to scan initially, then occasional new items during reintroduction.
 
-## Barcode Scanning (stub for v1)
-
-Same purpose as nutrition label capture but using the product barcode. **The barcode icon should be present in the UI but is a v2 feature.** The existing `convex/ingredientNutritionApi.ts` only supports text-based search — a new barcode lookup action (using OpenFoodFacts' barcode endpoint) needs to be built before this flow can work.
-
-**Planned flow (v2):**
-
-1. User taps **barcode icon**
-2. Scans product barcode
-3. New action looks up barcode via OpenFoodFacts API (`/api/v0/product/{barcode}.json`)
-4. If found: show nutrition data for review, save to registry
-5. If not found: fall back to manual entry or nutrition label photo capture
-
 ## Data Model Integration
 
 ### Existing infrastructure (already built, needs wiring)
 
-| System                   | What it does                                                       | Status                                  |
-| ------------------------ | ------------------------------------------------------------------ | --------------------------------------- |
-| `ingredientExposures`    | Tracks every food item eaten (canonical name, quantity, timestamp) | Active writes, no UI consumer           |
-| `ingredientProfiles`     | Per-food metadata: nutrition per 100g, food group, tags            | Infrastructure ready, no data populated |
-| `ingredientOverrides`    | User-set food status (safe/watch/avoid)                            | Backend ready, no UI to create          |
-| `ingredientNutritionApi` | OpenFoodFacts text-based search (no barcode lookup)                | Fully built, untriggered                |
-| `foodLibrary`            | Stores composite food definitions                                  | Active, used by food parsing            |
-
-### New data needed
-
-- **Recipes table** — name, ingredients with quantities, slot defaults, frequency, favourite flag
-- **Meal slot association** — which slot a log entry belongs to (Breakfast/Lunch/Dinner/Snacks)
-- The new `recipes` table is separate from `foodLibrary` (see Recipes section above for details)
+| System                   | What it does                                                       | Status                                                                                                                                                 |
+| ------------------------ | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `ingredientExposures`    | Tracks every food item eaten (canonical name, quantity, timestamp) | Active writes, no UI consumer                                                                                                                          |
+| `ingredientProfiles`     | Per-food metadata: nutrition per 100g, food group, tags            | Infrastructure ready, no data populated                                                                                                                |
+| `ingredientOverrides`    | User-set food status (safe/watch/avoid)                            | Backend ready, no UI to create                                                                                                                         |
+| `ingredientNutritionApi` | OpenFoodFacts text-based search (no barcode lookup)                | Fully built, untriggered                                                                                                                               |
+| `foodLibrary`            | Stores ingredient and composite food definitions                   | Active, used by food parsing. **Extend with recipe fields** (structuredIngredients, slotDefaults, slots, frequency, isFavourite) — see Recipes section |
 
 ## Failure States
 
@@ -302,24 +296,21 @@ The app is online-only (per CLAUDE.md: no fake offline). Input modes should fail
 When items are added to the staging area:
 
 - **Same food, same unit:** Quantities are summed (200g rice + 150g rice = 350g rice)
-- **Same food, different units:** Shown as separate line items (1 cup rice + 200g rice = two rows). No automatic unit conversion — the user can manually adjust if needed.
+- **Same food, different units:** Shown as one line items (1 cup rice + 200g rice = one row). convert the cup to grams using the foodLibrary data.
 - **Decrement:** Tapping an item in staging reduces by 1 default unit. If the item came from a recipe with a specific quantity (e.g., "1 tsp butter"), decrement removes that quantity.
 
 ## Non-Goals (v1)
 
-- In-app voice recognition (user's device voice works fine)
 - Meal planning / scheduling future meals
-- Photo-of-plate AI identification (just nutrition labels and barcodes)
 - Social features, sharing, or multi-user
 - Offline support
-- Barcode scanning UI (can stub the icon, implement in a later wave)
 
 ## Success Criteria
 
 - Log a typical breakfast (scrambled eggs on toast) in under 5 taps
 - Log a snack (20 kaleitos) in 2 taps (tap Snacks, tap Kaleitos chip)
 - Log a complex meal (toast + variable toppings) by tapping base + individual toppings, review staging, confirm
-- Zero dropdowns or scroll-to-select interactions in the primary logging flow
+- Minimal dropdowns or scroll-to-select interactions in the primary logging flow
 - Staging area correctly aggregates duplicate ingredients
 - Nutrition totals update in real-time as items are added/removed
 
@@ -328,4 +319,3 @@ When items are added to the staging area:
 - This is a **web app** (React + Vite + Tailwind v4), not a native mobile app. Design should be mobile-responsive but the primary development target is desktop browser.
 - The existing Track page left column is where the food input currently lives. The new design may replace or significantly rework this section.
 - The food parsing pipeline (`convex/foodParsing.ts` → `processLogInternal`) already handles the backend work of creating log entries and ingredient exposures. The new UI should feed into this existing pipeline.
-- Recipes are a new concept that wraps the existing `foodLibrary` composites with user-facing features (naming, slot defaults, favourites, frequency tracking).
