@@ -5,12 +5,12 @@
 
 ## Wave Overview
 
-| Wave                        | Scope                                                                                          | PRD                   | Dependencies                                                     |
-| --------------------------- | ---------------------------------------------------------------------------------------------- | --------------------- | ---------------------------------------------------------------- |
-| **1: Meal Logging**         | Recipes, quick-log by slot, favourites, staging area, nutrition label capture                  | `meal-logging.md`     | None — builds on existing `foodLibrary` + `foodParsing` pipeline |
-| **2: Filter Bar**           | Composable filter bar on Patterns page using static registry data                              | `filter-prompt.md`    | None — all data exists in `shared/foodRegistryData.ts`           |
-| **3: Live User Data**       | Wire `ingredientExposures` + `ingredientOverrides` to filter; expand status enum               | (section in this doc) | Waves 1 + 2                                                      |
-| **4: Nutrition Enrichment** | Batch-populate `ingredientProfiles.nutritionPer100g` via OpenFoodFacts; wire nutrition filters | (section in this doc) | Wave 3                                                           |
+| Wave                        | Scope                                                                                          | PRD                   | Dependencies                                                                                                                                                    |
+| --------------------------- | ---------------------------------------------------------------------------------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1: Meal Logging**         | Recipes, quick-log by slot, favourites, staging area, nutrition label capture                  | `meal-logging.md`     | None — builds on existing `foodLibrary` + `foodParsing` pipeline                                                                                                |
+| **2: Filter Bar**           | Composable filter bar on Patterns page using static classification + digestion risk data       | `filter-prompt.md`    | None — static data exists in `shared/foodRegistry.ts` + `shared/foodRegistryData.ts` (types). User-specific fields like status and nutrition come in Waves 3-4. |
+| **3: Live User Data**       | Wire `ingredientExposures` + `ingredientOverrides` to filter; expand status enum               | (section in this doc) | Waves 1 + 2                                                                                                                                                     |
+| **4: Nutrition Enrichment** | Batch-populate `ingredientProfiles.nutritionPer100g` via OpenFoodFacts; wire nutrition filters | (section in this doc) | Wave 3                                                                                                                                                          |
 
 **Waves 1 and 2 can run in parallel.** Different pages, different concerns.
 **Waves 3 and 4 are sequential** — each builds on the prior wave's data.
@@ -64,6 +64,25 @@ User taps chips / types / speaks
 3. **Baseline flag** — Optional "baseline" marker on control foods (stable enough to pair with new foods for testing). Stored on `ingredientOverrides`.
 
 4. **UI for overrides** — Simple inline action on the Patterns food table to set/change a food's status. No separate management page needed.
+
+### Status enum migration plan
+
+The codebase currently has multiple status-related enums that need reconciliation:
+
+| Location                         | Current values                                                                       | Purpose                 |
+| -------------------------------- | ------------------------------------------------------------------------------------ | ----------------------- |
+| `ingredientOverrides` schema     | `safe \| watch \| avoid`                                                             | User-set manual status  |
+| `foodPrimaryStatusValidator`     | `building \| safe \| watch \| avoid`                                                 | Computed primary status |
+| `foodTrialSummary.currentStatus` | `testing \| safe \| safe-loose \| safe-hard \| watch \| risky \| culprit \| cleared` | Detailed trial status   |
+| `foodAssessments.verdict`        | `culprit \| safe \| watch \| next_to_try \| avoid \| trial_next`                     | AI assessment verdict   |
+
+**Proposed migration:**
+
+- `ingredientOverrides.status`: expand to `building | like | dislike | watch | avoid`. Existing `safe` values migrate to `like` (assumption: if user marked it safe, they tolerate it and are okay with eating it).
+- `foodPrimaryStatusValidator`: expand to match (`building | like | dislike | watch | avoid`). Existing `safe` values migrate to `like`.
+- `foodTrialSummary` and `foodAssessments`: **no changes**. These are AI/computed statuses with different granularity. They feed into the override system but are not user-facing in the same way. The filter bar's "status" column reads from `ingredientOverrides` (user-set) with `foodTrialSummary` as a secondary signal.
+
+A Convex migration mutation should be written to update existing `safe` → `like` values in both `ingredientOverrides` and any `foodTrialSummary` records that use `primaryStatus`.
 
 ### Handoff from Wave 2
 

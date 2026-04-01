@@ -37,23 +37,23 @@ Logging friction is the #1 UX blocker. The current food input is a single text f
 
 ### Existing app design language
 
-The app already has a mature dark theme (teal/cyan primary, pink/magenta secondary, dark card backgrounds with subtle borders). The app uses chip-based selection extensively (Bristol scale, urgency, effort, volume, fluid types, quick capture cards). The Food page is a **top-level nav destination** (bottom nav: Home, Track, Food, Insights).
+The app already has a mature dark theme (teal/cyan primary, pink/magenta secondary, dark card backgrounds with subtle borders). The app uses chip-based selection extensively (Bristol scale, urgency, effort, volume, fluid types, quick capture cards).
 
 ## Architecture
 
+### Current vs. proposed navigation
+
+**Current state:** The app has 3 top-level routes: **Track**, **Patterns**, **Settings**. The root `/` route renders Track. Food logging is a single text field in the Track page left column.
+
+**Proposed state (from wireframes):** The wireframes show a new 4-tab navigation: **Home**, **Track**, **Food**, **Insights**. This PRD covers the **Food** page only. The new navigation structure (adding Home, Food, and Insights as routes; potentially restructuring Track) is a **separate prerequisite** that should be implemented before or alongside this PRD. This PRD does not define the Home or Insights pages.
+
 ### Entry Point
 
-The **Food** tab in the bottom navigation (Home, Track, **Food**, Insights). This is a dedicated page, not a subsection of Home. The Home page also has a Nutrition quick-access section that links to the Food page.
+The **Food** tab in the proposed navigation. Until the new nav is built, this page can be developed as a standalone route (`/food`) and linked from the existing Track page food section.
 
-### "What can I eat today?" (Home page)
+### "What can I eat today?" (future — not in scope)
 
-The Home page includes an AI-powered suggestion section showing 3-4 food recommendations based on tolerance history:
-
-- Frequently logged safe foods ("Scrambled eggs on white toast — Scanned 4 times, your go-to")
-- Foods currently being tested ("Banana with yogurt — Gentle, building")
-- Next food to try ("Cooked carrots — Stage 3, Low gas, Soft texture")
-
-Each suggestion has a **Log** button for one-tap logging or a **Start** button for foods being trialled for the first time. This section is informational and motivational — the full meal builder lives on the Food page.
+The wireframes show an AI-powered suggestion section on the proposed Home page with food recommendations based on tolerance history. **This is not part of this PRD's scope.** It depends on the food status system from Wave 3 and the Home page route which does not yet exist. Noted here for context only — it will be scoped in a future PRD after Waves 1-3 are complete.
 
 ### Food Logging Page Layout (top to bottom)
 
@@ -159,17 +159,23 @@ Water has its own quick-action via the droplet icon (visible in the input bar ar
 A named combination of ingredients with default portions. Recipes are the primary quick-log mechanism.
 
 ```typescript
+// Meal slots — schema value is lowercase singular, display label is title case
+// (e.g., schema: "snack", display: "Snacks")
+type MealSlot = "breakfast" | "lunch" | "dinner" | "snack";
+
 interface Recipe {
-  id: string;
+  // Convex ID — stored in a NEW `recipes` table (see note below)
+  _id: Id<"recipes">;
+  userId: string;
   name: string; // "Scrambled eggs on toast"
-  ingredients: RecipeIngredient[]; // Expanded on add to staging
+  ingredients: RecipeIngredient[]; // Default ingredients (expanded on add to staging)
   slotDefaults: {
-    // Portion overrides per slot
-    [slot: string]: RecipeIngredient[];
+    // Optional portion overrides per slot — falls back to `ingredients` if not set
+    [slot in MealSlot]?: RecipeIngredient[];
   };
   slots: MealSlot[]; // Which slots this recipe appears in
-  frequency: number; // Auto-tracked for sorting
-  isFavourite: boolean; // User-pinned
+  frequency: number; // Auto-incremented on each log
+  isFavourite: boolean; // User-pinned to top of slot
 }
 
 interface RecipeIngredient {
@@ -178,6 +184,8 @@ interface RecipeIngredient {
   unit: string; // "g", "slice", "piece", "ml", "tsp"
 }
 ```
+
+**Relationship to `foodLibrary`:** Recipes are a **new `recipes` table**, not an extension of `foodLibrary`. The `foodLibrary` table stores canonical food definitions and composite ingredient lists (for the LLM parsing pipeline). Recipes are a user-facing layer on top: they reference canonical food names from the registry but add portions, slot defaults, frequency, and favourites. The two tables serve different purposes and should not be merged. Existing `foodLibrary` composites remain unchanged.
 
 ### Example Recipes
 
@@ -248,13 +256,15 @@ See `cal-ai-1.png` — photo at top, parsed nutrition below, serving stepper, Fi
 
 Rare after initial setup. User buys the same products weekly from the same supermarkets. ~15-20 products to scan initially, then occasional new items during reintroduction.
 
-## Barcode Scanning
+## Barcode Scanning (stub for v1)
 
-Same purpose as nutrition label capture but using the product barcode:
+Same purpose as nutrition label capture but using the product barcode. **The barcode icon should be present in the UI but is a v2 feature.** The existing `convex/ingredientNutritionApi.ts` only supports text-based search — a new barcode lookup action (using OpenFoodFacts' barcode endpoint) needs to be built before this flow can work.
+
+**Planned flow (v2):**
 
 1. User taps **barcode icon**
 2. Scans product barcode
-3. Look up in OpenFoodFacts API (already integrated: `convex/ingredientNutritionApi.ts`)
+3. New action looks up barcode via OpenFoodFacts API (`/api/v0/product/{barcode}.json`)
 4. If found: show nutrition data for review, save to registry
 5. If not found: fall back to manual entry or nutrition label photo capture
 
@@ -267,14 +277,33 @@ Same purpose as nutrition label capture but using the product barcode:
 | `ingredientExposures`    | Tracks every food item eaten (canonical name, quantity, timestamp) | Active writes, no UI consumer           |
 | `ingredientProfiles`     | Per-food metadata: nutrition per 100g, food group, tags            | Infrastructure ready, no data populated |
 | `ingredientOverrides`    | User-set food status (safe/watch/avoid)                            | Backend ready, no UI to create          |
-| `ingredientNutritionApi` | OpenFoodFacts API lookup                                           | Fully built, untriggered                |
+| `ingredientNutritionApi` | OpenFoodFacts text-based search (no barcode lookup)                | Fully built, untriggered                |
 | `foodLibrary`            | Stores composite food definitions                                  | Active, used by food parsing            |
 
 ### New data needed
 
 - **Recipes table** — name, ingredients with quantities, slot defaults, frequency, favourite flag
 - **Meal slot association** — which slot a log entry belongs to (Breakfast/Lunch/Dinner/Snacks)
-- Recipes can build on the existing `foodLibrary` composite concept but need the slot-aware defaults and portion tracking that composites don't currently have
+- The new `recipes` table is separate from `foodLibrary` (see Recipes section above for details)
+
+## Failure States
+
+The app is online-only (per CLAUDE.md: no fake offline). Input modes should fail clearly:
+
+- **Network down:** Show explicit "No connection" state. Disable Log button. Staging area is preserved (Zustand state) so nothing is lost — user can retry when connected.
+- **Camera permission denied:** Show a brief message explaining the permission is needed. Do not re-prompt automatically.
+- **Voice input returns nothing:** No-op. The search field remains empty; user can type instead.
+- **AI parsing fails or low confidence:** Show the raw text in the staging area with a warning badge. User can manually edit/correct items before logging.
+- **Nutrition label photo is unreadable:** Show the review screen with empty/partial fields. User fills in manually. "Fix Results" is the primary flow for this case.
+- **Search returns no results:** Show "No matches" with an option to add as a new food (plain text entry with manual portion).
+
+## Staging Area Aggregation Rules
+
+When items are added to the staging area:
+
+- **Same food, same unit:** Quantities are summed (200g rice + 150g rice = 350g rice)
+- **Same food, different units:** Shown as separate line items (1 cup rice + 200g rice = two rows). No automatic unit conversion — the user can manually adjust if needed.
+- **Decrement:** Tapping an item in staging reduces by 1 default unit. If the item came from a recipe with a specific quantity (e.g., "1 tsp butter"), decrement removes that quantity.
 
 ## Non-Goals (v1)
 
