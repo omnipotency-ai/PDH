@@ -7,9 +7,9 @@ import {
   Outlet,
   useRouterState,
 } from "@tanstack/react-router";
-import { Authenticated, AuthLoading, Unauthenticated, useQuery } from "convex/react";
+import { Authenticated, AuthLoading, Unauthenticated } from "convex/react";
 import { LayoutDashboard, NotebookPen, Settings } from "lucide-react";
-import React, { lazy, type ReactNode, Suspense, useEffect, useRef, useState } from "react";
+import React, { lazy, type ReactNode, Suspense, useEffect, useState } from "react";
 import ModeToggle from "@/components/mode-toggle";
 import {
   NavigationMenu,
@@ -23,7 +23,6 @@ import { ApiKeyProvider } from "@/contexts/ApiKeyContext";
 import { ProfileProvider } from "@/contexts/ProfileContext";
 import { SyncedLogsProvider } from "@/contexts/SyncedLogsContext";
 import { cn } from "@/lib/utils";
-import { api } from "../convex/_generated/api";
 import TrackPage from "./pages/Track";
 
 const PatternsPage = lazy(() => import("./pages/Patterns"));

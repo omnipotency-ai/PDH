@@ -20,12 +20,12 @@ export const DEFAULT_INSIGHT_MODEL: InsightModel = "gpt-5.4";
 export type InsightModel = (typeof INSIGHT_MODEL_OPTIONS)[number];
 
 /** All valid insight models as a Set, for runtime validation. */
-const VALID_INSIGHT_MODELS: ReadonlySet<string> = new Set<string>(INSIGHT_MODEL_OPTIONS);
+const VALID_INSIGHT_MODELS: ReadonlySet<string> = new Set<string>(
+  INSIGHT_MODEL_OPTIONS,
+);
 
 /** Backward-compatible aliases for previously stored model names. */
-const LEGACY_INSIGHT_MODEL_ALIASES: Readonly<Record<string, InsightModel>> = {
-  "gpt-5.2": "gpt-5.4",
-};
+const LEGACY_INSIGHT_MODEL_ALIASES: Readonly<Record<string, InsightModel>> = {};
 
 /** Type guard: checks whether a value is a valid InsightModel. */
 function isInsightModel(value: unknown): value is InsightModel {
@@ -47,7 +47,6 @@ export function getModelLabel(model: string): string {
     case "gpt-5-mini":
       return "GPT-5 Mini";
     case "gpt-5.4":
-    case "gpt-5.2":
       return "GPT-5.4";
     default:
       return model;

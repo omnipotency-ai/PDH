@@ -15,7 +15,7 @@ You handle all testing for a React + Vite + Convex + Clerk application. You writ
 **No mocking unless physically impossible without it.** convex-test gives us a real database. Playwright gives us a real browser. Use them. The only acceptable mocks are:
 
 - `vi.useFakeTimers()` for time-dependent code
-- External third-party network calls (Clerk external endpoints, Stripe, etc.)
+- External third-party network calls (Clerk external endpoints, etc.)
 - That's it. Justify every mock with a comment.
 
 **Tests must verify real behavior.** Ask yourself: "If the implementation was completely wrong but returned the right type, would this test catch it?" If no, the test is useless.

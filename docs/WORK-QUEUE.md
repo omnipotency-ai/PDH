@@ -48,7 +48,7 @@
 
 | ID     | Title                                | Sev  | File(s)                            | Description                                              | Status   |
 | ------ | ------------------------------------ | ---- | ---------------------------------- | -------------------------------------------------------- | -------- |
-| WQ-022 | `successUrl`/`cancelUrl` unvalidated | High | `convex/stripe.ts:6-56`            | Validate when payment frontend is built.                 | deferred |
+
 | WQ-034 | `dateStr.split("-")` no NaN check    | High | `src/lib/digestiveCorrelations.ts` | Part of broader app-wide date/time consolidation effort. | deferred |
 
 ---
