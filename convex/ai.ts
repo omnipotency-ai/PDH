@@ -11,8 +11,6 @@ import { requireAuth } from "./lib/auth";
 const allowedModels = v.union(
   v.literal("gpt-5.4"),
   v.literal("gpt-5-mini"),
-  // Legacy alias — still accepted for backward compatibility with stored preferences.
-  v.literal("gpt-5.2"),
 );
 
 const OPENAI_API_KEY_PATTERN = /^sk-[A-Za-z0-9_-]{20,}$/;
@@ -44,11 +42,6 @@ function classifyOpenAiError(status: number): string {
  * This action is a thin relay: it authenticates the user, resolves the API key
  * (server-stored preferred, client-provided as fallback), makes the call, and
  * returns the result.
- *
- * TODO: Add per-user rate limiting. A simple approach would be to count recent
- * chatCompletion calls per userId (e.g., via a rate_limits table or in-memory
- * counter) and reject requests exceeding a threshold (e.g., 60 calls/hour).
- * This prevents runaway costs from compromised clients or bugs.
  */
 export const chatCompletion = action({
   args: {

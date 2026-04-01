@@ -9,43 +9,9 @@
     "convex/extractInsightData.ts",
     "convex/conversations.ts",
     "convex/weeklySummaries.ts",
-    "convex/waitlist.ts",
-    "convex/stripe.ts"
+    "convex/waitlist.ts"
   ],
   "findings": [
-    {
-      "id": "F001",
-      "severity": "HIGH",
-      "category": "security",
-      "file": "convex/stripe.ts",
-      "line": 29,
-      "title": "Client-supplied priceId and URLs passed to Stripe without allowlist validation",
-      "description": "The `priceId`, `successUrl`, and `cancelUrl` args come from the client and are forwarded directly to the Stripe Checkout API without any server-side validation. A malicious caller could supply an arbitrary Stripe price ID (enabling them to check out at an unintended price point) or craft redirect URLs pointing to phishing pages. Even though the Stripe dashboard can restrict price IDs, the server should enforce an allowlist of known price IDs. The success/cancel URLs should be validated to be absolute HTTPS URLs on the application's own domain.",
-      "fix": "1. Define a server-side set of valid price IDs and throw if `args.priceId` is not in it:\n```ts\nconst VALID_PRICE_IDS = new Set([process.env.STRIPE_PRICE_ID_BASIC, ...]);\nif (!VALID_PRICE_IDS.has(args.priceId)) throw new Error('Invalid price ID');\n```\n2. Validate successUrl and cancelUrl are absolute HTTPS URLs on your own domain:\n```ts\nconst APP_ORIGIN = process.env.APP_URL; // e.g. https://PDH.app\nfor (const url of [args.successUrl, args.cancelUrl]) {\n  const parsed = new URL(url);\n  if (parsed.origin !== APP_ORIGIN) throw new Error('Invalid redirect URL');\n}\n```",
-      "implemented": false
-    },
-    {
-      "id": "F002",
-      "severity": "HIGH",
-      "category": "security",
-      "file": "convex/stripe.ts",
-      "line": 53,
-      "title": "Stripe API error response body leaked to caller",
-      "description": "When the Stripe API returns a non-OK response, the full `response.text()` body is included verbatim in the thrown error message: `throw new Error('Stripe API error: ' + error)`. Stripe error bodies can include diagnostic information about your account configuration (e.g., key type, feature flags). This text will propagate to the client in the Convex error response.",
-      "fix": "Log the full body server-side and return a sanitised message to the caller:\n```ts\nconst errorBody = await response.text();\nconsole.error('[stripe] Stripe API error', response.status, errorBody);\nthrow new Error(`Stripe API error (status ${response.status}). Check server logs.`);\n```",
-      "implemented": false
-    },
-    {
-      "id": "F003",
-      "severity": "HIGH",
-      "category": "auth",
-      "file": "convex/stripe.ts",
-      "line": 13,
-      "title": "stripe.ts uses raw ctx.auth.getUserIdentity() instead of requireAuth(ctx)",
-      "description": "CLAUDE.md and the project pattern require all auth checks to use `requireAuth(ctx)` from `convex/lib/auth.ts`. `stripe.ts` uses the legacy `ctx.auth.getUserIdentity()` pattern directly. While functionally equivalent today, it diverges from the canonical pattern and will be overlooked during any future migration of `requireAuth`.",
-      "fix": "Replace:\n```ts\nconst identity = await ctx.auth.getUserIdentity();\nif (identity === null) throw new Error('Not authenticated');\n```\nWith:\n```ts\nconst { userId } = await requireAuth(ctx);\n```\nAlso import `requireAuth` from `./lib/auth`.",
-      "implemented": false
-    },
     {
       "id": "F004",
       "severity": "HIGH",
@@ -264,17 +230,6 @@
       "title": "list query limit clamps to 1000 — document why 1000 is safe",
       "description": "The `list` query clamps the limit to `Math.min(Math.max(args.limit ?? 50, 1), 1000)`. 1000 aiAnalysis rows is not inherently dangerous, but it should be documented why this ceiling is acceptable relative to Convex's 32K document read limit. If each row is large, 1000 may still cause performance issues.",
       "fix": "Add a comment explaining the limit justification, similar to the WQ-335 comment pattern used in `computeAggregates.ts`.",
-      "implemented": false
-    },
-    {
-      "id": "F024",
-      "severity": "NICE-TO-HAVE",
-      "category": "quality",
-      "file": "convex/stripe.ts",
-      "line": 6,
-      "title": "Stripe integration uses raw fetch instead of the Stripe SDK",
-      "description": "The Stripe checkout session is created via a raw `fetch` call with manually encoded form body. The official Stripe Node.js SDK handles encoding, error parsing, retry logic, and idempotency keys automatically. The raw fetch approach is fragile and more error-prone to maintain.",
-      "fix": "Use the `stripe` npm package:\n```ts\nimport Stripe from 'stripe';\nconst stripe = new Stripe(stripeSecretKey);\nconst session = await stripe.checkout.sessions.create({ ... });\n```\nThis also means Stripe errors are typed and easier to classify.",
       "implemented": false
     }
   ],

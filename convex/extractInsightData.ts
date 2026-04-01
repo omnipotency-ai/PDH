@@ -108,8 +108,6 @@ function buildFallbackAssessmentSeeds(insight: {
     confidence: "high" | "medium" | "low";
     reasoning: string;
   }>;
-  likelySafe: Array<{ food: string; reasoning: string }>;
-  nextFoodToTry: { food: string; reasoning: string; timing: string };
 }): ExtractedAssessmentSeed[] {
   return [
     ...insight.suspectedCulprits.map((culprit) => ({
@@ -125,31 +123,6 @@ function buildFallbackAssessmentSeeds(insight: {
       reasoning: culprit.reasoning,
       source: "derived" as const,
     })),
-    ...insight.likelySafe.map((safe) => ({
-      food: safe.food,
-      verdict: "safe" as const,
-      confidence: "medium" as const,
-      causalRole: "unlikely" as const,
-      changeType: "unchanged" as const,
-      modifierSummary: "",
-      reasoning: safe.reasoning,
-      source: "derived" as const,
-    })),
-    ...(insight.nextFoodToTry.food
-      ? [
-          {
-            food: insight.nextFoodToTry.food,
-            verdict: "trial_next" as const,
-            confidence: "medium" as const,
-            causalRole: "unlikely" as const,
-            changeType: "new" as const,
-            modifierSummary: "",
-            reasoning:
-              `${insight.nextFoodToTry.reasoning} Timing: ${insight.nextFoodToTry.timing}`.trim(),
-            source: "derived" as const,
-          },
-        ]
-      : []),
   ];
 }
 
@@ -160,8 +133,6 @@ function buildAssessmentSeeds(insight: {
     confidence: "high" | "medium" | "low";
     reasoning: string;
   }>;
-  likelySafe: Array<{ food: string; reasoning: string }>;
-  nextFoodToTry: { food: string; reasoning: string; timing: string };
 }): ExtractedAssessmentSeed[] {
   const explicit = Array.isArray(insight.foodAssessments)
     ? insight.foodAssessments
@@ -275,14 +246,10 @@ export const extractFromReport = internalMutation({
       ),
     );
     const structuredAssessments = buildAssessmentSeeds({
-      foodAssessments: (insight.foodAssessments ?? undefined) as StructuredFoodAssessment[] | undefined,
+      foodAssessments: (insight.foodAssessments ?? undefined) as
+        | StructuredFoodAssessment[]
+        | undefined,
       suspectedCulprits: insight.suspectedCulprits ?? [],
-      likelySafe: insight.likelySafe ?? [],
-      nextFoodToTry: insight.nextFoodToTry ?? {
-        food: "",
-        reasoning: "",
-        timing: "",
-      },
     });
 
     // ─── Extract structured food assessments ─────────────────────────────

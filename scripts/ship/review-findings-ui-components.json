@@ -75,28 +75,6 @@
       "implemented": false
     },
     {
-      "id": "F003",
-      "severity": "HIGH",
-      "category": "convex",
-      "file": "convex/stripe.ts",
-      "line": 14,
-      "title": "Raw ctx.auth.getUserIdentity() used instead of requireAuth(ctx) — legacy pattern",
-      "description": "The `createCheckoutSession` action calls `ctx.auth.getUserIdentity()` directly and checks for `null` inline (line 14-15). The project's canonical auth pattern is `requireAuth(ctx)` from `convex/lib/auth.ts`, which provides a consistent identity type and error message. Using the raw call bypasses any future auth-level logic added to `requireAuth` and is inconsistent with the rest of the codebase. The CLAUDE.md and project memory both flag this as a HIGH legacy pattern.",
-      "fix": "Replace `const identity = await ctx.auth.getUserIdentity(); if (identity === null) throw new Error(\"Not authenticated\");` with `const identity = await requireAuth(ctx);` from `@/lib/auth`.",
-      "implemented": false
-    },
-    {
-      "id": "F004",
-      "severity": "HIGH",
-      "category": "security",
-      "file": "src/components/landing/PricingSection.tsx",
-      "line": 32,
-      "title": "Stripe price IDs read from VITE_ env vars — bundled into client JS",
-      "description": "The `VITE_STRIPE_MONTHLY_PRICE_ID` and `VITE_STRIPE_LIFETIME_PRICE_ID` values are read from `import.meta.env` at lines 32-35 and sent directly to the `createCheckoutSession` action as `priceId`. Because all `VITE_*` variables are inlined into the client bundle at build time, anyone who inspects the JS can extract these IDs. A malicious user could substitute a different `priceId` (e.g. a free/test price from the same account) when calling the action directly, bypassing your pricing. The action accepts any `priceId: v.string()` with no server-side validation against an allowlist.",
-      "fix": "Move price ID selection to the Convex action. Accept `mode: v.union(v.literal('subscription'), v.literal('payment'))` only from the client, then look up the correct price ID from Convex environment variables server-side. This keeps price IDs out of the client bundle entirely and prevents substitution attacks.",
-      "implemented": false
-    },
-    {
       "id": "F005",
       "severity": "MODERATE",
       "category": "accessibility",

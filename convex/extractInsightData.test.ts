@@ -212,17 +212,6 @@ describe("extractInsightData", () => {
               reasoning: "Legacy fallback should be ignored.",
             },
           ],
-          likelySafe: [
-            {
-              food: "Legacy Rice",
-              reasoning: "Legacy fallback should be ignored.",
-            },
-          ],
-          nextFoodToTry: {
-            food: "Legacy Oats",
-            reasoning: "Legacy fallback should be ignored.",
-            timing: "Tomorrow morning",
-          },
           suggestions: ["Keep the next coffee away from nicotine."],
         },
         model: "test",
@@ -357,18 +346,6 @@ describe("extractInsightData", () => {
               reasoning: "This still sits inside the loose-output window.",
             },
           ],
-          likelySafe: [
-            {
-              food: "toast / white bread",
-              reasoning:
-                "Repeated clean exposures and better tolerated than biscuits.",
-            },
-          ],
-          nextFoodToTry: {
-            food: "Stewed Apple",
-            reasoning: "Worth a clean retest on its own.",
-            timing: "Tomorrow at lunch",
-          },
         },
         model: "test",
         durationMs: 100,
@@ -411,29 +388,7 @@ describe("extractInsightData", () => {
 
     expect(
       assessments.map((assessment) => assessment.canonicalName).sort(),
-    ).toEqual([
-      "grilled white meat",
-      "high-sugar refined snack",
-      "stewed apple",
-      "toast",
-      "white bread",
-    ]);
-
-    const toast = assessments.find(
-      (assessment) => assessment.canonicalName === "toast",
-    );
-    expect(toast).toMatchObject({
-      foodName: "White Toast",
-      verdict: "safe",
-    });
-
-    const whiteBread = assessments.find(
-      (assessment) => assessment.canonicalName === "white bread",
-    );
-    expect(whiteBread).toMatchObject({
-      foodName: "White Bread",
-      verdict: "safe",
-    });
+    ).toEqual(["grilled white meat", "high-sugar refined snack"]);
 
     const biscoff = assessments.find(
       (assessment) => assessment.canonicalName === "high-sugar refined snack",
@@ -442,14 +397,6 @@ describe("extractInsightData", () => {
       foodName: "High-sugar Refined Snack",
       verdict: "watch",
       confidence: "medium",
-    });
-
-    const stewedApple = assessments.find(
-      (assessment) => assessment.canonicalName === "stewed apple",
-    );
-    expect(stewedApple).toMatchObject({
-      foodName: "Stewed Apple",
-      verdict: "trial_next",
     });
   });
 });

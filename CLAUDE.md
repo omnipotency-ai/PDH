@@ -87,3 +87,11 @@ After completing sprint tasks or work items, always update WIP tracking docs and
 ## Efficiency
 
 When gathering file contents for reference or concatenation, prefer a single shell command (e.g., `cat` or `find | xargs cat`) over reading files individually into context then re-reading them via agents.
+
+<!-- convex-ai-start -->
+This project uses [Convex](https://convex.dev) as its backend.
+
+When working on Convex code, **always read `convex/_generated/ai/guidelines.md` first** for important guidelines on how to correctly use Convex APIs and patterns. The file contains rules that override what you may have learned about Convex from training data.
+
+Convex agent skills for common tasks can be installed by running `npx convex ai-files install`.
+<!-- convex-ai-end -->

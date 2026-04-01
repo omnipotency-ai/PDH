@@ -2,12 +2,14 @@ node_modules/
 build/
 dist/
 coverage/
+.vscode/
+.vite/
 .vite-cache/
+.vercel/
+.playwright/
+.playwright-cli/
 .DS_Store
 *.log
-package-lock.json
-.env*
-!.env.example
 
 # Office documents & temp files
 *.xlsx
@@ -19,45 +21,20 @@ package-lock.json
 ~$*
 .~lock.*
 
-# Product lifecycle folder (spreadsheets, trackers, working docs)
-product/
-
 # Original high-res logo (69MB) — keep in cloud storage, not in repo
 PDH_logo_final_v1.png
 logo_preview.png
 
-# Audit & remediation docs (process artifacts, not source code)
-docs/audits/
-
 # Test artifacts
+e2e/*.spec.ts
 playwright-report/
 test-results/
-.playwright/
-.vercel
+
+# Environment variables
+.env
+.env.local
 .env*.local
-.vercel/README.txt
-.vercel/project.json
-# Food artwork and playwright output directories
-images/
-output/
 
 # Track shared project instructions under .claude/, but keep local state out.
 .claude/**/.DS_Store
 .claude/command-history.log
-concatenated-report.md
-create_indexed_concat.py
-create_indexed_headings.py
-concat_docs.sh
-.playwright-cli/
-scripts/ship/review-findings.json
-
-# Design language eval workspace (scratch, not source code)
-PDH-design-language-workspace/
-
-# Scratch prototypes
-design-system-prototype-v2.jsx
-
-# Data dumps & binary artifacts
-docs/logs.json
-docs/logs2.json
-docs/research/exported-assets.zip

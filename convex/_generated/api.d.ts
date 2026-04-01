@@ -32,10 +32,8 @@ import type * as logs from "../logs.js";
 import type * as migrations from "../migrations.js";
 import type * as profiles from "../profiles.js";
 import type * as seedTestData from "../seedTestData.js";
-import type * as stripe from "../stripe.js";
 import type * as testFixtures from "../testFixtures.js";
 import type * as validators from "../validators.js";
-import type * as waitlist from "../waitlist.js";
 import type * as weeklySummaries from "../weeklySummaries.js";
 
 import type {
@@ -69,10 +67,8 @@ declare const fullApi: ApiFromModules<{
   migrations: typeof migrations;
   profiles: typeof profiles;
   seedTestData: typeof seedTestData;
-  stripe: typeof stripe;
   testFixtures: typeof testFixtures;
   validators: typeof validators;
-  waitlist: typeof waitlist;
   weeklySummaries: typeof weeklySummaries;
 }>;
 
