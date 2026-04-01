@@ -569,7 +569,7 @@ export default function TrackPage() {
   );
 
   return (
-    <div className="mx-auto max-w-110 pb-8">
+    <div className="mx-auto max-w-440 pb-8">
       <header className="mb-3">
         <div className="grid grid-cols-1 items-baseline gap-5 md:grid-cols-2 xl:grid-cols-[3fr_4fr_3fr]">
           <div className="flex flex-wrap items-baseline gap-4">
