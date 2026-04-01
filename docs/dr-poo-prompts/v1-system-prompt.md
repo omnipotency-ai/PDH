@@ -386,8 +386,6 @@ Built by `buildUserMessage()`. Sent as JSON in the user message:
   "habitLogs": [...],
   "fluidLogs": [...],
   "activityLogs": [...],
-  "cycleHormonalLogs": [...],
-  "reproductiveHealthContext": {...},
   "patientMessages": [{ "message": "...", "sentAt": "..." }],
   "recentSuggestionHistory": [...],
   "foodTrialDatabase": [...],

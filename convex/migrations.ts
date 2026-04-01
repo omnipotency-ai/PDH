@@ -1531,3 +1531,80 @@ export const normalizeCanonicalNames = internalMutation({
     };
   },
 });
+
+// ── Migration: strip reproductiveHealth from profiles ─────────────────────
+// The reproductiveHealth sub-object was removed from the product but may
+// still exist in stored profile documents. This strips it so the validator
+// no longer needs to tolerate it.
+export const stripReproductiveHealth = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const profiles = await ctx.db.query("profiles").take(1000);
+    let fixed = 0;
+
+    for (const profile of profiles) {
+      const raw = profile as Record<string, unknown>;
+      const hp = raw.healthProfile as Record<string, unknown> | undefined;
+      if (!hp || !("reproductiveHealth" in hp)) continue;
+
+      const { reproductiveHealth: _, ...restHp } = hp;
+      await ctx.db.patch(profile._id, {
+        healthProfile: restHp as typeof profile.healthProfile,
+      });
+      fixed++;
+    }
+
+    return { fixed };
+  },
+});
+
+// ── Migration: strip legacy AI insight fields from aiAnalyses ─────────────
+// Fields lifestyleExperiment, likelySafe, nextFoodToTry, miniChallenge were
+// removed from the AI pipeline but may still exist in stored documents.
+const LEGACY_INSIGHT_FIELDS = [
+  "lifestyleExperiment",
+  "likelySafe",
+  "nextFoodToTry",
+  "miniChallenge",
+] as const;
+
+export const stripLegacyInsightFields = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const BATCH_SIZE = 20;
+    const rows = await ctx.db.query("aiAnalyses").take(BATCH_SIZE);
+    let fixed = 0;
+    let scanned = 0;
+
+    for (const row of rows) {
+      scanned++;
+      if (!row.insight) continue;
+      const insight = row.insight as Record<string, unknown>;
+      const hasLegacy = LEGACY_INSIGHT_FIELDS.some((f) => f in insight);
+      if (!hasLegacy) continue;
+
+      const cleaned = { ...insight };
+      for (const f of LEGACY_INSIGHT_FIELDS) delete cleaned[f];
+      await ctx.db.patch(row._id, {
+        insight: cleaned as typeof row.insight,
+      });
+      fixed++;
+    }
+
+    const hasMore = rows.length === BATCH_SIZE;
+    if (hasMore && fixed > 0) {
+      await ctx.scheduler.runAfter(
+        100,
+        internal.migrations.stripLegacyInsightFields,
+        {},
+      );
+    }
+
+    const status =
+      hasMore && fixed > 0 ? "Scheduling next batch..." : "Complete.";
+    console.log(
+      `[stripLegacyInsightFields] scanned=${scanned}, fixed=${fixed}. ${status}`,
+    );
+    return { scanned, fixed, hasMore };
+  },
+});

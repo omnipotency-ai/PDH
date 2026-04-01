@@ -519,6 +519,9 @@ export const healthProfileValidator = v.object({
   recreationalDepressantsFrequency: v.optional(usageFrequencyValidator),
   recreationalDepressantsYears: v.optional(v.union(v.number(), v.null())),
   lifestyleNotes: v.optional(v.string()),
+  // Legacy field — no longer used but present in stored profile.
+  // Remove after running stripReproductiveHealth migration.
+  reproductiveHealth: v.optional(v.any()),
 });
 
 // ── Log data validators ────────────────────────────────────────────────────
