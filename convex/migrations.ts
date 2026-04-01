@@ -1532,32 +1532,6 @@ export const normalizeCanonicalNames = internalMutation({
   },
 });
 
-// ── Migration: strip reproductiveHealth from profiles ─────────────────────
-// The reproductiveHealth sub-object was removed from the product but may
-// still exist in stored profile documents. This strips it so the validator
-// no longer needs to tolerate it.
-export const stripReproductiveHealth = internalMutation({
-  args: {},
-  handler: async (ctx) => {
-    const profiles = await ctx.db.query("profiles").take(1000);
-    let fixed = 0;
-
-    for (const profile of profiles) {
-      const raw = profile as Record<string, unknown>;
-      const hp = raw.healthProfile as Record<string, unknown> | undefined;
-      if (!hp || !("reproductiveHealth" in hp)) continue;
-
-      const { reproductiveHealth: _, ...restHp } = hp;
-      await ctx.db.patch(profile._id, {
-        healthProfile: restHp as typeof profile.healthProfile,
-      });
-      fixed++;
-    }
-
-    return { fixed };
-  },
-});
-
 // ── Migration: strip legacy AI insight fields from aiAnalyses ─────────────
 // Fields lifestyleExperiment, likelySafe, nextFoodToTry, miniChallenge were
 // removed from the AI pipeline but may still exist in stored documents.
