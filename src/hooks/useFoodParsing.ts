@@ -14,13 +14,18 @@ export interface FoodParsingState {
    * (registry matching, LLM matching) is triggered automatically by the
    * logs.add mutation scheduler. Optional timestampMs overrides Date.now().
    *
-   * Note: The first `items` parameter is unused — the server handles all parsing.
-   * It is retained for interface compatibility with callers that pass ParsedItem[].
+   * The server handles all parsing — callers pass notes + raw text only.
    */
-  handleLogFood: (notes: string, rawText: string, timestampMs?: number) => Promise<void>;
+  handleLogFood: (
+    notes: string,
+    rawText: string,
+    timestampMs?: number,
+  ) => Promise<void>;
 }
 
-export function useFoodParsing({ afterSave }: UseFoodParsingOptions): FoodParsingState {
+export function useFoodParsing({
+  afterSave,
+}: UseFoodParsingOptions): FoodParsingState {
   const addSyncedLog = useAddSyncedLog();
 
   const handleLogFood = useCallback(

@@ -746,12 +746,6 @@ export const normalizeProfileHabits = internalMutation({
 // are present. Also normalizes request and response to their expected shapes.
 // Run this before deploying the strict AI analysis validators.
 const VALID_CONFIDENCES = new Set(["high", "medium", "low"]);
-const VALID_EXPERIMENT_STATUSES = new Set([
-  "adapted",
-  "broken",
-  "testing",
-  "rewarding",
-]);
 
 type StoredInsight = Infer<typeof aiInsightValidator>;
 type StoredRequest = Infer<typeof aiRequestValidator>;
@@ -782,29 +776,6 @@ function normalizeStoredInsight(raw: unknown): StoredInsight {
     }
   }
 
-  type ExperimentStatus = "adapted" | "broken" | "testing" | "rewarding";
-  let lifestyleExperiment: {
-    status: ExperimentStatus;
-    message: string;
-  } | null = null;
-  if (
-    obj.lifestyleExperiment &&
-    typeof obj.lifestyleExperiment === "object" &&
-    !Array.isArray(obj.lifestyleExperiment)
-  ) {
-    const le = obj.lifestyleExperiment as Record<string, unknown>;
-    if (
-      typeof le.status === "string" &&
-      VALID_EXPERIMENT_STATUSES.has(le.status) &&
-      typeof le.message === "string"
-    ) {
-      lifestyleExperiment = {
-        status: le.status as ExperimentStatus,
-        message: le.message,
-      };
-    }
-  }
-
   const suspectedCulprits = Array.isArray(obj.suspectedCulprits)
     ? obj.suspectedCulprits
         .filter(
@@ -832,22 +803,6 @@ function normalizeStoredInsight(raw: unknown): StoredInsight {
         })
     : [];
 
-  const likelySafe = Array.isArray(obj.likelySafe)
-    ? obj.likelySafe
-        .filter(
-          (item: unknown) =>
-            item &&
-            typeof item === "object" &&
-            !Array.isArray(item) &&
-            typeof (item as Record<string, unknown>).food === "string" &&
-            typeof (item as Record<string, unknown>).reasoning === "string",
-        )
-        .map((item: unknown) => {
-          const s = item as Record<string, unknown>;
-          return { food: s.food as string, reasoning: s.reasoning as string };
-        })
-    : [];
-
   const mealPlan = Array.isArray(obj.mealPlan)
     ? obj.mealPlan
         .filter(
@@ -871,41 +826,6 @@ function normalizeStoredInsight(raw: unknown): StoredInsight {
         })
     : [];
 
-  let nextFoodToTry = {
-    food: "Plain white rice",
-    reasoning: "Safe default after any episode.",
-    timing: "Next meal",
-  };
-  if (
-    obj.nextFoodToTry &&
-    typeof obj.nextFoodToTry === "object" &&
-    !Array.isArray(obj.nextFoodToTry)
-  ) {
-    const nft = obj.nextFoodToTry as Record<string, unknown>;
-    if (typeof nft.food === "string") {
-      nextFoodToTry = {
-        food: nft.food,
-        reasoning: typeof nft.reasoning === "string" ? nft.reasoning : "",
-        timing: typeof nft.timing === "string" ? nft.timing : "",
-      };
-    }
-  }
-
-  let miniChallenge: { challenge: string; duration: string } | null = null;
-  if (
-    obj.miniChallenge &&
-    typeof obj.miniChallenge === "object" &&
-    !Array.isArray(obj.miniChallenge)
-  ) {
-    const mc = obj.miniChallenge as Record<string, unknown>;
-    if (typeof mc.challenge === "string") {
-      miniChallenge = {
-        challenge: mc.challenge,
-        duration: typeof mc.duration === "string" ? mc.duration : "",
-      };
-    }
-  }
-
   const suggestions = Array.isArray(obj.suggestions)
     ? obj.suggestions.filter((s): s is string => typeof s === "string")
     : [];
@@ -914,12 +834,8 @@ function normalizeStoredInsight(raw: unknown): StoredInsight {
     directResponseToUser,
     summary,
     educationalInsight,
-    lifestyleExperiment,
     suspectedCulprits,
-    likelySafe,
     mealPlan,
-    nextFoodToTry,
-    miniChallenge,
     suggestions,
   };
 }

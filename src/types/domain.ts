@@ -28,7 +28,13 @@ export type {
 import type { SleepGoal } from "../lib/streaks";
 import type { UnitSystem } from "../lib/units";
 
-export type LogType = "food" | "fluid" | "digestion" | "habit" | "activity" | "weight";
+export type LogType =
+  | "food"
+  | "fluid"
+  | "digestion"
+  | "habit"
+  | "activity"
+  | "weight";
 
 export type SurgeryType =
   | "Colectomy with ileostomy"
@@ -74,7 +80,12 @@ export const HEALTH_COMORBIDITY_OPTIONS = [
   "HIV+",
 ] as const;
 
-export type Gender = "male" | "female" | "non_binary" | "prefer_not_to_say" | "";
+export type Gender =
+  | "male"
+  | "female"
+  | "non_binary"
+  | "prefer_not_to_say"
+  | "";
 
 // ── Food Personalisation ──────────────────────────────────────────────────────
 
@@ -266,9 +277,6 @@ export interface PersistedProfileSettings {
   transitCalibration?: TransitCalibration;
 }
 
-/** Status of the habit-gut autonomy experiment state machine. */
-export type LifestyleExperimentStatus = "adapted" | "broken" | "testing" | "rewarding";
-
 export interface AiNutritionistInsight {
   /** Direct reply to the patient's messages. Null if no patient messages. */
   directResponseToUser: string | null;
@@ -277,28 +285,13 @@ export interface AiNutritionistInsight {
   clinicalReasoning: string | null;
   /** Novel educational fact — food chemistry, gut anatomy, or recovery science. */
   educationalInsight: { topic: string; fact: string } | null;
-  /**
-   * Autonomy & Trade-Off Engine output.
-   * - adapted: habits are heavy but stools are stable — "free pass" granted.
-   * - broken: bad stools + heavy accelerants — propose isolation experiment.
-   * - testing: patient is mid-experiment — track and encourage.
-   * - rewarding: experiment succeeded — grant the "free pass".
-   * Null when habits are low/normal and stools are fine.
-   */
-  lifestyleExperiment: {
-    status: LifestyleExperimentStatus;
-    message: string;
-  } | null;
   foodAssessments?: StructuredFoodAssessment[];
   suspectedCulprits: Array<{
     food: string;
     confidence: "high" | "medium" | "low";
     reasoning: string;
   }>;
-  likelySafe: Array<{ food: string; reasoning: string }>;
   mealPlan: Array<{ meal: string; items: string[]; reasoning: string }>;
-  nextFoodToTry: { food: string; reasoning: string; timing: string };
-  miniChallenge: { challenge: string; duration: string } | null;
   suggestions: string[];
 }
 
@@ -316,7 +309,12 @@ export interface StructuredFoodAssessment {
   reasoning: string;
 }
 
-export type AiAnalysisStatus = "idle" | "sending" | "receiving" | "done" | "error";
+export type AiAnalysisStatus =
+  | "idle"
+  | "sending"
+  | "receiving"
+  | "done"
+  | "error";
 export type AiAnalysisProgressStep = "sending" | "receiving" | "done";
 
 export interface FoodItem {
@@ -353,7 +351,10 @@ export interface FoodItem {
   >;
 }
 
-export const GROUP_COLORS: Record<FoodGroup, { primary: string; glow: string }> = {
+export const GROUP_COLORS: Record<
+  FoodGroup,
+  { primary: string; glow: string }
+> = {
   protein: { primary: "teal-400", glow: "teal-500" },
   carbs: { primary: "amber-400", glow: "amber-500" },
   fats: { primary: "violet-400", glow: "violet-500" },

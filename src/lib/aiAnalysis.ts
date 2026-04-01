@@ -13,7 +13,6 @@ import type {
   BaselineDelta,
   DrPooReply,
   HealthProfile,
-  LifestyleExperimentStatus,
   LogEntry,
   OutputFormat,
   OutputLength,
@@ -40,9 +39,6 @@ export const TOKEN_WARNING_THRESHOLD = 50_000;
 
 /** Suffix added when storing oversized request/response strings in Convex history. */
 const STORAGE_TRUNCATION_SUFFIX = "\n...[truncated for storage]";
-
-/** Valid statuses for the lifestyleExperiment field returned by AI. */
-const VALID_EXPERIMENT_STATUSES = new Set(["adapted", "broken", "testing", "rewarding"]);
 
 /** Maximum allowed length for a patient's preferred name in the LLM prompt. */
 const MAX_PREFERRED_NAME_LENGTH = 50;
@@ -105,51 +101,6 @@ interface AiAnalysisResult {
 
 type EducationalInsightValue = NonNullable<AiNutritionistInsight["educationalInsight"]>;
 
-// Local fallback bank used only when the model returns a duplicate/missing educational insight.
-// This keeps responses self-contained without sending long historical fact lists to the model.
-const FALLBACK_EDUCATIONAL_INSIGHTS: EducationalInsightValue[] = [
-  {
-    topic: "Meal volume and urgency",
-    fact: "Large meal volume can increase urgency after reconnection; smaller portions often reduce pressure swings.",
-  },
-  {
-    topic: "Hydration timing",
-    fact: "Spacing fluids across the day can support steadier stool consistency better than chugging large volumes at once.",
-  },
-  {
-    topic: "Gastrocolic reflex",
-    fact: "Urgency soon after eating is often the gastrocolic reflex moving older contents, not the meal you just ate.",
-  },
-  {
-    topic: "Stool form tracking",
-    fact: "Bristol trends over several events are more useful than any single stool when judging tolerance changes.",
-  },
-  {
-    topic: "Sleep and motility",
-    fact: "Poor sleep can alter gut motility signals and make stool pattern shifts more likely the next day.",
-  },
-  {
-    topic: "Food re-testing",
-    fact: "Tolerance can change during recovery, so foods flagged earlier may become manageable when re-tested at the right time.",
-  },
-  {
-    topic: "Fat load effects",
-    fact: "A high fat load can speed or loosen output in sensitive phases, especially when combined with accelerants.",
-  },
-  {
-    topic: "Fiber transitions",
-    fact: "Rapid fiber changes can disrupt stool form; stepwise adjustments are usually better tolerated than abrupt jumps.",
-  },
-  {
-    topic: "Context matters",
-    fact: "The same food can behave differently depending on sleep, hydration, and stimulant load on that day.",
-  },
-  {
-    topic: "Pattern confidence",
-    fact: "Repeated observations build confidence; single-event conclusions are useful only as provisional signals.",
-  },
-];
-
 function normalizeEducationalKey(value: string): string {
   return value
     .toLowerCase()
@@ -171,15 +122,6 @@ function collectEducationalKeys(previousReports: PreviousReport[]): Set<string> 
   return seen;
 }
 
-function pickFallbackEducationalInsight(seen: Set<string>): EducationalInsightValue {
-  const candidate = FALLBACK_EDUCATIONAL_INSIGHTS.find((item) => !seen.has(educationalKey(item)));
-  if (candidate) return candidate;
-  return {
-    topic: "Pattern literacy",
-    fact: `Consistent logging improves pattern detection quality over time. Focus point #${seen.size + 1}.`,
-  };
-}
-
 function enforceNovelEducationalInsight(
   insight: AiNutritionistInsight,
   previousReports: PreviousReport[],
@@ -191,7 +133,7 @@ function enforceNovelEducationalInsight(
   }
   return {
     ...insight,
-    educationalInsight: pickFallbackEducationalInsight(seen),
+    educationalInsight: null,
   };
 }
 
@@ -1331,8 +1273,6 @@ The user message may include 'previousWeekRecap' — an AI-generated narrative s
 - Carry-forward notes about unfinished threads and personal context
 
 This is YOUR memory of recent conversations. Use it to:
-- Remember which foods you assessed as safe, which passed their tests, which you suspected — and reference them naturally.
-- Notice recurring themes or unfinished business.
 - Build continuity across sessions rather than treating each report as a fresh start
 - Pick up unfinished threads and follow through on plans you made together
 
@@ -1347,13 +1287,9 @@ Before writing your response, review the conversation history from this half-wee
 
 If nothing material has changed since your last response, keep it brief. Do not generate output just to fill space.
 
-If you notice the conversation has been circling the same topic for multiple sessions, either commit harder with specific timing and a direct prompt, or acknowledge and pivot to a different suggestion.
-
 ### 4. Satiety, cravings, and culinary expansion
 
 The patient is not in caloric danger. However, bland diet fatigue is real and psychologically draining. Your job is to ACTIVELY help expand the diet:
-
-CRITICAL: Food trial progression is based on GUT OUTPUT, not lifestyle. If the patient's last stool was Bristol 3–5, they have EARNED a new food trial — regardless of what they smoked, drank, or used that day. Never withhold food expansion as a reward for lifestyle changes. The patient's motivation to engage with this system depends on seeing progress in their diet variety.
 
 - If the gut is stable (recent Bristol 3–5): suggest one new food trial OR a safe flavour enhancement. Be specific — a pinch of salt, a drop of soy sauce, a gentle herb, a splash of safe broth, mashing a potato differently, trying a soft-scrambled egg instead of boiled.
 - If the gut is unstable (recent Bristol 6–7): pull back to proven safe foods, but acknowledge the frustration of dietary restriction. Stabilise for 24 hours before trying anything new.
@@ -1368,115 +1304,22 @@ CRITICAL: Food trial progression is based on GUT OUTPUT, not lifestyle. If the p
 - Bristol 6: Mushy — WATCH if persistent. Isolated Bristol 6 is not alarming.
 - Bristol 7: Watery — RISKY. Flag associated foods strongly.
 
-### 6. Stalled transit detection
-
-You can observe transit patterns from food logs alone — you don't need a bowel event:
-- 8+ hours since eating with no bowel movement: worth noting, but NOT alarming. Post-anastomosis guts stall sometimes.
-- 14+ hours with no movement: suggest gentle strategies (warm drink, walk, relaxed toilet sit).
-- NEVER suggest emergency/surgical review for slow transit alone. Only flag for medical attention if accompanied by: severe pain, vomiting, blood, fever, or abdominal distension.
-
-## Meal planning (OPTIONAL — de-emphasised)
-
-The app has a dedicated Menu page where the patient builds their own meal plans from safe foods. Do NOT generate full meal plans unless the patient explicitly asks for one.
-
-Default behaviour: return an EMPTY mealPlan array.
-
-Only populate mealPlan when:
-1. The patient explicitly requests meal ideas (e.g., "what should I eat?", "give me a meal plan").
-2. There is a safety-critical reason (e.g., post-diarrhea recovery where specific meals are needed).
-
-When you DO populate mealPlan, keep to 2-3 meals maximum and follow these principles:
-- Small portions only.
-- Build on foods already proven safe.
-- After diarrhea: conservative, proven safe foods only.
-- After healthy stools: suggest one moderately new item.
-
-## Next food to try
-
-Always suggest one specific food to trial next, with precise timing tied to the patient's meal schedule and the current time. Don't say "try at lunch" at 23:00 — say "try at tomorrow's lunch around 15:00."
-
-Be varied with suggestions. If the patient has been stable, push the boundary — a new herb, a different protein, a sauce, a vegetable. Prioritise variety and flavour within what the gut can currently tolerate.
-
 ## The Autonomy & Trade-Off Engine (lifestyle ↔ gut formula)
 
 You are managing the mathematical formula of the patient's gut:
-[Food] + [Lifestyle Accelerants: Coffee, Smoking, Stimulants, Sugar] = [Bristol Output]
-
-Your goal is NOT to "fix" their lifestyle. Your goal is to help them achieve 100% Autonomy — the dignity and freedom to go to the beach, work, and socialise without fearing an accident. Autonomy requires Bristol 3s, 4s, or solid 5s.
-
-### Rule 1: The Adapted Baseline (the "Free Pass")
-If the patient's logs show heavy lifestyle accelerants (smoking, multiple coffees, stimulant use) BUT their recent bowel events are stable (Bristol 3, 4, or 5):
-- Their physiology has ADAPTED to this load. This is their normal baseline.
-- DO NOT suggest reducing their habits.
-- Acknowledge their stability. Their current routine is working for their gut.
-- Set lifestyleExperiment.status = "adapted" with a brief validation message.
-
-### Rule 2: The Broken Formula (loss of autonomy)
-If the patient is experiencing Bristol 6s, 7s, or accidents, AND they are using heavy accelerants, the formula is broken. They cannot have heavy accelerants + fast-transit foods + bowel control all at once. Trade-offs must be made.
-- Do NOT lecture about long-term health. Frame it purely around autonomy and dignity.
-- Present the trade-off: "To get autonomy back, we have to change the math. We can either slow down the food (heavier binding foods) OR turn down one lifestyle accelerant."
-- Set lifestyleExperiment.status = "broken" with the trade-off message and experiment options.
-
-### Rule 3: The Isolation Experiment (gamification)
-If Rule 2 applies, propose an Isolation Experiment. Ask the patient to pick EXACTLY ONE dial to adjust for 3–4 days. Do NOT ask them to change everything at once. Example options:
-- Option A: Limit coffee to 1 in the early morning (loose outputs happen during the day, not overnight).
-- Option B: Reduce stimulant use by 10–20% to measure impact.
-- Option C: Cut smoking in half for 3 days.
-- Option D: Keep ALL habits the same, but massively increase heavy binding foods (rice, potatoes, bread) — accept potential weight gain as a trade-off.
-
-### Rule 4: The Reward Condition
-When proposing the experiment, state the gamified reward: "Pick ONE of these for 3 days. If your gut stabilises to 3s and 4s, you earn a free pass on the rest of your habits — we won't touch them."
-
-### Rule 5: Check Previous Experiments
-Review 'previousWeekRecap' and 'patientMessages'. If the patient chose an experiment, track it. If Bristol improved → celebrate and grant the "free pass" (status = "rewarding"). If not improved → suggest testing a different dial. If mid-experiment → encourage (status = "testing").
-
-### Rule 6: Acute Deviations
-If daily logs show a spike significantly above baseline (e.g., a heavy session) that correlates with a crash in gut stability, point out the direct cause-and-effect clinically. This is transit forecasting, not moralising.
-
-### Rule 7: Anti-Nagging Constraint
-Don't re-explain the same lifestyle trade-off in the same way. If the data shows a new acute deviation, comment on it. If the situation is unchanged, factor it silently and note it briefly in clinicalReasoning. Only comment again to the patient on acute deviations or new symptoms.
-
-### Rule 8: When habits are normal
-If habits are low/normal and stools are fine, set lifestyleExperiment to null. Factor them silently into transit calculations. You may note baseline habit levels in clinicalReasoning as context, but don't address the patient about them.
+[Food (quantity and type) + Fluids] + [Lifestyle Accelerants: Smoking, Stimulants (adhd meds, crystal meth smoking), Sugar, Stress, Sleep, Exercise] = [Bristol Output] Food is only one controllable in determining the return to digestive health. Studies of post-anastomosis patients show that lifestyle factors such as stress, sleep, and exercise have a significant impact on bowel function.  Then there is also the effect of LARS (low anterior resection syndrome) which can cause bowel incontinence and urgency.  This is a common side effect of rectal surgery and can be managed with lifestyle changes and medication.   
 
 ### Harm reduction & timing strategies
 If the patient consumes known triggers (coffee, alcohol), give strategic timing advice to protect sleep and dignity. Example: "If you're having coffee, front-load it in the morning so any loose output happens during the day."
 
-Hydration and sleep: mention practically when relevant. Do not nag.
-
-## Optional mini challenges (gamification)
-
-Short, optional, time-boxed challenges tied to habit deviations or positive trends.
-
-WHEN TO SERVE A MINI CHALLENGE:
-- When habit levels have DEVIATED significantly above baseline. The challenge goal is to return toward their normal baseline, NOT to quit or go to zero.
-- When you spot a natural positive trend (e.g., lighter day than usual). The challenge reinforces it.
-- NEVER serve mini challenges when habits are at baseline levels.
-
-RULES:
-- NEVER reveal the reward before they complete the challenge. The reward is a surprise food trial or flavour expansion that comes AFTER completion.
-- The reward concept is INTERNAL to the mini challenge only. Do NOT treat nextFoodToTry as the challenge reward.
-- Mini challenges are ALWAYS optional. Frame them as optional.
-- Challenge goals should be realistic and achievable — return to baseline, not abstinence.
-- If the patient ignores or doesn't complete a mini challenge, say NOTHING. No guilt. Just set miniChallenge to null and move on.
-
-## Habit-digestion correlation insights
-
-The user message may include 'habitCorrelationInsights' — AI or heuristic-generated summaries of how the patient's habits (total fluids, walking, sleep, destructive habits like cigarettes/alcohol/sweets) correlate with BM quality over recent days. Each entry has an area (water, walk, sleep, destructive) and an insight string.
-
-Use these to:
-- Reinforce positive patterns naturally in your summary.
-- Reference specific correlation findings when they support your current advice.
-- Weigh them alongside your own deductive reasoning — they are statistical observations, not diagnoses.
-- Do NOT parrot them back mechanically. Integrate them when relevant.
-
 ## Time awareness
 
 Be aware of the current time and adapt your response:
-- Late night (after midnight): advise sleep. Defer analysis to morning.
-- Morning: comment on the day ahead, suggest breakfast.
+- Late night (after 2am): advise sleep.
+- Morning: comment on the day ahead, suggest breakfast if appropriate.
 - Afternoon: look ahead to dinner.
 - Evening: wind down, suggest light dinner, hydration reminder.
+- the baseline figures are for the average of the entire day over all time, the logged figures are up to that point in the day so you need to adjust your expectations accordingly. 300ml water intake at 11am is not comparable to a baseline of 1,8l.
 
 ## Output format
 
@@ -1487,7 +1330,7 @@ You MUST respond with valid JSON only. No markdown, no prose outside the JSON. T
   "summary": "string",
   "clinicalReasoning": "string | null",
   "educationalInsight": { "topic": "string", "fact": "string" },
-  "lifestyleExperiment": { "status": "adapted | broken | testing | rewarding", "message": "string" } | null,
+  "suggestions": ["string"],
   "foodAssessments": [
     {
       "food": "string",
@@ -1502,36 +1345,19 @@ You MUST respond with valid JSON only. No markdown, no prose outside the JSON. T
   "suspectedCulprits": [
     { "food": "string", "confidence": "high" | "medium" | "low", "reasoning": "string" }
   ],
-  "likelySafe": [
-    { "food": "string", "reasoning": "string" }
-  ],
   "mealPlan": [
     { "meal": "string", "items": ["string"], "reasoning": "string" }
   ],
-  "nextFoodToTry": { "food": "string", "reasoning": "string", "timing": "string" },
-  "miniChallenge": { "challenge": "string", "duration": "string" } | null,
-  "suggestions": ["string"]
 }
 
 Rules for each field:
 - **directResponseToUser**: Answer the patient's messages or questions here. Address bowel movement notes that contain questions. If the patient didn't send any messages and there are no questions in the log notes, set to null.
-- **summary**: A summary of the period's data addressed to the patient. Reflect what the data actually shows. Never leave summary empty.
+- **summary**: A summary of the period's data addressed to the patient. Reflect what the data actually shows. Never leave summary empty, do not repeat what you may have said in the direct response to user or clinical reasoning.Summary is the patients overview of the period.
+- **suggestions**: offer 0 to 5 novel or timely suggestions to help the patient with their current and ongoing situation. offer coping tips, routines, ways to adhere to the plan with adhd, environmental factors, cbt for habits, when to take a walk vs lie down and rest (around eating or smoking), try to be helpful, light but empathetic to the physical state and mental duress Peter might be in.
 - **clinicalReasoning**: Write your full deductive reasoning here — transit estimates, modifier weighting, food-to-output tracing, pattern observations. This is your working space. Other fields should summarise conclusions from this reasoning. Use markdown for readability (bold key findings, italicise caveats). Set to null only if there is genuinely nothing clinical to reason about (e.g., no food or bowel data logged).
-- **educationalInsight**: ALWAYS populate this field with one new, interesting fact (never null). It can be about food, habits, bowel patterns, motility, colon recovery, hydration, sleep, or gut-brain interactions. Never repeat prior educational facts.
-- **lifestyleExperiment**: Populate based on the Autonomy & Trade-Off Engine rules above. Status must be one of: "adapted" (heavy habits but stable stools — grant the free pass), "broken" (bad stools + heavy accelerants — propose the isolation experiment), "testing" (patient is mid-experiment — encourage), "rewarding" (experiment succeeded — grant free pass). Set to null when habits are low/normal and stools are fine, or when you've already explained the situation recently and there are no new acute deviations.
-- **foodAssessments**: This is the canonical food verdict output. Include only foods whose verdict changed, are newly assessed, or need reinforcing because today's evidence materially changes confidence. "safe" means exonerated or trusted; "watch" means mixed/confounded evidence; "avoid" means strong current suspicion; "trial_next" means the next deliberate food to test. Use "modifierSummary" to explain accelerants/decelerants that changed the transit math.
-- **suspectedCulprits**: Foods correlated with bad outputs via your deductive reasoning. Include your dynamically adjusted transit logic in the reasoning. Reference the food trial database for existing verdicts. Include foods here when: (a) new evidence has changed a food's status, (b) a food is being assessed for the first time, or (c) you want to reinforce a verdict from the previousWeekRecap because it's directly relevant to today's data. Empty array if nothing has changed.
-- **likelySafe**: Foods explicitly exonerated — explain WHY they're safe (e.g., "fell outside the transit window", "3 clean trials", "no offending properties"). Empty array if unchanged.
-- **mealPlan**: OPTIONAL brief section. Only populate if the patient explicitly asks for meal ideas OR if there is a safety-critical reason to suggest specific meals (e.g., post-episode recovery). When populated, keep to 2-3 meals maximum. The app now has a dedicated Menu page that handles meal planning, so avoid duplicating that work. Default to empty array unless specifically requested.
-- **nextFoodToTry**: One specific food that is closest to being cleared — prefer foods currently in "testing" status with the most trials (e.g. 3 trials is closer to graduation than 1). Do NOT suggest individual ingredients that were only ever logged as part of a composite dish (e.g. do not suggest "onion" if it only appeared as part of a guacamole entry). If no foods are currently testing, suggest a new food appropriate to the patient's current zone and gut stability. Always populated.
-- **miniChallenge**: An optional, time-boxed mini challenge. Only serve one if there's a genuine opportunity (e.g., a natural break from a habit deviation). Set to null if no challenge is appropriate. NEVER reveal the food reward — just the challenge and duration. If the patient didn't complete the last challenge, do NOT mention it — just set to null.
-- **suggestions**: Focus suggestions primarily on the LATEST bowel movement and the current user question. You may add at most one extra cross-cutting suggestion if clinically relevant. Apply spaced repetition, not nagging: normal suggestions can repeat at most 3 times with increasing cooldown; safety-critical suggestions can repeat up to 5 times with increasing cooldown. If a suggestion has already been repeated and appears ignored, stop repeating it and offer a different one. Count rules: default 0-5; in concise mode cap to 2; safety-critical concerns may exceed these caps when needed for safety. Never lecture about lifestyle choices.
-
-## Structure & length preferences
-
-${buildStructureDirective(prefs.outputFormat)}
-
-${buildLengthDirective(prefs.outputLength)}`;
+- **educationalInsight**: ALWAYS populate this field with one new, interesting fact (never null). It can be about food, habits, bowel patterns, motility, colon recovery, hydration, sleep, or gut-brain interactions. Pick a letter randomly and deliver a fact that starts with that letter related to the patients current situation.
+- **foodAssessments**: This is the canonical food verdict output. trusted; mixed/confounded evidence; avoid. Use "modifierSummary" to explain accelerants/decelerants that changed the transit math.Include your dynamically adjusted transit logic in the reasoning.
+- **mealPlan**: detail the weight or volume of food and drinks for the next 8 to 12 hours, Peter likes to snack but its contributing to fragmented output sometimes, figure out the menu that will satisfy his snacking and keep his output solid. Be clear about portion sizes, if he is hungry, you need to calculate what he can tolerate without tipping the bowel into dumping from too much food in. `;
 }
 
 // ─── Baseline averages context for AI prompts ────────────────────────────────
@@ -1693,7 +1519,6 @@ interface BuildUserMessageParams {
   suggestionHistory: SuggestionHistoryEntry[];
   weeklyContext: WeeklyDigestInput[];
   previousWeeklySummary?: PreviousWeeklySummary;
-  habitCorrelationInsights?: HabitCorrelationInsight[];
   baselineAverages?: BaselineAverages;
 }
 
@@ -1709,7 +1534,6 @@ export function buildUserMessage(params: BuildUserMessageParams): string {
     suggestionHistory,
     weeklyContext,
     previousWeeklySummary,
-    habitCorrelationInsights,
     baselineAverages,
   } = params;
 
@@ -1766,10 +1590,6 @@ export function buildUserMessage(params: BuildUserMessageParams): string {
         carryForwardNotes: previousWeeklySummary.carryForwardNotes,
       },
     }),
-    ...(habitCorrelationInsights &&
-      habitCorrelationInsights.length > 0 && {
-        habitCorrelationInsights,
-      }),
     ...(baselineAverages !== undefined && {
       baselineComparison: buildBaselineContext(baselineAverages),
     }),
@@ -1791,12 +1611,6 @@ function toStringArray(value: unknown): string[] {
 }
 
 /**
- * A gentle, easily-digested food that is safe for most post-surgical patients.
- * Used as the default "next food to try" when the AI response omits one.
- */
-const DEFAULT_FOOD_SUGGESTION = "Plain white rice";
-
-/**
  * Parse and validate a raw AI JSON response into a typed AiNutritionistInsight.
  *
  * Handles missing or malformed fields by substituting safe defaults.
@@ -1807,32 +1621,6 @@ const DEFAULT_FOOD_SUGGESTION = "Plain white rice";
  */
 export function parseAiInsight(raw: unknown): AiNutritionistInsight | null {
   if (!isRecord(raw)) return null;
-
-  // nextFoodToTry — require the "food" string to be present, else use default
-  const nextFoodToTryDefault: AiNutritionistInsight["nextFoodToTry"] = {
-    food: DEFAULT_FOOD_SUGGESTION,
-    reasoning: "Safe default after any episode.",
-    timing: "Next meal",
-  };
-
-  const rawNextFood = raw.nextFoodToTry;
-  const nextFoodToTry: AiNutritionistInsight["nextFoodToTry"] =
-    isRecord(rawNextFood) && typeof rawNextFood.food === "string"
-      ? {
-          food: rawNextFood.food,
-          reasoning: typeof rawNextFood.reasoning === "string" ? rawNextFood.reasoning : "",
-          timing: typeof rawNextFood.timing === "string" ? rawNextFood.timing : "",
-        }
-      : nextFoodToTryDefault;
-
-  const rawMiniChallenge = raw.miniChallenge;
-  const miniChallenge: AiNutritionistInsight["miniChallenge"] =
-    isRecord(rawMiniChallenge) && typeof rawMiniChallenge.challenge === "string"
-      ? {
-          challenge: rawMiniChallenge.challenge,
-          duration: typeof rawMiniChallenge.duration === "string" ? rawMiniChallenge.duration : "",
-        }
-      : null;
 
   // Parse the new directResponseToUser field
   const directResponseToUser: string | null =
@@ -1847,28 +1635,15 @@ export function parseAiInsight(raw: unknown): AiNutritionistInsight | null {
       ? { topic: rawEduInsight.topic, fact: rawEduInsight.fact }
       : null;
 
-  // Parse lifestyleExperiment
-  const rawLifestyle = raw.lifestyleExperiment;
-  const lifestyleExperiment: AiNutritionistInsight["lifestyleExperiment"] =
-    isRecord(rawLifestyle) &&
-    typeof rawLifestyle.status === "string" &&
-    VALID_EXPERIMENT_STATUSES.has(rawLifestyle.status) &&
-    typeof rawLifestyle.message === "string"
-      ? {
-          status: rawLifestyle.status as LifestyleExperimentStatus,
-          message: rawLifestyle.message,
-        }
-      : null;
-
-  const clinicalReasoning: string | null =
+    const clinicalReasoning: string | null =
     typeof raw.clinicalReasoning === "string" ? raw.clinicalReasoning : null;
 
   return {
     directResponseToUser,
     summary: typeof raw.summary === "string" ? raw.summary : "No summary available.",
+    suggestions: toStringArray(raw.suggestions),
     clinicalReasoning,
     educationalInsight,
-    lifestyleExperiment,
     foodAssessments: Array.isArray(raw.foodAssessments)
       ? raw.foodAssessments.filter(
           (item: unknown): item is StructuredFoodAssessment =>
@@ -1901,12 +1676,6 @@ export function parseAiInsight(raw: unknown): AiNutritionistInsight | null {
             typeof item.reasoning === "string",
         )
       : [],
-    likelySafe: Array.isArray(raw.likelySafe)
-      ? raw.likelySafe.filter(
-          (item: unknown): item is AiNutritionistInsight["likelySafe"][number] =>
-            isRecord(item) && typeof item.food === "string" && typeof item.reasoning === "string",
-        )
-      : [],
     mealPlan: Array.isArray(raw.mealPlan)
       ? raw.mealPlan.filter(
           (item: unknown): item is AiNutritionistInsight["mealPlan"][number] =>
@@ -1916,9 +1685,6 @@ export function parseAiInsight(raw: unknown): AiNutritionistInsight | null {
             typeof item.reasoning === "string",
         )
       : [],
-    nextFoodToTry,
-    miniChallenge,
-    suggestions: toStringArray(raw.suggestions),
   };
 }
 
@@ -1937,12 +1703,6 @@ export interface SuggestionHistoryEntry {
   lastSuggested: string;
 }
 
-export interface HabitCorrelationInsight {
-  area: string; // "water" | "walk" | "sleep" | "destructive"
-  insight: string;
-  generatedAt: string; // human-readable timestamp
-}
-
 export interface EnhancedAiContext {
   foodTrials?: FoodTrialSummaryInput[];
   conversationHistory?: ConversationMessage[];
@@ -1953,7 +1713,6 @@ export interface EnhancedAiContext {
     textNormalized: string;
     reportTimestamp: number;
   }>;
-  habitCorrelationInsights?: HabitCorrelationInsight[];
   baselineAverages?: BaselineAverages;
 }
 
@@ -2241,9 +2000,6 @@ export async function fetchAiInsights(
       weeklyContext,
       ...(safeEnhancedContext?.previousWeeklySummary !== undefined && {
         previousWeeklySummary: safeEnhancedContext.previousWeeklySummary,
-      }),
-      ...(safeEnhancedContext?.habitCorrelationInsights !== undefined && {
-        habitCorrelationInsights: safeEnhancedContext.habitCorrelationInsights,
       }),
       ...(safeEnhancedContext?.baselineAverages !== undefined && {
         baselineAverages: safeEnhancedContext.baselineAverages,

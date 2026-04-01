@@ -1,13 +1,10 @@
 import {
-  Beaker,
   BookOpen,
   BrainCircuit,
   Check,
   Copy,
-  ShieldCheck,
   TriangleAlert,
   UtensilsCrossed,
-  Zap,
 } from "lucide-react";
 import { type RefObject, useCallback, useRef, useState } from "react";
 import Markdown from "react-markdown";
@@ -19,7 +16,11 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { getAiDisclaimer } from "@/lib/aiAnalysis";
 import { AI_MARKDOWN_COMPONENTS } from "@/lib/aiMarkdownComponents";
 import type { AiNutritionistInsight } from "@/types/domain";
@@ -70,21 +71,22 @@ function confidenceBadgeTone(confidence: "high" | "medium" | "low"): string {
 }
 
 /**
- * Report details: culprits, safe foods, next food, suggestions, disclaimer, habits, meals.
+ * Report details: culprits, meals, educational insight, suggestions, disclaimer.
  * Used by Track page inside a collapsible, and by DrPooFullReport on the Archive page.
  *
  * Section order:
  *   0. Clinical reasoning (collapsible "Dr. Poo's analysis")
- *   1. Likely safe / suspected culprits
+ *   1. Suspected culprits
  *   2. Meal ideas (prominent, expanded by default — most actionable section)
- *   3. Next food to try
- *   4. Did you know (educational insight)
- *   5. Suggestions
- *   6. Mini challenge
- *   7. Disclaimer
- *   8. Habits Free Pass (lifestyle experiment) — only when relevant
+ *   3. Did you know (educational insight)
+ *   4. Suggestions
+ *   5. Disclaimer
  */
-export function DrPooReportDetails({ insights }: { insights: AiNutritionistInsight }) {
+export function DrPooReportDetails({
+  insights,
+}: {
+  insights: AiNutritionistInsight;
+}) {
   const hasMealPlan = insights.mealPlan.length > 0;
 
   return (
@@ -103,83 +105,52 @@ export function DrPooReportDetails({ insights }: { insights: AiNutritionistInsig
           </CollapsibleTrigger>
           <CollapsibleContent>
             <div className="prose-sm mt-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2.5 text-xs text-[var(--text-muted)] [&_em]:text-[var(--text-faint)] [&_strong]:text-[var(--text)]">
-              <Markdown components={AI_MARKDOWN_COMPONENTS}>{insights.clinicalReasoning}</Markdown>
+              <Markdown components={AI_MARKDOWN_COMPONENTS}>
+                {insights.clinicalReasoning}
+              </Markdown>
             </div>
           </CollapsibleContent>
         </Collapsible>
       )}
 
-      {/* 1. Culprits & Safe — side by side FAQ accordions */}
-      {(insights.suspectedCulprits.length > 0 || insights.likelySafe.length > 0) && (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {insights.suspectedCulprits.length > 0 && (
-            <div>
-              <div className="mb-2 flex items-center gap-1.5">
-                <TriangleAlert size={12} className="text-[var(--section-food)]" />
-                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--section-food)]">
-                  Suspected Culprits
-                </p>
-              </div>
-              <Accordion type="single" collapsible className="space-y-1">
-                {insights.suspectedCulprits.map((item) => (
-                  <AccordionItem
-                    key={item.food}
-                    value={item.food}
-                    className="glass-card overflow-hidden rounded-xl border-0"
-                  >
-                    <AccordionTrigger className="px-3 py-2.5 hover:no-underline [&>svg]:text-[var(--text-faint)]">
-                      <div className="flex items-center gap-2">
-                        <span className="font-display text-sm font-semibold text-[var(--text)]">
-                          {item.food}
-                        </span>
-                        <span
-                          className={`rounded-md border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${confidenceBadgeTone(item.confidence)}`}
-                        >
-                          {item.confidence}
-                        </span>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="px-3 pb-3">
-                      <div className="prose-sm text-xs text-[var(--text-muted)] [&_strong]:text-[var(--text)] [&_em]:text-[var(--text-faint)]">
-                        <Markdown components={AI_MARKDOWN_COMPONENTS}>{item.reasoning}</Markdown>
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            </div>
-          )}
-
-          {insights.likelySafe.length > 0 && (
-            <div>
-              <div className="mb-2 flex items-center gap-1.5">
-                <ShieldCheck size={12} className="text-[var(--section-observe)]" />
-                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--section-observe)]">
-                  Likely Safe
-                </p>
-              </div>
-              <Accordion type="single" collapsible className="space-y-1">
-                {insights.likelySafe.map((item) => (
-                  <AccordionItem
-                    key={item.food}
-                    value={item.food}
-                    className="glass-card overflow-hidden rounded-xl border-0"
-                  >
-                    <AccordionTrigger className="px-3 py-2.5 hover:no-underline [&>svg]:text-[var(--text-faint)]">
-                      <span className="font-display text-sm font-semibold text-[var(--text)]">
-                        {item.food}
-                      </span>
-                    </AccordionTrigger>
-                    <AccordionContent className="px-3 pb-3">
-                      <div className="prose-sm text-xs text-[var(--text-muted)] [&_strong]:text-[var(--text)] [&_em]:text-[var(--text-faint)]">
-                        <Markdown components={AI_MARKDOWN_COMPONENTS}>{item.reasoning}</Markdown>
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            </div>
-          )}
+      {/* 1. Suspected Culprits — FAQ accordion */}
+      {insights.suspectedCulprits.length > 0 && (
+        <div>
+          <div className="mb-2 flex items-center gap-1.5">
+            <TriangleAlert size={12} className="text-[var(--section-food)]" />
+            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--section-food)]">
+              Suspected Culprits
+            </p>
+          </div>
+          <Accordion type="single" collapsible className="space-y-1">
+            {insights.suspectedCulprits.map((item) => (
+              <AccordionItem
+                key={item.food}
+                value={item.food}
+                className="glass-card overflow-hidden rounded-xl border-0"
+              >
+                <AccordionTrigger className="px-3 py-2.5 hover:no-underline [&>svg]:text-[var(--text-faint)]">
+                  <div className="flex items-center gap-2">
+                    <span className="font-display text-sm font-semibold text-[var(--text)]">
+                      {item.food}
+                    </span>
+                    <span
+                      className={`rounded-md border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${confidenceBadgeTone(item.confidence)}`}
+                    >
+                      {item.confidence}
+                    </span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-3 pb-3">
+                  <div className="prose-sm text-xs text-[var(--text-muted)] [&_strong]:text-[var(--text)] [&_em]:text-[var(--text-faint)]">
+                    <Markdown components={AI_MARKDOWN_COMPONENTS}>
+                      {item.reasoning}
+                    </Markdown>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
         </div>
       )}
 
@@ -200,29 +171,7 @@ export function DrPooReportDetails({ insights }: { insights: AiNutritionistInsig
         </div>
       )}
 
-      {/* 3. Next Food to Try */}
-      {insights.nextFoodToTry && (
-        <div>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--section-bowel)]">
-            Next Food to Try
-          </p>
-          <div className="glass-card rounded-xl border border-[var(--section-bowel-border)] px-3 py-2.5">
-            <p className="font-display text-sm font-semibold text-[var(--text)]">
-              {insights.nextFoodToTry.food}
-            </p>
-            <div className="prose-sm mt-1 text-xs text-[var(--text-muted)] [&_strong]:text-[var(--text)] [&_em]:text-[var(--text-faint)]">
-              <Markdown components={AI_MARKDOWN_COMPONENTS}>
-                {insights.nextFoodToTry.reasoning}
-              </Markdown>
-            </div>
-            <p className="mt-1 text-xs text-[var(--section-bowel)]">
-              {insights.nextFoodToTry.timing}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* 4. Educational Insight (Did You Know?) */}
+      {/* 3. Educational Insight (Did You Know?) */}
       {insights.educationalInsight && (
         <div>
           <div className="mb-2 flex items-center gap-1.5">
@@ -253,61 +202,19 @@ export function DrPooReportDetails({ insights }: { insights: AiNutritionistInsig
           <div className="prose-sm space-y-1 text-xs text-[var(--text-muted)] [&_strong]:text-[var(--text)] [&_em]:text-[var(--text-faint)]">
             {insights.suggestions.map((suggestion) => (
               <div key={suggestion}>
-                <Markdown components={AI_MARKDOWN_COMPONENTS}>{suggestion}</Markdown>
+                <Markdown components={AI_MARKDOWN_COMPONENTS}>
+                  {suggestion}
+                </Markdown>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* 6. Mini Challenge */}
-      {insights.miniChallenge && (
-        <div>
-          <div className="mb-2 flex items-center gap-1.5">
-            <Zap size={12} className="text-[var(--section-quick)]" />
-            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--section-quick)]">
-              Mini Challenge
-            </p>
-          </div>
-          <div className="glass-card rounded-xl border border-[var(--section-quick-border)] px-3 py-2.5">
-            <div className="prose-sm text-sm text-[var(--text)] [&_strong]:font-semibold [&_em]:text-[var(--text-muted)]">
-              <Markdown components={AI_MARKDOWN_COMPONENTS}>
-                {insights.miniChallenge.challenge}
-              </Markdown>
-            </div>
-            <p className="mt-1 text-xs text-[var(--text-faint)]">
-              {insights.miniChallenge.duration}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* 7. Disclaimer */}
+      {/* 6. Disclaimer */}
       <p className="border-t border-[var(--border)] pt-3 text-[10px] leading-relaxed text-[var(--text-faint)] italic">
         {getAiDisclaimer()}
       </p>
-
-      {/* 8. Lifestyle Experiment (Habits Free Pass) — only when relevant */}
-      {insights.lifestyleExperiment && (
-        <div>
-          <div className="mb-2 flex items-center gap-1.5">
-            <Beaker size={12} className="text-[var(--section-habits)]" />
-            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--section-habits)]">
-              {insights.lifestyleExperiment.status === "adapted" && "Habits — Free Pass"}
-              {insights.lifestyleExperiment.status === "broken" && "Habits — Trade-Off Needed"}
-              {insights.lifestyleExperiment.status === "testing" && "Experiment In Progress"}
-              {insights.lifestyleExperiment.status === "rewarding" && "Experiment Won!"}
-            </p>
-          </div>
-          <div className="glass-card rounded-xl border border-[var(--section-habits-border)] px-3 py-2.5">
-            <div className="prose-sm text-xs text-[var(--text-muted)] [&_strong]:text-[var(--text)] [&_em]:text-[var(--text-faint)]">
-              <Markdown components={AI_MARKDOWN_COMPONENTS}>
-                {insights.lifestyleExperiment.message}
-              </Markdown>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -316,7 +223,11 @@ export function DrPooReportDetails({ insights }: { insights: AiNutritionistInsig
  * Full Dr. Poo report with summary + details.
  * Used by the Archive page where everything is always visible.
  */
-export function DrPooFullReport({ insights }: { insights: AiNutritionistInsight }) {
+export function DrPooFullReport({
+  insights,
+}: {
+  insights: AiNutritionistInsight;
+}) {
   const reportRef = useRef<HTMLDivElement>(null);
 
   return (
@@ -341,7 +252,9 @@ export function DrPooFullReport({ insights }: { insights: AiNutritionistInsight 
 
         {/* Summary */}
         <div className="prose-sm text-sm text-[var(--text)] [&_em]:text-[var(--text-muted)] [&_strong]:font-semibold">
-          <Markdown components={AI_MARKDOWN_COMPONENTS}>{insights.summary}</Markdown>
+          <Markdown components={AI_MARKDOWN_COMPONENTS}>
+            {insights.summary}
+          </Markdown>
         </div>
 
         <DrPooReportDetails insights={insights} />

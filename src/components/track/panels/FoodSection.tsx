@@ -5,23 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { usePanelTime } from "@/hooks/usePanelTime";
-import { type CustomFoodPreset, loadCustomFoodPresets } from "@/lib/customFoodPresets";
+import {
+  type CustomFoodPreset,
+  loadCustomFoodPresets,
+} from "@/lib/customFoodPresets";
 import { getErrorMessage } from "@/lib/errors";
 import { PanelTimePicker } from "./PanelTimePicker";
 
-export interface ParsedItem {
-  name: string;
-  quantity: string;
-  unit: string;
-  /** When true, this item came from a custom food preset badge and should bypass AI parsing. */
-  fromPreset?: boolean;
-  /** Ingredients from the custom food preset, if any. */
-  presetIngredients?: string[];
-}
-
 interface FoodSectionProps {
   onLogFood: (
-    items: ParsedItem[],
     notes: string,
     rawText: string,
     timestampMs?: number,
@@ -33,12 +25,23 @@ export function FoodSection({ onLogFood, captureTimestamp }: FoodSectionProps) {
   const [foodName, setFoodName] = useState("");
   const [foodError, setFoodError] = useState("");
   const [saving, setSaving] = useState(false);
-  const [customFoodPresets, setCustomFoodPresets] = useState<CustomFoodPreset[]>([]);
+  const [customFoodPresets, setCustomFoodPresets] = useState<
+    CustomFoodPreset[]
+  >([]);
   // Track the active preset so we can bypass AI parsing when submitting a badge
-  const [activePreset, setActivePreset] = useState<CustomFoodPreset | null>(null);
+  const [activePreset, setActivePreset] = useState<CustomFoodPreset | null>(
+    null,
+  );
 
-  const { timeValue, setTimeValue, dateValue, setDateValue, isEdited, getTimestampMs, reset } =
-    usePanelTime(captureTimestamp);
+  const {
+    timeValue,
+    setTimeValue,
+    dateValue,
+    setDateValue,
+    isEdited,
+    getTimestampMs,
+    reset,
+  } = usePanelTime(captureTimestamp);
 
   useEffect(() => {
     setCustomFoodPresets(loadCustomFoodPresets());
@@ -62,21 +65,6 @@ export function FoodSection({ onLogFood, captureTimestamp }: FoodSectionProps) {
     const savedActivePreset = activePreset;
     const savedTimestampMs = getTimestampMs();
 
-    // Check if the current food name matches the active preset — if so, bypass AI parsing
-    const isFromPreset =
-      activePreset !== null && activePreset.name.trim().toLowerCase() === name.toLowerCase();
-
-    const item: ParsedItem = {
-      name,
-      quantity: "",
-      unit: "",
-      ...(isFromPreset && { fromPreset: true }),
-      ...(isFromPreset &&
-        activePreset.ingredients.length > 0 && {
-          presetIngredients: activePreset.ingredients,
-        }),
-    };
-
     // Optimistic: clear input immediately so the UI stays responsive
     setFoodName("");
     setActivePreset(null);
@@ -84,7 +72,7 @@ export function FoodSection({ onLogFood, captureTimestamp }: FoodSectionProps) {
     setSaving(true);
 
     // Fire save in background — server handles all parsing
-    onLogFood([item], "", savedName, savedTimestampMs)
+    onLogFood("", savedName, savedTimestampMs)
       .catch((err: unknown) => {
         // Restore all input state so the user doesn't lose their entry
         setFoodName(savedName);
@@ -129,7 +117,9 @@ export function FoodSection({ onLogFood, captureTimestamp }: FoodSectionProps) {
                   onClick={() => {
                     const nextName = preset.name.trim();
                     if (!nextName) return;
-                    if (foodName.trim().toLowerCase() === nextName.toLowerCase()) {
+                    if (
+                      foodName.trim().toLowerCase() === nextName.toLowerCase()
+                    ) {
                       void submitFood();
                       return;
                     }
@@ -174,7 +164,9 @@ export function FoodSection({ onLogFood, captureTimestamp }: FoodSectionProps) {
             aria-describedby={foodError ? foodErrorId : undefined}
             className="h-8 flex-1 rounded-[6px] text-(--text-muted) placeholder:text-(--text-faint) focus:ring-(--section-food)/30 focus:border-(--section-food)/50"
             style={{
-              border: foodError ? "1px solid var(--red)" : "1px solid var(--section-food-border)",
+              border: foodError
+                ? "1px solid var(--red)"
+                : "1px solid var(--section-food-border)",
               background: "var(--section-food-muted)",
             }}
           />
@@ -194,7 +186,11 @@ export function FoodSection({ onLogFood, captureTimestamp }: FoodSectionProps) {
           </Button>
         </div>
         {foodError && (
-          <p id={foodErrorId} role="alert" className="text-[11px] text-[var(--red)]">
+          <p
+            id={foodErrorId}
+            role="alert"
+            className="text-[11px] text-[var(--red)]"
+          >
             {foodError}
           </p>
         )}

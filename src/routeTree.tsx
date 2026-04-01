@@ -20,13 +20,8 @@ import {
 import { Toaster } from "@/components/ui/sonner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ApiKeyProvider } from "@/contexts/ApiKeyContext";
-import {
-  type PatchProfileArgs,
-  ProfileProvider,
-  useProfileContext,
-} from "@/contexts/ProfileContext";
+import { ProfileProvider } from "@/contexts/ProfileContext";
 import { SyncedLogsProvider } from "@/contexts/SyncedLogsContext";
-import { migrateLegacyStorage } from "@/lib/migrateLegacyStorage";
 import { cn } from "@/lib/utils";
 import { api } from "../convex/_generated/api";
 import TrackPage from "./pages/Track";
@@ -96,23 +91,23 @@ class RouteErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBounda
   render() {
     if (!this.state.hasError) return this.props.children;
     return (
-      <div className="mx-auto my-8 max-w-xl rounded-2xl border border-[var(--red)]/40 bg-[var(--surface-1)] p-5">
-        <h2 className="text-base font-bold text-[var(--text)]">{this.props.label} crashed</h2>
-        <p className="mt-1 text-sm text-[var(--text-muted)]">
+      <div className="mx-auto my-8 max-w-xl rounded-2xl border border-(--red)/40 bg-(--surface-1) p-5">
+        <h2 className="text-base font-bold text-(--text)">{this.props.label} crashed</h2>
+        <p className="mt-1 text-sm text-(--text-muted)">
           The page hit an unexpected error. You can retry without losing the rest of the app.
         </p>
         <div className="mt-3 flex gap-2">
           <button
             type="button"
             onClick={this.handleReset}
-            className="rounded-lg bg-[var(--surface-0)] px-3 py-1.5 text-xs font-semibold text-[var(--text)]"
+            className="rounded-lg bg-(--surface-0) px-3 py-1.5 text-xs font-semibold text-(--text)"
           >
             Retry
           </button>
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-semibold text-[var(--text-muted)]"
+            className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-(--text-muted)"
           >
             Reload app
           </button>
@@ -137,22 +132,22 @@ function AuthLoadingFallback() {
   if (!timedOut) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-[var(--text-muted)]">Loading...</p>
+        <p className="text-sm text-(--text-muted)">Loading...</p>
       </div>
     );
   }
 
   return (
     <div className="flex min-h-screen items-center justify-center px-6">
-      <div className="max-w-md space-y-3 rounded-2xl border border-[var(--orange)]/30 bg-[var(--surface-1)] p-5">
-        <h2 className="text-base font-semibold text-[var(--text)]">Auth is unavailable</h2>
-        <p className="text-sm text-[var(--text-muted)]">
+      <div className="max-w-md space-y-3 rounded-2xl border border-(--orange)/30 bg-(--surface-1) p-5">
+        <h2 className="text-base font-semibold text-(--text)">Auth is unavailable</h2>
+        <p className="text-sm text-(--text-muted)">
           Sign-in is taking too long to load. Try reloading the page.
         </p>
         <button
           type="button"
           onClick={() => window.location.reload()}
-          className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--text)] hover:bg-[var(--surface-2)]"
+          className="rounded-lg border border-border px-3 py-1.5 text-sm text-(--text) hover:bg-(--surface-2)"
         >
           Retry
         </button>
@@ -165,8 +160,8 @@ function GlobalHeader() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   return (
-    <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-[rgba(255,255,255,0.7)] backdrop-blur-xl backdrop-saturate-150 dark:bg-[rgba(12,20,32,0.7)]">
-      <div className="mx-auto w-full max-w-[1760px] px-4 py-2.5">
+    <header className="sticky top-0 z-50 border-b border-white/6 bg-[rgba(255,255,255,0.7)] backdrop-blur-xl backdrop-saturate-150 dark:bg-[rgba(12,20,32,0.7)]">
+      <div className="mx-auto w-full max-w-440 px-4 py-2.5">
         <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
           {/* Logo area */}
           <Tooltip>
@@ -180,10 +175,10 @@ function GlobalHeader() {
                   className="h-16 w-16 drop-shadow-[0_0_8px_rgba(45,212,191,0.4)]"
                 />
                 <div className="hidden lg:block">
-                  <p className="bg-gradient-to-r from-[var(--teal)] to-[var(--section-food)] bg-clip-text font-display text-lg font-extrabold tracking-tight text-transparent">
+                  <p className="bg-linear-to-r from-(--teal) to-(--section-food) bg-clip-text font-display text-lg font-extrabold tracking-tight text-transparent">
                     PDH
                   </p>
-                  <p className="text-[10px] font-medium uppercase tracking-widest text-[var(--text-faint)]">
+                  <p className="text-[10px] font-medium uppercase tracking-widest text-(--text-faint)">
                     Anastomosis Food Re-Integration Tracker
                   </p>
                 </div>
@@ -213,15 +208,15 @@ function GlobalHeader() {
                             className={cn(
                               "group relative inline-flex h-10 w-auto flex-row items-center gap-2 border-b-2 border-transparent px-4 py-2 font-semibold tracking-wide transition-all duration-200",
                               isActive
-                                ? cn("text-[var(--text)]", item.activeBorder)
-                                : "text-[var(--text-muted)] hover:-translate-y-px hover:text-[var(--text)]",
+                                ? cn("text-(--text)", item.activeBorder)
+                                : "text-(--text-muted) hover:-translate-y-px hover:text-(--text)",
                             )}
                           >
                             <Link to={item.to} aria-label={item.label}>
                               <Icon
                                 className={cn(
                                   "h-4 w-4 transition-colors",
-                                  isActive ? item.activeTone : "group-hover:text-[var(--text)]",
+                                  isActive ? item.activeTone : "group-hover:text-(--text)",
                                 )}
                                 aria-hidden="true"
                               />
@@ -232,7 +227,7 @@ function GlobalHeader() {
                               {isActive && (
                                 <span
                                   className={cn(
-                                    "absolute bottom-0 left-1/2 h-px w-3/4 -translate-x-1/2 bg-gradient-to-r opacity-60",
+                                    "absolute bottom-0 left-1/2 h-px w-3/4 -translate-x-1/2 bg-linear-to-r opacity-60",
                                     item.activeGlow,
                                   )}
                                   aria-hidden="true"
@@ -253,7 +248,7 @@ function GlobalHeader() {
           </div>
 
           <div className="flex items-center justify-end gap-3">
-            <div className="rounded-lg transition-colors hover:bg-white/[0.06]">
+            <div className="rounded-lg transition-colors hover:bg-white/6">
               <ModeToggle />
             </div>
             <UserButton />
@@ -274,34 +269,6 @@ function GlobalHeader() {
   );
 }
 
-/**
- * Runs the one-time legacy IDB-to-cloud migration on first mount.
- * Must be rendered inside ProfileProvider (needs patchProfile).
- * Renders nothing — purely a side-effect component.
- */
-function LegacyMigration() {
-  const { patchProfile } = useProfileContext();
-  const cloudProfile = useQuery(api.logs.getProfile);
-  const migrated = useRef(false);
-
-  useEffect(() => {
-    if (migrated.current || cloudProfile === undefined) return;
-    migrated.current = true;
-
-    migrateLegacyStorage(cloudProfile, (updates) => patchProfile(updates as PatchProfileArgs))
-      .then((didMigrate) => {
-        if (didMigrate) {
-          console.log("[Migration] Legacy storage migrated to cloud");
-        }
-      })
-      .catch((err: unknown) => {
-        console.error("[Migration] Failed:", err);
-      });
-  }, [cloudProfile, patchProfile]);
-
-  return null;
-}
-
 function AppLayout() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
@@ -318,9 +285,8 @@ function AppLayout() {
       <Authenticated>
         <ApiKeyProvider>
           <ProfileProvider>
-            <LegacyMigration />
             <GlobalHeader />
-            <main className="relative z-10 mx-auto w-full max-w-[1760px] px-4 py-4 pb-8">
+            <main className="relative z-10 mx-auto w-full max-w-440 px-4 py-4 pb-8">
               {requiresSyncedLogs ? (
                 <SyncedLogsProvider>
                   <Outlet />
@@ -341,14 +307,14 @@ function AppLayout() {
             height={72}
             className="drop-shadow-[0_0_8px_rgba(45,212,191,0.4)]"
           />
-          <h1 className="bg-gradient-to-r from-[var(--teal)] to-[var(--section-food)] bg-clip-text font-display text-2xl font-extrabold tracking-tight text-transparent">
+          <h1 className="bg-linear-to-r from-(--teal) to-(--section-food) bg-clip-text font-display text-2xl font-extrabold tracking-tight text-transparent">
             PDH
           </h1>
-          <p className="text-sm text-[var(--text-muted)]">Sign in to access the app</p>
+          <p className="text-sm text-(--text-muted)">Sign in to access the app</p>
           <SignInButton mode="modal">
             <button
               type="button"
-              className="rounded-xl bg-[var(--teal)] px-6 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:brightness-110"
+              className="rounded-xl bg-(--teal) px-6 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:brightness-110"
             >
               Sign in
             </button>

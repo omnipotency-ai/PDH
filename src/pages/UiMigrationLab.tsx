@@ -80,7 +80,6 @@ const longList = [
   "Movement",
   "Medication",
   "Mood",
-  "Cycle",
   "Notes",
   "Weight",
   "Energy",
@@ -99,16 +98,16 @@ export default function UiMigrationLab() {
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 pb-10">
-      <div className="rounded-3xl border border-white/10 bg-[var(--surface-1)] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.24)]">
+      <div className="rounded-3xl border border-white/10 bg-(--surface-1) p-6 shadow-[0_24px_80px_rgba(0,0,0,0.24)]">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--text-faint)]">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-(--text-faint)">
               Manual Verification
             </p>
-            <h1 className="mt-2 font-display text-3xl tracking-tight text-[var(--text)]">
+            <h1 className="mt-2 font-display text-3xl tracking-tight text-(--text)">
               Base UI Migration Lab
             </h1>
-            <p className="mt-2 max-w-2xl text-sm text-[var(--text-muted)]">
+            <p className="mt-2 max-w-2xl text-sm text-(--text-muted)">
               This page exercises the migrated primitives in one place. Open the menus, drawers,
               sheets, tooltips, tabs, and toggles here and compare the behavior against what you
               expect in the live screens.
@@ -134,10 +133,10 @@ export default function UiMigrationLab() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <section className="rounded-3xl border border-white/10 bg-[var(--surface-1)] p-5">
-          <h2 className="text-lg font-semibold text-[var(--text)]">Buttons, labels, toggles</h2>
+        <section className="rounded-3xl border border-white/10 bg-(--surface-1) p-5">
+          <h2 className="text-lg font-semibold text-(--text)">Buttons, labels, toggles</h2>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <div className="space-y-3 rounded-2xl border border-white/8 bg-[var(--surface-0)] p-4">
+            <div className="space-y-3 rounded-2xl border border-white/8 bg-(--surface-0) p-4">
               <div className="flex flex-wrap gap-2">
                 <Button>Default</Button>
                 <Button variant="secondary">Secondary</Button>
@@ -174,7 +173,7 @@ export default function UiMigrationLab() {
               </div>
             </div>
 
-            <div className="space-y-4 rounded-2xl border border-white/8 bg-[var(--surface-0)] p-4">
+            <div className="space-y-4 rounded-2xl border border-white/8 bg-(--surface-0) p-4">
               <div className="flex items-center gap-3">
                 <Checkbox
                   id="ui-lab-checkbox"
@@ -187,7 +186,7 @@ export default function UiMigrationLab() {
               </div>
               <div className="flex items-center gap-3">
                 <Switch checked={switchChecked} onCheckedChange={setSwitchChecked} />
-                <span className="text-sm text-[var(--text)]">
+                <span className="text-sm text-(--text)">
                   Switch state: {switchChecked ? "enabled" : "disabled"}
                 </span>
               </div>
@@ -213,17 +212,17 @@ export default function UiMigrationLab() {
                   <ToggleGroupItem value="sleep">Sleep</ToggleGroupItem>
                 </ToggleGroup>
               </div>
-              <p className="text-xs text-[var(--text-faint)]">
+              <p className="text-xs text-(--text-faint)">
                 Toggle group value: {toggleGroupValue.length ? toggleGroupValue.join(", ") : "none"}
               </p>
             </div>
           </div>
         </section>
 
-        <section className="rounded-3xl border border-white/10 bg-[var(--surface-1)] p-5">
-          <h2 className="text-lg font-semibold text-[var(--text)]">Overlays and navigation</h2>
+        <section className="rounded-3xl border border-white/10 bg-(--surface-1) p-5">
+          <h2 className="text-lg font-semibold text-(--text)">Overlays and navigation</h2>
           <div className="mt-4 grid gap-4">
-            <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-white/8 bg-[var(--surface-0)] p-4">
+            <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-white/8 bg-(--surface-0) p-4">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button variant="outline">Tooltip trigger</Button>
@@ -247,7 +246,7 @@ export default function UiMigrationLab() {
 
               <Popover open={anchoredPopoverOpen} onOpenChange={setAnchoredPopoverOpen}>
                 <PopoverAnchor asChild>
-                  <div className="rounded-2xl border border-dashed border-white/15 px-3 py-2 text-sm text-[var(--text-muted)]">
+                  <div className="rounded-2xl border border-dashed border-white/15 px-3 py-2 text-sm text-(--text-muted)">
                     Anchored card target
                   </div>
                 </PopoverAnchor>
@@ -269,7 +268,7 @@ export default function UiMigrationLab() {
               </Popover>
             </div>
 
-            <div className="rounded-2xl border border-white/8 bg-[var(--surface-0)] p-4">
+            <div className="rounded-2xl border border-white/8 bg-(--surface-0) p-4">
               <NavigationMenu viewport={false}>
                 <NavigationMenuList className="justify-start">
                   <NavigationMenuItem>
@@ -294,7 +293,7 @@ export default function UiMigrationLab() {
               </NavigationMenu>
             </div>
 
-            <div className="flex flex-wrap gap-3 rounded-2xl border border-white/8 bg-[var(--surface-0)] p-4">
+            <div className="flex flex-wrap gap-3 rounded-2xl border border-white/8 bg-(--surface-0) p-4">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline">
@@ -353,7 +352,7 @@ export default function UiMigrationLab() {
                     <SheetTitle>Sheet demo</SheetTitle>
                     <SheetDescription>Side panel animation and close button.</SheetDescription>
                   </SheetHeader>
-                  <div className="p-4 text-sm text-[var(--text-muted)]">
+                  <div className="p-4 text-sm text-(--text-muted)">
                     This is the Base UI dialog-backed sheet wrapper.
                   </div>
                 </SheetContent>
@@ -388,29 +387,29 @@ export default function UiMigrationLab() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-        <section className="rounded-3xl border border-white/10 bg-[var(--surface-1)] p-5">
-          <h2 className="text-lg font-semibold text-[var(--text)]">Disclosure + tabs</h2>
+        <section className="rounded-3xl border border-white/10 bg-(--surface-1) p-5">
+          <h2 className="text-lg font-semibold text-(--text)">Disclosure + tabs</h2>
           <div className="mt-4 space-y-4">
             <Collapsible
               open={collapsibleOpen}
               onOpenChange={setCollapsibleOpen}
-              className="overflow-hidden rounded-2xl border border-white/8 bg-[var(--surface-0)]"
+              className="overflow-hidden rounded-2xl border border-white/8 bg-(--surface-0)"
             >
               <CollapsibleTrigger asChild>
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left text-sm font-semibold text-[var(--text)] transition-colors hover:bg-white/4 hover:text-[var(--teal)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]/35 focus:ring-inset"
+                  className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left text-sm font-semibold text-(--text) transition-colors hover:bg-white/4 hover:text-(--teal) focus:outline-none focus:ring-2 focus:ring-(--ring)/35 focus:ring-inset"
                 >
                   <span className="flex items-center gap-2">
                     <FlaskConical className="size-4" />
                     Flexible section
                   </span>
-                  <span className="text-xs text-[var(--text-faint)]">
+                  <span className="text-xs text-(--text-faint)">
                     {collapsibleOpen ? "Collapse" : "Expand"}
                   </span>
                 </button>
               </CollapsibleTrigger>
-              <CollapsibleContent className="border-t border-white/8 px-4 py-4 text-sm text-[var(--text-muted)]">
+              <CollapsibleContent className="border-t border-white/8 px-4 py-4 text-sm text-(--text-muted)">
                 The trigger stays visually part of the same card, and the panel now eases in below
                 it instead of feeling detached.
               </CollapsibleContent>
@@ -419,19 +418,19 @@ export default function UiMigrationLab() {
             <Accordion defaultValue={["summary"]} multiple className="space-y-3">
               <AccordionItem
                 value="summary"
-                className="overflow-hidden rounded-2xl border border-white/8 bg-[var(--surface-0)] px-4"
+                className="overflow-hidden rounded-2xl border border-white/8 bg-(--surface-0) px-4"
               >
                 <AccordionTrigger>Symptom summary</AccordionTrigger>
-                <AccordionContent className="text-[var(--text-muted)]">
+                <AccordionContent className="text-(--text-muted)">
                   Confirms Base UI accordion panel open-state selectors and icon rotation.
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem
                 value="details"
-                className="overflow-hidden rounded-2xl border border-white/8 bg-[var(--surface-0)] px-4"
+                className="overflow-hidden rounded-2xl border border-white/8 bg-(--surface-0) px-4"
               >
                 <AccordionTrigger>Nutrition details</AccordionTrigger>
-                <AccordionContent className="text-[var(--text-muted)]">
+                <AccordionContent className="text-(--text-muted)">
                   Open and close this item as well to verify multiple-item behavior.
                 </AccordionContent>
               </AccordionItem>
@@ -444,14 +443,14 @@ export default function UiMigrationLab() {
               </TabsList>
               <TabsContent
                 value="one"
-                className="rounded-2xl border border-white/8 bg-[var(--surface-0)] p-4 text-sm text-[var(--text-muted)]"
+                className="rounded-2xl border border-white/8 bg-(--surface-0) p-4 text-sm text-(--text-muted)"
               >
                 Tabs now read as a section switcher rather than a pill group, and keyboard focus no
                 longer draws over the active border.
               </TabsContent>
               <TabsContent
                 value="two"
-                className="rounded-2xl border border-white/8 bg-[var(--surface-0)] p-4 text-sm text-[var(--text-muted)]"
+                className="rounded-2xl border border-white/8 bg-(--surface-0) p-4 text-sm text-(--text-muted)"
               >
                 Switch tabs with mouse and keyboard to validate focus roving and active styling.
               </TabsContent>
@@ -459,11 +458,11 @@ export default function UiMigrationLab() {
           </div>
         </section>
 
-        <section className="rounded-3xl border border-white/10 bg-[var(--surface-1)] p-5">
-          <h2 className="text-lg font-semibold text-[var(--text)]">Scroll area + separators</h2>
-          <div className="mt-4 rounded-2xl border border-white/8 bg-[var(--surface-0)] p-4">
+        <section className="rounded-3xl border border-white/10 bg-(--surface-1) p-5">
+          <h2 className="text-lg font-semibold text-(--text)">Scroll area + separators</h2>
+          <div className="mt-4 rounded-2xl border border-white/8 bg-(--surface-0) p-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-[var(--text)]">Scrollable list</span>
+              <span className="text-sm text-(--text)">Scrollable list</span>
               <Badge variant="outline">12 rows</Badge>
             </div>
             <Separator className="my-3" />
@@ -475,12 +474,12 @@ export default function UiMigrationLab() {
                     className={cn(
                       "flex items-center justify-between rounded-xl border px-3 py-2 text-sm",
                       index % 2 === 0
-                        ? "border-white/8 bg-[var(--surface-1)]"
+                        ? "border-white/8 bg-(--surface-1)"
                         : "border-sky-400/15 bg-sky-400/6",
                     )}
                   >
-                    <span className="text-[var(--text)]">{item}</span>
-                    <span className="text-xs text-[var(--text-faint)]">ready</span>
+                    <span className="text-(--text)">{item}</span>
+                    <span className="text-xs text-(--text-faint)">ready</span>
                   </div>
                 ))}
               </div>
@@ -495,7 +494,7 @@ export default function UiMigrationLab() {
         title="Responsive shell demo"
         description="Resize the window to verify the mobile drawer, tablet dialog, and desktop sheet variants."
       >
-        <div className="space-y-4 p-4 text-sm text-[var(--text-muted)]">
+        <div className="space-y-4 p-4 text-sm text-(--text-muted)">
           <p>
             This wrapper now routes through the Base UI drawer and dialog primitives instead of the
             old Radix/Vaul mix.

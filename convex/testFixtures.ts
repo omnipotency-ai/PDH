@@ -20,10 +20,6 @@ export const TEST_AI_INSIGHT: {
   directResponseToUser: string | null;
   summary: string;
   educationalInsight: { topic: string; fact: string } | null;
-  lifestyleExperiment: {
-    status: "adapted" | "broken" | "testing" | "rewarding";
-    message: string;
-  } | null;
   foodAssessments: Array<{
     food: string;
     verdict: "safe" | "watch" | "avoid" | "trial_next";
@@ -38,26 +34,19 @@ export const TEST_AI_INSIGHT: {
     confidence: "high" | "medium" | "low";
     reasoning: string;
   }>;
-  likelySafe: Array<{ food: string; reasoning: string }>;
   mealPlan: Array<{
     meal: string;
     items: string[];
     reasoning: string;
   }>;
-  nextFoodToTry: { food: string; reasoning: string; timing: string };
-  miniChallenge: { challenge: string; duration: string } | null;
   suggestions: string[];
 } = {
   directResponseToUser: null,
   summary: "Test summary",
   educationalInsight: null,
-  lifestyleExperiment: null,
   foodAssessments: [],
   suspectedCulprits: [],
-  likelySafe: [],
   mealPlan: [],
-  nextFoodToTry: { food: "Plain white rice", reasoning: "", timing: "" },
-  miniChallenge: null,
   suggestions: [],
 };
 
@@ -100,11 +89,5 @@ export const TEST_AI_INSIGHT_WITH_FOODS: typeof TEST_AI_INSIGHT = {
       reasoning: "Caused issues",
     },
   ],
-  likelySafe: [{ food: "Rice", reasoning: "Well tolerated" }],
-  nextFoodToTry: {
-    food: "Oatmeal",
-    reasoning: "Good fiber source",
-    timing: "Tomorrow morning",
-  },
   suggestions: ["Drink more water", "Try smaller meals"],
 };

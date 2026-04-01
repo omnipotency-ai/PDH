@@ -147,13 +147,6 @@ export const foodTendencyValidator = v.union(
   v.literal("hard"),
 );
 
-const lifestyleExperimentStatusValidator = v.union(
-  v.literal("adapted"),
-  v.literal("broken"),
-  v.literal("testing"),
-  v.literal("rewarding"),
-);
-
 export const aiInsightValidator = v.union(
   v.object({
     directResponseToUser: v.optional(v.union(v.string(), v.null())),
@@ -161,15 +154,6 @@ export const aiInsightValidator = v.union(
     clinicalReasoning: v.optional(v.union(v.string(), v.null())),
     educationalInsight: v.optional(
       v.union(v.object({ topic: v.string(), fact: v.string() }), v.null()),
-    ),
-    lifestyleExperiment: v.optional(
-      v.union(
-        v.object({
-          status: lifestyleExperimentStatusValidator,
-          message: v.string(),
-        }),
-        v.null(),
-      ),
     ),
     foodAssessments: v.optional(v.array(structuredFoodAssessmentValidator)),
     suspectedCulprits: v.array(
@@ -179,24 +163,12 @@ export const aiInsightValidator = v.union(
         reasoning: v.string(),
       }),
     ),
-    likelySafe: v.array(v.object({ food: v.string(), reasoning: v.string() })),
     mealPlan: v.array(
       v.object({
         meal: v.string(),
         items: v.array(v.string()),
         reasoning: v.string(),
       }),
-    ),
-    nextFoodToTry: v.object({
-      food: v.string(),
-      reasoning: v.string(),
-      timing: v.string(),
-    }),
-    miniChallenge: v.optional(
-      v.union(
-        v.object({ challenge: v.string(), duration: v.string() }),
-        v.null(),
-      ),
     ),
     suggestions: v.array(v.string()),
   }),

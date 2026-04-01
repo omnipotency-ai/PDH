@@ -76,7 +76,10 @@ export function computeTrend(stat: TrendData): Trend | null {
   if (stat.clearedHistory) return "improving";
 
   // Recent suspect with negative Bayesian status → worsening
-  if (stat.recentSuspect && (stat.primaryStatus === "watch" || stat.primaryStatus === "avoid")) {
+  if (
+    stat.recentSuspect &&
+    (stat.primaryStatus === "watch" || stat.primaryStatus === "avoid")
+  ) {
     return "worsening";
   }
 
@@ -84,7 +87,8 @@ export function computeTrend(stat: TrendData): Trend | null {
   // combinedScore is (codePositive - codeNegative + aiScore), reflecting
   // the net posterior evidence direction.
   if (stat.confidence >= 0.3) {
-    if (stat.combinedScore > 0.5) return stat.primaryStatus === "safe" ? "stable" : "improving";
+    if (stat.combinedScore > 0.5)
+      return stat.primaryStatus === "safe" ? "stable" : "improving";
     if (stat.combinedScore < -0.5) return "worsening";
     return "stable";
   }
@@ -92,7 +96,11 @@ export function computeTrend(stat: TrendData): Trend | null {
   // Low confidence fallback: compare recent vs older outcomes
   const all = stat.recentOutcomes;
   const badScore = (outcomes: typeof all) =>
-    outcomes.reduce((sum, o) => sum + (o === "bad" ? 2 : o === "loose" || o === "hard" ? 1 : 0), 0);
+    outcomes.reduce(
+      (sum, o) =>
+        sum + (o === "bad" ? 2 : o === "loose" || o === "hard" ? 1 : 0),
+      0,
+    );
 
   const midpoint = Math.ceil(all.length / 2);
   const recent = all.slice(0, midpoint);
@@ -111,31 +119,28 @@ export function computeTrend(stat: TrendData): Trend | null {
 // ─── AI override flags ────────────────────────────────────────────────────────
 
 export interface AiFlags {
-  likelySafe: Set<string>;
   suspectedCulprits: Set<string>;
 }
 
-export function buildAiFlags(aiHistory: ReturnType<typeof useAiAnalysisHistory>): AiFlags {
-  const likelySafe = new Set<string>();
+export function buildAiFlags(
+  aiHistory: ReturnType<typeof useAiAnalysisHistory>,
+): AiFlags {
   const suspectedCulprits = new Set<string>();
 
-  if (!aiHistory || aiHistory.length === 0) return { likelySafe, suspectedCulprits };
+  if (!aiHistory || aiHistory.length === 0) return { suspectedCulprits };
 
   // Find latest record with a valid insight
   const latest = aiHistory.find(
     (a: { insight: unknown; error?: unknown }) => a.insight && !a.error,
   );
-  if (!latest) return { likelySafe, suspectedCulprits };
+  if (!latest) return { suspectedCulprits };
 
   const insight = parseAiInsight(latest.insight);
-  if (!insight) return { likelySafe, suspectedCulprits };
+  if (!insight) return { suspectedCulprits };
 
-  for (const item of insight.likelySafe) {
-    likelySafe.add(item.food.toLowerCase());
-  }
   for (const item of insight.suspectedCulprits) {
     suspectedCulprits.add(item.food.toLowerCase());
   }
 
-  return { likelySafe, suspectedCulprits };
+  return { suspectedCulprits };
 }
