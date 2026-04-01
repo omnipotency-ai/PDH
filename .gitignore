@@ -10,7 +10,6 @@ coverage/
 .playwright-cli/
 .DS_Store
 *.log
-bun.lock
 
 # Office documents & temp files
 *.xlsx
