@@ -38,3 +38,4 @@ test-results/
 # Track shared project instructions under .claude/, but keep local state out.
 .claude/**/.DS_Store
 .claude/command-history.log
+.claude/worktrees/

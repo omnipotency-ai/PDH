@@ -10,7 +10,7 @@ export default defineConfig({
   },
   test: {
     environment: "edge-runtime",
-    exclude: ["e2e/**", "node_modules/**"],
+    exclude: ["e2e/**", "node_modules/**", ".claude/worktrees/**"],
     server: { deps: { inline: ["convex-test"] } },
   },
 });
