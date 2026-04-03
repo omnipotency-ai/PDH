@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { resolveCanonicalFoodName } from "../shared/foodCanonicalName";
+import { isFoodPipelineType } from "../shared/logTypeUtils";
 import {
   buildFoodEvidenceResult,
   type FoodEvidenceLog,
@@ -923,7 +924,7 @@ export const backfillKnownFoodsWorker = internalMutation({
 
     for (const log of logs) {
       lastTimestamp = log.timestamp;
-      if (log.type !== "food") continue;
+      if (!isFoodPipelineType(log.type)) continue;
 
       const data = log.data as Record<string, unknown> | null;
       if (!Array.isArray(data?.items)) continue;

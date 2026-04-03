@@ -375,7 +375,7 @@ async function recanonicalizeFoodLogsForUser(
   const recanonicalizedSamples: string[] = [];
 
   for (const log of logs) {
-    if (log.type !== "food") continue;
+    if (!isFoodPipelineType(log.type)) continue;
     processedLogs += 1;
 
     const data = log.data as Record<string, unknown> | null;
@@ -974,7 +974,7 @@ export const batchUpdateFoodItems = mutation({
       if (record.userId !== userId) {
         throw new Error("Not authorized");
       }
-      if (record.type !== "food") {
+      if (!isFoodPipelineType(record.type)) {
         skipped++;
         continue;
       }
@@ -2176,7 +2176,7 @@ export const backfillResolvedBy = mutation({
     let itemsPatched = 0;
 
     for (const log of logs) {
-      if (log.type !== "food") continue;
+      if (!isFoodPipelineType(log.type)) continue;
       const items = (log.data as Record<string, unknown> | undefined)?.items as
         | Array<Record<string, unknown>>
         | undefined;

@@ -1,79 +1,50 @@
-# Next Session — Nutrition Card Wave 1 (Foundation)
+# Next Session — Nutrition Card Wave 2 (Core UI)
 
 ## Context
 
-Wave 0 research is complete. 16 agents (3 independent + 1 validator × 4 tasks) produced cross-validated docs. All findings verified against source code. Branch: `feat/nutrition`.
+Wave 0 (Research) and Wave 1 (Foundation) are complete on `feat/nutrition` branch. PR #2 is open for merge to main. All work is additive — no existing behavior changed.
 
 ## What to read first
 
-1. `memory/project_wave0_decisions.md` — user decisions from end of Wave 0 session
+1. `docs/plans/nutrition-card-implementation-plan.json` (v3.0) — the master plan, Wave 0+1 marked complete
 2. `memory/project_nutrition_card_decisions.md` — all 22 locked visual + behavioral decisions
-3. `docs/nutrition-card/data-model-mapping.md` — definitive mock → real mapping
-4. `docs/nutrition-card/pipeline-integration.md` — how to call the food pipeline (Option B)
-5. `docs/nutrition-card/fluid-migration.md` — preset migration table
-6. `docs/nutrition-card/portion-schema-design.md` — interfaces, field mapping, seeding strategy
-7. `docs/plans/nutrition-card-implementation-plan.json` — the 30-task plan (needs updates below)
+3. `memory/project_wave0_decisions.md` — user decisions: type=liquid, coffee composite, 1850kcal, portions pre-populated
+4. `memory/feedback_subagent_model_choice.md` — use opus for implementers + quality reviewers, haiku for spec reviewers
 
-## Plan updates required before starting
+## What was built in Wave 1
 
-The original plan needs these additions based on user decisions:
+- **`shared/logTypeUtils.ts`** — `isFoodPipelineType()` helper (centralised food/liquid check)
+- **`shared/foodPortionData.ts`** — 147 entries, USDA nutrition per 100g, portion sizes
+- **`shared/foodRegistryUtils.ts`** — `getPortionData`, `calculateCaloriesForPortion`, `calculateMacrosForPortion`
+- **`src/lib/nutritionUtils.ts`** — `getMealSlot`, `calculateTotalCalories`, `calculateTotalMacros`, `groupByMealSlot`, `calculateWaterIntake`
+- **`src/hooks/useNutritionData.ts`** — read-only hook: todayFoodLogs, totalCaloriesToday, totalMacrosToday, waterIntakeToday, caloriesByMealSlot, logsByMealSlot, recentFoods
+- **`src/hooks/useProfile.ts`** — `useNutritionGoals()` (1850kcal, 1000ml defaults), `useFoodFavourites()` (add/remove/isFavourite)
+- **`convex/migrations.ts`** — `backfillFluidToLiquid` (ready to run, not yet executed)
+- **Profile schema** — `nutritionGoals` + `foodFavourites` optional fields on profiles table
 
-### New: `type: "liquid"` log type
+## Wave 2 task order
 
-- Add `"liquid"` to LogType union in `convex/validators.ts`, `src/types/domain.ts`
-- Update `convex/schema.ts` if LogType is referenced
-- Update all consumers of LogType (SyncedLogsContext, syncCore, TodayLog groups)
-- This is a schema-level change — do it first in Wave 1
+1. **W2-01: useNutritionStore** — useReducer-based UI state (view, searchQuery, stagingItems, modals, mealSlot). Fuse.js search (threshold 0.4, min 3 chars). Staging aggregates same canonicalName. Staging persists across view changes. **Must complete before W2-02 through W2-06.**
+2. **W2-02: NutritionCard (collapsed)** — header, calorie summary bar, search input, log food button, water progress. Uses useNutritionData + useNutritionStore.
+3. **W2-03: SearchView** — meals first then foods in results, camera+mic icons, auto-detect meal slot label.
+4. **W2-04: StagingModal** — centered, food rows with -/+/cal/X, 5 macro totals, match indicators.
+5. **W2-05: WaterModal** — centered, ring animation, plus/minus, cyan/teal theme, escape to close.
+6. **W2-06: CalorieDetailView** — segmented color bar by meal slot, per-slot calories, 5 macro columns, accordions.
 
-### New: Fluid → liquid backfill migration
+W2-02 through W2-06 can run in parallel after W2-01 completes (they all depend on the store but not each other).
 
-- All existing `type: "fluid"` logs where name ≠ "Water" must be updated to `type: "liquid"`
-- Use Convex migration pattern (widen-migrate-narrow or batch mutation)
-- Water logs stay as `type: "fluid"`
+## Before starting Wave 2
 
-### New: Coffee composite in food registry
+- Merge PR #2 to main (or continue on feat/nutrition)
+- Run `backfillFluidToLiquid` migration on dev data
+- Agent A's worktree files are reference only: `.claude/worktrees/agent-a31ddf8f/`
 
-- Coffee = composite: 200ml water + 50ml skimmed milk + coffee
-- Default portion: 250ml
-- QuickCapture coffee tap should create a `type: "liquid"` log (not fluid)
-- Wire this in Wave 3 (Integration) alongside other QuickCapture changes
+## Subagent strategy (learned this session)
 
-### Changed: FOOD_PORTION_DATA must be pre-populated
-
-- The plan assumed this could start empty. User said NO — all 147 entries need real data.
-- This becomes a Wave 1 task: research + populate `shared/foodPortionData.ts` with:
-  - Nutrition per 100g from USDA FoodData Central / Open Food Facts
-  - Default portion sizes in grams
-  - Natural units with gram equivalents (tsp=5g, tbsp=15g, slice bread≈30g, etc.)
-- DO NOT hallucinate values. Use verified external data sources.
-- This blocks Wave 2 UI work (can't show calories without data).
-
-### Changed: Default calorie goal
-
-- 1,850 kcal/day (not 1,800). Based on user's actual stats: male, 52y, 186cm, 105kg, sedentary.
-- Water goal: 1,000ml (unchanged).
-
-## Revised Wave 1 task order
-
-1. **W1-00 (NEW): Add `type: "liquid"` to schema** — validators, domain types, schema, all consumers
-2. **W1-01: Populate FOOD_PORTION_DATA** — research real data, populate all 147 entries, create utility functions (TDD)
-3. **W1-02: Add nutrition goals + favourites to profile schema** — calorieGoal default 1,850, waterGoalMl 1,000
-4. **W1-03: Build useNutritionData hook** — reads from SyncedLogs, handles food + liquid + fluid types
-5. **W1-04 (NEW): Backfill fluid → liquid migration** — batch mutation for non-water fluid logs
-
-Tasks W1-00 and W1-01 can run in parallel (no file conflicts). W1-02 depends on W1-00 (schema). W1-03 depends on W1-00 + W1-01 + W1-02. W1-04 depends on W1-00.
-
-## Key research findings to remember
-
-- **Option B for pipeline**: send `rawInput` + `items: []` to trigger server matching
-- **Registry has 147 entries** (not 148)
-- **canonicalName is optional AND nullable** — UI must handle missing lookups grac- **ingredientProfiles is per-user, starts empty** — static FOOD_PORTION_DATA is the global fallback
-- **fiberPer100g in code, "Fibre" in UI** — US spelling in identifiers, UK in display
-- **MacroBreakdown nulls mean "no data"** — distinguish from zero grams
-- **MealSlot is lowercase** — "breakfast", "lunch", "dinner", "snack"
-- **Aquarius → "electrolyte drink"** (250ml), needs adding to examples array
-- **"Other" freeform drink button removed** — non-water drinks go through food search
-- **QuickCapture fluid habits stay as-is** (`logAs` only accepts "habit" | "fluid", no "food")
+- **Opus for implementers** — sonnet ran out of context 3 of 4 times, requiring manual cleanup
+- **Haiku for spec reviewers** — checklist comparison works fine at haiku tier
+- **Opus for quality reviewers** — catches real architectural bugs (found 20 missed food pipeline consumers)
+- **Sonnet for targeted fix agents** — narrow scope, works fine
 
 ## Verification commands
 
@@ -81,10 +52,10 @@ Tasks W1-00 and W1-01 can run in parallel (no file conflicts). W1-02 depends on 
 bun run typecheck
 bun run build
 bun run lint:fix
-bun run test
+bun run test:unit
 bun run format
 ```
 
 ## Branch
 
-`feat/nutrition` — commit to this branch, not adams-rib.
+Continue on `feat/nutrition` or create `feat/nutrition-ui` for Wave 2.

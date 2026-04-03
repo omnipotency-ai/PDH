@@ -21,7 +21,8 @@ import { toast } from "sonner";
 import { useApiKeyContext } from "@/contexts/ApiKeyContext";
 import { useSyncedLogsContext } from "@/contexts/SyncedLogsContext";
 import { asConvexId, type SyncedLog } from "@/lib/sync";
-import type { FoodItem, FoodLog } from "@/types/domain";
+import type { FoodItem, FoodLog, LiquidLog } from "@/types/domain";
+import { isFoodPipelineType } from "@shared/logTypeUtils";
 import { api } from "../../convex/_generated/api";
 
 /**
@@ -42,13 +43,16 @@ function isItemUnresolvedForLlm(item: FoodItem): boolean {
  * Find food logs that have unresolved items needing LLM matching.
  * Only considers logs from the last 6 hours (the processing window).
  */
-function findLogsNeedingLlmMatching(logs: SyncedLog[], nowMs: number): FoodLog[] {
+function findLogsNeedingLlmMatching(
+  logs: SyncedLog[],
+  nowMs: number,
+): (FoodLog | LiquidLog)[] {
   const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
-  const result: FoodLog[] = [];
+  const result: (FoodLog | LiquidLog)[] = [];
 
   for (const log of logs) {
-    if (log.type !== "food") continue;
-    const foodLog = log as FoodLog;
+    if (!isFoodPipelineType(log.type)) continue;
+    const foodLog = log as FoodLog | LiquidLog;
 
     // Only process logs within the 6-hour window
     const ageMs = nowMs - foodLog.timestamp;
@@ -126,9 +130,12 @@ export function useFoodLlmMatching(): void {
         .then((result) => {
           if (result.matched > 0) {
             const foodWord = result.matched === 1 ? "food" : "foods";
-            toast.success(`${result.matched} ${foodWord} matched automatically`, {
-              id: toastId,
-            });
+            toast.success(
+              `${result.matched} ${foodWord} matched automatically`,
+              {
+                id: toastId,
+              },
+            );
           } else {
             // Nothing matched — dismiss the loading toast silently.
             // The unresolved toast from useUnresolvedFoodToast will guide the user.
@@ -137,7 +144,9 @@ export function useFoodLlmMatching(): void {
         })
         .catch((err: unknown) => {
           const message = err instanceof Error ? err.message : "Unknown error";
-          console.error(`LLM food matching failed for log ${foodLog.id}: ${message}`);
+          console.error(
+            `LLM food matching failed for log ${foodLog.id}: ${message}`,
+          );
 
           // Non-retryable errors: don't remove from sent set (prevents retry loops)
           const isNonRetryable =
@@ -151,9 +160,12 @@ export function useFoodLlmMatching(): void {
               message.includes("Invalid OpenAI API key") ||
               message.includes("No OpenAI API key available")
             ) {
-              toast.error("AI matching failed: check your OpenAI API key in Settings", {
-                id: toastId,
-              });
+              toast.error(
+                "AI matching failed: check your OpenAI API key in Settings",
+                {
+                  id: toastId,
+                },
+              );
             } else {
               toast.dismiss(toastId);
             }
