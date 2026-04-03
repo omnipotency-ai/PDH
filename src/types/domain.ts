@@ -77,6 +77,18 @@ export const HEALTH_COMORBIDITY_OPTIONS = [
 
 export type Gender = "male" | "female" | "non_binary" | "prefer_not_to_say" | "";
 
+// ── Nutrition Goals ───────────────────────────────────────────────────────────
+
+export interface NutritionGoals {
+  dailyCalorieGoal: number;
+  dailyWaterGoalMl: number;
+}
+
+export const DEFAULT_NUTRITION_GOALS: NutritionGoals = {
+  dailyCalorieGoal: 1850,
+  dailyWaterGoalMl: 1000,
+};
+
 // ── Food Personalisation ──────────────────────────────────────────────────────
 
 /** How cautiously Dr. Poo upgrades foods and makes suggestions. */

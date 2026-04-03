@@ -226,6 +226,11 @@ export const aiRequestValidator = v.union(
 
 export const aiResponseValidator = v.union(v.string(), v.null());
 
+export const nutritionGoalsValidator = v.object({
+  dailyCalorieGoal: v.number(),
+  dailyWaterGoalMl: v.number(),
+});
+
 export const sleepGoalValidator = v.object({
   targetHours: v.number(),
   nudgeTime: v.string(),

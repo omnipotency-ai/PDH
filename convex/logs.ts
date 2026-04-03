@@ -24,6 +24,7 @@ import {
   habitsValidator,
   healthProfileValidator,
   logDataValidator,
+  nutritionGoalsValidator,
   sleepGoalValidator,
   transitCalibrationValidator,
 } from "./validators";
@@ -1129,6 +1130,8 @@ export const patchProfile = mutation({
     aiPreferences: v.optional(aiPreferencesValidator),
     foodPersonalisation: v.optional(foodPersonalisationValidator),
     transitCalibration: v.optional(transitCalibrationValidator),
+    nutritionGoals: v.optional(nutritionGoalsValidator),
+    foodFavourites: v.optional(v.array(v.string())),
     now: v.number(),
   },
   handler: async (ctx, args) => {
@@ -1197,6 +1200,14 @@ export const patchProfile = mutation({
         },
       );
     }
+    if (args.nutritionGoals !== undefined) {
+      updates.nutritionGoals = args.nutritionGoals;
+    }
+    if (args.foodFavourites !== undefined) {
+      updates.foodFavourites = sanitizeUnknownStringsDeep(args.foodFavourites, {
+        path: "profile.foodFavourites",
+      });
+    }
 
     if (existing) {
       await ctx.db.patch(existing._id, updates);
@@ -1228,6 +1239,12 @@ export const patchProfile = mutation({
       }),
       ...(updates.transitCalibration !== undefined && {
         transitCalibration: updates.transitCalibration,
+      }),
+      ...(updates.nutritionGoals !== undefined && {
+        nutritionGoals: updates.nutritionGoals,
+      }),
+      ...(updates.foodFavourites !== undefined && {
+        foodFavourites: updates.foodFavourites,
       }),
     } as Parameters<typeof ctx.db.insert<"profiles">>[1]);
   },

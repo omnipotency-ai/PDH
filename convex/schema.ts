@@ -14,6 +14,7 @@ import {
   foodTendencyValidator,
   healthProfileValidator,
   logDataValidator,
+  nutritionGoalsValidator,
   sleepGoalValidator,
   storedFluidPresetsValidator,
   storedProfileHabitsValidator,
@@ -351,6 +352,8 @@ export default defineSchema({
     // Encrypted BYOK OpenAI API key. Stored server-side so Convex actions can
     // read it without the client passing it each time.
     encryptedApiKey: v.optional(v.string()),
+    nutritionGoals: v.optional(nutritionGoalsValidator),
+    foodFavourites: v.optional(v.array(v.string())),
     updatedAt: v.number(),
   }).index("by_userId", ["userId"]),
 

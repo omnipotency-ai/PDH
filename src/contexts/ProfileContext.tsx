@@ -1,5 +1,12 @@
 import { useMutation, useQuery } from "convex/react";
-import { createContext, type ReactNode, useCallback, useContext, useMemo, useRef } from "react";
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useMemo,
+  useRef,
+} from "react";
 import type { HabitConfig } from "@/lib/habitTemplates";
 import { getDefaultHabitTemplates } from "@/lib/habitTemplates";
 import type { SleepGoal } from "@/lib/streaks";
@@ -11,11 +18,13 @@ import type {
   FluidPreset,
   FoodPersonalisation,
   HealthProfile,
+  NutritionGoals,
   TransitCalibration,
 } from "@/types/domain";
 import {
   DEFAULT_AI_PREFERENCES,
   DEFAULT_FOOD_PERSONALISATION,
+  DEFAULT_NUTRITION_GOALS,
   DEFAULT_TRANSIT_CALIBRATION,
 } from "@/types/domain";
 import { api } from "../../convex/_generated/api";
@@ -34,6 +43,8 @@ interface ResolvedProfile {
   aiPreferences: AiPreferences;
   foodPersonalisation: FoodPersonalisation;
   transitCalibration: TransitCalibration;
+  nutritionGoals: NutritionGoals;
+  foodFavourites: string[];
 }
 
 export const DEFAULT_PROFILE: ResolvedProfile = {
@@ -45,6 +56,8 @@ export const DEFAULT_PROFILE: ResolvedProfile = {
   aiPreferences: { ...DEFAULT_AI_PREFERENCES },
   foodPersonalisation: { ...DEFAULT_FOOD_PERSONALISATION },
   transitCalibration: { ...DEFAULT_TRANSIT_CALIBRATION },
+  nutritionGoals: { ...DEFAULT_NUTRITION_GOALS },
+  foodFavourites: [],
 };
 
 // ---------------------------------------------------------------------------
@@ -61,6 +74,8 @@ export type PatchProfileArgs = {
   aiPreferences?: AiPreferences;
   foodPersonalisation?: FoodPersonalisation;
   transitCalibration?: TransitCalibration;
+  nutritionGoals?: NutritionGoals;
+  foodFavourites?: string[];
 };
 
 interface ProfileContextValue {
@@ -91,12 +106,22 @@ function resolveProfile(
   return {
     unitSystem: raw.unitSystem ?? DEFAULT_PROFILE.unitSystem,
     habits: (raw.habits ?? DEFAULT_PROFILE.habits) as HabitConfig[],
-    fluidPresets: (raw.fluidPresets ?? DEFAULT_PROFILE.fluidPresets) as FluidPreset[],
+    fluidPresets: (raw.fluidPresets ??
+      DEFAULT_PROFILE.fluidPresets) as FluidPreset[],
     sleepGoal: raw.sleepGoal ?? DEFAULT_PROFILE.sleepGoal,
     healthProfile: hp ?? DEFAULT_PROFILE.healthProfile,
-    aiPreferences: (raw.aiPreferences ?? DEFAULT_PROFILE.aiPreferences) as AiPreferences,
-    foodPersonalisation: raw.foodPersonalisation ?? DEFAULT_PROFILE.foodPersonalisation,
-    transitCalibration: raw.transitCalibration ?? DEFAULT_PROFILE.transitCalibration,
+    aiPreferences: (raw.aiPreferences ??
+      DEFAULT_PROFILE.aiPreferences) as AiPreferences,
+    foodPersonalisation:
+      raw.foodPersonalisation ?? DEFAULT_PROFILE.foodPersonalisation,
+    transitCalibration:
+      raw.transitCalibration ?? DEFAULT_PROFILE.transitCalibration,
+    nutritionGoals:
+      (raw.nutritionGoals as NutritionGoals | undefined) ??
+      DEFAULT_PROFILE.nutritionGoals,
+    foodFavourites:
+      (raw.foodFavourites as string[] | undefined) ??
+      DEFAULT_PROFILE.foodFavourites,
   };
 }
 
