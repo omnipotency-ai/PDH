@@ -175,6 +175,7 @@ export function calculateCaloriesForPortion(
   canonical: string,
   portionG: number,
 ): number | undefined {
+  if (portionG < 0) return undefined;
   const data = FOOD_PORTION_DATA.get(canonical);
   if (data?.caloriesPer100g == null) return undefined;
   return Math.round((data.caloriesPer100g * portionG) / 100);
@@ -201,6 +202,15 @@ export function calculateMacrosForPortion(
   canonical: string,
   portionG: number,
 ): MacroBreakdown {
+  if (portionG < 0) {
+    return {
+      protein: undefined,
+      carbs: undefined,
+      fat: undefined,
+      sugars: undefined,
+      fiber: undefined,
+    };
+  }
   const data = FOOD_PORTION_DATA.get(canonical);
   if (!data) {
     return {

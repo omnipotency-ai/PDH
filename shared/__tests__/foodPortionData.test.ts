@@ -138,6 +138,15 @@ describe("calculateCaloriesForPortion", () => {
     expect(calculateCaloriesForPortion("not a food", 150)).toBeUndefined();
     expect(calculateCaloriesForPortion("", 100)).toBeUndefined();
   });
+
+  it("returns undefined for negative portionG", () => {
+    expect(
+      calculateCaloriesForPortion("grilled white meat", -1),
+    ).toBeUndefined();
+    expect(
+      calculateCaloriesForPortion("grilled white meat", -100),
+    ).toBeUndefined();
+  });
 });
 
 // ── calculateMacrosForPortion ────────────────────────────────────────────────
@@ -207,5 +216,14 @@ describe("calculateMacrosForPortion", () => {
       const decimals = result.protein.toString().split(".")[1];
       expect((decimals?.length ?? 0) <= 1).toBe(true);
     }
+  });
+
+  it("returns undefined values for negative portionG", () => {
+    const result = calculateMacrosForPortion("grilled white meat", -50);
+    expect(result.protein).toBeUndefined();
+    expect(result.carbs).toBeUndefined();
+    expect(result.fat).toBeUndefined();
+    expect(result.sugars).toBeUndefined();
+    expect(result.fiber).toBeUndefined();
   });
 });

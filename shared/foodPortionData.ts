@@ -1307,6 +1307,10 @@ const ZONE_3: PortionRecord = {
     fiberPer100g: 1.5,
     source: "estimated",
   },
+  // Note: Bulking agents (maltodextrin, dextrose) in sweetener packets
+  // contribute fewer metabolizable calories than the standard 4 kcal/g
+  // carbohydrate model implies. Macro-derived calories will overestimate
+  // the stated caloriesPer100g.
   "non-sugar sweetener": {
     defaultPortionG: 1,
     naturalUnit: "sachet",
@@ -1323,12 +1327,12 @@ const ZONE_3: PortionRecord = {
     defaultPortionG: 25,
     naturalUnit: "square",
     unitWeightG: 10,
-    caloriesPer100g: 546,
-    proteinPer100g: 4.9,
-    carbsPer100g: 59.4,
-    fatPer100g: 31.3,
-    sugarsPer100g: 47.9,
-    fiberPer100g: 7.0,
+    caloriesPer100g: 598,
+    proteinPer100g: 7.8,
+    carbsPer100g: 45.9,
+    fatPer100g: 42.6,
+    sugarsPer100g: 24.0,
+    fiberPer100g: 10.9,
     source: "usda",
   },
   "refined confectionery": {
@@ -1649,6 +1653,9 @@ const ZONE_3: PortionRecord = {
     fiberPer100g: 22.0,
     source: "estimated",
   },
+  // Note: Alcohol calories (7 kcal/g ethanol) are not captured by the
+  // protein/carbs/fat macro model (4/4/9 kcal/g). Macros will not sum
+  // to the stated caloriesPer100g — the gap is ethanol energy.
   alcohol: {
     defaultPortionG: 150,
     naturalUnit: "glass",
