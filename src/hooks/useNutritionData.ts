@@ -106,16 +106,28 @@ export function useNutritionData(): NutritionData {
   }, [logs, todayKey]);
 
   // Derive calorie total.
-  const totalCaloriesToday = useMemo(() => calculateTotalCalories(todayFoodLogs), [todayFoodLogs]);
+  const totalCaloriesToday = useMemo(
+    () => calculateTotalCalories(todayFoodLogs),
+    [todayFoodLogs],
+  );
 
   // Derive macro totals.
-  const totalMacrosToday = useMemo(() => calculateTotalMacros(todayFoodLogs), [todayFoodLogs]);
+  const totalMacrosToday = useMemo(
+    () => calculateTotalMacros(todayFoodLogs),
+    [todayFoodLogs],
+  );
 
   // Derive water intake.
-  const waterIntakeToday = useMemo(() => calculateWaterIntake(todayFluidLogs), [todayFluidLogs]);
+  const waterIntakeToday = useMemo(
+    () => calculateWaterIntake(todayFluidLogs),
+    [todayFluidLogs],
+  );
 
   // Group today's food logs by meal slot.
-  const logsByMealSlot = useMemo(() => groupByMealSlot(todayFoodLogs), [todayFoodLogs]);
+  const logsByMealSlot = useMemo(
+    () => groupByMealSlot(todayFoodLogs),
+    [todayFoodLogs],
+  );
 
   // Calculate calories per meal slot.
   const caloriesByMealSlot = useMemo(() => {
@@ -137,8 +149,8 @@ export function useNutritionData(): NutritionData {
     const seen = new Set<string>();
     const result: string[] = [];
 
-    // Iterate logs in reverse (most recent first) since logs are sorted ascending by _creationTime.
-    for (let i = logs.length - 1; i >= 0; i--) {
+    // Logs arrive descending (most recent first) from Convex query. Iterate forward.
+    for (let i = 0; i < logs.length; i++) {
       const log = logs[i];
       if (log.timestamp < sevenDaysAgo) break;
 
