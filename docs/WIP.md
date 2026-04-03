@@ -42,34 +42,22 @@ All 4 ingredient subsystems confirmed as pre-built infrastructure for filter pro
 
 ### Wave 1: Meal Logging (in progress)
 
-**Status:** round 2 worktree agents running (2026-04-02)
-**PRD:** merged to main — `docs/design/meal-logging.md`
-**Goal:** Reduce daily logging friction — saved meals, quick-log by meal slot (breakfast/lunch/dinner/snack), favourites, water tracking, calorie breakdown.
-**Architecture:** Home screen Nutrition card + modal (not standalone /food route). Progressive disclosure: collapsed card → expanded search → staging modal.
+**Status:** All 22 decisions locked. Implementation plan written. Ready for execution (2026-04-03).
+**PRD:** `docs/design/meal-logging.md`
+**Decisions:** `memory/project_nutrition_card_decisions.md`
+**Plan:** `docs/plans/nutrition-card-implementation-plan.json` (26 tasks, 6 waves)
+**Next session prompt:** `docs/design/next-session-prompt.md`
 
-**Key design decisions:**
+**Base:** Agent A's worktree (modular, useReducer, 9 files). Color = D's orange. Water = C's cyan.
 
-- Shopping cart pattern with listed rows (+/- portion controls), not chips
-- Recipes = extended foodLibrary composites (no new table)
-- Meal slots auto-detected by time of day, user can override
-- Water logging via separate modal with blue accent
-- 1800 kcal/day goal with per-slot breakdown
+**Implementation approach:** 6 waves of parallel agents:
 
-**Round 1 (completed):** 4 agents built standalone `/food` chip-based builder. V1 and V4 kept for reference. All had Zustand + React 19 infinite loop bug (fixed).
-**Round 2 (complete 2026-04-03):** 4 agents finished. User did extensive browser testing with annotated screenshots. Individual reports + overview comparison written.
-
-**Comparison results:**
-
-- A: Best architecture (modular/useReducer), centered modals, correct dark mode, favourites
-- B: Best live search, inline staging feedback, auto-detected meal label — but staging lost on close
-- C: Best water colours (cyan), cleanest visual — but dark mode broken, monolithic code
-- D: Best accessibility, global escape, block text parsing — but 1001-line component
-- Round 1 V4: Natural unit portions + 6-value macro bar (kcal/protein/carbs/fat/fibre/sugar)
-
-**Reports:** `docs/plans/Worktree spec/report-agent-{a,b,c,d}.md`, `report-overview.md`, `research-food-filter-patterns.md`
-**User annotations:** `docs/plans/Worktree spec/user-annotations/` (images 12-19)
-
-**Next:** Walk through 22 component decisions (visual vs behavioral) one at a time. Then build final combined implementation. See memory file `project_round2_next_session.md` for full agenda.
+- Wave 0: Research (4 agents, read-only analysis docs)
+- Wave 1: Foundation (schema, registry, data hooks)
+- Wave 2: Core UI (6 agents building components)
+- Wave 3: Integration (wire to existing food pipeline)
+- Wave 4: Migration (non-water drinks → food logging)
+- Wave 5: Polish (dark mode, a11y, tests)
 
 ### Wave 2: Filter Bar (static data)
 

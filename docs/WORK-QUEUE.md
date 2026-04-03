@@ -33,7 +33,7 @@
 
 ## Priority: Logging UX Redesign
 
-> PRD: `docs/design/meal-logging.md` (merged). Round 2 complete (2026-04-03). Next: per-component visual+behavioral decisions, then combined implementation.
+> PRD: `docs/design/meal-logging.md` (merged). All 22 decisions locked (2026-04-03). Implementation plan: `docs/plans/nutrition-card-implementation-plan.json` (26 tasks, 6 waves).
 
 | ID     | Title                             | Sev  | Description                                                                                                                                            | Status      |
 | ------ | --------------------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------- |
