@@ -40,36 +40,45 @@ All 4 ingredient subsystems confirmed as pre-built infrastructure for filter pro
 
 ## Upcoming Work Queue
 
-### Wave 1: Meal Logging (in progress)
+### Wave 1: Meal Logging (Wave 0 complete, Wave 1 next)
 
-**Status:** round 2 worktree agents running (2026-04-02)
-**PRD:** merged to main — `docs/design/meal-logging.md`
-**Goal:** Reduce daily logging friction — saved meals, quick-log by meal slot (breakfast/lunch/dinner/snack), favourites, water tracking, calorie breakdown.
-**Architecture:** Home screen Nutrition card + modal (not standalone /food route). Progressive disclosure: collapsed card → expanded search → staging modal.
+**Status:** Wave 0 research complete (2026-04-03). 16 adversarial agents produced 4 cross-validated docs. User reviewed assumptions and made 5 decisions. Plan updated for Wave 1.
+**Branch:** `feat/nutrition`
+**PRD:** `docs/design/meal-logging.md`
+**Decisions:** `memory/project_nutrition_card_decisions.md` + `memory/project_wave0_decisions.md`
+**Plan:** `docs/plans/nutrition-card-implementation-plan.json` (needs updates per next-session-prompt)
+**Research docs:** `docs/nutrition-card/*.md` (4 final + 12 raw analyses)
+**Next session prompt:** `docs/design/next-session-prompt.md`
 
-**Key design decisions:**
+**Wave 0 completed tasks:**
 
-- Shopping cart pattern with listed rows (+/- portion controls), not chips
-- Recipes = extended foodLibrary composites (no new table)
-- Meal slots auto-detected by time of day, user can override
-- Water logging via separate modal with blue accent
-- 1800 kcal/day goal with per-slot breakdown
+- W0-01: Data model mapping (147 entries, mock→real gaps documented)
+- W0-02: Pipeline integration (Option B confirmed — rawInput + empty items)
+- W0-03: Fluid migration (3 presets mapped, water stays fluid)
+- W0-04: Portion schema design (separate FOOD_PORTION_DATA, seeding strategy)
 
-**Round 1 (completed):** 4 agents built standalone `/food` chip-based builder. V1 and V4 kept for reference. All had Zustand + React 19 infinite loop bug (fixed).
-**Round 2 (complete 2026-04-03):** 4 agents finished. User did extensive browser testing with annotated screenshots. Individual reports + overview comparison written.
+**Key Wave 0 user decisions:**
 
-**Comparison results:**
+- New `type: "liquid"` log type (food, liquid, fluid)
+- Coffee composite: 200ml water + 50ml skimmed milk + coffee = 250ml
+- Calorie goal: 1,850 kcal/day
+- FOOD_PORTION_DATA must be pre-populated (not empty)
+- Fluid→liquid backfill migration needed
 
-- A: Best architecture (modular/useReducer), centered modals, correct dark mode, favourites
-- B: Best live search, inline staging feedback, auto-detected meal label — but staging lost on close
-- C: Best water colours (cyan), cleanest visual — but dark mode broken, monolithic code
-- D: Best accessibility, global escape, block text parsing — but 1001-line component
-- Round 1 V4: Natural unit portions + 6-value macro bar (kcal/protein/carbs/fat/fibre/sugar)
+**Wave 1 in progress (Foundation):**
 
-**Reports:** `docs/plans/Worktree spec/report-agent-{a,b,c,d}.md`, `report-overview.md`, `research-food-filter-patterns.md`
-**User annotations:** `docs/plans/Worktree spec/user-annotations/` (images 12-19)
+- W1-00: Add type="liquid" to schema — **DONE** (2026-04-03)
+- W1-01: Populate FOOD_PORTION_DATA (all 147 entries, real data)
+- W1-02: Add nutrition goals + favourites to profile
+- W1-03: Build useNutritionData hook
+- W1-04 (NEW): Backfill fluid→liquid migration
 
-**Next:** Walk through 22 component decisions (visual vs behavioral) one at a time. Then build final combined implementation. See memory file `project_round2_next_session.md` for full agenda.
+**Remaining waves:**
+
+- Wave 2: Core UI (6 agents building components)
+- Wave 3: Integration (wire to existing food pipeline)
+- Wave 4: Migration (non-water drinks → food logging)
+- Wave 5: Polish (dark mode, a11y, tests)
 
 ### Wave 2: Filter Bar (static data)
 

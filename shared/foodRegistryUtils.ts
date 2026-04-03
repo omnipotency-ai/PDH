@@ -14,6 +14,11 @@ import type {
   FoodZone,
 } from "./foodRegistryData";
 import { FOOD_GROUP_LINES, FOOD_REGISTRY } from "./foodRegistryData";
+import type { PortionData } from "./foodPortionData";
+import { FOOD_PORTION_DATA } from "./foodPortionData";
+
+// Re-export PortionData so consumers can import from this utils file
+export type { PortionData };
 
 /**
  * All canonical food names as a Set for O(1) membership checks.
@@ -77,7 +82,9 @@ export function getFoodEntry(canonical: string): FoodRegistryEntry | undefined {
   return FOOD_ENTRY_MAP.get(canonical);
 }
 
-export function getFoodDigestionMetadata(canonical: string): FoodDigestionMetadata | undefined {
+export function getFoodDigestionMetadata(
+  canonical: string,
+): FoodDigestionMetadata | undefined {
   const entry = getFoodEntry(canonical);
   return entry ? pickFoodDigestionMetadata(entry) : undefined;
 }
@@ -86,7 +93,9 @@ export function getFoodZone(canonical: string): FoodZone | undefined {
   return getFoodEntry(canonical)?.zone;
 }
 
-export function getFoodsByZone(zone: FoodZone): ReadonlyArray<FoodRegistryEntry> {
+export function getFoodsByZone(
+  zone: FoodZone,
+): ReadonlyArray<FoodRegistryEntry> {
   return FOOD_REGISTRY.filter((e) => e.zone === zone);
 }
 
@@ -108,8 +117,12 @@ export function getFoodLine(canonical: string): FoodLine | undefined {
   return getFoodEntry(canonical)?.line;
 }
 
-export function getFoodsByLine(line: FoodLine): ReadonlyArray<FoodRegistryEntry> {
-  return FOOD_REGISTRY.filter((e) => e.line === line).sort((a, b) => a.lineOrder - b.lineOrder);
+export function getFoodsByLine(
+  line: FoodLine,
+): ReadonlyArray<FoodRegistryEntry> {
+  return FOOD_REGISTRY.filter((e) => e.line === line).sort(
+    (a, b) => a.lineOrder - b.lineOrder,
+  );
 }
 
 export function getLinesByGroup(group: FoodGroup): ReadonlyArray<FoodLine> {
@@ -141,4 +154,81 @@ export function getGroupDisplayName(group: FoodGroup): string {
     seasoning: "Seasoning",
   };
   return names[group];
+}
+
+// ── PORTION DATA utilities ─────────────────────────────────────────────────
+
+/**
+ * Look up static portion + nutrition data for a canonical food.
+ * O(1) via Map. Returns undefined if no data seeded for this food.
+ */
+export function getPortionData(canonical: string): PortionData | undefined {
+  return FOOD_PORTION_DATA.get(canonical);
+}
+
+/**
+ * Calculate estimated calories for a specific portion weight.
+ * Returns undefined when no calorie data exists for this food.
+ * Rounded to nearest integer.
+ */
+export function calculateCaloriesForPortion(
+  canonical: string,
+  portionG: number,
+): number | undefined {
+  if (portionG < 0) return undefined;
+  const data = FOOD_PORTION_DATA.get(canonical);
+  if (data?.caloriesPer100g == null) return undefined;
+  return Math.round((data.caloriesPer100g * portionG) / 100);
+}
+
+/**
+ * Macronutrient breakdown for a given portion weight.
+ * undefined for each field = no data available (distinct from 0 = food has none of this macro).
+ */
+export interface MacroBreakdown {
+  protein: number | undefined;
+  carbs: number | undefined;
+  fat: number | undefined;
+  sugars: number | undefined;
+  fiber: number | undefined;
+}
+
+/**
+ * Calculate macronutrient breakdown for a specific portion weight.
+ * Each field is undefined when source data is missing.
+ * Non-undefined values rounded to 1 decimal place.
+ */
+export function calculateMacrosForPortion(
+  canonical: string,
+  portionG: number,
+): MacroBreakdown {
+  if (portionG < 0) {
+    return {
+      protein: undefined,
+      carbs: undefined,
+      fat: undefined,
+      sugars: undefined,
+      fiber: undefined,
+    };
+  }
+  const data = FOOD_PORTION_DATA.get(canonical);
+  if (!data) {
+    return {
+      protein: undefined,
+      carbs: undefined,
+      fat: undefined,
+      sugars: undefined,
+      fiber: undefined,
+    };
+  }
+  const scale = (v: number | undefined): number | undefined =>
+    v != null ? Math.round((v * portionG * 10) / 100) / 10 : undefined;
+
+  return {
+    protein: scale(data.proteinPer100g),
+    carbs: scale(data.carbsPer100g),
+    fat: scale(data.fatPer100g),
+    sugars: scale(data.sugarsPer100g),
+    fiber: scale(data.fiberPer100g),
+  };
 }

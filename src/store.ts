@@ -32,6 +32,9 @@ function createLogTypeGuard<T extends LogType>(type: T) {
 /** Type guard for food logs */
 export const isFoodLog = createLogTypeGuard("food");
 
+/** Type guard for liquid logs */
+export const isLiquidLog = createLogTypeGuard("liquid");
+
 /** Type guard for fluid logs */
 export const isFluidLog = createLogTypeGuard("fluid");
 

@@ -8,6 +8,7 @@ import type {
   FluidPreset,
   FoodPersonalisation,
   HealthProfile,
+  NutritionGoals,
   TransitCalibration,
 } from "@/types/domain";
 
@@ -42,12 +43,14 @@ export function useHabits() {
   );
 
   const addHabit = useCallback(
-    (habit: HabitConfig) => patchProfile({ habits: [...profile.habits, habit] }),
+    (habit: HabitConfig) =>
+      patchProfile({ habits: [...profile.habits, habit] }),
     [patchProfile, profile.habits],
   );
 
   const removeHabit = useCallback(
-    (habitId: string) => patchProfile({ habits: profile.habits.filter((h) => h.id !== habitId) }),
+    (habitId: string) =>
+      patchProfile({ habits: profile.habits.filter((h) => h.id !== habitId) }),
     [patchProfile, profile.habits],
   );
 
@@ -191,7 +194,8 @@ export function useTransitCalibration() {
   const { profile, patchProfile } = useProfileContext();
 
   const setTransitCalibration = useCallback(
-    (transitCalibration: TransitCalibration) => patchProfile({ transitCalibration }),
+    (transitCalibration: TransitCalibration) =>
+      patchProfile({ transitCalibration }),
     [patchProfile],
   );
 
@@ -201,5 +205,66 @@ export function useTransitCalibration() {
       setTransitCalibration,
     }),
     [profile.transitCalibration, setTransitCalibration],
+  );
+}
+
+// ---------------------------------------------------------------------------
+// useNutritionGoals
+// ---------------------------------------------------------------------------
+
+export function useNutritionGoals() {
+  const { profile, patchProfile } = useProfileContext();
+
+  const setNutritionGoals = useCallback(
+    (updates: Partial<NutritionGoals>) =>
+      patchProfile({
+        nutritionGoals: { ...profile.nutritionGoals, ...updates },
+      }),
+    [patchProfile, profile.nutritionGoals],
+  );
+
+  return useMemo(
+    () => ({
+      ...profile.nutritionGoals,
+      setNutritionGoals,
+    }),
+    [profile.nutritionGoals, setNutritionGoals],
+  );
+}
+
+// ---------------------------------------------------------------------------
+// useFoodFavourites
+// ---------------------------------------------------------------------------
+
+export function useFoodFavourites() {
+  const { profile, patchProfile } = useProfileContext();
+  const favourites = profile.foodFavourites;
+
+  const addFavourite = useCallback(
+    (canonical: string) => {
+      if (!favourites.includes(canonical)) {
+        patchProfile({ foodFavourites: [...favourites, canonical] });
+      }
+    },
+    [patchProfile, favourites],
+  );
+
+  const removeFavourite = useCallback(
+    (canonical: string) => {
+      patchProfile({
+        foodFavourites: favourites.filter((f) => f !== canonical),
+      });
+    },
+    [patchProfile, favourites],
+  );
+
+  const isFavourite = useCallback(
+    (canonical: string) => favourites.includes(canonical),
+    [favourites],
+  );
+
+  return useMemo(
+    () => ({ favourites, addFavourite, removeFavourite, isFavourite }),
+    [favourites, addFavourite, removeFavourite, isFavourite],
   );
 }

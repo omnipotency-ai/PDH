@@ -1582,3 +1582,101 @@ export const stripLegacyInsightFields = internalMutation({
     return { scanned, fixed, hasMore };
   },
 });
+
+// ── Migration: backfill fluid → liquid for non-water drinks ──────────────
+//
+// What it does:
+//   Scans all logs with type="fluid" and reclassifies any that contain
+//   non-water items (e.g. coffee, juice, tea) to type="liquid". Logs where
+//   every item is "water" (case-insensitive) are left as type="fluid".
+//
+// When to run:
+//   After deploying the schema change that added type="liquid" (commit a8f21d0).
+//   Safe to run multiple times — already-migrated rows are skipped because
+//   they will no longer match the type="fluid" index filter.
+//
+// How to trigger:
+//   From the Convex dashboard Functions panel, call:
+//     internal.migrations.backfillFluidToLiquid
+//   Or via CLI:
+//     npx convex run migrations:backfillFluidToLiquid
+//
+// Batch self-scheduling:
+//   Each invocation processes `batchSize` (default 100) fluid logs and
+//   schedules itself to continue if the page was full (i.e., more may exist).
+//   The cursor is the Convex pagination continueCursor string.
+
+export const backfillFluidToLiquid = internalMutation({
+  args: {
+    cursor: v.optional(v.string()),
+    batchSize: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const batchSize = Math.min(Math.max(args.batchSize ?? 100, 1), 200);
+
+    // Paginate through all fluid logs in insertion order.
+    const page = await ctx.db.query("logs").paginate({
+      cursor: args.cursor ?? null,
+      numItems: batchSize,
+    });
+
+    let scanned = 0;
+    let updated = 0;
+    let skipped = 0;
+
+    for (const log of page.page) {
+      // Only process fluid logs — other types are untouched.
+      if (log.type !== "fluid") {
+        skipped++;
+        continue;
+      }
+
+      scanned++;
+
+      // Inspect items to determine if any is non-water.
+      const data = (log.data ?? {}) as Record<string, unknown>;
+      const items = Array.isArray(data.items) ? data.items : [];
+
+      const hasNonWaterItem = items.some((item) => {
+        const row = (item ?? {}) as Record<string, unknown>;
+        const name =
+          typeof row.name === "string" ? row.name.trim().toLowerCase() : "";
+        return name !== "water";
+      });
+
+      if (!hasNonWaterItem) {
+        // All items are water (or items array is empty) — leave as "fluid".
+        continue;
+      }
+
+      // At least one non-water item — reclassify to "liquid".
+      await ctx.db.patch(log._id, { type: "liquid" });
+      updated++;
+    }
+
+    // Schedule continuation if there are more pages to process.
+    if (!page.isDone) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.migrations.backfillFluidToLiquid,
+        {
+          cursor: page.continueCursor,
+          ...(args.batchSize !== undefined && { batchSize: args.batchSize }),
+        },
+      );
+    }
+
+    const status = page.isDone ? "complete" : "scheduling_next_batch";
+    console.log(
+      `[backfillFluidToLiquid] scanned=${scanned}, updated=${updated}, skipped=${skipped}, status=${status}`,
+    );
+
+    return {
+      scanned,
+      updated,
+      skipped,
+      continueCursor: page.continueCursor,
+      isDone: page.isDone,
+    };
+  },
+});

@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { resolveCanonicalFoodName } from "../shared/foodCanonicalName";
 import { canonicalizeKnownFoodName } from "../shared/foodCanonicalization";
+import { isFoodPipelineType } from "../shared/logTypeUtils";
 import { getCanonicalFoodProjection } from "../shared/foodProjection";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -23,12 +24,14 @@ import {
   habitsValidator,
   healthProfileValidator,
   logDataValidator,
+  nutritionGoalsValidator,
   sleepGoalValidator,
   transitCalibrationValidator,
 } from "./validators";
 
 const logTypeValidator = v.union(
   v.literal("food"),
+  v.literal("liquid"),
   v.literal("fluid"),
   v.literal("habit"),
   v.literal("activity"),
@@ -372,7 +375,7 @@ async function recanonicalizeFoodLogsForUser(
   const recanonicalizedSamples: string[] = [];
 
   for (const log of logs) {
-    if (log.type !== "food") continue;
+    if (!isFoodPipelineType(log.type)) continue;
     processedLogs += 1;
 
     const data = log.data as Record<string, unknown> | null;
@@ -831,7 +834,7 @@ export const add = mutation({
       type: args.type,
       data,
     });
-    if (args.type === "food") {
+    if (args.type === "food" || args.type === "liquid") {
       const foodData = data as { rawInput?: string; items?: unknown[] };
       if (
         foodData.rawInput &&
@@ -870,7 +873,7 @@ export const remove = mutation({
     if (record.userId !== userId) {
       throw new Error("Not authorized to delete this log entry.");
     }
-    if (record.type === "food") {
+    if (record.type === "food" || record.type === "liquid") {
       await clearIngredientExposuresForLog(ctx, { userId, logId: record._id });
     }
     await ctx.db.delete(args.id);
@@ -897,7 +900,7 @@ export const update = mutation({
       timestamp: args.timestamp,
       data,
     });
-    if (record.type === "food") {
+    if (record.type === "food" || record.type === "liquid") {
       const foodData = data as { rawInput?: string; items?: unknown[] };
       const hasRawInput =
         typeof foodData.rawInput === "string" && foodData.rawInput.length > 0;
@@ -971,7 +974,7 @@ export const batchUpdateFoodItems = mutation({
       if (record.userId !== userId) {
         throw new Error("Not authorized");
       }
-      if (record.type !== "food") {
+      if (!isFoodPipelineType(record.type)) {
         skipped++;
         continue;
       }
@@ -1127,6 +1130,8 @@ export const patchProfile = mutation({
     aiPreferences: v.optional(aiPreferencesValidator),
     foodPersonalisation: v.optional(foodPersonalisationValidator),
     transitCalibration: v.optional(transitCalibrationValidator),
+    nutritionGoals: v.optional(nutritionGoalsValidator),
+    foodFavourites: v.optional(v.array(v.string())),
     now: v.number(),
   },
   handler: async (ctx, args) => {
@@ -1195,6 +1200,14 @@ export const patchProfile = mutation({
         },
       );
     }
+    if (args.nutritionGoals !== undefined) {
+      updates.nutritionGoals = args.nutritionGoals;
+    }
+    if (args.foodFavourites !== undefined) {
+      updates.foodFavourites = sanitizeUnknownStringsDeep(args.foodFavourites, {
+        path: "profile.foodFavourites",
+      });
+    }
 
     if (existing) {
       await ctx.db.patch(existing._id, updates);
@@ -1226,6 +1239,12 @@ export const patchProfile = mutation({
       }),
       ...(updates.transitCalibration !== undefined && {
         transitCalibration: updates.transitCalibration,
+      }),
+      ...(updates.nutritionGoals !== undefined && {
+        nutritionGoals: updates.nutritionGoals,
+      }),
+      ...(updates.foodFavourites !== undefined && {
+        foodFavourites: updates.foodFavourites,
       }),
     } as Parameters<typeof ctx.db.insert<"profiles">>[1]);
   },
@@ -1286,6 +1305,7 @@ type BackupPayload = {
 
 type BackupLogType =
   | "food"
+  | "liquid"
   | "fluid"
   | "habit"
   | "activity"
@@ -1294,6 +1314,7 @@ type BackupLogType =
 
 const BACKUP_LOG_TYPES = new Set<string>([
   "food",
+  "liquid",
   "fluid",
   "habit",
   "activity",
@@ -2155,7 +2176,7 @@ export const backfillResolvedBy = mutation({
     let itemsPatched = 0;
 
     for (const log of logs) {
-      if (log.type !== "food") continue;
+      if (!isFoodPipelineType(log.type)) continue;
       const items = (log.data as Record<string, unknown> | undefined)?.items as
         | Array<Record<string, unknown>>
         | undefined;
@@ -2207,7 +2228,7 @@ export const getLogOwner = internalQuery({
     if (!log) return null;
     // Include itemsVersion for food logs so callers can do OCC checks
     const itemsVersion =
-      log.type === "food"
+      log.type === "food" || log.type === "liquid"
         ? (((log.data as Record<string, unknown>).itemsVersion as
             | number
             | undefined) ?? 0)

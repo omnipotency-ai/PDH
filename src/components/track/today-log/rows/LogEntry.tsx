@@ -93,7 +93,7 @@ export function LogEntry({ log, habits, onDelete, onSave }: LogEntryProps) {
   }, [editing, log]);
 
   const initFoodDraftItems = useCallback((): DraftItem[] => {
-    if (log.type !== "food") return [];
+    if (log.type !== "food" && log.type !== "liquid") return [];
     return log.data.items.map((item) => ({
       id: crypto.randomUUID(),
       name: String(item?.parsedName ?? item?.name ?? item?.rawName ?? item?.userSegment ?? ""),
@@ -111,7 +111,7 @@ export function LogEntry({ log, habits, onDelete, onSave }: LogEntryProps) {
     setDraftNotes(getLogNotes(log));
     setDraftDate(format(log.timestamp, "yyyy-MM-dd"));
     setDraftTimestamp(format(log.timestamp, "HH:mm"));
-    if (log.type === "food") {
+    if (log.type === "food" || log.type === "liquid") {
       setDraftItems(initFoodDraftItems());
     }
     if (log.type === "digestion") {
@@ -140,7 +140,7 @@ export function LogEntry({ log, habits, onDelete, onSave }: LogEntryProps) {
     const notes = draftNotes.trim();
 
     let nextData: LogUpdateData;
-    if (log.type === "food") {
+    if (log.type === "food" || log.type === "liquid") {
       const originalItems = Array.isArray(log.data?.items) ? log.data.items : [];
       const editedItems = draftItems
         .filter((d) => d.name.trim())
@@ -564,8 +564,8 @@ export function LogEntry({ log, habits, onDelete, onSave }: LogEntryProps) {
               />
             </div>
 
-            {/* Food: per-item editing */}
-            {log.type === "food" && (
+            {/* Food / Liquid: per-item editing */}
+            {(log.type === "food" || log.type === "liquid") && (
               <div className="space-y-1.5">
                 {draftItems.map((draft, i) => (
                   <div key={draft.id} className="flex items-center gap-1">

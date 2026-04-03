@@ -19,33 +19,37 @@ describe("legacy log path", () => {
     const userId = "test-legacy-path";
 
     // Legacy path: items are pre-filled by old client, no rawInput
-    const logId = await t.withIdentity({ subject: userId }).mutation(api.logs.add, {
-      timestamp: Date.now(),
-      type: "food",
-      data: {
-        items: [
-          {
-            name: "toast",
-            canonicalName: "toast",
-            quantity: null,
-            unit: null,
-          },
-          {
-            name: "banana",
-            canonicalName: "ripe banana",
-            quantity: null,
-            unit: null,
-          },
-        ],
-        notes: "",
-      },
-    });
+    const logId = await t
+      .withIdentity({ subject: userId })
+      .mutation(api.logs.add, {
+        timestamp: Date.now(),
+        type: "food",
+        data: {
+          items: [
+            {
+              name: "toast",
+              canonicalName: "toast",
+              quantity: null,
+              unit: null,
+            },
+            {
+              name: "banana",
+              canonicalName: "ripe banana",
+              quantity: null,
+              unit: null,
+            },
+          ],
+          notes: "",
+        },
+      });
 
     // Legacy path creates exposures immediately (no 6-hour wait)
     await t.run(async (ctx) => {
       const exposures = await ctx.db
         .query("ingredientExposures")
-        .withIndex("by_userId_logId", (q) => q.eq("userId", userId).eq("logId", logId))
+        .withIndex("by_userId_logId", (q) =>
+          q.eq("userId", userId).eq("logId", logId),
+        )
         .collect();
 
       // Should have exposures right away
@@ -61,7 +65,9 @@ describe("legacy log path", () => {
       timestamp: Date.now(),
       type: "food",
       data: {
-        items: [{ name: "toast", canonicalName: "toast", quantity: null, unit: null }],
+        items: [
+          { name: "toast", canonicalName: "toast", quantity: null, unit: null },
+        ],
         notes: "",
       },
     });
@@ -93,11 +99,13 @@ describe("quantity extraction", () => {
     const t = convexTest(schema);
     const userId = "test-qty-numeric";
 
-    const logId = await t.withIdentity({ subject: userId }).mutation(api.logs.add, {
-      timestamp: Date.now(),
-      type: "food",
-      data: { rawInput: "4 toast", items: [], notes: "" },
-    });
+    const logId = await t
+      .withIdentity({ subject: userId })
+      .mutation(api.logs.add, {
+        timestamp: Date.now(),
+        type: "food",
+        data: { rawInput: "4 toast", items: [], notes: "" },
+      });
 
     vi.runAllTimers();
     await t.finishInProgressScheduledFunctions();
@@ -127,11 +135,13 @@ describe("quantity extraction", () => {
     const t = convexTest(schema);
     const userId = "test-qty-measure";
 
-    const logId = await t.withIdentity({ subject: userId }).mutation(api.logs.add, {
-      timestamp: Date.now(),
-      type: "food",
-      data: { rawInput: "200g rice", items: [], notes: "" },
-    });
+    const logId = await t
+      .withIdentity({ subject: userId })
+      .mutation(api.logs.add, {
+        timestamp: Date.now(),
+        type: "food",
+        data: { rawInput: "200g rice", items: [], notes: "" },
+      });
 
     vi.runAllTimers();
     await t.finishInProgressScheduledFunctions();
@@ -159,11 +169,13 @@ describe("quantity extraction", () => {
     const t = convexTest(schema);
     const userId = "test-qty-word";
 
-    const logId = await t.withIdentity({ subject: userId }).mutation(api.logs.add, {
-      timestamp: Date.now(),
-      type: "food",
-      data: { rawInput: "two bananas", items: [], notes: "" },
-    });
+    const logId = await t
+      .withIdentity({ subject: userId })
+      .mutation(api.logs.add, {
+        timestamp: Date.now(),
+        type: "food",
+        data: { rawInput: "two bananas", items: [], notes: "" },
+      });
 
     vi.runAllTimers();
     await t.finishInProgressScheduledFunctions();
@@ -186,11 +198,13 @@ describe("quantity extraction", () => {
     const t = convexTest(schema);
     const userId = "test-qty-none";
 
-    const logId = await t.withIdentity({ subject: userId }).mutation(api.logs.add, {
-      timestamp: Date.now(),
-      type: "food",
-      data: { rawInput: "honey", items: [], notes: "" },
-    });
+    const logId = await t
+      .withIdentity({ subject: userId })
+      .mutation(api.logs.add, {
+        timestamp: Date.now(),
+        type: "food",
+        data: { rawInput: "honey", items: [], notes: "" },
+      });
 
     vi.runAllTimers();
     await t.finishInProgressScheduledFunctions();
@@ -228,11 +242,13 @@ describe("resolveItem mutation", () => {
     const t = convexTest(schema);
     const userId = "test-resolve-pending";
 
-    const logId = await t.withIdentity({ subject: userId }).mutation(api.logs.add, {
-      timestamp: Date.now(),
-      type: "food",
-      data: { rawInput: "zxyphlor", items: [], notes: "" },
-    });
+    const logId = await t
+      .withIdentity({ subject: userId })
+      .mutation(api.logs.add, {
+        timestamp: Date.now(),
+        type: "food",
+        data: { rawInput: "zxyphlor", items: [], notes: "" },
+      });
 
     // Run deterministic parsing — zxyphlor will be unresolved
     vi.runAllTimers();
@@ -242,16 +258,22 @@ describe("resolveItem mutation", () => {
     await t.run(async (ctx) => {
       const log = await ctx.db.get(logId);
       if (log === null) throw new Error("expected log");
-      const items = ((log as Doc<"logs">).data as { items: Array<{ canonicalName?: string }> }).items;
+      const items = (
+        (log as Doc<"logs">).data as {
+          items: Array<{ canonicalName?: string }>;
+        }
+      ).items;
       expect(items[0].canonicalName).toBeUndefined();
     });
 
     // Manually resolve via resolveItem
-    await t.withIdentity({ subject: userId }).mutation(api.foodParsing.resolveItem, {
-      logId,
-      itemIndex: 0,
-      canonicalName: "sweet biscuit",
-    });
+    await t
+      .withIdentity({ subject: userId })
+      .mutation(api.foodParsing.resolveItem, {
+        logId,
+        itemIndex: 0,
+        canonicalName: "sweet biscuit",
+      });
 
     // Verify item is now resolved
     await t.run(async (ctx) => {
@@ -271,65 +293,77 @@ describe("resolveItem mutation", () => {
     const t = convexTest(schema);
     vi.useFakeTimers();
 
-    const logId = await t.withIdentity({ subject: "user-a" }).mutation(api.logs.add, {
-      timestamp: Date.now(),
-      type: "food",
-      data: { rawInput: "zxyphlor", items: [], notes: "" },
-    });
+    const logId = await t
+      .withIdentity({ subject: "user-a" })
+      .mutation(api.logs.add, {
+        timestamp: Date.now(),
+        type: "food",
+        data: { rawInput: "zxyphlor", items: [], notes: "" },
+      });
 
     vi.runAllTimers();
     await t.finishInProgressScheduledFunctions();
     vi.useRealTimers();
 
     await expect(
-      t.withIdentity({ subject: "user-b" }).mutation(api.foodParsing.resolveItem, {
-        logId,
-        itemIndex: 0,
-        canonicalName: "toast",
-      }),
+      t
+        .withIdentity({ subject: "user-b" })
+        .mutation(api.foodParsing.resolveItem, {
+          logId,
+          itemIndex: 0,
+          canonicalName: "toast",
+        }),
     ).rejects.toThrow("Not authorized");
   });
 
   it("rejects resolveItem on non-food log", async () => {
     const t = convexTest(schema);
 
-    const logId = await t.withIdentity({ subject: "test-user" }).mutation(api.logs.add, {
-      timestamp: Date.now(),
-      type: "digestion",
-      data: {
-        bristolCode: 4,
-      },
-    });
+    const logId = await t
+      .withIdentity({ subject: "test-user" })
+      .mutation(api.logs.add, {
+        timestamp: Date.now(),
+        type: "digestion",
+        data: {
+          bristolCode: 4,
+        },
+      });
 
     await expect(
-      t.withIdentity({ subject: "test-user" }).mutation(api.foodParsing.resolveItem, {
-        logId,
-        itemIndex: 0,
-        canonicalName: "toast",
-      }),
-    ).rejects.toThrow("not a food log");
+      t
+        .withIdentity({ subject: "test-user" })
+        .mutation(api.foodParsing.resolveItem, {
+          logId,
+          itemIndex: 0,
+          canonicalName: "toast",
+        }),
+    ).rejects.toThrow("not a food or liquid log");
   });
 
   it("rejects resolveItem with out-of-range item index", async () => {
     const t = convexTest(schema);
     vi.useFakeTimers();
 
-    const logId = await t.withIdentity({ subject: "test-user" }).mutation(api.logs.add, {
-      timestamp: Date.now(),
-      type: "food",
-      data: { rawInput: "zxyphlor", items: [], notes: "" },
-    });
+    const logId = await t
+      .withIdentity({ subject: "test-user" })
+      .mutation(api.logs.add, {
+        timestamp: Date.now(),
+        type: "food",
+        data: { rawInput: "zxyphlor", items: [], notes: "" },
+      });
 
     vi.runAllTimers();
     await t.finishInProgressScheduledFunctions();
     vi.useRealTimers();
 
     await expect(
-      t.withIdentity({ subject: "test-user" }).mutation(api.foodParsing.resolveItem, {
-        logId,
-        itemIndex: 5,
-        canonicalName: "toast",
-      }),
+      t
+        .withIdentity({ subject: "test-user" })
+        .mutation(api.foodParsing.resolveItem, {
+          logId,
+          itemIndex: 5,
+          canonicalName: "toast",
+        }),
     ).rejects.toThrow("out of range");
   });
 
@@ -337,19 +371,23 @@ describe("resolveItem mutation", () => {
     const t = convexTest(schema);
 
     // Create a food log that's still processing (rawInput set, items empty)
-    const logId = await t.withIdentity({ subject: "test-user" }).mutation(api.logs.add, {
-      timestamp: Date.now(),
-      type: "food",
-      data: { rawInput: "toast", items: [], notes: "" },
-    });
+    const logId = await t
+      .withIdentity({ subject: "test-user" })
+      .mutation(api.logs.add, {
+        timestamp: Date.now(),
+        type: "food",
+        data: { rawInput: "toast", items: [], notes: "" },
+      });
 
     // Don't run timers — items stay empty (processing state)
     await expect(
-      t.withIdentity({ subject: "test-user" }).mutation(api.foodParsing.resolveItem, {
-        logId,
-        itemIndex: 0,
-        canonicalName: "toast",
-      }),
+      t
+        .withIdentity({ subject: "test-user" })
+        .mutation(api.foodParsing.resolveItem, {
+          logId,
+          itemIndex: 0,
+          canonicalName: "toast",
+        }),
     ).rejects.toThrow("no items");
   });
 
@@ -357,22 +395,26 @@ describe("resolveItem mutation", () => {
     const t = convexTest(schema);
     const userId = "test-resolve-invalid";
 
-    const logId = await t.withIdentity({ subject: userId }).mutation(api.logs.add, {
-      timestamp: Date.now(),
-      type: "food",
-      data: { rawInput: "zxyphlor", items: [], notes: "" },
-    });
+    const logId = await t
+      .withIdentity({ subject: userId })
+      .mutation(api.logs.add, {
+        timestamp: Date.now(),
+        type: "food",
+        data: { rawInput: "zxyphlor", items: [], notes: "" },
+      });
 
     vi.runAllTimers();
     await t.finishInProgressScheduledFunctions();
 
     // Try to resolve with a name not in registry
     await expect(
-      t.withIdentity({ subject: userId }).mutation(api.foodParsing.resolveItem, {
-        logId,
-        itemIndex: 0,
-        canonicalName: "completely_fake_food",
-      }),
+      t
+        .withIdentity({ subject: userId })
+        .mutation(api.foodParsing.resolveItem, {
+          logId,
+          itemIndex: 0,
+          canonicalName: "completely_fake_food",
+        }),
     ).rejects.toThrow();
   });
 
@@ -380,22 +422,26 @@ describe("resolveItem mutation", () => {
     const t = convexTest(schema);
     const userId = "test-resolve-already";
 
-    const logId = await t.withIdentity({ subject: userId }).mutation(api.logs.add, {
-      timestamp: Date.now(),
-      type: "food",
-      data: { rawInput: "toast", items: [], notes: "" },
-    });
+    const logId = await t
+      .withIdentity({ subject: userId })
+      .mutation(api.logs.add, {
+        timestamp: Date.now(),
+        type: "food",
+        data: { rawInput: "toast", items: [], notes: "" },
+      });
 
     vi.runAllTimers();
     await t.finishInProgressScheduledFunctions();
 
     // Toast is already registry-resolved — resolveItem should reject
     await expect(
-      t.withIdentity({ subject: userId }).mutation(api.foodParsing.resolveItem, {
-        logId,
-        itemIndex: 0,
-        canonicalName: "bread",
-      }),
+      t
+        .withIdentity({ subject: userId })
+        .mutation(api.foodParsing.resolveItem, {
+          logId,
+          itemIndex: 0,
+          canonicalName: "bread",
+        }),
     ).rejects.toThrow("already resolved");
   });
 
@@ -405,11 +451,13 @@ describe("resolveItem mutation", () => {
     const t = convexTest(schema);
     const userId = "test-resolve-expired";
 
-    const logId = await t.withIdentity({ subject: userId }).mutation(api.logs.add, {
-      timestamp: Date.now(),
-      type: "food",
-      data: { rawInput: "zxyphlor", items: [], notes: "" },
-    });
+    const logId = await t
+      .withIdentity({ subject: userId })
+      .mutation(api.logs.add, {
+        timestamp: Date.now(),
+        type: "food",
+        data: { rawInput: "zxyphlor", items: [], notes: "" },
+      });
 
     // Run everything including 6-hour expiry
     vi.runAllTimers();
@@ -430,11 +478,13 @@ describe("resolveItem mutation", () => {
 
     // Attempting to resolve an expired item should be rejected per policy
     await expect(
-      t.withIdentity({ subject: userId }).mutation(api.foodParsing.resolveItem, {
-        logId,
-        itemIndex: 0,
-        canonicalName: "sweet biscuit",
-      }),
+      t
+        .withIdentity({ subject: userId })
+        .mutation(api.foodParsing.resolveItem, {
+          logId,
+          itemIndex: 0,
+          canonicalName: "sweet biscuit",
+        }),
     ).rejects.toThrow();
   });
 
@@ -442,25 +492,31 @@ describe("resolveItem mutation", () => {
     const t = convexTest(schema);
     const userId = "test-search-learned-alias";
 
-    const logId = await t.withIdentity({ subject: userId }).mutation(api.logs.add, {
-      timestamp: Date.now(),
-      type: "food",
-      data: { rawInput: "zxyphlor", items: [], notes: "" },
-    });
+    const logId = await t
+      .withIdentity({ subject: userId })
+      .mutation(api.logs.add, {
+        timestamp: Date.now(),
+        type: "food",
+        data: { rawInput: "zxyphlor", items: [], notes: "" },
+      });
 
     vi.runAllTimers();
     await t.finishInProgressScheduledFunctions();
 
-    await t.withIdentity({ subject: userId }).mutation(api.foodParsing.resolveItem, {
-      logId,
-      itemIndex: 0,
-      canonicalName: "sweet biscuit",
-    });
+    await t
+      .withIdentity({ subject: userId })
+      .mutation(api.foodParsing.resolveItem, {
+        logId,
+        itemIndex: 0,
+        canonicalName: "sweet biscuit",
+      });
 
-    const results = await t.withIdentity({ subject: userId }).query(api.foodParsing.searchFoods, {
-      query: "zxyphlor",
-      limit: 10,
-    });
+    const results = await t
+      .withIdentity({ subject: userId })
+      .query(api.foodParsing.searchFoods, {
+        query: "zxyphlor",
+        limit: 10,
+      });
 
     expect(results[0]?.canonicalName).toBe("sweet biscuit");
   });
@@ -484,13 +540,17 @@ describe("processLogInternal error paths", () => {
 
     // Fabricate a valid-looking but non-existent log ID by creating and deleting a log
     const userId = "test-processlog-missing";
-    const logId = await t.withIdentity({ subject: userId }).mutation(api.logs.add, {
-      timestamp: Date.now(),
-      type: "digestion",
-      data: { bristolCode: 4 },
-    });
+    const logId = await t
+      .withIdentity({ subject: userId })
+      .mutation(api.logs.add, {
+        timestamp: Date.now(),
+        type: "digestion",
+        data: { bristolCode: 4 },
+      });
 
-    await t.withIdentity({ subject: userId }).mutation(api.logs.remove, { id: logId });
+    await t
+      .withIdentity({ subject: userId })
+      .mutation(api.logs.remove, { id: logId });
 
     // processLogInternal should silently return (not throw) for a deleted log
     await t.run(async (ctx) => {
@@ -506,11 +566,13 @@ describe("processLogInternal error paths", () => {
     const t = convexTest(schema);
     const userId = "test-processlog-nonfood";
 
-    const logId = await t.withIdentity({ subject: userId }).mutation(api.logs.add, {
-      timestamp: Date.now(),
-      type: "digestion",
-      data: { bristolCode: 4 },
-    });
+    const logId = await t
+      .withIdentity({ subject: userId })
+      .mutation(api.logs.add, {
+        timestamp: Date.now(),
+        type: "digestion",
+        data: { bristolCode: 4 },
+      });
 
     // processLogInternal should return without error for non-food logs
     await t.action(internal.foodParsing.processLogInternal, { logId });
@@ -531,21 +593,23 @@ describe("processLogInternal error paths", () => {
     const userId = "test-processlog-no-rawinput";
 
     // Create a legacy food log with pre-filled items but no rawInput
-    const logId = await t.withIdentity({ subject: userId }).mutation(api.logs.add, {
-      timestamp: Date.now(),
-      type: "food",
-      data: {
-        items: [
-          {
-            name: "toast",
-            canonicalName: "toast",
-            quantity: null,
-            unit: null,
-          },
-        ],
-        notes: "",
-      },
-    });
+    const logId = await t
+      .withIdentity({ subject: userId })
+      .mutation(api.logs.add, {
+        timestamp: Date.now(),
+        type: "food",
+        data: {
+          items: [
+            {
+              name: "toast",
+              canonicalName: "toast",
+              quantity: null,
+              unit: null,
+            },
+          ],
+          notes: "",
+        },
+      });
 
     // processLogInternal should return without error
     await t.action(internal.foodParsing.processLogInternal, { logId });
@@ -567,11 +631,13 @@ describe("processLogInternal error paths", () => {
     const userId = "test-processlog-whitespace";
 
     // Create a food log where rawInput is effectively empty after sanitization
-    const logId = await t.withIdentity({ subject: userId }).mutation(api.logs.add, {
-      timestamp: Date.now(),
-      type: "food",
-      data: { rawInput: "  ,  ,  ", items: [], notes: "" },
-    });
+    const logId = await t
+      .withIdentity({ subject: userId })
+      .mutation(api.logs.add, {
+        timestamp: Date.now(),
+        type: "food",
+        data: { rawInput: "  ,  ,  ", items: [], notes: "" },
+      });
 
     vi.runAllTimers();
     await t.finishAllScheduledFunctions(() => vi.runAllTimers());
@@ -590,11 +656,13 @@ describe("processLogInternal error paths", () => {
     const t = convexTest(schema);
     const userId = "test-processlog-unrecognized";
 
-    const logId = await t.withIdentity({ subject: userId }).mutation(api.logs.add, {
-      timestamp: Date.now(),
-      type: "food",
-      data: { rawInput: "xylophrenic gloop", items: [], notes: "" },
-    });
+    const logId = await t
+      .withIdentity({ subject: userId })
+      .mutation(api.logs.add, {
+        timestamp: Date.now(),
+        type: "food",
+        data: { rawInput: "xylophrenic gloop", items: [], notes: "" },
+      });
 
     // Run only the delay-0 processLogInternal, not the 6-hour processEvidence
     // (which would expire unresolved items to unknown_food).
@@ -625,15 +693,17 @@ describe("processLogInternal error paths", () => {
     const t = convexTest(schema);
     const userId = "test-processlog-mixed";
 
-    const logId = await t.withIdentity({ subject: userId }).mutation(api.logs.add, {
-      timestamp: Date.now(),
-      type: "food",
-      data: {
-        rawInput: "toast, xylophrenic gloop, honey",
-        items: [],
-        notes: "",
-      },
-    });
+    const logId = await t
+      .withIdentity({ subject: userId })
+      .mutation(api.logs.add, {
+        timestamp: Date.now(),
+        type: "food",
+        data: {
+          rawInput: "toast, xylophrenic gloop, honey",
+          items: [],
+          notes: "",
+        },
+      });
 
     // Run only the delay-0 processLogInternal, not the 6-hour processEvidence
     // (which would expire unresolved items to unknown_food).
@@ -670,11 +740,13 @@ describe("processLogInternal error paths", () => {
     const t = convexTest(schema);
     const userId = "test-processlog-evidence-scheduled";
 
-    const logId = await t.withIdentity({ subject: userId }).mutation(api.logs.add, {
-      timestamp: Date.now(),
-      type: "food",
-      data: { rawInput: "toast", items: [], notes: "" },
-    });
+    const logId = await t
+      .withIdentity({ subject: userId })
+      .mutation(api.logs.add, {
+        timestamp: Date.now(),
+        type: "food",
+        data: { rawInput: "toast", items: [], notes: "" },
+      });
 
     // Run all scheduled functions including the 6-hour processEvidence
     await t.finishAllScheduledFunctions(() => vi.runAllTimers());
@@ -683,7 +755,9 @@ describe("processLogInternal error paths", () => {
     await t.run(async (ctx) => {
       const log = await ctx.db.get(logId);
       if (log === null) throw new Error("expected log");
-      const data = (log as Doc<"logs">).data as { evidenceProcessedAt?: number };
+      const data = (log as Doc<"logs">).data as {
+        evidenceProcessedAt?: number;
+      };
       expect(data.evidenceProcessedAt).toBeDefined();
       expect(typeof data.evidenceProcessedAt).toBe("number");
     });
@@ -703,11 +777,13 @@ describe("log deletion clears exposures", () => {
     const t = convexTest(schema);
     const userId = "test-delete-exposures";
 
-    const logId = await t.withIdentity({ subject: userId }).mutation(api.logs.add, {
-      timestamp: Date.now(),
-      type: "food",
-      data: { rawInput: "toast, honey", items: [], notes: "" },
-    });
+    const logId = await t
+      .withIdentity({ subject: userId })
+      .mutation(api.logs.add, {
+        timestamp: Date.now(),
+        type: "food",
+        data: { rawInput: "toast, honey", items: [], notes: "" },
+      });
 
     // Run full pipeline including evidence
     vi.runAllTimers();
@@ -717,19 +793,25 @@ describe("log deletion clears exposures", () => {
     await t.run(async (ctx) => {
       const exposures = await ctx.db
         .query("ingredientExposures")
-        .withIndex("by_userId_logId", (q) => q.eq("userId", userId).eq("logId", logId))
+        .withIndex("by_userId_logId", (q) =>
+          q.eq("userId", userId).eq("logId", logId),
+        )
         .collect();
       expect(exposures).toHaveLength(2);
     });
 
     // Delete the log
-    await t.withIdentity({ subject: userId }).mutation(api.logs.remove, { id: logId });
+    await t
+      .withIdentity({ subject: userId })
+      .mutation(api.logs.remove, { id: logId });
 
     // Exposures should be cleared
     await t.run(async (ctx) => {
       const exposures = await ctx.db
         .query("ingredientExposures")
-        .withIndex("by_userId_logId", (q) => q.eq("userId", userId).eq("logId", logId))
+        .withIndex("by_userId_logId", (q) =>
+          q.eq("userId", userId).eq("logId", logId),
+        )
         .collect();
       expect(exposures).toHaveLength(0);
     });

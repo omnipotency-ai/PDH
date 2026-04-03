@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { getFoodItemResolutionStatus } from "@/components/track/today-log/helpers";
 import type { SyncedLog } from "@/lib/sync";
 import type { FoodItem, FoodLogData } from "@/types/domain";
+import { isFoodPipelineType } from "@shared/logTypeUtils";
 
 export interface UnresolvedQueueItem {
   logId: string;
@@ -17,12 +18,14 @@ export interface UnresolvedQueueItem {
  * Build a flat queue of all pending food items from today's logs.
  * Only includes items with status "pending" (not "expired" or "resolved").
  */
-export function useUnresolvedFoodQueue(logs: SyncedLog[]): UnresolvedQueueItem[] {
+export function useUnresolvedFoodQueue(
+  logs: SyncedLog[],
+): UnresolvedQueueItem[] {
   return useMemo(() => {
     const queue: UnresolvedQueueItem[] = [];
 
     for (const log of logs) {
-      if (log.type !== "food") continue;
+      if (!isFoodPipelineType(log.type)) continue;
 
       const foodData = log.data as FoodLogData;
       if (!Array.isArray(foodData?.items)) continue;
@@ -38,7 +41,8 @@ export function useUnresolvedFoodQueue(logs: SyncedLog[]): UnresolvedQueueItem[]
           queue.push({
             logId: log.id,
             itemIndex: i,
-            foodName: item.parsedName ?? item.name ?? item.userSegment ?? "Food",
+            foodName:
+              item.parsedName ?? item.name ?? item.userSegment ?? "Food",
             rawInput,
             logTimestamp: log.timestamp,
             item,

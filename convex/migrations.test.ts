@@ -41,17 +41,22 @@ describe("migrateLegacyLogsBatch — data shape compliance", () => {
     });
 
     // Run migration (not dry run)
-    const result = await t.mutation(internal.migrations.migrateLegacyLogsBatch, {
-      cursor: null,
-      numItems: 10,
-      dryRun: false,
-    });
+    const result = await t.mutation(
+      internal.migrations.migrateLegacyLogsBatch,
+      {
+        cursor: null,
+        numItems: 10,
+        dryRun: false,
+      },
+    );
 
     expect(result.scanned).toBe(1);
     expect(result.isDone).toBe(true);
 
     // Verify the migrated log is still readable via normal query
-    const logs = await t.withIdentity({ subject: userId }).query(api.logs.list, {});
+    const logs = await t
+      .withIdentity({ subject: userId })
+      .query(api.logs.list, {});
     expect(logs).toHaveLength(1);
     expect(logs[0].type).toBe("food");
 
@@ -96,15 +101,20 @@ describe("migrateLegacyLogsBatch — data shape compliance", () => {
       });
     });
 
-    const result = await t.mutation(internal.migrations.migrateLegacyLogsBatch, {
-      cursor: null,
-      numItems: 10,
-      dryRun: false,
-    });
+    const result = await t.mutation(
+      internal.migrations.migrateLegacyLogsBatch,
+      {
+        cursor: null,
+        numItems: 10,
+        dryRun: false,
+      },
+    );
 
     expect(result.scanned).toBe(1);
 
-    const logs = await t.withIdentity({ subject: userId }).query(api.logs.list, {});
+    const logs = await t
+      .withIdentity({ subject: userId })
+      .query(api.logs.list, {});
     expect(logs).toHaveLength(1);
     const data = logs[0].data as {
       items: Array<{ name: string; quantity: number; unit: string }>;
@@ -143,15 +153,20 @@ describe("migrateLegacyLogsBatch — data shape compliance", () => {
       });
     });
 
-    const result = await t.mutation(internal.migrations.migrateLegacyLogsBatch, {
-      cursor: null,
-      numItems: 10,
-      dryRun: false,
-    });
+    const result = await t.mutation(
+      internal.migrations.migrateLegacyLogsBatch,
+      {
+        cursor: null,
+        numItems: 10,
+        dryRun: false,
+      },
+    );
 
     expect(result.scanned).toBe(1);
 
-    const logs = await t.withIdentity({ subject: userId }).query(api.logs.list, {});
+    const logs = await t
+      .withIdentity({ subject: userId })
+      .query(api.logs.list, {});
     expect(logs).toHaveLength(1);
     expect(logs[0].type).toBe("digestion");
     const data = logs[0].data as {
@@ -204,15 +219,20 @@ describe("migrateLegacyLogsBatch — data shape compliance", () => {
       });
     });
 
-    const result = await t.mutation(internal.migrations.migrateLegacyLogsBatch, {
-      cursor: null,
-      numItems: 10,
-      dryRun: false,
-    });
+    const result = await t.mutation(
+      internal.migrations.migrateLegacyLogsBatch,
+      {
+        cursor: null,
+        numItems: 10,
+        dryRun: false,
+      },
+    );
 
     expect(result.scanned).toBe(1);
 
-    const logs = await t.withIdentity({ subject: userId }).query(api.logs.list, {});
+    const logs = await t
+      .withIdentity({ subject: userId })
+      .query(api.logs.list, {});
     expect(logs).toHaveLength(1);
     expect(logs[0].type).toBe("habit");
     const data = logs[0].data as {
@@ -253,15 +273,20 @@ describe("migrateLegacyLogsBatch — data shape compliance", () => {
       });
     });
 
-    const result = await t.mutation(internal.migrations.migrateLegacyLogsBatch, {
-      cursor: null,
-      numItems: 10,
-      dryRun: false,
-    });
+    const result = await t.mutation(
+      internal.migrations.migrateLegacyLogsBatch,
+      {
+        cursor: null,
+        numItems: 10,
+        dryRun: false,
+      },
+    );
 
     expect(result.scanned).toBe(1);
 
-    const logs = await t.withIdentity({ subject: userId }).query(api.logs.list, {});
+    const logs = await t
+      .withIdentity({ subject: userId })
+      .query(api.logs.list, {});
     expect(logs).toHaveLength(1);
     expect(logs[0].type).toBe("activity");
     const data = logs[0].data as {
@@ -298,15 +323,20 @@ describe("migrateLegacyLogsBatch — data shape compliance", () => {
       });
     });
 
-    const result = await t.mutation(internal.migrations.migrateLegacyLogsBatch, {
-      cursor: null,
-      numItems: 10,
-      dryRun: false,
-    });
+    const result = await t.mutation(
+      internal.migrations.migrateLegacyLogsBatch,
+      {
+        cursor: null,
+        numItems: 10,
+        dryRun: false,
+      },
+    );
 
     expect(result.scanned).toBe(1);
 
-    const logs = await t.withIdentity({ subject: userId }).query(api.logs.list, {});
+    const logs = await t
+      .withIdentity({ subject: userId })
+      .query(api.logs.list, {});
     expect(logs).toHaveLength(1);
     expect(logs[0].type).toBe("weight");
     const data = logs[0].data as { weightKg: number };
@@ -337,11 +367,14 @@ describe("migrateLegacyLogsBatch — data shape compliance", () => {
       });
     });
 
-    const result = await t.mutation(internal.migrations.migrateLegacyLogsBatch, {
-      cursor: null,
-      numItems: 10,
-      dryRun: true,
-    });
+    const result = await t.mutation(
+      internal.migrations.migrateLegacyLogsBatch,
+      {
+        cursor: null,
+        numItems: 10,
+        dryRun: true,
+      },
+    );
 
     expect(result.scanned).toBe(1);
     // In dry run, the underlying data remains unchanged
@@ -388,7 +421,9 @@ describe("migrateLegacyLogsBatch — data shape compliance", () => {
       dryRun: false,
     });
 
-    const logs = await t.withIdentity({ subject: userId }).query(api.logs.list, {});
+    const logs = await t
+      .withIdentity({ subject: userId })
+      .query(api.logs.list, {});
     expect(logs).toHaveLength(1);
     const data = logs[0].data as {
       items: Array<{
@@ -496,6 +531,222 @@ describe("normalizeCanonicalNames", () => {
       expect(foodLibrary?.canonicalName).toBe("butter");
       expect(ingredientOverride?.canonicalName).toBe("butter");
       expect(ingredientProfile?.canonicalName).toBe("butter");
+    });
+  });
+});
+
+describe("backfillFluidToLiquid", () => {
+  const userId = "fluid-migration-test-user";
+
+  it("leaves a water-only fluid log as type='fluid'", async () => {
+    const t = convexTest(schema);
+    const now = Date.now();
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("logs", {
+        userId,
+        timestamp: now,
+        type: "fluid",
+        data: { items: [{ name: "Water", quantity: 250, unit: "ml" }] },
+      });
+    });
+
+    const result = await t.mutation(
+      internal.migrations.backfillFluidToLiquid,
+      {},
+    );
+
+    expect(result.scanned).toBe(1);
+    expect(result.updated).toBe(0);
+    expect(result.isDone).toBe(true);
+
+    await t.run(async (ctx) => {
+      const log = await ctx.db
+        .query("logs")
+        .withIndex("by_userId", (q) => q.eq("userId", userId))
+        .first();
+      if (log === null) throw new Error("expected log");
+      expect(log.type).toBe("fluid");
+    });
+  });
+
+  it("updates a non-water fluid log (Coffee) to type='liquid'", async () => {
+    const t = convexTest(schema);
+    const now = Date.now();
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("logs", {
+        userId,
+        timestamp: now,
+        type: "fluid",
+        data: { items: [{ name: "Coffee", quantity: 200, unit: "ml" }] },
+      });
+    });
+
+    const result = await t.mutation(
+      internal.migrations.backfillFluidToLiquid,
+      {},
+    );
+
+    expect(result.scanned).toBe(1);
+    expect(result.updated).toBe(1);
+    expect(result.isDone).toBe(true);
+
+    await t.run(async (ctx) => {
+      const log = await ctx.db
+        .query("logs")
+        .withIndex("by_userId", (q) => q.eq("userId", userId))
+        .first();
+      if (log === null) throw new Error("expected log");
+      expect(log.type).toBe("liquid");
+    });
+  });
+
+  it("updates a mixed log (Water + Coffee) to type='liquid'", async () => {
+    const t = convexTest(schema);
+    const now = Date.now();
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("logs", {
+        userId,
+        timestamp: now,
+        type: "fluid",
+        data: {
+          items: [
+            { name: "Water", quantity: 100, unit: "ml" },
+            { name: "Coffee", quantity: 50, unit: "ml" },
+          ],
+        },
+      });
+    });
+
+    const result = await t.mutation(
+      internal.migrations.backfillFluidToLiquid,
+      {},
+    );
+
+    expect(result.scanned).toBe(1);
+    expect(result.updated).toBe(1);
+    expect(result.isDone).toBe(true);
+
+    await t.run(async (ctx) => {
+      const log = await ctx.db
+        .query("logs")
+        .withIndex("by_userId", (q) => q.eq("userId", userId))
+        .first();
+      if (log === null) throw new Error("expected log");
+      expect(log.type).toBe("liquid");
+    });
+  });
+
+  it("does not modify food logs", async () => {
+    const t = convexTest(schema);
+    const now = Date.now();
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("logs", {
+        userId,
+        timestamp: now,
+        type: "food",
+        data: { items: [{ name: "Toast", quantity: 1, unit: null }] },
+      });
+    });
+
+    const result = await t.mutation(
+      internal.migrations.backfillFluidToLiquid,
+      {},
+    );
+
+    // scanned counts only fluid logs — food logs are skipped entirely
+    expect(result.scanned).toBe(0);
+    expect(result.updated).toBe(0);
+    expect(result.isDone).toBe(true);
+
+    await t.run(async (ctx) => {
+      const log = await ctx.db
+        .query("logs")
+        .withIndex("by_userId", (q) => q.eq("userId", userId))
+        .first();
+      if (log === null) throw new Error("expected log");
+      expect(log.type).toBe("food");
+    });
+  });
+
+  it("handles an empty batch (no fluid logs to process)", async () => {
+    const t = convexTest(schema);
+
+    const result = await t.mutation(
+      internal.migrations.backfillFluidToLiquid,
+      {},
+    );
+
+    expect(result.scanned).toBe(0);
+    expect(result.updated).toBe(0);
+    expect(result.isDone).toBe(true);
+  });
+
+  it("does a case-insensitive water check (lowercase 'water' stays as fluid)", async () => {
+    const t = convexTest(schema);
+    const now = Date.now();
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("logs", {
+        userId,
+        timestamp: now,
+        type: "fluid",
+        data: { items: [{ name: "water", quantity: 300, unit: "ml" }] },
+      });
+    });
+
+    const result = await t.mutation(
+      internal.migrations.backfillFluidToLiquid,
+      {},
+    );
+
+    expect(result.scanned).toBe(1);
+    expect(result.updated).toBe(0);
+
+    await t.run(async (ctx) => {
+      const log = await ctx.db
+        .query("logs")
+        .withIndex("by_userId", (q) => q.eq("userId", userId))
+        .first();
+      if (log === null) throw new Error("expected log");
+      expect(log.type).toBe("fluid");
+    });
+  });
+
+  it("only patches the type field — leaves data, timestamp, userId unchanged", async () => {
+    const t = convexTest(schema);
+    const now = Date.now();
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("logs", {
+        userId,
+        timestamp: now,
+        type: "fluid",
+        data: { items: [{ name: "Orange Juice", quantity: 150, unit: "ml" }] },
+      });
+    });
+
+    await t.mutation(internal.migrations.backfillFluidToLiquid, {});
+
+    await t.run(async (ctx) => {
+      const log = await ctx.db
+        .query("logs")
+        .withIndex("by_userId", (q) => q.eq("userId", userId))
+        .first();
+      if (log === null) throw new Error("expected log");
+      expect(log.type).toBe("liquid");
+      expect(log.userId).toBe(userId);
+      expect(log.timestamp).toBe(now);
+      const data = log.data as {
+        items: Array<{ name: string; quantity: number; unit: string }>;
+      };
+      expect(data.items).toHaveLength(1);
+      expect(data.items[0].name).toBe("Orange Juice");
+      expect(data.items[0].quantity).toBe(150);
+      expect(data.items[0].unit).toBe("ml");
     });
   });
 });

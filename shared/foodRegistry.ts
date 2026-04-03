@@ -28,6 +28,8 @@ export {
   CANONICAL_FOOD_NAMES,
   FOOD_GROUPS,
   FOOD_LINES,
+  calculateCaloriesForPortion,
+  calculateMacrosForPortion,
   getFoodDigestionMetadata,
   getFoodEntry,
   getFoodGroup,
@@ -38,6 +40,12 @@ export {
   getGroupDisplayName,
   getLineDisplayName,
   getLinesByGroup,
+  getPortionData,
   isCanonicalFood,
   pickFoodDigestionMetadata,
 } from "./foodRegistryUtils";
+
+export type { MacroBreakdown } from "./foodRegistryUtils";
+
+export { FOOD_PORTION_DATA } from "./foodPortionData";
+export type { PortionData } from "./foodPortionData";

@@ -30,6 +30,8 @@ interface RawInputEditModalProps {
   logTimestamp: number;
   /** Existing notes on the log entry, preserved across edits. */
   currentNotes?: string;
+  /** The log's type — preserved so liquid logs don't become food logs on edit. */
+  logType?: "food" | "liquid";
 }
 
 export function RawInputEditModal({
@@ -39,6 +41,7 @@ export function RawInputEditModal({
   currentRawInput,
   logTimestamp,
   currentNotes,
+  logType = "food",
 }: RawInputEditModalProps) {
   const [editedText, setEditedText] = useState(currentRawInput);
   const [isSaving, setIsSaving] = useState(false);
@@ -88,7 +91,7 @@ export function RawInputEditModal({
       await updateSyncedLog({
         id: logId,
         timestamp: logTimestamp,
-        type: "food",
+        type: logType,
         data: {
           rawInput: trimmed,
           items: [],
@@ -158,7 +161,12 @@ export function RawInputEditModal({
         </div>
 
         <div className="flex items-center justify-end gap-2">
-          <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} disabled={isSaving}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onOpenChange(false)}
+            disabled={isSaving}
+          >
             Cancel
           </Button>
           <Button

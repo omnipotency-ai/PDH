@@ -1,63 +1,61 @@
-# Next Session — Meal Logging Component Decisions
+# Next Session — Nutrition Card Wave 2 (Core UI)
 
 ## Context
 
-We ran 4 parallel worktree agents (A-D) to build competing Nutrition card implementations. Both the user and I tested them extensively. Now we need to make final decisions for the combined implementation, separating **visual** picks from **behavioral/code** picks.
+Wave 0 (Research) and Wave 1 (Foundation) are complete on `feat/nutrition` branch. PR #2 is open for merge to main. All work is additive — no existing behavior changed.
 
-**Key principle from user:** "It might be that we keep the behavior from B, but the visual from A and C."
+## What to read first
 
-## What to Do
+1. `docs/plans/nutrition-card-implementation-plan.json` (v3.0) — the master plan, Wave 0+1 marked complete
+2. `memory/project_nutrition_card_decisions.md` — all 22 locked visual + behavioral decisions
+3. `memory/project_wave0_decisions.md` — user decisions: type=liquid, coffee composite, 1850kcal, portions pre-populated
+4. `memory/feedback_subagent_model_choice.md` — use opus for implementers + quality reviewers, haiku for spec reviewers
 
-Walk through each component one at a time. For each:
+## What was built in Wave 1
 
-1. Look at the user's annotated image (in `docs/plans/Worktree spec/user-annotations/`)
-2. Compare visual preference (user's browser testing) with code/behavioral best (my analysis)
-3. Make a final decision on both layers
-4. Record the decision
+- **`shared/logTypeUtils.ts`** — `isFoodPipelineType()` helper (centralised food/liquid check)
+- **`shared/foodPortionData.ts`** — 147 entries, USDA nutrition per 100g, portion sizes
+- **`shared/foodRegistryUtils.ts`** — `getPortionData`, `calculateCaloriesForPortion`, `calculateMacrosForPortion`
+- **`src/lib/nutritionUtils.ts`** — `getMealSlot`, `calculateTotalCalories`, `calculateTotalMacros`, `groupByMealSlot`, `calculateWaterIntake`
+- **`src/hooks/useNutritionData.ts`** — read-only hook: todayFoodLogs, totalCaloriesToday, totalMacrosToday, waterIntakeToday, caloriesByMealSlot, logsByMealSlot, recentFoods
+- **`src/hooks/useProfile.ts`** — `useNutritionGoals()` (1850kcal, 1000ml defaults), `useFoodFavourites()` (add/remove/isFavourite)
+- **`convex/migrations.ts`** — `backfillFluidToLiquid` (ready to run, not yet executed)
+- **Profile schema** — `nutritionGoals` + `foodFavourites` optional fields on profiles table
 
-## Components (22 items)
+## Wave 2 task order
 
-### Visual / UI
+1. **W2-01: useNutritionStore** — useReducer-based UI state (view, searchQuery, stagingItems, modals, mealSlot). Fuse.js search (threshold 0.4, min 3 chars). Staging aggregates same canonicalName. Staging persists across view changes. **Must complete before W2-02 through W2-06.**
+2. **W2-02: NutritionCard (collapsed)** — header, calorie summary bar, search input, log food button, water progress. Uses useNutritionData + useNutritionStore.
+3. **W2-03: SearchView** — meals first then foods in results, camera+mic icons, auto-detect meal slot label.
+4. **W2-04: StagingModal** — centered, food rows with -/+/cal/X, 5 macro totals, match indicators.
+5. **W2-05: WaterModal** — centered, ring animation, plus/minus, cyan/teal theme, escape to close.
+6. **W2-06: CalorieDetailView** — segmented color bar by meal slot, per-slot calories, 5 macro columns, accordions.
 
-1. Collapsed card
-2. Search view
-3. Staging modal
-4. Water modal
-5. Calorie detail
-6. Favourites
-7. Filter (needs redesign — see `research-food-filter-patterns.md`)
+W2-02 through W2-06 can run in parallel after W2-01 completes (they all depend on the store but not each other).
 
-### Behavioral / Code
+## Before starting Wave 2
 
-8. Architecture (modular vs monolithic)
-9. State management (useReducer vs useState)
-10. Fuzzy search (Fuse.js vs custom, threshold)
-11. Live search (as-you-type results)
-12. Block text parsing
-13. Staging aggregation
-14. Staging persistence
-15. Global escape
-16. Dark mode
-17. Modal positioning
-18. Accessibility
-19. Unknown food handling
-20. Inline staging feedback
-21. Natural units (from V4)
-22. 6-value macros (from V4)
+- Merge PR #2 to main (or continue on feat/nutrition)
+- Run `backfillFluidToLiquid` migration on dev data
+- Agent A's worktree files are reference only: `.claude/worktrees/agent-a31ddf8f/`
 
-## Reference Files
+## Subagent strategy (learned this session)
 
-- Agent reports: `docs/plans/Worktree spec/report-agent-{a,b,c,d}.md`
-- Overview: `docs/plans/Worktree spec/report-overview.md`
-- Filter research: `docs/plans/Worktree spec/research-food-filter-patterns.md`
-- User annotations: `docs/plans/Worktree spec/user-annotations/` (images 12-19 with README)
-- User visual picks: memory `feedback_round2_full_comparison.md`
-- User filter/water feedback: memory `feedback_round2_water_filter.md`
+- **Opus for implementers** — sonnet ran out of context 3 of 4 times, requiring manual cleanup
+- **Haiku for spec reviewers** — checklist comparison works fine at haiku tier
+- **Opus for quality reviewers** — catches real architectural bugs (found 20 missed food pipeline consumers)
+- **Sonnet for targeted fix agents** — narrow scope, works fine
 
-## Worktree Branches (code reference)
+## Verification commands
 
-- A (Coral/Dark): `.claude/worktrees/agent-a31ddf8f` — branch `worktree-agent-a31ddf8f`
-- B (Yellow/Light): `.claude/worktrees/agent-aa467ec9` — branch `worktree-agent-aa467ec9`
-- C (Blue/Light): `.claude/worktrees/agent-a0b4b876` — branch `worktree-agent-a0b4b876`
-- D (Orange/Dark): `.claude/worktrees/agent-a73daffd` — branch `worktree-agent-a73daffd`
-- Round 1 V4: `.claude/worktrees/agent-a1d74ee2` — branch `worktree-agent-a1d74ee2`
+```
+bun run typecheck
+bun run build
+bun run lint:fix
+bun run test:unit
+bun run format
+```
+
+## Branch
+
+Continue on `feat/nutrition` or create `feat/nutrition-ui` for Wave 2.

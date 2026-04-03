@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { isFoodPipelineType } from "../shared/logTypeUtils";
 import {
   buildFoodEvidenceResult,
   type FoodEvidenceLog,
@@ -645,7 +646,7 @@ export const mergeDuplicates = mutation({
         .take(5000);
 
       for (const log of logs) {
-        if (log.type !== "food") continue;
+        if (!isFoodPipelineType(log.type)) continue;
         const data = log.data as Record<string, unknown>;
         const items = Array.isArray(data.items)
           ? (data.items as Array<Record<string, unknown>>)
