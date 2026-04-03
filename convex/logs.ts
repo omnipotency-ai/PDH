@@ -29,6 +29,7 @@ import {
 
 const logTypeValidator = v.union(
   v.literal("food"),
+  v.literal("liquid"),
   v.literal("fluid"),
   v.literal("habit"),
   v.literal("activity"),
@@ -831,7 +832,7 @@ export const add = mutation({
       type: args.type,
       data,
     });
-    if (args.type === "food") {
+    if (args.type === "food" || args.type === "liquid") {
       const foodData = data as { rawInput?: string; items?: unknown[] };
       if (
         foodData.rawInput &&
@@ -870,7 +871,7 @@ export const remove = mutation({
     if (record.userId !== userId) {
       throw new Error("Not authorized to delete this log entry.");
     }
-    if (record.type === "food") {
+    if (record.type === "food" || record.type === "liquid") {
       await clearIngredientExposuresForLog(ctx, { userId, logId: record._id });
     }
     await ctx.db.delete(args.id);
@@ -897,7 +898,7 @@ export const update = mutation({
       timestamp: args.timestamp,
       data,
     });
-    if (record.type === "food") {
+    if (record.type === "food" || record.type === "liquid") {
       const foodData = data as { rawInput?: string; items?: unknown[] };
       const hasRawInput =
         typeof foodData.rawInput === "string" && foodData.rawInput.length > 0;
@@ -1286,6 +1287,7 @@ type BackupPayload = {
 
 type BackupLogType =
   | "food"
+  | "liquid"
   | "fluid"
   | "habit"
   | "activity"
@@ -1294,6 +1296,7 @@ type BackupLogType =
 
 const BACKUP_LOG_TYPES = new Set<string>([
   "food",
+  "liquid",
   "fluid",
   "habit",
   "activity",
@@ -2207,7 +2210,7 @@ export const getLogOwner = internalQuery({
     if (!log) return null;
     // Include itemsVersion for food logs so callers can do OCC checks
     const itemsVersion =
-      log.type === "food"
+      log.type === "food" || log.type === "liquid"
         ? (((log.data as Record<string, unknown>).itemsVersion as
             | number
             | undefined) ?? 0)

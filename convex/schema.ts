@@ -26,6 +26,7 @@ export default defineSchema({
     timestamp: v.number(),
     type: v.union(
       v.literal("food"),
+      v.literal("liquid"),
       v.literal("fluid"),
       v.literal("habit"),
       v.literal("activity"),

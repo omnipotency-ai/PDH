@@ -51,6 +51,12 @@ export function groupLogEntries(sorted: SyncedLog[], habits: HabitConfig[]): Dis
       continue;
     }
 
+    if (log.type === "liquid") {
+      // Liquid logs use FoodLogData shape and display with food entries
+      foodEntries.push(log as unknown as FoodLog);
+      continue;
+    }
+
     if (log.type === "digestion") {
       items.push({ kind: "individual", log, sortKey: log.timestamp });
       continue;

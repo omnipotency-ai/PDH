@@ -65,9 +65,9 @@ All 4 ingredient subsystems confirmed as pre-built infrastructure for filter pro
 - FOOD_PORTION_DATA must be pre-populated (not empty)
 - Fluid→liquid backfill migration needed
 
-**Wave 1 next (Foundation):**
+**Wave 1 in progress (Foundation):**
 
-- W1-00 (NEW): Add type="liquid" to schema
+- W1-00: Add type="liquid" to schema — **DONE** (2026-04-03)
 - W1-01: Populate FOOD_PORTION_DATA (all 147 entries, real data)
 - W1-02: Add nutrition goals + favourites to profile
 - W1-03: Build useNutritionData hook

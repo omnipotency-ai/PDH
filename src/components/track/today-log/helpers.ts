@@ -93,11 +93,11 @@ export function hasNotes(log: SyncedLog): log is SyncedLog & { data: { notes?: s
 export function hasItems(log: SyncedLog): log is SyncedLog & {
   data: { items: Array<{ name?: string; quantity?: number; unit?: string }> };
 } {
-  return log.type === "food" || log.type === "fluid";
+  return log.type === "food" || log.type === "liquid" || log.type === "fluid";
 }
 
 export function getLogIcon(log: SyncedLog): LucideIcon {
-  if (log.type === "food") return Soup;
+  if (log.type === "food" || log.type === "liquid") return Soup;
   if (log.type === "fluid") return Droplets;
   if (log.type === "digestion") return HeartPulse;
   if (log.type === "weight") return Weight;
@@ -111,7 +111,7 @@ export function getLogIcon(log: SyncedLog): LucideIcon {
 }
 
 export function getLogColor(log: SyncedLog): string {
-  if (log.type === "food") return "text-[var(--section-food)]";
+  if (log.type === "food" || log.type === "liquid") return "text-[var(--section-food)]";
   if (log.type === "fluid") return "text-sky-600 dark:text-sky-400";
   if (log.type === "digestion") return "text-[var(--section-bowel)]";
   if (log.type === "weight") return "text-indigo-600 dark:text-indigo-400";
@@ -192,6 +192,7 @@ export function findHabitConfigForHabitLog(
 
 export function getLogTitle(log: SyncedLog, habits: HabitConfig[]): string {
   if (log.type === "food") return "Food Intake";
+  if (log.type === "liquid") return "Beverage";
   if (log.type === "fluid") {
     const first = String(log.data.items[0]?.name ?? "").trim();
     return first || "Fluid";
@@ -213,7 +214,7 @@ export function getLogTitle(log: SyncedLog, habits: HabitConfig[]): string {
 }
 
 export function getLogDetail(log: SyncedLog): string | null {
-  if (log.type === "food") {
+  if (log.type === "food" || log.type === "liquid") {
     const items = log.data.items;
     const rawLabels = items
       .map((item) =>
@@ -276,7 +277,7 @@ export function getLogDetail(log: SyncedLog): string | null {
 }
 
 export function getEditablePrimary(log: SyncedLog): string {
-  if (log.type === "food") {
+  if (log.type === "food" || log.type === "liquid") {
     const firstItem = log.data?.items?.[0];
     return String(
       firstItem?.userSegment ??
@@ -293,7 +294,7 @@ export function getEditablePrimary(log: SyncedLog): string {
 }
 
 export function canEditPrimary(log: SyncedLog): boolean {
-  return log.type === "food" || log.type === "fluid";
+  return log.type === "food" || log.type === "liquid" || log.type === "fluid";
 }
 
 export function formatDuration(minutes: number, type: string): string {

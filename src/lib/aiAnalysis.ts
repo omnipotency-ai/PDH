@@ -418,8 +418,8 @@ export function buildRecentEvents(logs: LogEntry[], profile: HealthProfile): Rec
   const foodLogs = mapFoodLogs(
     logs.filter(
       (log): log is LogEntry & { type: "food" } =>
-        log.type === "food" && log.timestamp >= cutoffs.food,
-    ),
+        (log.type === "food" || log.type === "liquid") && log.timestamp >= cutoffs.food,
+    ) as Array<LogEntry & { type: "food" }>,
   );
 
   const bowelEvents = mapBowelEvents(
@@ -1635,7 +1635,7 @@ export function parseAiInsight(raw: unknown): AiNutritionistInsight | null {
       ? { topic: rawEduInsight.topic, fact: rawEduInsight.fact }
       : null;
 
-    const clinicalReasoning: string | null =
+  const clinicalReasoning: string | null =
     typeof raw.clinicalReasoning === "string" ? raw.clinicalReasoning : null;
 
   return {

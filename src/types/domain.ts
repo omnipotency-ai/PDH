@@ -15,6 +15,7 @@ import type {
 } from "../../shared/foodTypes";
 import { DEFAULT_INSIGHT_MODEL, type InsightModel } from "../lib/aiModels";
 import type { HabitConfig } from "../lib/habitTemplates";
+
 export type {
   FoodAssessmentCausalRole,
   FoodAssessmentChangeType,
@@ -28,13 +29,7 @@ export type {
 import type { SleepGoal } from "../lib/streaks";
 import type { UnitSystem } from "../lib/units";
 
-export type LogType =
-  | "food"
-  | "fluid"
-  | "digestion"
-  | "habit"
-  | "activity"
-  | "weight";
+export type LogType = "food" | "liquid" | "fluid" | "digestion" | "habit" | "activity" | "weight";
 
 export type SurgeryType =
   | "Colectomy with ileostomy"
@@ -80,12 +75,7 @@ export const HEALTH_COMORBIDITY_OPTIONS = [
   "HIV+",
 ] as const;
 
-export type Gender =
-  | "male"
-  | "female"
-  | "non_binary"
-  | "prefer_not_to_say"
-  | "";
+export type Gender = "male" | "female" | "non_binary" | "prefer_not_to_say" | "";
 
 // ── Food Personalisation ──────────────────────────────────────────────────────
 
@@ -309,12 +299,7 @@ export interface StructuredFoodAssessment {
   reasoning: string;
 }
 
-export type AiAnalysisStatus =
-  | "idle"
-  | "sending"
-  | "receiving"
-  | "done"
-  | "error";
+export type AiAnalysisStatus = "idle" | "sending" | "receiving" | "done" | "error";
 export type AiAnalysisProgressStep = "sending" | "receiving" | "done";
 
 export interface FoodItem {
@@ -351,10 +336,7 @@ export interface FoodItem {
   >;
 }
 
-export const GROUP_COLORS: Record<
-  FoodGroup,
-  { primary: string; glow: string }
-> = {
+export const GROUP_COLORS: Record<FoodGroup, { primary: string; glow: string }> = {
   protein: { primary: "teal-400", glow: "teal-500" },
   carbs: { primary: "amber-400", glow: "amber-500" },
   fats: { primary: "violet-400", glow: "violet-500" },
@@ -407,6 +389,7 @@ export interface WeightLogData {
 /** Maps LogType to its corresponding data shape */
 export interface LogDataMap {
   food: FoodLogData;
+  liquid: FoodLogData;
   fluid: FluidLogData;
   digestion: DigestiveLogData;
   habit: HabitLogData;
@@ -426,6 +409,7 @@ export type LogEntry = {
 
 // ── Narrowed log type aliases ────────────────────────────────────────────────
 export type FoodLog = LogEntry & { type: "food"; data: FoodLogData };
+export type LiquidLog = LogEntry & { type: "liquid"; data: FoodLogData };
 export type FluidLog = LogEntry & { type: "fluid"; data: FluidLogData };
 export type DigestiveLog = LogEntry & {
   type: "digestion";

@@ -9,7 +9,10 @@ import {
   type TransitCalibration,
   toLegacyFoodStatus,
 } from "../shared/foodEvidence";
-import { formatCanonicalFoodDisplayName, prefersSummaryCandidate } from "../shared/foodNormalize";
+import {
+  formatCanonicalFoodDisplayName,
+  prefersSummaryCandidate,
+} from "../shared/foodNormalize";
 import { getLoggedFoodIdentity } from "../shared/foodProjection";
 import type {
   FoodAssessmentCausalRole,
@@ -29,7 +32,8 @@ function getLatestTimestamp(
   fallback: number,
 ): number {
   const finite = timestamps.filter(
-    (timestamp): timestamp is number => typeof timestamp === "number" && Number.isFinite(timestamp),
+    (timestamp): timestamp is number =>
+      typeof timestamp === "number" && Number.isFinite(timestamp),
   );
   return finite.length > 0 ? Math.max(...finite) : fallback;
 }
@@ -107,9 +111,18 @@ async function upsertFoodTrialSummaries(
     deleteOrphans: boolean;
   },
 ): Promise<{ updated: number }> {
-  const { userId, recomputeAt, fusedSummaries, existingSummaries, deleteOrphans } = opts;
+  const {
+    userId,
+    recomputeAt,
+    fusedSummaries,
+    existingSummaries,
+    deleteOrphans,
+  } = opts;
 
-  const existingByName = new Map<string, (typeof existingSummaries)[number][]>();
+  const existingByName = new Map<
+    string,
+    (typeof existingSummaries)[number][]
+  >();
   for (const summary of existingSummaries) {
     const canonicalName = resolveCanonicalFoodName(summary.canonicalName);
     const rows = existingByName.get(canonicalName);
@@ -129,7 +142,10 @@ async function upsertFoodTrialSummaries(
 
     let existing: (typeof existingSummaries)[number] | undefined;
     for (const candidate of existingByName.get(canonicalName) ?? []) {
-      if (!existing || prefersSummaryCandidate(candidate, existing, canonicalName)) {
+      if (
+        !existing ||
+        prefersSummaryCandidate(candidate, existing, canonicalName)
+      ) {
         existing = candidate;
       }
     }
@@ -140,7 +156,10 @@ async function upsertFoodTrialSummaries(
       userId,
       canonicalName,
       displayName: formatCanonicalFoodDisplayName(canonicalName),
-      currentStatus: toLegacyFoodStatus(summary.primaryStatus, summary.tendency),
+      currentStatus: toLegacyFoodStatus(
+        summary.primaryStatus,
+        summary.tendency,
+      ),
       latestAiVerdict,
       ...(summary.latestConfidence && {
         latestConfidence: summary.latestConfidence,
@@ -242,7 +261,9 @@ async function updateFoodTrialSummaryImpl(
   // which foods were affected.
   const reportAssessments = await ctx.db
     .query("foodAssessments")
-    .withIndex("by_aiAnalysisId", (q) => q.eq("aiAnalysisId", args.aiAnalysisId))
+    .withIndex("by_aiAnalysisId", (q) =>
+      q.eq("aiAnalysisId", args.aiAnalysisId),
+    )
     .collect();
 
   const affectedFoods = new Set(reportAssessments.map((a) => a.canonicalName));
@@ -251,7 +272,10 @@ async function updateFoodTrialSummaryImpl(
   if (affectedFoods.size === 0) {
     // Still update the profile timestamp if we have a valid report timestamp.
     if (profile && aiAnalysis) {
-      const recomputeAt = getLatestTimestamp([profile.updatedAt, aiAnalysis.timestamp], 0);
+      const recomputeAt = getLatestTimestamp(
+        [profile.updatedAt, aiAnalysis.timestamp],
+        0,
+      );
       await ctx.db.patch(profile._id, { updatedAt: recomputeAt });
     }
     return { updated: 0 };
@@ -355,7 +379,9 @@ async function updateFoodTrialSummaryImpl(
   // buildFoodEvidenceResult may produce summaries for other foods that
   // appear in the log window but weren't in this report. We only want
   // to upsert summaries for the foods that were actually assessed.
-  const affectedFoodNormalized = new Set([...affectedFoods].map(resolveCanonicalFoodName));
+  const affectedFoodNormalized = new Set(
+    [...affectedFoods].map(resolveCanonicalFoodName),
+  );
   const scopedSummaries = fused.summaries.filter((s) =>
     affectedFoodNormalized.has(resolveCanonicalFoodName(s.canonicalName)),
   );
@@ -443,7 +469,7 @@ async function updateWeeklyDigestImpl(
     .collect();
 
   const digestionLogs = logs.filter((l) => l.type === "digestion");
-  const foodLogs = logs.filter((l) => l.type === "food");
+  const foodLogs = logs.filter((l) => l.type === "food" || l.type === "liquid");
   const habitLogs = logs.filter((l) => l.type === "habit");
   const fluidLogs = logs.filter((l) => l.type === "fluid");
 
@@ -473,7 +499,10 @@ async function updateWeeklyDigestImpl(
 
   const avgBristol =
     bristolScores.length > 0
-      ? Math.round((bristolScores.reduce((a, b) => a + b, 0) / bristolScores.length) * 10) / 10
+      ? Math.round(
+          (bristolScores.reduce((a, b) => a + b, 0) / bristolScores.length) *
+            10,
+        ) / 10
       : undefined;
 
   // Food stats -- collect unique food names from this week
@@ -543,9 +572,15 @@ async function updateWeeklyDigestImpl(
   const safeFoodMap = new Map<string, number>();
   for (const a of weekAssessments) {
     if (a.verdict === "culprit" || a.verdict === "avoid") {
-      culpritFoods.set(a.canonicalName, (culpritFoods.get(a.canonicalName) ?? 0) + 1);
+      culpritFoods.set(
+        a.canonicalName,
+        (culpritFoods.get(a.canonicalName) ?? 0) + 1,
+      );
     } else if (a.verdict === "safe") {
-      safeFoodMap.set(a.canonicalName, (safeFoodMap.get(a.canonicalName) ?? 0) + 1);
+      safeFoodMap.set(
+        a.canonicalName,
+        (safeFoodMap.get(a.canonicalName) ?? 0) + 1,
+      );
     }
   }
 
@@ -751,7 +786,9 @@ export const backfillFoodTrials = mutation({
         internal.computeAggregates.backfillFoodTrialsWorker,
         { userId },
       );
-      console.info(`[backfillFoodTrials] Scheduled worker (task ${String(taskId)}) for user ${userId}`);
+      console.info(
+        `[backfillFoodTrials] Scheduled worker (task ${String(taskId)}) for user ${userId}`,
+      );
     } catch (error) {
       console.error(
         `[backfillFoodTrials] Failed to schedule worker for user ${userId}:`,
@@ -963,7 +1000,9 @@ export const backfillKnownFoods = mutation({
           cursor: 0,
         },
       );
-      console.info(`[backfillKnownFoods] Scheduled worker (task ${String(taskId)}) for user ${userId}`);
+      console.info(
+        `[backfillKnownFoods] Scheduled worker (task ${String(taskId)}) for user ${userId}`,
+      );
     } catch (error) {
       console.error(
         `[backfillKnownFoods] Failed to schedule worker for user ${userId}:`,

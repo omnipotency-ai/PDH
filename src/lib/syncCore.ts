@@ -58,6 +58,7 @@ type ConvexLogData = FunctionArgs<typeof api.logs.add>["data"];
  */
 const VALID_LOG_TYPES: ReadonlySet<string> = new Set<LogType>([
   "food",
+  "liquid",
   "fluid",
   "digestion",
   "habit",
@@ -137,9 +138,10 @@ export function sanitizeLogData(type: LogType, data: LogPayloadData): ConvexLogD
   // validator shape. Server-only fields (evidenceProcessedAt, itemsVersion)
   // are never sent from the client, so we don't include them.
   switch (type) {
-    case "food": {
-      assertObject(sanitized, "food");
-      assertField(sanitized, "items", "food");
+    case "food":
+    case "liquid": {
+      assertObject(sanitized, type);
+      assertField(sanitized, "items", type);
       const d = sanitized as FoodLogData;
       // Map items to fix null→undefined for canonicalName (domain allows null,
       // Convex validator does not).
@@ -244,6 +246,8 @@ export function toValidatedSyncedLog(row: ConvexLogRow): SyncedLog | null {
   switch (type) {
     case "food":
       return { id, timestamp, type, data: data as LogDataMap["food"] };
+    case "liquid":
+      return { id, timestamp, type, data: data as LogDataMap["liquid"] };
     case "fluid":
       return { id, timestamp, type, data: data as LogDataMap["fluid"] };
     case "digestion":
