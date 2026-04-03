@@ -40,20 +40,41 @@ All 4 ingredient subsystems confirmed as pre-built infrastructure for filter pro
 
 ## Upcoming Work Queue
 
-### Wave 1: Meal Logging (in progress)
+### Wave 1: Meal Logging (Wave 0 complete, Wave 1 next)
 
-**Status:** All 22 decisions locked. Implementation plan written. Ready for execution (2026-04-03).
+**Status:** Wave 0 research complete (2026-04-03). 16 adversarial agents produced 4 cross-validated docs. User reviewed assumptions and made 5 decisions. Plan updated for Wave 1.
+**Branch:** `feat/nutrition`
 **PRD:** `docs/design/meal-logging.md`
-**Decisions:** `memory/project_nutrition_card_decisions.md`
-**Plan:** `docs/plans/nutrition-card-implementation-plan.json` (26 tasks, 6 waves)
+**Decisions:** `memory/project_nutrition_card_decisions.md` + `memory/project_wave0_decisions.md`
+**Plan:** `docs/plans/nutrition-card-implementation-plan.json` (needs updates per next-session-prompt)
+**Research docs:** `docs/nutrition-card/*.md` (4 final + 12 raw analyses)
 **Next session prompt:** `docs/design/next-session-prompt.md`
 
-**Base:** Agent A's worktree (modular, useReducer, 9 files). Color = D's orange. Water = C's cyan.
+**Wave 0 completed tasks:**
 
-**Implementation approach:** 6 waves of parallel agents:
+- W0-01: Data model mapping (147 entries, mock→real gaps documented)
+- W0-02: Pipeline integration (Option B confirmed — rawInput + empty items)
+- W0-03: Fluid migration (3 presets mapped, water stays fluid)
+- W0-04: Portion schema design (separate FOOD_PORTION_DATA, seeding strategy)
 
-- Wave 0: Research (4 agents, read-only analysis docs)
-- Wave 1: Foundation (schema, registry, data hooks)
+**Key Wave 0 user decisions:**
+
+- New `type: "liquid"` log type (food, liquid, fluid)
+- Coffee composite: 200ml water + 50ml skimmed milk + coffee = 250ml
+- Calorie goal: 1,850 kcal/day
+- FOOD_PORTION_DATA must be pre-populated (not empty)
+- Fluid→liquid backfill migration needed
+
+**Wave 1 next (Foundation):**
+
+- W1-00 (NEW): Add type="liquid" to schema
+- W1-01: Populate FOOD_PORTION_DATA (all 147 entries, real data)
+- W1-02: Add nutrition goals + favourites to profile
+- W1-03: Build useNutritionData hook
+- W1-04 (NEW): Backfill fluid→liquid migration
+
+**Remaining waves:**
+
 - Wave 2: Core UI (6 agents building components)
 - Wave 3: Integration (wire to existing food pipeline)
 - Wave 4: Migration (non-water drinks → food logging)
