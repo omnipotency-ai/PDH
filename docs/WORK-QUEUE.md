@@ -3,7 +3,7 @@
 > **Single source of truth** for all remediation, bugs, and tech debt.
 >
 > **Created:** 2026-03-17
-> **Last updated:** 2026-03-31
+> **Last updated:** 2026-04-03
 
 ---
 
@@ -33,23 +33,23 @@
 
 ## Priority: Logging UX Redesign
 
-> Reduce friction so logging actually happens. Design session TBD (next conversation).
+> PRD: `docs/design/meal-logging.md` (merged). Round 2 complete (2026-04-03). Next: per-component visual+behavioral decisions, then combined implementation.
 
-| ID     | Title                             | Sev  | Description                                                                                                               | Status |
-| ------ | --------------------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------- | ------ |
-| WQ-410 | Voice/conversational food logging | Crit | Natural language input ("I ate toast with butter and beans") parsed by AI into structured log entries. Minimal friction.  | open   |
-| WQ-411 | Portion size tracking             | High | Add portion size to food logs. AI prompts for reasonable defaults. Same food at different quantities = different outcome. | open   |
-| WQ-412 | Logging gap detection & nudges    | Med  | AI detects missing logs and prompts gently. Especially important on bad days when user avoids logging.                    | open   |
-| WQ-413 | Liquids consolidation             | Med  | Water stays in fluids. All other liquids (milk, juice, cola, etc.) move to food logging with full registry profiles.      | open   |
+| ID     | Title                             | Sev  | Description                                                                                                                                            | Status      |
+| ------ | --------------------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------- |
+| WQ-410 | Voice/conversational food logging | Crit | Natural language input ("I ate toast with butter and beans") parsed by AI into structured log entries. Minimal friction.                               | open        |
+| WQ-411 | Portion size tracking             | High | +/- portion controls per food row in staging area. AI prompts for reasonable defaults. Same food at different quantities = different outcome.          | in-progress |
+| WQ-412 | Logging gap detection & nudges    | Med  | AI detects missing logs and prompts gently. Especially important on bad days when user avoids logging.                                                 | open        |
+| WQ-413 | Liquids consolidation             | Med  | Water stays in fluids (separate modal with blue accent). All other liquids (milk, juice, cola, etc.) move to food logging with full registry profiles. | in-progress |
 
 ---
 
 ## Open: Security & Type Safety
 
-| ID     | Title                                | Sev  | File(s)                            | Description                                              | Status   |
-| ------ | ------------------------------------ | ---- | ---------------------------------- | -------------------------------------------------------- | -------- |
+| ID  | Title | Sev | File(s) | Description | Status |
+| --- | ----- | --- | ------- | ----------- | ------ |
 
-| WQ-034 | `dateStr.split("-")` no NaN check    | High | `src/lib/digestiveCorrelations.ts` | Part of broader app-wide date/time consolidation effort. | deferred |
+| WQ-034 | `dateStr.split("-")` no NaN check | High | `src/lib/digestiveCorrelations.ts` | Part of broader app-wide date/time consolidation effort. | deferred |
 
 ---
 

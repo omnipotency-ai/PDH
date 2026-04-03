@@ -1,49 +1,63 @@
-# Next Session: Merge PR + 4 Parallel UI Implementations
+# Next Session — Meal Logging Component Decisions
 
-## Step 1: Create 4 worktrees for parallel UI implementations
+## Context
 
-Spawn 4 agents using `isolation: "worktree"`, each implementing the meal logging PRD (`docs/design/meal-logging.md`). All 4 get the identical prompt. The value is in seeing how they independently interpret the same spec — layout choices, component structure, interaction details, visual treatment will naturally vary.
+We ran 4 parallel worktree agents (A-D) to build competing Nutrition card implementations. Both the user and I tested them extensively. Now we need to make final decisions for the combined implementation, separating **visual** picks from **behavioral/code** picks.
 
-### Agent prompt (identical for all 4)
+**Key principle from user:** "It might be that we keep the behavior from B, but the visual from A and C."
 
-> You are implementing the Food Logging page for PDH, a post-surgical food reintroduction tracker.
->
-> **Read these files first:**
->
-> - `docs/design/meal-logging.md` — the full PRD (this is your spec, follow it closely)
-> - All reference images in `docs/design/food-trackers/` — especially `pdh-light-mode-reference.png` (primary style reference) and `pdh-dark-mode-reference.png` (dark mode reference)
-> - `CLAUDE.md` — project engineering principles
-> - `src/routeTree.tsx` — current route structure
-> - `src/components/Track.tsx` — current Track page (the food input section is what you're replacing)
-> - `src/components/ui/` — existing component library
->
-> **What to build:**
-> Create a new `/food` route with the meal builder UI described in the PRD. The page must:
->
-> - Follow the chip-based meal builder flow (input bar → meal slot chips → recipe/food chips → staging area → Log button)
-> - Support dark mode using the existing theme system
-> - Be mobile-responsive and ADHD-friendly (taps over dropdowns, progressive disclosure, calm and scannable)
-> - Use the existing design tokens and component library where possible
->
-> **What to mock:**
-> You can mock the Convex backend with static data for now. Create a Zustand store for the staging area state. Use hardcoded recipe/food data that matches the examples in the PRD (scrambled eggs on toast, toast with toppings, coffee, kaleitos, etc.).
->
-> **What NOT to do:**
->
-> - Don't modify existing pages or routes (create new files only)
-> - Don't build the nutrition label capture or barcode scanning flows (just show the icons)
-> - Don't build recipe management UI
-> - Don't implement the "What can I eat today?" section (future scope)
+## What to Do
 
-### What to review after
+Walk through each component one at a time. For each:
 
-Show Peter each of the versions so he can have a look and get a feel for whats right. He will Compare the 4 implementations side by side: and tell you which he likes best.
+1. Look at the user's annotated image (in `docs/plans/Worktree spec/user-annotations/`)
+2. Compare visual preference (user's browser testing) with code/behavioral best (my analysis)
+3. Make a final decision on both layers
+4. Record the decision
 
-1. Which layout feels best for quick logging (5 taps or less)?
-2. Which works best on mobile vs desktop?
-3. Which handles the staging area most intuitively?
-4. Which would you actually use on a bad day?
+## Components (22 items)
 
-then you will take thiose bits he liked best and combine into the final implementation.
+### Visual / UI
 
-you must show peter the agernts work and get his feedback before proceeding to the final implementation.
+1. Collapsed card
+2. Search view
+3. Staging modal
+4. Water modal
+5. Calorie detail
+6. Favourites
+7. Filter (needs redesign — see `research-food-filter-patterns.md`)
+
+### Behavioral / Code
+
+8. Architecture (modular vs monolithic)
+9. State management (useReducer vs useState)
+10. Fuzzy search (Fuse.js vs custom, threshold)
+11. Live search (as-you-type results)
+12. Block text parsing
+13. Staging aggregation
+14. Staging persistence
+15. Global escape
+16. Dark mode
+17. Modal positioning
+18. Accessibility
+19. Unknown food handling
+20. Inline staging feedback
+21. Natural units (from V4)
+22. 6-value macros (from V4)
+
+## Reference Files
+
+- Agent reports: `docs/plans/Worktree spec/report-agent-{a,b,c,d}.md`
+- Overview: `docs/plans/Worktree spec/report-overview.md`
+- Filter research: `docs/plans/Worktree spec/research-food-filter-patterns.md`
+- User annotations: `docs/plans/Worktree spec/user-annotations/` (images 12-19 with README)
+- User visual picks: memory `feedback_round2_full_comparison.md`
+- User filter/water feedback: memory `feedback_round2_water_filter.md`
+
+## Worktree Branches (code reference)
+
+- A (Coral/Dark): `.claude/worktrees/agent-a31ddf8f` — branch `worktree-agent-a31ddf8f`
+- B (Yellow/Light): `.claude/worktrees/agent-aa467ec9` — branch `worktree-agent-aa467ec9`
+- C (Blue/Light): `.claude/worktrees/agent-a0b4b876` — branch `worktree-agent-a0b4b876`
+- D (Orange/Dark): `.claude/worktrees/agent-a73daffd` — branch `worktree-agent-a73daffd`
+- Round 1 V4: `.claude/worktrees/agent-a1d74ee2` — branch `worktree-agent-a1d74ee2`
