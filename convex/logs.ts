@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { resolveCanonicalFoodName } from "../shared/foodCanonicalName";
 import { canonicalizeKnownFoodName } from "../shared/foodCanonicalization";
+import { isFoodPipelineType } from "../shared/logTypeUtils";
 import { getCanonicalFoodProjection } from "../shared/foodProjection";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";

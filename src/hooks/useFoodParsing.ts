@@ -16,16 +16,10 @@ export interface FoodParsingState {
    *
    * The server handles all parsing — callers pass notes + raw text only.
    */
-  handleLogFood: (
-    notes: string,
-    rawText: string,
-    timestampMs?: number,
-  ) => Promise<void>;
+  handleLogFood: (notes: string, rawText: string, timestampMs?: number) => Promise<void>;
 }
 
-export function useFoodParsing({
-  afterSave,
-}: UseFoodParsingOptions): FoodParsingState {
+export function useFoodParsing({ afterSave }: UseFoodParsingOptions): FoodParsingState {
   const addSyncedLog = useAddSyncedLog();
 
   const handleLogFood = useCallback(

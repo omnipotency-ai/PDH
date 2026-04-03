@@ -2,6 +2,7 @@ import { resolveCanonicalFoodName } from "./foodCanonicalName";
 import { formatFoodDisplayName } from "./foodNormalize";
 import { getLoggedFoodIdentity } from "./foodProjection";
 import { type FoodZone, getFoodGroup, getFoodZone } from "./foodRegistry";
+import { isFoodPipelineType } from "./logTypeUtils";
 import type {
   FoodAssessmentCausalRole,
   FoodAssessmentChangeType,
@@ -456,7 +457,7 @@ function buildFoodTrials(logs: FoodEvidenceLog[]): FoodTrial[] {
   const trials: FoodTrial[] = [];
 
   for (const log of logs) {
-    if (log.type !== "food") continue;
+    if (!isFoodPipelineType(log.type)) continue;
     const parsed = parseFoodData(log.data);
     if (!parsed) {
       console.warn(

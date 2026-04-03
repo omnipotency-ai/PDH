@@ -33,6 +33,7 @@ import {
   searchFoodDocuments,
 } from "../shared/foodMatching";
 import { getFoodZone, isCanonicalFood } from "../shared/foodRegistry";
+import { isFoodPipelineType } from "../shared/logTypeUtils";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { ActionCtx, MutationCtx, QueryCtx } from "./_generated/server";
@@ -408,7 +409,7 @@ export const getFoodLogForProcessing = internalQuery({
   args: { logId: v.id("logs") },
   handler: async (ctx, args): Promise<FoodLogSnapshot | null> => {
     const log = await ctx.db.get(args.logId);
-    if (!log || log.type !== "food") return null;
+    if (!log || !isFoodPipelineType(log.type)) return null;
 
     const data = log.data as FoodLogData;
     if (!data.rawInput || typeof data.rawInput !== "string") return null;
@@ -432,7 +433,7 @@ export const getFoodLogVersionInfo = internalQuery({
     args,
   ): Promise<{ userId: string; itemsVersion: number } | null> => {
     const log = await ctx.db.get(args.logId);
-    if (!log || log.type !== "food") return null;
+    if (!log || !isFoodPipelineType(log.type)) return null;
 
     const data = log.data as FoodLogData;
     return {
@@ -489,7 +490,9 @@ export const isAliasEmbeddingCurrent = internalQuery({
   handler: async (ctx, args): Promise<boolean> => {
     const candidates = await ctx.db
       .query("foodEmbeddings")
-      .withIndex("by_canonicalName", (q) => q.eq("canonicalName", args.canonicalName))
+      .withIndex("by_canonicalName", (q) =>
+        q.eq("canonicalName", args.canonicalName),
+      )
       .collect();
 
     return candidates.some(
@@ -689,7 +692,7 @@ export const writeProcessedItems = internalMutation({
     }
 
     const log = await ctx.db.get(args.logId);
-    if (!log || log.type !== "food") return;
+    if (!log || !isFoodPipelineType(log.type)) return;
 
     const data = log.data as FoodLogData;
     const nextVersion = (data.itemsVersion ?? 0) + 1;
@@ -1225,7 +1228,8 @@ export const processLog = mutation({
 
     const log = await ctx.db.get(args.logId);
     if (!log) throw new Error("Log not found");
-    if (log.type !== "food") throw new Error("Log is not a food log");
+    if (!isFoodPipelineType(log.type))
+      throw new Error("Log is not a food or liquid log");
     if (log.userId !== userId) {
       throw new Error("Not authorized to process this log");
     }
@@ -1406,8 +1410,8 @@ export const applyLlmResults = internalMutation({
     }
 
     const log = await ctx.db.get(args.logId);
-    if (!log || log.type !== "food") {
-      throw new Error("Log not found or is not a food log");
+    if (!log || !isFoodPipelineType(log.type)) {
+      throw new Error("Log not found or is not a food or liquid log");
     }
     if (log.userId !== args.userId) {
       throw new Error("Not authorized to modify this log");
@@ -1479,7 +1483,8 @@ export const applyLlmResults = internalMutation({
         resolvedBy: resolved.resolvedBy,
         ...(zone !== undefined && { recoveryStage: zone }),
         matchConfidence: 1,
-        matchStrategy: resolved.resolvedBy === "fuzzy" ? "fuzzy" : ("llm" as const),
+        matchStrategy:
+          resolved.resolvedBy === "fuzzy" ? "fuzzy" : ("llm" as const),
         // Clear candidates/buckets since the item is now resolved
         matchCandidates: undefined,
         bucketOptions: undefined,
@@ -1557,7 +1562,7 @@ export const processEvidence = internalMutation({
   args: { logId: v.id("logs"), now: v.optional(v.number()) },
   handler: async (ctx, args) => {
     const log = await ctx.db.get(args.logId);
-    if (!log || log.type !== "food") return;
+    if (!log || !isFoodPipelineType(log.type)) return;
 
     const data = log.data as FoodLogData;
     if (data.evidenceProcessedAt != null) return;
@@ -1658,7 +1663,8 @@ export const resolveItem = mutation({
 
     const log = await ctx.db.get(args.logId);
     if (!log) throw new Error("Log not found");
-    if (log.type !== "food") throw new Error("Log is not a food log");
+    if (!isFoodPipelineType(log.type))
+      throw new Error("Log is not a food or liquid log");
     if (log.userId !== userId) {
       throw new Error("Not authorized to modify this log");
     }

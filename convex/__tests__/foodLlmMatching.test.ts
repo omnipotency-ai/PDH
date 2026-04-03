@@ -63,10 +63,14 @@ describe("buildRegistryVocabularyForPrompt", () => {
     const lines = result.split("\n");
 
     // Find an entry that has many examples in the registry
-    const entryWithManyExamples = FOOD_REGISTRY.find((e) => e.examples.length > 5);
+    const entryWithManyExamples = FOOD_REGISTRY.find(
+      (e) => e.examples.length > 5,
+    );
 
     if (entryWithManyExamples) {
-      const line = lines.find((l) => l.startsWith(`${entryWithManyExamples.canonical} |`));
+      const line = lines.find((l) =>
+        l.startsWith(`${entryWithManyExamples.canonical} |`),
+      );
       if (line === undefined) throw new Error("expected line");
       // The examples portion should have at most 5 comma-separated items
       const examplesPart = line.split(" | ")[2];
@@ -133,7 +137,8 @@ describe("buildMatchingPrompt", () => {
   });
 
   it("includes the registry vocabulary in the system prompt", () => {
-    const vocab = "canonical | zone | examples\n--- | --- | ---\ntoast | 1 | toast, white toast";
+    const vocab =
+      "canonical | zone | examples\n--- | --- | ---\ntoast | 1 | toast, white toast";
     const result = buildMatchingPrompt("toast", ["toast"], vocab);
 
     expect(result.systemPrompt).toContain(vocab);
@@ -194,7 +199,8 @@ describe("parseLlmResponse", () => {
   it("parses valid JSON response", () => {
     const result = parseLlmResponse(validResponse);
 
-    if (result === undefined || result === null) throw new Error("expected result");
+    if (result === undefined || result === null)
+      throw new Error("expected result");
     expect(result.results).toHaveLength(1);
     expect(result.results[0].segment).toBe("steak and chips");
     expect(result.results[0].foods).toHaveLength(2);
@@ -206,7 +212,8 @@ describe("parseLlmResponse", () => {
     const wrapped = `\`\`\`json\n${validResponse}\n\`\`\``;
     const result = parseLlmResponse(wrapped);
 
-    if (result === undefined || result === null) throw new Error("expected result");
+    if (result === undefined || result === null)
+      throw new Error("expected result");
     expect(result.results).toHaveLength(1);
   });
 
@@ -214,7 +221,8 @@ describe("parseLlmResponse", () => {
     const wrapped = `\`\`\`\n${validResponse}\n\`\`\``;
     const result = parseLlmResponse(wrapped);
 
-    if (result === undefined || result === null) throw new Error("expected result");
+    if (result === undefined || result === null)
+      throw new Error("expected result");
     expect(result.results).toHaveLength(1);
   });
 
@@ -671,7 +679,9 @@ describe("processLlmResults", () => {
         },
         {
           segment: "completely unknown",
-          foods: [{ parsedName: "gloopfruit", canonical: "gloopfruit_made_up" }],
+          foods: [
+            { parsedName: "gloopfruit", canonical: "gloopfruit_made_up" },
+          ],
         },
         {
           segment: "honey drizzle",
@@ -715,7 +725,9 @@ describe("parseLlmResponse — malformed and adversarial inputs", () => {
   });
 
   it("returns null for plain text error message", () => {
-    expect(parseLlmResponse("Rate limit exceeded. Please retry after 30 seconds.")).toBeNull();
+    expect(
+      parseLlmResponse("Rate limit exceeded. Please retry after 30 seconds."),
+    ).toBeNull();
   });
 
   it("returns null for JSON with nested results but wrong shape", () => {
@@ -864,15 +876,17 @@ describe("matchUnresolvedItems action", () => {
     const t = convexTest(schema);
     const userId = "test-user-auth";
 
-    const logId = await t.withIdentity({ subject: userId }).mutation(api.logs.add, {
-      timestamp: Date.now(),
-      type: "food",
-      data: {
-        rawInput: "mystery food",
-        items: [],
-        notes: "",
-      },
-    });
+    const logId = await t
+      .withIdentity({ subject: userId })
+      .mutation(api.logs.add, {
+        timestamp: Date.now(),
+        type: "food",
+        data: {
+          rawInput: "mystery food",
+          items: [],
+          notes: "",
+        },
+      });
 
     // Without identity — requireAuth throws
     await expect(
@@ -888,47 +902,57 @@ describe("matchUnresolvedItems action", () => {
     const t = convexTest(schema);
     const userId = "test-user-bad-key";
 
-    const logId = await t.withIdentity({ subject: userId }).mutation(api.logs.add, {
-      timestamp: Date.now(),
-      type: "food",
-      data: {
-        rawInput: "mystery food",
-        items: [],
-        notes: "",
-      },
-    });
+    const logId = await t
+      .withIdentity({ subject: userId })
+      .mutation(api.logs.add, {
+        timestamp: Date.now(),
+        type: "food",
+        data: {
+          rawInput: "mystery food",
+          items: [],
+          notes: "",
+        },
+      });
 
     // No server key stored, so client key is used as fallback — and it's invalid
     await expect(
-      t.withIdentity({ subject: userId }).action(api.foodLlmMatching.matchUnresolvedItems, {
-        apiKey: "not-a-valid-key",
-        logId,
-        rawInput: "mystery food",
-        unresolvedSegments: ["mystery food"],
-      }),
-    ).rejects.toThrow("[NON_RETRYABLE] [KEY_ERROR] Invalid OpenAI API key format");
+      t
+        .withIdentity({ subject: userId })
+        .action(api.foodLlmMatching.matchUnresolvedItems, {
+          apiKey: "not-a-valid-key",
+          logId,
+          rawInput: "mystery food",
+          unresolvedSegments: ["mystery food"],
+        }),
+    ).rejects.toThrow(
+      "[NON_RETRYABLE] [KEY_ERROR] Invalid OpenAI API key format",
+    );
   });
 
   it("throws when no API key is available (no server key, no client key)", async () => {
     const t = convexTest(schema);
     const userId = "test-user-no-key";
 
-    const logId = await t.withIdentity({ subject: userId }).mutation(api.logs.add, {
-      timestamp: Date.now(),
-      type: "food",
-      data: {
-        rawInput: "mystery food",
-        items: [],
-        notes: "",
-      },
-    });
+    const logId = await t
+      .withIdentity({ subject: userId })
+      .mutation(api.logs.add, {
+        timestamp: Date.now(),
+        type: "food",
+        data: {
+          rawInput: "mystery food",
+          items: [],
+          notes: "",
+        },
+      });
 
     await expect(
-      t.withIdentity({ subject: userId }).action(api.foodLlmMatching.matchUnresolvedItems, {
-        logId,
-        rawInput: "mystery food",
-        unresolvedSegments: ["mystery food"],
-      }),
+      t
+        .withIdentity({ subject: userId })
+        .action(api.foodLlmMatching.matchUnresolvedItems, {
+          logId,
+          rawInput: "mystery food",
+          unresolvedSegments: ["mystery food"],
+        }),
     ).rejects.toThrow(
       "[NON_RETRYABLE] [KEY_ERROR] No OpenAI API key available. Please add your key in Settings.",
     );
@@ -943,15 +967,17 @@ describe("matchUnresolvedItems action", () => {
       apiKey: "sk-test1234567890abcdefghij",
     });
 
-    const logId = await t.withIdentity({ subject: userId }).mutation(api.logs.add, {
-      timestamp: Date.now(),
-      type: "food",
-      data: {
-        rawInput: "nothing unresolved",
-        items: [],
-        notes: "",
-      },
-    });
+    const logId = await t
+      .withIdentity({ subject: userId })
+      .mutation(api.logs.add, {
+        timestamp: Date.now(),
+        type: "food",
+        data: {
+          rawInput: "nothing unresolved",
+          items: [],
+          notes: "",
+        },
+      });
 
     const result = await t
       .withIdentity({ subject: userId })
@@ -971,15 +997,17 @@ describe("matchUnresolvedItems action", () => {
       apiKey: "sk-test1234567890abcdefghij",
     });
 
-    const logId = await t.withIdentity({ subject: userId }).mutation(api.logs.add, {
-      timestamp: Date.now(),
-      type: "food",
-      data: {
-        rawInput: "nothing unresolved",
-        items: [],
-        notes: "",
-      },
-    });
+    const logId = await t
+      .withIdentity({ subject: userId })
+      .mutation(api.logs.add, {
+        timestamp: Date.now(),
+        type: "food",
+        data: {
+          rawInput: "nothing unresolved",
+          items: [],
+          notes: "",
+        },
+      });
 
     // No apiKey arg at all — server resolves from profile
     const result = await t
@@ -999,30 +1027,40 @@ describe("matchUnresolvedItems action", () => {
     const attackerUserId = "test-user-attacker";
 
     // Both users need API keys for the action to proceed past key resolution
-    await t.withIdentity({ subject: ownerUserId }).mutation(api.profiles.setApiKey, {
-      apiKey: "sk-test1234567890abcdefghij",
-    });
-    await t.withIdentity({ subject: attackerUserId }).mutation(api.profiles.setApiKey, {
-      apiKey: "sk-test1234567890abcdefghij",
-    });
+    await t
+      .withIdentity({ subject: ownerUserId })
+      .mutation(api.profiles.setApiKey, {
+        apiKey: "sk-test1234567890abcdefghij",
+      });
+    await t
+      .withIdentity({ subject: attackerUserId })
+      .mutation(api.profiles.setApiKey, {
+        apiKey: "sk-test1234567890abcdefghij",
+      });
 
-    const logId = await t.withIdentity({ subject: ownerUserId }).mutation(api.logs.add, {
-      timestamp: Date.now(),
-      type: "food",
-      data: {
-        rawInput: "my private food",
-        items: [],
-        notes: "",
-      },
-    });
+    const logId = await t
+      .withIdentity({ subject: ownerUserId })
+      .mutation(api.logs.add, {
+        timestamp: Date.now(),
+        type: "food",
+        data: {
+          rawInput: "my private food",
+          items: [],
+          notes: "",
+        },
+      });
 
     await expect(
-      t.withIdentity({ subject: attackerUserId }).action(api.foodLlmMatching.matchUnresolvedItems, {
-        logId,
-        rawInput: "my private food",
-        unresolvedSegments: ["my private food"],
-      }),
-    ).rejects.toThrow("[NON_RETRYABLE] [VALIDATION_ERROR] Not authorized to process this log.");
+      t
+        .withIdentity({ subject: attackerUserId })
+        .action(api.foodLlmMatching.matchUnresolvedItems, {
+          logId,
+          rawInput: "my private food",
+          unresolvedSegments: ["my private food"],
+        }),
+    ).rejects.toThrow(
+      "[NON_RETRYABLE] [VALIDATION_ERROR] Not authorized to process this log.",
+    );
   });
 });
 
@@ -1105,7 +1143,9 @@ describe("LLM API failure response handling", () => {
         },
         {
           segment: "mystery food two",
-          foods: [{ parsedName: "abcnotreal", canonical: "hallucinated_food_2" }],
+          foods: [
+            { parsedName: "abcnotreal", canonical: "hallucinated_food_2" },
+          ],
         },
       ],
     });
@@ -1203,7 +1243,13 @@ async function createFoodLogWithItems(
       resolvedBy?: "registry" | "llm" | "user" | "expired";
       recoveryStage?: 1 | 2 | 3;
       matchConfidence?: number;
-      matchStrategy?: "alias" | "fuzzy" | "embedding" | "combined" | "llm" | "user";
+      matchStrategy?:
+        | "alias"
+        | "fuzzy"
+        | "embedding"
+        | "combined"
+        | "llm"
+        | "user";
       matchCandidates?: Array<{
         canonicalName: string;
         zone: 1 | 2 | 3;
@@ -1521,7 +1567,9 @@ describe("applyLlmResults internalMutation", () => {
     const exposures = await t.run(async (ctx) => {
       return await ctx.db
         .query("ingredientExposures")
-        .withIndex("by_userId_logId", (q) => q.eq("userId", userId).eq("logId", logId))
+        .withIndex("by_userId_logId", (q) =>
+          q.eq("userId", userId).eq("logId", logId),
+        )
         .collect();
     });
 
@@ -1572,7 +1620,9 @@ describe("applyLlmResults internalMutation", () => {
     const exposures = await t.run(async (ctx) => {
       return await ctx.db
         .query("ingredientExposures")
-        .withIndex("by_userId_logId", (q) => q.eq("userId", userId).eq("logId", logId))
+        .withIndex("by_userId_logId", (q) =>
+          q.eq("userId", userId).eq("logId", logId),
+        )
         .collect();
     });
 
@@ -1649,7 +1699,7 @@ describe("applyLlmResults internalMutation", () => {
           },
         ],
       }),
-    ).rejects.toThrow("not a food log");
+    ).rejects.toThrow("not a food or liquid log");
   });
 
   it("throws when log has no items", async () => {
@@ -1949,7 +1999,9 @@ describe("applyLlmResults internalMutation", () => {
     const exposures = await t.run(async (ctx) => {
       return await ctx.db
         .query("ingredientExposures")
-        .withIndex("by_userId_logId", (q) => q.eq("userId", userId).eq("logId", logId))
+        .withIndex("by_userId_logId", (q) =>
+          q.eq("userId", userId).eq("logId", logId),
+        )
         .collect();
     });
 
@@ -1997,7 +2049,9 @@ describe("applyLlmResults internalMutation", () => {
     const exposures = await t.run(async (ctx) => {
       return await ctx.db
         .query("ingredientExposures")
-        .withIndex("by_userId_logId", (q) => q.eq("userId", userId).eq("logId", logId))
+        .withIndex("by_userId_logId", (q) =>
+          q.eq("userId", userId).eq("logId", logId),
+        )
         .collect();
     });
 
@@ -2045,7 +2099,9 @@ describe("applyLlmResults internalMutation", () => {
     const exposures = await t.run(async (ctx) => {
       return await ctx.db
         .query("ingredientExposures")
-        .withIndex("by_userId_logId", (q) => q.eq("userId", userId).eq("logId", logId))
+        .withIndex("by_userId_logId", (q) =>
+          q.eq("userId", userId).eq("logId", logId),
+        )
         .collect();
     });
 
