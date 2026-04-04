@@ -50,9 +50,7 @@ export const FoodRow = memo(function FoodRow({
           onClick={() => onToggleFavourite(canonicalName)}
           className="shrink-0 p-0"
           aria-label={
-            isFilled
-              ? `Remove ${displayName} from favourites`
-              : `Add ${displayName} to favourites`
+            isFilled ? `Remove ${displayName} from favourites` : `Add ${displayName} to favourites`
           }
         >
           <Heart

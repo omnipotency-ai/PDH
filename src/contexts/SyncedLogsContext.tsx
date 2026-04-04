@@ -1,10 +1,4 @@
-import {
-  createContext,
-  type ReactNode,
-  useContext,
-  useEffect,
-  useMemo,
-} from "react";
+import { createContext, type ReactNode, useContext, useEffect, useMemo } from "react";
 import { useHabits } from "@/hooks/useProfile";
 import { rebuildHabitLogsFromSyncedLogs } from "@/lib/derivedHabitLogs";
 import { type SyncedLog, useSyncedLogsByRange } from "@/lib/sync";
@@ -24,11 +18,7 @@ export function SyncedLogsProvider({ children }: { children: ReactNode }) {
   const { fourteenDaysAgoMs, endOfTodayMs } = useMemo(() => {
     const now = new Date();
 
-    const startOfToday = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-    );
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const fourteenDaysAgo = new Date(startOfToday);
     fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
 
@@ -68,19 +58,13 @@ export function SyncedLogsProvider({ children }: { children: ReactNode }) {
     }
   }, [derivedHabitLogs, habitLogs, setHabitLogs]);
 
-  return (
-    <SyncedLogsContext.Provider value={logs}>
-      {children}
-    </SyncedLogsContext.Provider>
-  );
+  return <SyncedLogsContext.Provider value={logs}>{children}</SyncedLogsContext.Provider>;
 }
 
 export function useSyncedLogsContext(): SyncedLog[] {
   const ctx = useContext(SyncedLogsContext);
   if (ctx === null) {
-    throw new Error(
-      "useSyncedLogsContext must be used within SyncedLogsProvider",
-    );
+    throw new Error("useSyncedLogsContext must be used within SyncedLogsProvider");
   }
   return ctx;
 }

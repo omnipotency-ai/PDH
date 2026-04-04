@@ -179,6 +179,14 @@ export function FoodFilterView({
 
   const favouriteSet = useMemo(() => new Set(favourites), [favourites]);
 
+  // Tab count badges (#71) — derived from the per-tab lists, not displayedItems.
+  const tabCounts: Record<FilterTab, number> = {
+    recent: validRecentFoods.length,
+    frequent: frequentFoods.length,
+    favourites: validFavourites.length,
+    all: allFoods.length,
+  };
+
   return (
     <div data-slot="food-filter-view" className="space-y-3">
       {/* Header row */}
@@ -206,6 +214,7 @@ export function FoodFilterView({
         {TABS.map((tab) => {
           const isActive = activeTab === tab.id;
           const Icon = tab.icon;
+          const count = tabCounts[tab.id];
           return (
             <button
               key={tab.id}
@@ -221,7 +230,10 @@ export function FoodFilterView({
               onClick={() => setActiveTab(tab.id)}
             >
               <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-              <span>{tab.label}</span>
+              <span>
+                {tab.label}
+                {count > 0 && <span className="ml-1 font-normal opacity-60">({count})</span>}
+              </span>
             </button>
           );
         })}

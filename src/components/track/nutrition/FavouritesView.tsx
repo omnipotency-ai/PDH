@@ -27,16 +27,9 @@ interface FavouritesViewProps {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function FavouritesView({
-  favourites,
-  onAddToStaging,
-  onBack,
-}: FavouritesViewProps) {
+export function FavouritesView({ favourites, onAddToStaging, onBack }: FavouritesViewProps) {
   // Filter to only foods that exist in FOOD_PORTION_DATA
-  const validFavourites = useMemo(
-    () => filterToKnownFoods(favourites),
-    [favourites],
-  );
+  const validFavourites = useMemo(() => filterToKnownFoods(favourites), [favourites]);
 
   return (
     <div data-slot="favourites-view" className="space-y-3">
