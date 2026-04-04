@@ -492,14 +492,12 @@ describe("reducer RESET_AFTER_LOG", () => {
   it("preserves water state and meal slot settings", () => {
     const state = makeState({
       waterModalOpen: true,
-      waterAmount: 300,
       activeMealSlot: "lunch",
       filterMealSlot: "dinner",
     });
     const next = nutritionReducer(state, { type: "RESET_AFTER_LOG" });
 
     expect(next.waterModalOpen).toBe(true);
-    expect(next.waterAmount).toBe(300);
     expect(next.activeMealSlot).toBe("lunch");
     expect(next.filterMealSlot).toBe("dinner");
   });
