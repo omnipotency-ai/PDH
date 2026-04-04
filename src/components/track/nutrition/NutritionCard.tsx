@@ -28,8 +28,14 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { useNutritionData } from "@/hooks/useNutritionData";
+import { useFoodFavourites } from "@/hooks/useProfile";
 import type { MealSlot } from "@/lib/nutritionUtils";
+import type { SyncedLog } from "@/lib/sync";
+import { FavouritesView } from "./FavouritesView";
+import { FoodFilterView } from "./FoodFilterView";
+import { LogFoodModal } from "./LogFoodModal";
 import { useNutritionStore } from "./useNutritionStore";
+import { WaterModal } from "./WaterModal";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -372,29 +378,16 @@ function MacroRow({
 
 // ── Meal Slot Accordion ─────────────────────────────────────────────────────
 
-interface FoodPipelineLog {
-  id: string;
-  timestamp: number;
-  type: "food" | "liquid";
-  data: {
-    items: Array<{
-      userSegment?: string;
-      parsedName?: string;
-      name?: string;
-      rawName?: string | null;
-      canonicalName?: string | null;
-      quantity: number | null;
-      unit: string | null;
-      quantityText?: string | null;
-      defaultPortionDisplay?: string;
-      preparation?: string;
-    }>;
-    rawInput?: string;
-    notes?: string;
-  };
+/** Narrowed SyncedLog for food pipeline types. */
+type FoodPipelineLog = SyncedLog & { type: "food" | "liquid" };
+
+// biome-ignore lint/suspicious/noExplicitAny: SyncedLog data is loosely typed
+function getFoodItems(log: FoodPipelineLog): Array<Record<string, any>> {
+  return Array.isArray(log.data?.items) ? log.data.items : [];
 }
 
-function getDisplayName(item: FoodPipelineLog["data"]["items"][number]): string {
+// biome-ignore lint/suspicious/noExplicitAny: SyncedLog item shape is dynamic
+function getDisplayName(item: Record<string, any>): string {
   return item.canonicalName ?? item.parsedName ?? item.name ?? item.userSegment ?? "Unknown food";
 }
 
@@ -402,18 +395,23 @@ function capitalize(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-function getItemMacros(item: FoodPipelineLog["data"]["items"][number]): {
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-  portionG: number;
-} {
+const ZERO_MACROS = {
+  calories: 0,
+  protein: 0,
+  carbs: 0,
+  fat: 0,
+  sugars: 0,
+  fiber: 0,
+  portionG: 0,
+};
+
+// biome-ignore lint/suspicious/noExplicitAny: SyncedLog item shape is dynamic
+function getItemMacros(item: Record<string, any>) {
   const canonical = item.canonicalName;
-  if (canonical == null) return { calories: 0, protein: 0, carbs: 0, fat: 0, portionG: 0 };
+  if (canonical == null) return ZERO_MACROS;
 
   const portionData = FOOD_PORTION_DATA.get(canonical);
-  if (!portionData) return { calories: 0, protein: 0, carbs: 0, fat: 0, portionG: 0 };
+  if (!portionData) return ZERO_MACROS;
 
   const portionG =
     item.quantity != null && item.quantity > 0 ? item.quantity : portionData.defaultPortionG;
@@ -424,6 +422,8 @@ function getItemMacros(item: FoodPipelineLog["data"]["items"][number]): {
     protein: Math.round((portionData.proteinPer100g ?? 0) * scale * 10) / 10,
     carbs: Math.round((portionData.carbsPer100g ?? 0) * scale * 10) / 10,
     fat: Math.round((portionData.fatPer100g ?? 0) * scale * 10) / 10,
+    sugars: Math.round((portionData.sugarsPer100g ?? 0) * scale * 10) / 10,
+    fiber: Math.round((portionData.fiberPer100g ?? 0) * scale * 10) / 10,
     portionG,
   };
 }
@@ -432,13 +432,18 @@ function MealSlotAccordion({
   config,
   logs,
   totalCalories,
+  isOpen,
+  onToggle,
+  onDeleteLog,
 }: {
   config: (typeof MEAL_SLOT_CONFIG)[number];
   logs: FoodPipelineLog[];
   totalCalories: number;
+  isOpen: boolean;
+  onToggle: () => void;
+  onDeleteLog: (logId: string) => void;
 }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const itemCount = logs.reduce((acc, log) => acc + log.data.items.length, 0);
+  const itemCount = logs.reduce((acc, log) => acc + getFoodItems(log).length, 0);
   const hasEntries = itemCount > 0;
 
   return (
@@ -451,7 +456,7 @@ function MealSlotAccordion({
         type="button"
         className="flex w-full items-center gap-3 px-2 py-3 text-left transition-colors hover:bg-[var(--surface-2)]"
         onClick={() => {
-          if (hasEntries) setIsOpen((prev) => !prev);
+          if (hasEntries) onToggle();
         }}
         aria-expanded={isOpen}
         aria-label={`${config.label}: ${hasEntries ? `${totalCalories} kcal, ${itemCount} items` : "No entries"}`}
@@ -497,7 +502,7 @@ function MealSlotAccordion({
       {isOpen && hasEntries && (
         <div className="space-y-1 pb-2 pl-14 pr-2">
           {logs.flatMap((log) =>
-            log.data.items.map((item, idx) => {
+            getFoodItems(log).map((item, idx) => {
               const macros = getItemMacros(item);
               const displayName = capitalize(getDisplayName(item));
               return (
@@ -524,6 +529,7 @@ function MealSlotAccordion({
                       type="button"
                       className="rounded-md p-1 text-[var(--text-faint)] transition-colors hover:bg-[var(--surface-3)] hover:text-[var(--red)]"
                       aria-label={`Delete ${displayName}`}
+                      onClick={() => onDeleteLog(log.id)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -705,6 +711,7 @@ function CalorieDetailView({
   onSearchFocus,
   onSearchChange,
   onSearchClear,
+  onDeleteLog,
   searchInputRef,
 }: {
   consumed: number;
@@ -727,8 +734,11 @@ function CalorieDetailView({
   onSearchFocus: () => void;
   onSearchChange: (value: string) => void;
   onSearchClear: () => void;
+  onDeleteLog: (logId: string) => void;
   searchInputRef: React.RefObject<HTMLInputElement | null>;
 }) {
+  const [openSlot, setOpenSlot] = useState<MealSlot | null>(null);
+
   return (
     <div data-slot="calorie-detail-view" className="space-y-4">
       <CalorieRing consumed={consumed} goal={goal} onExpand={onExpandCalories} />
@@ -767,7 +777,7 @@ function CalorieDetailView({
       {/* ── Macro row ─── */}
       <MacroRow macros={macros} />
 
-      {/* ── Meal slot accordions ─── */}
+      {/* ── Meal slot accordions (one open at a time) ─── */}
       <div
         data-slot="calorie-detail"
         className="overflow-hidden rounded-xl border border-[var(--surface-3)] bg-[var(--surface-1)]"
@@ -778,6 +788,9 @@ function CalorieDetailView({
             config={config}
             logs={logsByMealSlot[config.slot] as FoodPipelineLog[]}
             totalCalories={caloriesByMealSlot[config.slot]}
+            isOpen={openSlot === config.slot}
+            onToggle={() => setOpenSlot(openSlot === config.slot ? null : config.slot)}
+            onDeleteLog={onDeleteLog}
           />
         ))}
       </div>
@@ -797,7 +810,9 @@ export function NutritionCard() {
     waterGoal,
     caloriesByMealSlot,
     logsByMealSlot,
+    recentFoods,
   } = useNutritionData();
+  const { favourites } = useFoodFavourites();
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -834,13 +849,29 @@ export function NutritionCard() {
     searchInputRef.current?.focus();
   }, [dispatch]);
 
+  // Bug 3 fix: toggle between collapsed and calorieDetail
   const handleExpandCalories = useCallback(() => {
-    dispatch({ type: "SET_VIEW", view: "calorieDetail" });
-  }, [dispatch]);
+    dispatch({
+      type: "SET_VIEW",
+      view: state.view === "calorieDetail" ? "collapsed" : "calorieDetail",
+    });
+  }, [dispatch, state.view]);
 
   const handleOpenWater = useCallback(() => {
     dispatch({ type: "OPEN_WATER_MODAL" });
   }, [dispatch]);
+
+  const handleCloseWater = useCallback(() => {
+    dispatch({ type: "CLOSE_WATER_MODAL" });
+  }, [dispatch]);
+
+  const handleLogWater = useCallback(
+    (_amountMl: number) => {
+      // TODO: wire to actual fluid logging (FluidSection pattern)
+      dispatch({ type: "CLOSE_WATER_MODAL" });
+    },
+    [dispatch],
+  );
 
   const handleSelectFood = useCallback(
     (canonicalName: string) => {
@@ -848,6 +879,61 @@ export function NutritionCard() {
     },
     [dispatch],
   );
+
+  const handleAddToStaging = useCallback(
+    (canonicalName: string) => {
+      dispatch({ type: "ADD_TO_STAGING", canonicalName });
+    },
+    [dispatch],
+  );
+
+  const handleCloseStagingModal = useCallback(() => {
+    dispatch({ type: "CLOSE_STAGING_MODAL" });
+  }, [dispatch]);
+
+  const handleRemoveFromStaging = useCallback(
+    (canonicalName: string) => {
+      const item = state.stagingItems.find((i) => i.canonicalName === canonicalName);
+      if (item) dispatch({ type: "REMOVE_FROM_STAGING", id: item.id });
+    },
+    [dispatch, state.stagingItems],
+  );
+
+  const handleUpdateStagedQuantity = useCallback(
+    (canonicalName: string, newQuantity: number) => {
+      const item = state.stagingItems.find((i) => i.canonicalName === canonicalName);
+      if (item) {
+        const delta = newQuantity - item.portionG;
+        dispatch({ type: "ADJUST_STAGING_PORTION", id: item.id, delta });
+      }
+    },
+    [dispatch, state.stagingItems],
+  );
+
+  const handleClearStaging = useCallback(() => {
+    dispatch({ type: "CLEAR_STAGING" });
+  }, [dispatch]);
+
+  const handleLogFood = useCallback(() => {
+    // TODO: wire to actual food logging pipeline
+    dispatch({ type: "RESET_AFTER_LOG" });
+  }, [dispatch]);
+
+  const handleAddMore = useCallback(() => {
+    dispatch({ type: "CLOSE_STAGING_MODAL" });
+    dispatch({ type: "SET_VIEW", view: "search" });
+    requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+    });
+  }, [dispatch]);
+
+  const handleDeleteLog = useCallback((_logId: string) => {
+    // TODO: wire to useRemoveSyncedLog
+  }, []);
+
+  const handleBackToCollapsed = useCallback(() => {
+    dispatch({ type: "SET_VIEW", view: "collapsed" });
+  }, [dispatch]);
 
   // ── Header icons ─────────────────────────────────────────────────────────
 
@@ -944,39 +1030,50 @@ export function NutritionCard() {
           onSearchFocus={handleSearchFocus}
           onSearchChange={handleSearchChange}
           onSearchClear={handleSearchClear}
+          onDeleteLog={handleDeleteLog}
           searchInputRef={searchInputRef}
         />
       )}
 
-      {/* W2-06: FavouritesView placeholder */}
+      {/* FavouritesView */}
       {state.view === "favourites" && (
-        <div
-          data-slot="favourites-placeholder"
-          className="py-8 text-center text-xs text-[var(--text-faint)]"
-        >
-          {/* FavouritesView — W2-06 */}
-        </div>
+        <FavouritesView
+          favourites={favourites}
+          onAddToStaging={handleAddToStaging}
+          onBack={handleBackToCollapsed}
+        />
       )}
 
-      {/* W2-06: FoodFilterView placeholder */}
+      {/* FoodFilterView */}
       {state.view === "foodFilter" && (
-        <div
-          data-slot="food-filter-placeholder"
-          className="py-8 text-center text-xs text-[var(--text-faint)]"
-        >
-          {/* FoodFilterView — W2-06 */}
-        </div>
+        <FoodFilterView
+          recentFoods={recentFoods}
+          favourites={favourites}
+          onAddToStaging={handleAddToStaging}
+          onBack={handleBackToCollapsed}
+        />
       )}
 
-      {/* W2-03: StagingModal placeholder (rendered when stagingModalOpen) */}
-      {state.stagingModalOpen && (
-        <div data-slot="staging-modal-placeholder">{/* StagingModal — W2-03 */}</div>
-      )}
+      {/* LogFoodModal (staging) */}
+      <LogFoodModal
+        open={state.stagingModalOpen}
+        stagedItems={state.stagingItems}
+        onClose={handleCloseStagingModal}
+        onRemoveItem={handleRemoveFromStaging}
+        onUpdateQuantity={handleUpdateStagedQuantity}
+        onClearAll={handleClearStaging}
+        onLogFood={handleLogFood}
+        onAddMore={handleAddMore}
+      />
 
-      {/* W2-04: WaterModal placeholder (rendered when waterModalOpen) */}
-      {state.waterModalOpen && (
-        <div data-slot="water-modal-placeholder">{/* WaterModal — W2-04 */}</div>
-      )}
+      {/* WaterModal */}
+      <WaterModal
+        open={state.waterModalOpen}
+        onClose={handleCloseWater}
+        onLogWater={handleLogWater}
+        currentIntakeMl={waterIntakeToday}
+        goalMl={waterGoal}
+      />
     </section>
   );
 }
