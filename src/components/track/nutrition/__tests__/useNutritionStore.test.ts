@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   computeStagingTotals,
   createStagedItem,
+  MAX_PORTION_G,
   type NutritionState,
   nutritionReducer,
   recalculateMacros,
@@ -25,6 +26,7 @@ function makeState(overrides?: Partial<NutritionState>): NutritionState {
     waterModalOpen: false,
     activeMealSlot: "snack",
     filterMealSlot: "breakfast",
+    lastRemovedItem: null,
     ...overrides,
   };
 }
@@ -400,6 +402,65 @@ describe("reducer ADJUST_STAGING_PORTION", () => {
       delta: 10,
     });
     expect(next.stagingItems[1]).toBe(rice); // rice unchanged
+  });
+
+  it("clamps portion at MAX_PORTION_G (500g)", () => {
+    const item = assertDefined(createStagedItem("white rice"), "white rice");
+    const state = makeState({ stagingItems: [item] });
+    const next = nutritionReducer(state, {
+      type: "ADJUST_STAGING_PORTION",
+      id: item.id,
+      delta: 9999,
+    });
+    expect(next.stagingItems[0].portionG).toBe(MAX_PORTION_G);
+  });
+
+  it("sets lastRemovedItem with displayName when item is removed by zero portion", () => {
+    const item = assertDefined(createStagedItem("toast"), "toast");
+    const state = makeState({ stagingItems: [item] });
+    const next = nutritionReducer(state, {
+      type: "ADJUST_STAGING_PORTION",
+      id: item.id,
+      delta: -item.portionG,
+    });
+    expect(next.stagingItems).toHaveLength(0);
+    expect(next.lastRemovedItem).toBe("toast");
+  });
+
+  it("sets lastRemovedItem to null when portion stays positive", () => {
+    const item = assertDefined(createStagedItem("toast"), "toast");
+    const state = makeState({ stagingItems: [item] });
+    const next = nutritionReducer(state, {
+      type: "ADJUST_STAGING_PORTION",
+      id: item.id,
+      delta: 10,
+    });
+    expect(next.lastRemovedItem).toBeNull();
+  });
+});
+
+// ── Reducer: lastRemovedItem reset ──────────────────────────────────────────
+
+describe("reducer lastRemovedItem auto-reset", () => {
+  it("resets lastRemovedItem to null on the next action", () => {
+    const item = assertDefined(createStagedItem("toast"), "toast");
+    const state = makeState({
+      stagingItems: [item],
+    });
+    // First: remove via zero-portion
+    const withRemoved = nutritionReducer(state, {
+      type: "ADJUST_STAGING_PORTION",
+      id: item.id,
+      delta: -item.portionG,
+    });
+    expect(withRemoved.lastRemovedItem).toBe("toast");
+
+    // Next action should reset it
+    const afterNext = nutritionReducer(withRemoved, {
+      type: "SET_SEARCH_QUERY",
+      query: "rice",
+    });
+    expect(afterNext.lastRemovedItem).toBeNull();
   });
 });
 

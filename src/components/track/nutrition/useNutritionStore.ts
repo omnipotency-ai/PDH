@@ -19,8 +19,12 @@ import {
   type FoodRegistryEntry,
 } from "@shared/foodRegistryData";
 import Fuse from "fuse.js";
-import { useMemo, useReducer } from "react";
-import { getMealSlot, type MealSlot } from "@/lib/nutritionUtils";
+import { useDeferredValue, useMemo, useReducer } from "react";
+import {
+  computeMacrosForPortion,
+  getMealSlot,
+  type MealSlot,
+} from "@/lib/nutritionUtils";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -68,6 +72,8 @@ export interface NutritionState {
   activeMealSlot: MealSlot;
   /** For browsing logs by slot. */
   filterMealSlot: MealSlot;
+  /** Set when ADJUST_STAGING_PORTION removes an item (portion <= 0). Consuming component reads + toasts, then resets on next action. */
+  lastRemovedItem: string | null;
 }
 
 export type NutritionAction =
@@ -94,6 +100,11 @@ export interface StagingTotals {
   fiber: number;
 }
 
+// ── Constants ──────────────────────────────────────────────────────────────
+
+/** Maximum portion weight in grams. Clamps ADJUST_STAGING_PORTION. */
+export const MAX_PORTION_G = 500;
+
 // ── ID generation ───────────────────────────────────────────────────────────
 
 function generateStagingId(): string {
@@ -101,37 +112,6 @@ function generateStagingId(): string {
 }
 
 // ── Helper functions (exported for testing) ─────────────────────────────────
-
-/**
- * Compute macro values for a given portion weight from FOOD_PORTION_DATA.
- * Returns 0 for any missing per-100g value.
- * Calories rounded to nearest integer; macros rounded to 1 decimal.
- */
-function computeMacrosFromPortion(
-  canonicalName: string,
-  portionG: number,
-): {
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-  sugars: number;
-  fiber: number;
-} {
-  const data = FOOD_PORTION_DATA.get(canonicalName);
-  if (!data) {
-    return { calories: 0, protein: 0, carbs: 0, fat: 0, sugars: 0, fiber: 0 };
-  }
-  const scale = portionG / 100;
-  return {
-    calories: Math.round((data.caloriesPer100g ?? 0) * scale),
-    protein: Math.round((data.proteinPer100g ?? 0) * scale * 10) / 10,
-    carbs: Math.round((data.carbsPer100g ?? 0) * scale * 10) / 10,
-    fat: Math.round((data.fatPer100g ?? 0) * scale * 10) / 10,
-    sugars: Math.round((data.sugarsPer100g ?? 0) * scale * 10) / 10,
-    fiber: Math.round((data.fiberPer100g ?? 0) * scale * 10) / 10,
-  };
-}
 
 /**
  * Create a StagedItem for a canonical food.
@@ -142,7 +122,7 @@ export function createStagedItem(canonicalName: string): StagedItem | null {
   if (!portionData) return null;
 
   const portionG = portionData.defaultPortionG;
-  const macros = computeMacrosFromPortion(canonicalName, portionG);
+  const macros = computeMacrosForPortion(canonicalName, portionG);
 
   return {
     id: generateStagingId(),
@@ -167,7 +147,7 @@ export function recalculateMacros(
   item: StagedItem,
   newPortionG: number,
 ): StagedItem {
-  const macros = computeMacrosFromPortion(item.canonicalName, newPortionG);
+  const macros = computeMacrosForPortion(item.canonicalName, newPortionG);
   return {
     ...item,
     portionG: newPortionG,
@@ -213,84 +193,97 @@ export function nutritionReducer(
   state: NutritionState,
   action: NutritionAction,
 ): NutritionState {
+  // Reset lastRemovedItem on every action; ADJUST_STAGING_PORTION overrides below.
+  const base =
+    state.lastRemovedItem !== null
+      ? { ...state, lastRemovedItem: null }
+      : state;
+
   switch (action.type) {
     case "SET_VIEW":
-      return { ...state, view: action.view, searchQuery: "" };
+      return { ...base, view: action.view, searchQuery: "" };
 
     case "SET_SEARCH_QUERY":
-      return { ...state, searchQuery: action.query };
+      return { ...base, searchQuery: action.query };
 
     case "ADD_TO_STAGING": {
       const portionData = FOOD_PORTION_DATA.get(action.canonicalName);
-      if (!portionData) return state;
+      if (!portionData) return base;
 
-      const existingIndex = state.stagingItems.findIndex(
+      const existingIndex = base.stagingItems.findIndex(
         (item) => item.canonicalName === action.canonicalName,
       );
 
       if (existingIndex !== -1) {
         // Aggregate: increment portion by unitWeightG or defaultPortionG
-        const existing = state.stagingItems[existingIndex];
+        const existing = base.stagingItems[existingIndex];
         const increment =
           portionData.unitWeightG ?? portionData.defaultPortionG;
         const newPortionG = existing.portionG + increment;
         const updated = recalculateMacros(existing, newPortionG);
 
-        const newItems = [...state.stagingItems];
+        const newItems = [...base.stagingItems];
         newItems[existingIndex] = updated;
-        return { ...state, stagingItems: newItems };
+        return { ...base, stagingItems: newItems };
       }
 
       // New item
       const newItem = createStagedItem(action.canonicalName);
-      if (!newItem) return state;
-      return { ...state, stagingItems: [...state.stagingItems, newItem] };
+      if (!newItem) return base;
+      return { ...base, stagingItems: [...base.stagingItems, newItem] };
     }
 
     case "REMOVE_FROM_STAGING":
       return {
-        ...state,
-        stagingItems: state.stagingItems.filter(
-          (item) => item.id !== action.id,
-        ),
+        ...base,
+        stagingItems: base.stagingItems.filter((item) => item.id !== action.id),
       };
 
     case "ADJUST_STAGING_PORTION": {
-      const updated = state.stagingItems
+      let removedDisplayName: string | null = null;
+      const updated = base.stagingItems
         .map((item) => {
           if (item.id !== action.id) return item;
           const newPortionG = item.portionG + action.delta;
-          if (newPortionG <= 0) return null;
-          return recalculateMacros(item, newPortionG);
+          if (newPortionG <= 0) {
+            removedDisplayName = item.displayName;
+            return null;
+          }
+          const clamped = Math.min(newPortionG, MAX_PORTION_G);
+          return recalculateMacros(item, clamped);
         })
         .filter((item): item is StagedItem => item !== null);
-      return { ...state, stagingItems: updated };
+      return {
+        ...base,
+        stagingItems: updated,
+        lastRemovedItem: removedDisplayName,
+      };
     }
 
     case "CLEAR_STAGING":
-      return { ...state, stagingItems: [] };
+      return { ...base, stagingItems: [] };
 
     case "OPEN_STAGING_MODAL":
-      return { ...state, stagingModalOpen: true };
+      return { ...base, stagingModalOpen: true };
 
     case "CLOSE_STAGING_MODAL":
-      return { ...state, stagingModalOpen: false };
+      return { ...base, stagingModalOpen: false };
 
     case "OPEN_WATER_MODAL":
-      return { ...state, waterModalOpen: true };
+      return { ...base, waterModalOpen: true };
 
     case "CLOSE_WATER_MODAL":
-      return { ...state, waterModalOpen: false };
+      return { ...base, waterModalOpen: false };
 
     case "SET_ACTIVE_MEAL_SLOT":
-      return { ...state, activeMealSlot: action.slot };
+      return { ...base, activeMealSlot: action.slot };
 
     case "SET_FILTER_MEAL_SLOT":
-      return { ...state, filterMealSlot: action.slot };
+      return { ...base, filterMealSlot: action.slot };
 
     case "RESET_AFTER_LOG":
       return {
-        ...state,
+        ...base,
         stagingItems: [],
         stagingModalOpen: false,
         view: "collapsed",
@@ -298,20 +291,18 @@ export function nutritionReducer(
       };
 
     default:
-      return state;
+      return base;
   }
 }
 
 // ── Fuse.js search index (module-level singleton) ───────────────────────────
 
-const fuseIndex = new Fuse<FoodRegistryEntry>(
-  FOOD_REGISTRY as FoodRegistryEntry[],
-  {
-    keys: ["canonical", "examples"],
-    threshold: 0.4,
-    includeScore: true,
-  },
-);
+// FOOD_REGISTRY is ReadonlyArray<FoodRegistryEntry> — Fuse accepts ReadonlyArray, no cast needed.
+const fuseIndex = new Fuse<FoodRegistryEntry>(FOOD_REGISTRY, {
+  keys: ["canonical", "examples"],
+  threshold: 0.4,
+  includeScore: true,
+});
 
 /**
  * Search the food registry using Fuse.js fuzzy search.
@@ -335,6 +326,7 @@ function createInitialState(): NutritionState {
     waterModalOpen: false,
     activeMealSlot: getMealSlot(Date.now()),
     filterMealSlot: "breakfast",
+    lastRemovedItem: null,
   };
 }
 
@@ -352,6 +344,9 @@ export function useNutritionStore() {
     [state.searchQuery],
   );
 
+  // Fix #28: Defer search results so staging interactions don't block search rendering.
+  const deferredSearchResults = useDeferredValue(searchResults);
+
   const stagingTotals = useMemo(
     () => computeStagingTotals(state.stagingItems),
     [state.stagingItems],
@@ -360,7 +355,7 @@ export function useNutritionStore() {
   return {
     state,
     dispatch,
-    searchResults,
+    searchResults: deferredSearchResults,
     stagingTotals,
     stagingCount: state.stagingItems.length,
   };
