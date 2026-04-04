@@ -353,3 +353,77 @@ export function computeMacrosForPortion(
 export function filterToKnownFoods(names: ReadonlyArray<string>): string[] {
   return names.filter((name) => FOOD_PORTION_DATA.has(name));
 }
+
+// ---------------------------------------------------------------------------
+// Food item display helpers (shared from CalorieDetailView)
+// ---------------------------------------------------------------------------
+
+/**
+ * Return the food items array from a food/liquid log's data.
+ * The log must have a `data.items` field (i.e. be a food or liquid log).
+ */
+export function getFoodItems(log: { data: { items: FoodItem[] } }): FoodItem[] {
+  return log.data.items;
+}
+
+/**
+ * Resolve the best display name for a food item.
+ * Priority: canonicalName → parsedName → name → userSegment → "Unknown food".
+ */
+export function getDisplayName(item: FoodItem): string {
+  return (
+    item.canonicalName ??
+    item.parsedName ??
+    item.name ??
+    item.userSegment ??
+    "Unknown food"
+  );
+}
+
+// ---------------------------------------------------------------------------
+// getItemMacros
+// ---------------------------------------------------------------------------
+
+const ZERO_ITEM_MACROS = {
+  calories: 0,
+  protein: 0,
+  carbs: 0,
+  fat: 0,
+  sugars: 0,
+  fiber: 0,
+  portionG: 0,
+} as const;
+
+/**
+ * Resolve effective portion weight and compute macros for a single food item.
+ *
+ * Uses `item.quantity` when present, otherwise falls back to
+ * `FOOD_PORTION_DATA.defaultPortionG`. Items with no `canonicalName` or no
+ * portion data return all-zero macros.
+ */
+export function getItemMacros(item: FoodItem): {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  sugars: number;
+  fiber: number;
+  portionG: number;
+} {
+  const canonical = item.canonicalName;
+  if (canonical == null) return { ...ZERO_ITEM_MACROS };
+
+  // Unknown food: no portion data, nothing to compute.
+  const portionData = FOOD_PORTION_DATA.get(canonical);
+  if (!portionData) return { ...ZERO_ITEM_MACROS };
+
+  let portionG = 0;
+  if (item.quantity != null && item.quantity > 0) {
+    portionG = item.quantity;
+  } else {
+    portionG = portionData.defaultPortionG;
+  }
+
+  const macros = computeMacrosForPortion(canonical, portionG);
+  return { ...macros, portionG };
+}

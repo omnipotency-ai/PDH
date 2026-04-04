@@ -12,6 +12,7 @@ const FoodMatchingModal = lazy(() =>
 );
 
 import { NutritionCard } from "@/components/track/nutrition/NutritionCard";
+import { NutritionCardErrorBoundary } from "@/components/track/nutrition/NutritionCardErrorBoundary";
 import {
   type BowelFormState,
   BowelSection,
@@ -512,7 +513,9 @@ export default function TrackPage() {
       <div className="stagger-reveal grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-[3fr_4fr_3fr] xl:items-start">
         {/* ── Column 1: Input forms ── */}
         <section className="space-y-3 min-w-0">
-          <NutritionCard />
+          <NutritionCardErrorBoundary>
+            <NutritionCard />
+          </NutritionCardErrorBoundary>
           <FoodSection onLogFood={handleLogFood} />
           <FluidSection onLogFluid={handleLogFluid} />
           <BowelSection onSave={handleLogBowel} />
