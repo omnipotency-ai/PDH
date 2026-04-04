@@ -14,6 +14,7 @@ import { FOOD_PORTION_DATA } from "@shared/foodPortionData";
 import { FOOD_REGISTRY } from "@shared/foodRegistryData";
 import { ArrowLeft, Clock, Heart, List, Plus, Star } from "lucide-react";
 import { useMemo, useState } from "react";
+import { formatPortion, getDefaultCalories, titleCase } from "./nutritionUtils";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -44,34 +45,6 @@ const TABS: ReadonlyArray<TabConfig> = [
 /** Maximum items shown per tab to keep the list scannable. */
 const MAX_ITEMS_PER_TAB = 50;
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-/** Capitalize the first letter of each word. */
-function titleCase(str: string): string {
-  return str
-    .split(" ")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}
-
-/** Format portion display: "150g" or "1 medium egg (50g)". */
-function formatPortion(canonicalName: string): string {
-  const data = FOOD_PORTION_DATA.get(canonicalName);
-  if (!data) return "";
-
-  if (data.naturalUnit != null && data.unitWeightG != null) {
-    return `${data.naturalUnit} (${data.defaultPortionG}g)`;
-  }
-  return `${data.defaultPortionG}g`;
-}
-
-/** Get calories for the default portion. */
-function getDefaultCalories(canonicalName: string): number {
-  const data = FOOD_PORTION_DATA.get(canonicalName);
-  if (!data || data.caloriesPer100g == null) return 0;
-  return Math.round((data.caloriesPer100g * data.defaultPortionG) / 100);
-}
-
 // ── Component ────────────────────────────────────────────────────────────────
 
 export function FoodFilterView({
@@ -96,12 +69,18 @@ export function FoodFilterView({
 
   // Filter recent and favourites to only foods with portion data.
   const validRecentFoods = useMemo(
-    () => recentFoods.filter((name) => FOOD_PORTION_DATA.has(name)).slice(0, MAX_ITEMS_PER_TAB),
+    () =>
+      recentFoods
+        .filter((name) => FOOD_PORTION_DATA.has(name))
+        .slice(0, MAX_ITEMS_PER_TAB),
     [recentFoods],
   );
 
   const validFavourites = useMemo(
-    () => favourites.filter((name) => FOOD_PORTION_DATA.has(name)).slice(0, MAX_ITEMS_PER_TAB),
+    () =>
+      favourites
+        .filter((name) => FOOD_PORTION_DATA.has(name))
+        .slice(0, MAX_ITEMS_PER_TAB),
     [favourites],
   );
 

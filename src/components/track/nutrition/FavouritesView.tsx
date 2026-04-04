@@ -9,6 +9,7 @@
 
 import { FOOD_PORTION_DATA } from "@shared/foodPortionData";
 import { ArrowLeft, Heart, Plus } from "lucide-react";
+import { formatPortion, getDefaultCalories, titleCase } from "./nutritionUtils";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -18,39 +19,17 @@ interface FavouritesViewProps {
   onBack: () => void;
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-/** Capitalize the first letter of each word. */
-function titleCase(str: string): string {
-  return str
-    .split(" ")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}
-
-/** Format portion display: "150g" or "1 medium egg (50g)". */
-function formatPortion(canonicalName: string): string {
-  const data = FOOD_PORTION_DATA.get(canonicalName);
-  if (!data) return "";
-
-  if (data.naturalUnit != null && data.unitWeightG != null) {
-    return `${data.naturalUnit} (${data.defaultPortionG}g)`;
-  }
-  return `${data.defaultPortionG}g`;
-}
-
-/** Get calories for the default portion. */
-function getDefaultCalories(canonicalName: string): number {
-  const data = FOOD_PORTION_DATA.get(canonicalName);
-  if (!data || data.caloriesPer100g == null) return 0;
-  return Math.round((data.caloriesPer100g * data.defaultPortionG) / 100);
-}
-
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function FavouritesView({ favourites, onAddToStaging, onBack }: FavouritesViewProps) {
+export function FavouritesView({
+  favourites,
+  onAddToStaging,
+  onBack,
+}: FavouritesViewProps) {
   // Filter to only foods that exist in FOOD_PORTION_DATA
-  const validFavourites = favourites.filter((name) => FOOD_PORTION_DATA.has(name));
+  const validFavourites = favourites.filter((name) =>
+    FOOD_PORTION_DATA.has(name),
+  );
 
   return (
     <div data-slot="favourites-view" className="space-y-3">
