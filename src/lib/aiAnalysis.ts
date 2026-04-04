@@ -1,3 +1,4 @@
+import { isFoodPipelineType } from "@shared/logTypeUtils";
 import { DEFAULT_INSIGHT_MODEL, getModelLabel, getValidInsightModel } from "@/lib/aiModels";
 import { checkRateLimit } from "@/lib/aiRateLimiter";
 import type { AllowedAiModel, ConvexAiCaller } from "@/lib/convexAiClient";
@@ -5,7 +6,6 @@ import { debugWarn } from "@/lib/debugLog";
 import { getErrorMessage } from "@/lib/errors";
 import { INPUT_SAFETY_LIMITS, sanitizeUnknownStringsDeep } from "@/lib/inputSafety";
 import { MS_PER_DAY, MS_PER_HOUR } from "@/lib/timeConstants";
-import { isFoodPipelineType } from "@shared/logTypeUtils";
 import type {
   AiNutritionistInsight,
   AiPreferences,

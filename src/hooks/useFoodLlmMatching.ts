@@ -15,6 +15,7 @@
  * - Error: user-friendly message (non-retryable errors only)
  */
 
+import { isFoodPipelineType } from "@shared/logTypeUtils";
 import { useAction } from "convex/react";
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
@@ -22,7 +23,6 @@ import { useApiKeyContext } from "@/contexts/ApiKeyContext";
 import { useSyncedLogsContext } from "@/contexts/SyncedLogsContext";
 import { asConvexId, type SyncedLog } from "@/lib/sync";
 import type { FoodItem, FoodLog, LiquidLog } from "@/types/domain";
-import { isFoodPipelineType } from "@shared/logTypeUtils";
 import { api } from "../../convex/_generated/api";
 
 /**

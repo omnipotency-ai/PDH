@@ -1,8 +1,8 @@
+import { isFoodPipelineType } from "@shared/logTypeUtils";
 import { useMemo } from "react";
 import { getFoodItemResolutionStatus } from "@/components/track/today-log/helpers";
 import type { SyncedLog } from "@/lib/sync";
 import type { FoodItem, FoodLogData } from "@/types/domain";
-import { isFoodPipelineType } from "@shared/logTypeUtils";
 
 export interface UnresolvedQueueItem {
   logId: string;

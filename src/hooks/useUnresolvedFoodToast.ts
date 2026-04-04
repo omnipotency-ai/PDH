@@ -1,9 +1,9 @@
+import { isFoodPipelineType } from "@shared/logTypeUtils";
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import type { SyncedLog } from "@/lib/sync";
 import { MS_PER_HOUR } from "@/lib/timeConstants";
 import type { FoodItem, FoodLog, LiquidLog } from "@/types/domain";
-import { isFoodPipelineType } from "@shared/logTypeUtils";
 
 /** 6-hour processing window in milliseconds. */
 const PROCESSING_WINDOW_MS = 6 * MS_PER_HOUR;
