@@ -13,6 +13,8 @@ import {
   calculateTotalCalories,
   calculateTotalMacros,
   calculateWaterIntake,
+  getCurrentMealSlot,
+  getMealSlot,
   groupByMealSlot,
   type MacroTotals,
   type MealSlot,
@@ -67,8 +69,16 @@ export interface NutritionData {
   calorieGoal: number;
   /** Daily water goal in ml from profile. */
   waterGoal: number;
-  /** Canonical food names from the last 7 days, most recent first, deduped, max 50. */
+  /** The current meal slot based on time of day. */
+  currentMealSlot: MealSlot;
+  /**
+   * Canonical food names from the last 7 days scoped to the current meal slot.
+   * Falls back to allRecentFoods if no slot-specific foods exist.
+   * Most recent first, deduped, max 50.
+   */
   recentFoods: string[];
+  /** Canonical food names from the last 7 days (all slots), most recent first, deduped, max 50. */
+  allRecentFoods: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -131,11 +141,17 @@ export function useNutritionData(): NutritionData {
     return result;
   }, [logsByMealSlot]);
 
+  // Current meal slot based on time of day.
+  const currentMealSlot = useMemo(() => getCurrentMealSlot(), [todayKey]);
+
   // Recent foods: canonical names from last 7 days, most recent first, deduped, max 50.
-  const recentFoods = useMemo(() => {
+  // Computes both all-slot and per-slot lists in one pass.
+  const { slotRecentFoods, allRecentFoods } = useMemo(() => {
     const sevenDaysAgo = getSevenDaysAgoMidnight();
-    const seen = new Set<string>();
-    const result: string[] = [];
+    const seenAll = new Set<string>();
+    const seenSlot = new Set<string>();
+    const allResult: string[] = [];
+    const slotResult: string[] = [];
 
     // Logs arrive descending (most recent first) from Convex query. Iterate forward.
     for (let i = 0; i < logs.length; i++) {
@@ -145,17 +161,38 @@ export function useNutritionData(): NutritionData {
       if (!isFoodPipelineType(log.type)) continue;
 
       const foodLog = log as FoodPipelineLog;
+      const logSlot = getMealSlot(log.timestamp);
+
       for (const item of foodLog.data.items) {
         const canonical = item.canonicalName;
-        if (canonical == null || seen.has(canonical)) continue;
-        seen.add(canonical);
-        result.push(canonical);
-        if (result.length >= 50) return result;
+        if (canonical == null) continue;
+
+        // Add to all-slot list
+        if (!seenAll.has(canonical)) {
+          seenAll.add(canonical);
+          allResult.push(canonical);
+        }
+
+        // Add to slot-specific list
+        if (logSlot === currentMealSlot && !seenSlot.has(canonical)) {
+          seenSlot.add(canonical);
+          slotResult.push(canonical);
+        }
       }
+
+      // Early exit once both lists are full
+      if (allResult.length >= 50 && slotResult.length >= 50) break;
     }
 
-    return result;
-  }, [logs]);
+    return {
+      slotRecentFoods: slotResult.slice(0, 50),
+      allRecentFoods: allResult.slice(0, 50),
+    };
+  }, [logs, currentMealSlot]);
+
+  // Fall back to global recents if no slot-specific foods exist.
+  const recentFoods =
+    slotRecentFoods.length > 0 ? slotRecentFoods : allRecentFoods;
 
   return {
     todayFoodLogs,
@@ -167,6 +204,8 @@ export function useNutritionData(): NutritionData {
     logsByMealSlot,
     calorieGoal: dailyCalorieGoal,
     waterGoal: dailyWaterGoalMl,
+    currentMealSlot,
     recentFoods,
+    allRecentFoods,
   };
 }

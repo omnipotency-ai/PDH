@@ -4,6 +4,7 @@ import {
   calculateTotalCalories,
   calculateTotalMacros,
   calculateWaterIntake,
+  getCurrentMealSlot,
   getMealSlot,
   groupByMealSlot,
 } from "../nutritionUtils";
@@ -108,6 +109,80 @@ describe("getMealSlot", () => {
 });
 
 // ---------------------------------------------------------------------------
+// getCurrentMealSlot
+// ---------------------------------------------------------------------------
+
+describe("getCurrentMealSlot", () => {
+  it("returns breakfast for 6am", () => {
+    expect(getCurrentMealSlot(new Date(2026, 3, 3, 6, 0, 0))).toBe("breakfast");
+  });
+
+  it("returns breakfast for exactly 5am (start of window)", () => {
+    expect(getCurrentMealSlot(new Date(2026, 3, 3, 5, 0, 0))).toBe("breakfast");
+  });
+
+  it("returns breakfast for 10:59am (end of window)", () => {
+    expect(getCurrentMealSlot(new Date(2026, 3, 3, 10, 59, 0))).toBe(
+      "breakfast",
+    );
+  });
+
+  it("returns lunch for exactly 11am", () => {
+    expect(getCurrentMealSlot(new Date(2026, 3, 3, 11, 0, 0))).toBe("lunch");
+  });
+
+  it("returns lunch for 1pm", () => {
+    expect(getCurrentMealSlot(new Date(2026, 3, 3, 13, 0, 0))).toBe("lunch");
+  });
+
+  it("returns lunch for 1:59pm (end of window)", () => {
+    expect(getCurrentMealSlot(new Date(2026, 3, 3, 13, 59, 0))).toBe("lunch");
+  });
+
+  it("returns snack for exactly 2pm", () => {
+    expect(getCurrentMealSlot(new Date(2026, 3, 3, 14, 0, 0))).toBe("snack");
+  });
+
+  it("returns snack for 4:59pm (end of window)", () => {
+    expect(getCurrentMealSlot(new Date(2026, 3, 3, 16, 59, 0))).toBe("snack");
+  });
+
+  it("returns dinner for exactly 5pm", () => {
+    expect(getCurrentMealSlot(new Date(2026, 3, 3, 17, 0, 0))).toBe("dinner");
+  });
+
+  it("returns dinner for 8pm", () => {
+    expect(getCurrentMealSlot(new Date(2026, 3, 3, 20, 0, 0))).toBe("dinner");
+  });
+
+  it("returns dinner for 8:59pm (end of window)", () => {
+    expect(getCurrentMealSlot(new Date(2026, 3, 3, 20, 59, 0))).toBe("dinner");
+  });
+
+  it("returns snack for exactly 9pm (after dinner window)", () => {
+    expect(getCurrentMealSlot(new Date(2026, 3, 3, 21, 0, 0))).toBe("snack");
+  });
+
+  it("returns snack for midnight", () => {
+    expect(getCurrentMealSlot(new Date(2026, 3, 3, 0, 0, 0))).toBe("snack");
+  });
+
+  it("returns snack for 3am", () => {
+    expect(getCurrentMealSlot(new Date(2026, 3, 3, 3, 0, 0))).toBe("snack");
+  });
+
+  it("returns snack for 4:59am (just before breakfast)", () => {
+    expect(getCurrentMealSlot(new Date(2026, 3, 3, 4, 59, 0))).toBe("snack");
+  });
+
+  it("defaults to current time when no argument provided", () => {
+    // Just verify it returns a valid MealSlot without throwing
+    const result = getCurrentMealSlot();
+    expect(["breakfast", "lunch", "dinner", "snack"]).toContain(result);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // calculateTotalCalories
 // ---------------------------------------------------------------------------
 
@@ -118,17 +193,23 @@ describe("calculateTotalCalories", () => {
 
   it("calculates calories for white rice with quantity 200g", () => {
     // white rice: caloriesPer100g = 130, quantity = 200g → 260
-    const logs = [makeFoodLog([{ canonicalName: "white rice", quantity: 200, unit: "g" }])];
+    const logs = [
+      makeFoodLog([{ canonicalName: "white rice", quantity: 200, unit: "g" }]),
+    ];
     expect(calculateTotalCalories(logs)).toBe(260);
   });
 
   it("returns 0 for item with unknown canonical name", () => {
-    const logs = [makeFoodLog([{ canonicalName: "alien food", quantity: 100, unit: "g" }])];
+    const logs = [
+      makeFoodLog([{ canonicalName: "alien food", quantity: 100, unit: "g" }]),
+    ];
     expect(calculateTotalCalories(logs)).toBe(0);
   });
 
   it("returns 0 for item with null canonical name", () => {
-    const logs = [makeFoodLog([{ canonicalName: null, quantity: 100, unit: "g" }])];
+    const logs = [
+      makeFoodLog([{ canonicalName: null, quantity: 100, unit: "g" }]),
+    ];
     expect(calculateTotalCalories(logs)).toBe(0);
   });
 
@@ -139,7 +220,11 @@ describe("calculateTotalCalories", () => {
 
   it("uses defaultPortionG when quantity is null", () => {
     // white rice: caloriesPer100g = 130, defaultPortionG = 180 → 234
-    const logs = [makeFoodLog([{ canonicalName: "white rice", quantity: null, unit: null }])];
+    const logs = [
+      makeFoodLog([
+        { canonicalName: "white rice", quantity: null, unit: null },
+      ]),
+    ];
     expect(calculateTotalCalories(logs)).toBe(234);
   });
 
@@ -172,7 +257,9 @@ describe("calculateTotalMacros", () => {
   it("calculates proportional macros for white rice 200g", () => {
     // white rice per 100g: protein=2.7, carbs=28.2, fat=0.3, sugars=0, fiber=0.4
     // For 200g: protein=5.4, carbs=56.4, fat=0.6, sugars=0, fiber=0.8
-    const logs = [makeFoodLog([{ canonicalName: "white rice", quantity: 200, unit: "g" }])];
+    const logs = [
+      makeFoodLog([{ canonicalName: "white rice", quantity: 200, unit: "g" }]),
+    ];
     const macros = calculateTotalMacros(logs);
     expect(macros.protein).toBeCloseTo(5.4, 1);
     expect(macros.carbs).toBeCloseTo(56.4, 1);
@@ -200,7 +287,9 @@ describe("calculateTotalMacros", () => {
   });
 
   it("ignores items without portion data", () => {
-    const logs = [makeFoodLog([{ canonicalName: "alien food", quantity: 100, unit: "g" }])];
+    const logs = [
+      makeFoodLog([{ canonicalName: "alien food", quantity: 100, unit: "g" }]),
+    ];
     expect(calculateTotalMacros(logs)).toEqual({
       protein: 0,
       carbs: 0,

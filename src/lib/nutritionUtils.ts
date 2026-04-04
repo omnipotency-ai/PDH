@@ -45,6 +45,33 @@ export function getMealSlot(timestamp: number): MealSlot {
 }
 
 // ---------------------------------------------------------------------------
+// getCurrentMealSlot
+// ---------------------------------------------------------------------------
+
+/**
+ * Determine the current meal slot based on time of day.
+ * Used for scoping food suggestions (e.g. recent foods) to what the user
+ * is likely eating right now. Covers the full 24h cycle with no gaps.
+ *
+ * - Breakfast: 5:00 (inclusive) to 11:00 (exclusive)
+ * - Lunch:    11:00 (inclusive) to 14:00 (exclusive)
+ * - Snack:    14:00 (inclusive) to 17:00 (exclusive)
+ * - Dinner:   17:00 (inclusive) to 21:00 (exclusive)
+ * - Default:  Snack (21:00–5:00)
+ *
+ * Accepts an optional Date for testability; defaults to `new Date()`.
+ */
+export function getCurrentMealSlot(now?: Date): MealSlot {
+  const hour = (now ?? new Date()).getHours();
+
+  if (hour >= 5 && hour < 11) return "breakfast";
+  if (hour >= 11 && hour < 14) return "lunch";
+  if (hour >= 14 && hour < 17) return "snack";
+  if (hour >= 17 && hour < 21) return "dinner";
+  return "snack";
+}
+
+// ---------------------------------------------------------------------------
 // Internal: resolve portion weight for a food item
 // ---------------------------------------------------------------------------
 
@@ -184,7 +211,9 @@ export function groupByMealSlot<T extends { timestamp: number }>(
  * Sums all fluid log items where name is "Water" (case-insensitive).
  * Converts liters to ml when unit is "l" (case-insensitive).
  */
-export function calculateWaterIntake(fluidLogs: ReadonlyArray<{ data: FluidLogData }>): number {
+export function calculateWaterIntake(
+  fluidLogs: ReadonlyArray<{ data: FluidLogData }>,
+): number {
   let totalMl = 0;
 
   for (const log of fluidLogs) {
