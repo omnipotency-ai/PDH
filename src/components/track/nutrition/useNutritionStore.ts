@@ -15,9 +15,14 @@
 
 import { FOOD_PORTION_DATA } from "@shared/foodPortionData";
 import { FOOD_REGISTRY, type FoodRegistryEntry } from "@shared/foodRegistryData";
-import Fuse from "fuse.js";
+import Fuse, { type IFuseOptions } from "fuse.js";
 import { useDeferredValue, useMemo, useReducer } from "react";
-import { computeMacrosForPortion, getMealSlot, type MealSlot } from "@/lib/nutritionUtils";
+import {
+  computeMacrosForPortion,
+  getMealSlot,
+  type MealSlot,
+  titleCase,
+} from "@/lib/nutritionUtils";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -93,6 +98,21 @@ export interface StagingTotals {
 /** Maximum portion weight in grams. Clamps ADJUST_STAGING_PORTION. */
 export const MAX_PORTION_G = 500;
 
+/** Minimum portion weight in grams. Clamps recalculateMacros edge cases (#80). */
+export const MIN_PORTION_G = 1;
+
+/** Fuse.js configuration for food registry search (#58). */
+export const FUSE_OPTIONS: IFuseOptions<FoodRegistryEntry> = {
+  keys: ["canonical", "examples"],
+  threshold: 0.4,
+  includeScore: true,
+};
+
+/** O(1) lookup set for validating canonical names against FOOD_REGISTRY (#74). */
+const FOOD_REGISTRY_CANONICALS: ReadonlySet<string> = new Set(
+  FOOD_REGISTRY.map((entry) => entry.canonical),
+);
+
 // ── ID generation ───────────────────────────────────────────────────────────
 
 function generateStagingId(): string {
@@ -103,9 +123,13 @@ function generateStagingId(): string {
 
 /**
  * Create a StagedItem for a canonical food.
- * Returns null if the food is not found in FOOD_PORTION_DATA.
+ * Returns null if the canonicalName is not in FOOD_REGISTRY or FOOD_PORTION_DATA.
+ * Applies titleCase to displayName for clean UI presentation (#79).
  */
 export function createStagedItem(canonicalName: string): StagedItem | null {
+  // #74: Validate canonical name exists in FOOD_REGISTRY before proceeding.
+  if (!FOOD_REGISTRY_CANONICALS.has(canonicalName)) return null;
+
   const portionData = FOOD_PORTION_DATA.get(canonicalName);
   if (!portionData) return null;
 
@@ -115,7 +139,7 @@ export function createStagedItem(canonicalName: string): StagedItem | null {
   return {
     id: generateStagingId(),
     canonicalName,
-    displayName: canonicalName,
+    displayName: titleCase(canonicalName),
     portionG,
     ...(portionData.naturalUnit !== undefined && {
       naturalUnit: portionData.naturalUnit,
@@ -130,12 +154,19 @@ export function createStagedItem(canonicalName: string): StagedItem | null {
 /**
  * Recompute all macro fields for a new portion weight.
  * Preserves id, canonicalName, displayName, naturalUnit, unitWeightG.
+ *
+ * Edge cases (#80):
+ * - portionG <= 0 is clamped to MIN_PORTION_G (1g)
+ * - NaN portionG is clamped to MIN_PORTION_G (1g)
  */
 export function recalculateMacros(item: StagedItem, newPortionG: number): StagedItem {
-  const macros = computeMacrosForPortion(item.canonicalName, newPortionG);
+  // #80: Guard against NaN and non-positive values.
+  const safePortionG = Number.isNaN(newPortionG) || newPortionG <= 0 ? MIN_PORTION_G : newPortionG;
+
+  const macros = computeMacrosForPortion(item.canonicalName, safePortionG);
   return {
     ...item,
-    portionG: newPortionG,
+    portionG: safePortionG,
     ...macros,
   };
 }
@@ -266,19 +297,19 @@ export function nutritionReducer(state: NutritionState, action: NutritionAction)
         searchQuery: "",
       };
 
-    default:
-      return base;
+    default: {
+      // #73: Exhaustive check — TypeScript will error if a new action type is added
+      // to NutritionAction but not handled above.
+      const _exhaustive: never = action;
+      return _exhaustive;
+    }
   }
 }
 
 // ── Fuse.js search index (module-level singleton) ───────────────────────────
 
 // FOOD_REGISTRY is ReadonlyArray<FoodRegistryEntry> — Fuse accepts ReadonlyArray, no cast needed.
-const fuseIndex = new Fuse<FoodRegistryEntry>(FOOD_REGISTRY, {
-  keys: ["canonical", "examples"],
-  threshold: 0.4,
-  includeScore: true,
-});
+const fuseIndex = new Fuse<FoodRegistryEntry>(FOOD_REGISTRY, FUSE_OPTIONS);
 
 /**
  * Search the food registry using Fuse.js fuzzy search.
