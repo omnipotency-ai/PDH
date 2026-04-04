@@ -35,12 +35,17 @@
 
 > PRD: `docs/design/meal-logging.md` (merged). All 22 decisions locked (2026-04-03). Implementation plan: `docs/plans/nutrition-card-implementation-plan.json` (26 tasks, 6 waves).
 
-| ID     | Title                             | Sev  | Description                                                                                                                                            | Status      |
-| ------ | --------------------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------- |
-| WQ-410 | Voice/conversational food logging | Crit | Natural language input ("I ate toast with butter and beans") parsed by AI into structured log entries. Minimal friction.                               | open        |
-| WQ-411 | Portion size tracking             | High | +/- portion controls per food row in staging area. AI prompts for reasonable defaults. Same food at different quantities = different outcome.          | in-progress |
-| WQ-412 | Logging gap detection & nudges    | Med  | AI detects missing logs and prompts gently. Especially important on bad days when user avoids logging.                                                 | open        |
-| WQ-413 | Liquids consolidation             | Med  | Water stays in fluids (separate modal with blue accent). All other liquids (milk, juice, cola, etc.) move to food logging with full registry profiles. | in-progress |
+| ID     | Title                             | Sev  | Description                                                                                                                                        | Status      |
+| ------ | --------------------------------- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| WQ-410 | Voice/conversational food logging | Crit | Natural language input ("I ate toast with butter and beans") parsed by AI into structured log entries. Minimal friction.                           | open        |
+| WQ-411 | Portion size tracking             | High | +/- portion controls per food row in staging area. UI built in LogFoodModal (W2-03). handleLogFood stub needs wiring to useAddSyncedLog.           | in-progress |
+| WQ-412 | Logging gap detection & nudges    | Med  | AI detects missing logs and prompts gently. Especially important on bad days when user avoids logging.                                             | open        |
+| WQ-413 | Liquids consolidation             | Med  | Water stays in fluids (separate modal with cyan accent #42BCB8). WaterModal UI built (W2-04). handleLogWater stub needs wiring to useAddSyncedLog. | in-progress |
+| WQ-414 | Wire NutritionCard handler stubs  | High | 3 no-op handlers in NutritionCard.tsx: handleLogWater, handleLogFood, handleDeleteLog. Patterns in useHabitLog.ts and Track.tsx.                   | open        |
+| WQ-415 | NutritionCard E2E tests           | Med  | Only 3 basic E2E tests exist. No coverage for WaterModal, LogFoodModal, FavouritesView, FoodFilterView, CalorieDetailView.                         | open        |
+| WQ-416 | Extract duplicate nutrition utils | Low  | titleCase, formatPortion, getDefaultCalories duplicated across FavouritesView.tsx and FoodFilterView.tsx. Extract to shared module.                | open        |
+| WQ-417 | Meal-slot-scoped recent foods     | Med  | recentFoods in useNutritionData returns global recents. Spec says zero-state should show foods for current time-of-day meal slot.                  | open        |
+| WQ-418 | Clean dead water store state      | Low  | waterAmount/SET_WATER_AMOUNT in useNutritionStore unused by WaterModal (manages own state internally).                                             | open        |
 
 ---
 

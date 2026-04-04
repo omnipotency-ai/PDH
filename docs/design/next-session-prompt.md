@@ -1,61 +1,193 @@
-# Next Session — Nutrition Card Wave 2 (Core UI)
+# Next Session — Wire TODOs, PR, Review
 
-## Context
+## TL;DR
 
-Wave 0 (Research) and Wave 1 (Foundation) are complete on `feat/nutrition` branch. PR #2 is open for merge to main. All work is additive — no existing behavior changed.
+Three TODO stubs in `NutritionCard.tsx` need real wiring. Then commit, push, PR, and review. Agent prompts are pre-written below — dispatch immediately.
 
-## What to read first
+## Current State
 
-1. `docs/plans/nutrition-card-implementation-plan.json` (v3.0) — the master plan, Wave 0+1 marked complete
-2. `memory/project_nutrition_card_decisions.md` — all 22 locked visual + behavioral decisions
-3. `memory/project_wave0_decisions.md` — user decisions: type=liquid, coffee composite, 1850kcal, portions pre-populated
-4. `memory/feedback_subagent_model_choice.md` — use opus for implementers + quality reviewers, haiku for spec reviewers
+- **Branch:** `feat/nutrition`
+- **Last commit:** `43d3667` (W2-03+04+06)
+- **Uncommitted:** CalorieDetailView extracted to own file (user directive). Commit this first.
+- **All verification passes:** typecheck, build, 1357 tests, lint, format
 
-## What was built in Wave 1
-
-- **`shared/logTypeUtils.ts`** — `isFoodPipelineType()` helper (centralised food/liquid check)
-- **`shared/foodPortionData.ts`** — 147 entries, USDA nutrition per 100g, portion sizes
-- **`shared/foodRegistryUtils.ts`** — `getPortionData`, `calculateCaloriesForPortion`, `calculateMacrosForPortion`
-- **`src/lib/nutritionUtils.ts`** — `getMealSlot`, `calculateTotalCalories`, `calculateTotalMacros`, `groupByMealSlot`, `calculateWaterIntake`
-- **`src/hooks/useNutritionData.ts`** — read-only hook: todayFoodLogs, totalCaloriesToday, totalMacrosToday, waterIntakeToday, caloriesByMealSlot, logsByMealSlot, recentFoods
-- **`src/hooks/useProfile.ts`** — `useNutritionGoals()` (1850kcal, 1000ml defaults), `useFoodFavourites()` (add/remove/isFavourite)
-- **`convex/migrations.ts`** — `backfillFluidToLiquid` (ready to run, not yet executed)
-- **Profile schema** — `nutritionGoals` + `foodFavourites` optional fields on profiles table
-
-## Wave 2 task order
-
-1. **W2-01: useNutritionStore** — useReducer-based UI state (view, searchQuery, stagingItems, modals, mealSlot). Fuse.js search (threshold 0.4, min 3 chars). Staging aggregates same canonicalName. Staging persists across view changes. **Must complete before W2-02 through W2-06.**
-2. **W2-02: NutritionCard (collapsed)** — header, calorie summary bar, search input, log food button, water progress. Uses useNutritionData + useNutritionStore.
-3. **W2-03: SearchView** — meals first then foods in results, camera+mic icons, auto-detect meal slot label.
-4. **W2-04: StagingModal** — centered, food rows with -/+/cal/X, 5 macro totals, match indicators.
-5. **W2-05: WaterModal** — centered, ring animation, plus/minus, cyan/teal theme, escape to close.
-6. **W2-06: CalorieDetailView** — segmented color bar by meal slot, per-slot calories, 5 macro columns, accordions.
-
-W2-02 through W2-06 can run in parallel after W2-01 completes (they all depend on the store but not each other).
-
-## Before starting Wave 2
-
-- Merge PR #2 to main (or continue on feat/nutrition)
-- Run `backfillFluidToLiquid` migration on dev data
-- Agent A's worktree files are reference only: `.claude/worktrees/agent-a31ddf8f/`
-
-## Subagent strategy (learned this session)
-
-- **Opus for implementers** — sonnet ran out of context 3 of 4 times, requiring manual cleanup
-- **Haiku for spec reviewers** — checklist comparison works fine at haiku tier
-- **Opus for quality reviewers** — catches real architectural bugs (found 20 missed food pipeline consumers)
-- **Sonnet for targeted fix agents** — narrow scope, works fine
-
-## Verification commands
+## Step 1: Commit CalorieDetailView extraction
 
 ```
-bun run typecheck
-bun run build
-bun run lint:fix
-bun run test:unit
-bun run format
+git add src/components/track/nutrition/CalorieDetailView.tsx src/components/track/nutrition/NutritionCard.tsx
+git commit -m "refactor: extract CalorieDetailView to own file"
 ```
 
-## Branch
+Include `.agents/skills/` files — they're from Codex and should be committed.
 
-Continue on `feat/nutrition` or create `feat/nutrition-ui` for Wave 2.
+## Step 2: Dispatch 2 opus agents to wire TODOs
+
+### Agent 1: Wire handleLogWater + handleDeleteLog
+
+```
+You are implementing two TODO stubs in NutritionCard.tsx. This is a food reintegration tracker app (PDH).
+
+## TODO 1: handleLogWater (line ~499-505)
+
+Current code:
+  const handleLogWater = useCallback(
+    (_amountMl: number) => {
+      // TODO: wire to actual fluid logging (FluidSection pattern)
+      dispatch({ type: "CLOSE_WATER_MODAL" });
+    },
+    [dispatch],
+  );
+
+Wire this to log a water entry via useAddSyncedLog. Pattern from useHabitLog.ts:
+  const logId = await addSyncedLog({
+    timestamp: Date.now(),
+    type: "fluid",
+    data: { items: [{ name: "Water", quantity: amountMl, unit: "ml" }] },
+  });
+
+After success: show toast ("Water Xml logged"), close modal.
+On error: show error toast, keep modal open.
+
+## TODO 2: handleDeleteLog (line ~565-567)
+
+Current code:
+  const handleDeleteLog = useCallback((_logId: string) => {
+    // TODO: wire to useRemoveSyncedLog
+  }, []);
+
+Wire this to call useRemoveSyncedLog(logId). Pattern from Track.tsx line 85:
+  const removeSyncedLog = useRemoveSyncedLog();
+  // then: await removeSyncedLog(logId);
+
+After success: show toast ("Entry deleted").
+On error: show error toast.
+
+## Files to read:
+1. src/components/track/nutrition/NutritionCard.tsx — the file to modify
+2. src/lib/syncLogs.ts — useAddSyncedLog, useRemoveSyncedLog exports
+3. src/lib/sync.ts — re-exports from syncLogs
+
+## Imports to add:
+- import { toast } from "sonner";
+- import { useAddSyncedLog, useRemoveSyncedLog } from "@/lib/sync";
+- import { getErrorMessage } from "@/lib/errors";
+
+## Constraints:
+- Keep the existing dispatch calls (CLOSE_WATER_MODAL stays)
+- Make handlers async
+- Use getErrorMessage for error toasts (existing pattern)
+- Run: bun run typecheck && bun run build && bun run test after changes
+- Commit with message: "feat: wire handleLogWater and handleDeleteLog to Convex"
+```
+
+### Agent 2: Wire handleLogFood
+
+```
+You are implementing a TODO stub in NutritionCard.tsx. This is a food reintegration tracker app (PDH).
+
+## TODO: handleLogFood (line ~552-555)
+
+Current code:
+  const handleLogFood = useCallback(() => {
+    // TODO: wire to actual food logging pipeline
+    dispatch({ type: "RESET_AFTER_LOG" });
+  }, [dispatch]);
+
+This is called when the user presses "Log Food" in the LogFoodModal (staging confirmation).
+At this point, state.stagingItems contains StagedItem[] with:
+  { id, canonicalName, displayName, portionG, calories, protein, carbs, fat, sugars, fiber, naturalUnit?, unitWeightG? }
+
+Wire this to create a food log via useAddSyncedLog. The food log format is:
+  await addSyncedLog({
+    timestamp: Date.now(),
+    type: "food",
+    data: {
+      items: state.stagingItems.map(item => ({
+        canonicalName: item.canonicalName,
+        parsedName: item.displayName,
+        quantity: item.portionG,
+        unit: "g",
+      })),
+    },
+  });
+
+After success: show toast ("N items logged"), dispatch RESET_AFTER_LOG.
+On error: show error toast, do NOT reset staging (so user can retry).
+
+## Files to read:
+1. src/components/track/nutrition/NutritionCard.tsx — the file to modify
+2. src/components/track/nutrition/useNutritionStore.ts — StagedItem type, state.stagingItems
+3. src/lib/syncLogs.ts — useAddSyncedLog export
+4. src/hooks/useFoodParsing.ts — reference for food log data shape
+
+## Imports needed (if not already present from Agent 1):
+- import { toast } from "sonner";
+- import { useAddSyncedLog } from "@/lib/sync";
+- import { getErrorMessage } from "@/lib/errors";
+
+## Constraints:
+- The handler needs access to state.stagingItems — it's already in scope via useNutritionStore
+- Make handler async
+- Keep RESET_AFTER_LOG dispatch but move it to success path only
+- Run: bun run typecheck && bun run build && bun run test after changes
+- Commit with message: "feat: wire handleLogFood to create food logs from staging"
+```
+
+## Step 3: After both agents complete, commit and PR
+
+```bash
+git push -u origin feat/nutrition
+gh pr create --title "feat: Nutrition Card UI (Wave 2)" --body "$(cat <<'EOF'
+## Summary
+- NutritionCard with collapsed/expanded calorie detail views
+- WaterModal (cyan ring, +/- 200ml, logs to Convex)
+- LogFoodModal (staging confirmation with macro totals)
+- CalorieDetailView (meal breakdown bar, macros, one-at-a-time accordions)
+- FavouritesView + FoodFilterView (Recent|Frequent|Favourites|All tabs)
+- All wired to useNutritionStore (useReducer) + useNutritionData (Convex)
+- Delete, water logging, and food logging wired to Convex mutations
+
+## Test plan
+- [ ] Typecheck, build, 1357 unit tests pass
+- [ ] Visual verification on localhost:3005
+- [ ] Water modal: open, adjust amount, log → appears in today log
+- [ ] Food staging: search → add → review in modal → log → appears in today log
+- [ ] Delete: expand calorie detail → accordion → delete button removes entry
+- [ ] Escape key returns to collapsed from any expanded view
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+EOF
+)"
+```
+
+## Step 4: Review PR with opus agents
+
+Dispatch 2 opus agents in parallel reviewing the full PR diff (git diff main...HEAD):
+
+1. **Code quality reviewer** — security, correctness, performance, React patterns, accessibility
+2. **Architecture reviewer** — component boundaries, state management, data flow, future extensibility
+
+## Spec Review Findings (from this session, already documented)
+
+Issues to defer (not blocking PR):
+
+- Match status indicators in LogFoodModal (decision says "parked for research")
+- E2E tests for individual modals/views (defer to Wave 5)
+- recentFoods not scoped to current meal slot (minor, data layer change)
+- Dead code: waterAmount/SET_WATER_AMOUNT in store (cleanup task)
+- Duplicate utils across FavouritesView/FoodFilterView (cleanup task)
+- No food thumbnail in LogFoodModal (no image data available yet)
+
+## Key files
+
+| File                                                   | Purpose                                        |
+| ------------------------------------------------------ | ---------------------------------------------- |
+| `src/components/track/nutrition/NutritionCard.tsx`     | Main orchestrator (~550 lines)                 |
+| `src/components/track/nutrition/CalorieDetailView.tsx` | Expanded view with breakdown/macros/accordions |
+| `src/components/track/nutrition/WaterModal.tsx`        | Water logging modal                            |
+| `src/components/track/nutrition/LogFoodModal.tsx`      | Staging confirmation modal                     |
+| `src/components/track/nutrition/FavouritesView.tsx`    | Favourites list                                |
+| `src/components/track/nutrition/FoodFilterView.tsx`    | Filter tabs (Recent/Frequent/Favourites/All)   |
+| `src/components/track/nutrition/useNutritionStore.ts`  | UI state (useReducer + Fuse.js)                |
+| `src/hooks/useNutritionData.ts`                        | Read-only Convex data                          |
+| `src/hooks/useProfile.ts`                              | Nutrition goals + favourites                   |

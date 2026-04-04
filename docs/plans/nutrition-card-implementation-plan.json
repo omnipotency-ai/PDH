@@ -97,7 +97,7 @@
             "title": "Audit Agent A components vs real data model",
             "description": "Read all 9 Agent A files and the real domain types. Produce a line-by-line mapping document: for every type, interface, function, and import in Agent A's code, document what the real-app equivalent is (or note it doesn't exist). Key deliverable: a markdown file listing every mock dependency and its replacement.\n\nSpecific mappings needed:\n- mockData.FoodItem -> real FoodRegistryEntry (shared/foodRegistryData.ts) + ingredientProfiles.nutritionPer100g\n- mockData.FoodLogEntry -> real FoodLog (domain.ts) backed by logs table (type='food')\n- mockData.SavedMeal -> no real equivalent (defer or cut)\n- mockData.FOOD_REGISTRY -> shared/foodRegistry.ts FOOD_REGISTRY (148 entries, no macros/portions)\n- mockData.calculateCalories -> must compute from ingredientProfiles.nutritionPer100g.kcal * portion / 100\n- mockData.detectMealSlot -> corrected times: breakfast 5-9am, lunch 1-4pm, dinner 8-11pm, else snack\n- State.waterIntake/waterGoal -> derive from fluid logs (type='fluid', name='Water') in SyncedLogs\n- State.foodLogs -> derive from food logs (type='food') in SyncedLogs\n- State.favourites -> no existing storage; needs new field in profiles\n\nCRITICAL: Also audit the ingredientProfiles table to determine which entries already have nutritionPer100g data (kcal, protein, carbs, fat, sugars, fibre). Document coverage: how many of the 148 registry entries have matching ingredientProfiles with nutrition data? This directly feeds W1-01.",
             "files_to_read": [
-              "[COMPLETED — worktree paths were historical, task output at docs/nutrition-card/data-model-mapping.md]",
+              "[COMPLETED \u2014 worktree paths were historical, task output at docs/nutrition-card/data-model-mapping.md]",
               "src/types/domain.ts",
               "shared/foodRegistryData.ts",
               "convex/schema.ts",
@@ -105,7 +105,9 @@
               "src/contexts/SyncedLogsContext.tsx",
               "convex/ingredientProfiles.ts"
             ],
-            "files_to_modify": ["docs/nutrition-card/data-model-mapping.md"],
+            "files_to_modify": [
+              "docs/nutrition-card/data-model-mapping.md"
+            ],
             "depends_on": [],
             "completed": true,
             "task_protocol": {
@@ -131,7 +133,9 @@
             "verification": [
               "cat docs/nutrition-card/data-model-mapping.md | wc -l (should be >120 lines)"
             ],
-            "outputs": ["docs/nutrition-card/data-model-mapping.md"]
+            "outputs": [
+              "docs/nutrition-card/data-model-mapping.md"
+            ]
           },
           {
             "id": "W0-02",
@@ -147,7 +151,9 @@
               "src/components/track/FoodMatchingModal.tsx",
               "src/lib/syncLogs.ts"
             ],
-            "files_to_modify": ["docs/nutrition-card/pipeline-integration.md"],
+            "files_to_modify": [
+              "docs/nutrition-card/pipeline-integration.md"
+            ],
             "depends_on": [],
             "completed": true,
             "task_protocol": {
@@ -171,7 +177,9 @@
             "verification": [
               "cat docs/nutrition-card/pipeline-integration.md | wc -l (should be >80 lines)"
             ],
-            "outputs": ["docs/nutrition-card/pipeline-integration.md"]
+            "outputs": [
+              "docs/nutrition-card/pipeline-integration.md"
+            ]
           },
           {
             "id": "W0-03",
@@ -184,7 +192,9 @@
               "src/hooks/useProfile.ts",
               "shared/foodRegistryData.ts"
             ],
-            "files_to_modify": ["docs/nutrition-card/fluid-migration.md"],
+            "files_to_modify": [
+              "docs/nutrition-card/fluid-migration.md"
+            ],
             "depends_on": [],
             "completed": true,
             "task_protocol": {
@@ -208,7 +218,9 @@
             "verification": [
               "cat docs/nutrition-card/fluid-migration.md | wc -l (should be >50 lines)"
             ],
-            "outputs": ["docs/nutrition-card/fluid-migration.md"]
+            "outputs": [
+              "docs/nutrition-card/fluid-migration.md"
+            ]
           },
           {
             "id": "W0-04",
@@ -220,7 +232,9 @@
               "convex/ingredientProfiles.ts",
               "convex/schema.ts"
             ],
-            "files_to_modify": ["docs/nutrition-card/portion-schema-design.md"],
+            "files_to_modify": [
+              "docs/nutrition-card/portion-schema-design.md"
+            ],
             "depends_on": [],
             "completed": true,
             "task_protocol": {
@@ -245,7 +259,9 @@
             "verification": [
               "cat docs/nutrition-card/portion-schema-design.md | wc -l (should be >100 lines)"
             ],
-            "outputs": ["docs/nutrition-card/portion-schema-design.md"]
+            "outputs": [
+              "docs/nutrition-card/portion-schema-design.md"
+            ]
           }
         ]
       },
@@ -271,7 +287,9 @@
               "shared/foodRegistry.ts",
               "scripts/seedPortionData.ts"
             ],
-            "depends_on": ["W0-04"],
+            "depends_on": [
+              "W0-04"
+            ],
             "completed": true,
             "task_protocol": {
               "steps": [
@@ -331,7 +349,9 @@
               "convex/schema.ts",
               "src/hooks/useProfile.ts"
             ],
-            "depends_on": ["W0-01"],
+            "depends_on": [
+              "W0-01"
+            ],
             "completed": true,
             "task_protocol": {
               "steps": [
@@ -388,8 +408,15 @@
               "docs/nutrition-card/data-model-mapping.md",
               "shared/foodRegistryUtils.ts"
             ],
-            "files_to_modify": ["src/hooks/useNutritionData.ts"],
-            "depends_on": ["W0-01", "W0-02", "W1-01", "W1-02"],
+            "files_to_modify": [
+              "src/hooks/useNutritionData.ts"
+            ],
+            "depends_on": [
+              "W0-01",
+              "W0-02",
+              "W1-01",
+              "W1-02"
+            ],
             "completed": true,
             "task_protocol": {
               "steps": [
@@ -443,14 +470,17 @@
             "title": "Build useNutritionStore (UI state only)",
             "description": "Create useReducer-based hook for UI state: view, searchQuery, stagingItems, modals, mealSlot. Search uses Fuse.js against real FOOD_REGISTRY (threshold 0.4, min 3 chars). Staging aggregates same canonicalName. Staging persists across view changes.\n\nTDD: Write Vitest tests for the reducer FIRST \u2014 test every action type, staging aggregation logic, and search threshold behaviour. The reducer is a pure function, perfect for TDD.",
             "files_to_read": [
-              "[COMPLETED — output at src/components/track/nutrition/useNutritionStore.ts]",
+              "[COMPLETED \u2014 output at src/components/track/nutrition/useNutritionStore.ts]",
               "docs/nutrition-card/data-model-mapping.md",
               "shared/foodRegistryData.ts"
             ],
             "files_to_modify": [
               "src/components/track/nutrition/useNutritionStore.ts"
             ],
-            "depends_on": ["W0-01", "W1-01"],
+            "depends_on": [
+              "W0-01",
+              "W1-01"
+            ],
             "completed": true,
             "task_protocol": {
               "steps": [
@@ -515,7 +545,10 @@
               "src/components/track/nutrition/NutritionCard.tsx",
               "e2e/nutrition-card.spec.ts"
             ],
-            "depends_on": ["W2-01", "W1-03"],
+            "depends_on": [
+              "W2-01",
+              "W1-03"
+            ],
             "completed": false,
             "task_protocol": {
               "steps": [
@@ -582,7 +615,9 @@
               "src/components/track/nutrition/StagingModal.tsx",
               "e2e/nutrition-card.spec.ts"
             ],
-            "depends_on": ["W2-01"],
+            "depends_on": [
+              "W2-01"
+            ],
             "completed": false,
             "task_protocol": {
               "steps": [
@@ -648,7 +683,9 @@
               "src/components/track/nutrition/WaterModal.tsx",
               "e2e/nutrition-card.spec.ts"
             ],
-            "depends_on": ["W2-01"],
+            "depends_on": [
+              "W2-01"
+            ],
             "completed": false,
             "task_protocol": {
               "steps": [
@@ -713,7 +750,9 @@
               "src/components/track/nutrition/CalorieDetailView.tsx",
               "e2e/nutrition-card.spec.ts"
             ],
-            "depends_on": ["W2-01"],
+            "depends_on": [
+              "W2-01"
+            ],
             "completed": false,
             "task_protocol": {
               "steps": [
@@ -782,7 +821,10 @@
               "src/components/track/nutrition/index.ts",
               "e2e/nutrition-card.spec.ts"
             ],
-            "depends_on": ["W2-01", "W1-02"],
+            "depends_on": [
+              "W2-01",
+              "W1-02"
+            ],
             "completed": false,
             "task_protocol": {
               "steps": [
@@ -851,7 +893,10 @@
               "src/components/track/nutrition/useNutritionStore.ts",
               "e2e/nutrition-card.spec.ts"
             ],
-            "depends_on": ["W2-02", "W0-02"],
+            "depends_on": [
+              "W2-02",
+              "W0-02"
+            ],
             "completed": false,
             "task_protocol": {
               "steps": [
@@ -912,7 +957,10 @@
               "src/components/track/nutrition/WaterModal.tsx",
               "e2e/nutrition-card.spec.ts"
             ],
-            "depends_on": ["W2-04", "W1-03"],
+            "depends_on": [
+              "W2-04",
+              "W1-03"
+            ],
             "completed": false,
             "task_protocol": {
               "steps": [
@@ -970,7 +1018,10 @@
               "src/components/track/nutrition/useNutritionStore.ts",
               "e2e/nutrition-card.spec.ts"
             ],
-            "depends_on": ["W2-03", "W0-02"],
+            "depends_on": [
+              "W2-03",
+              "W0-02"
+            ],
             "completed": false,
             "task_protocol": {
               "steps": [
@@ -1019,12 +1070,16 @@
             "id": "W3-04",
             "title": "Add error boundary around NutritionCard",
             "description": "NEW TASK \u2014 not in v1 plan. Create a NutritionCardErrorBoundary that wraps NutritionCard in Track.tsx. If NutritionCard crashes, show a fallback UI with 'Nutrition card failed to load' message and a retry button. This prevents the entire Track page from dying if NutritionCard has a runtime error.\n\nThe error boundary should log the error to console for debugging.\n\nThis task MUST be completed before W3-05 (mounting in Track page).",
-            "files_to_read": ["src/pages/Track.tsx"],
+            "files_to_read": [
+              "src/pages/Track.tsx"
+            ],
             "files_to_modify": [
               "src/components/track/nutrition/NutritionCardErrorBoundary.tsx",
               "e2e/nutrition-card.spec.ts"
             ],
-            "depends_on": ["W2-02"],
+            "depends_on": [
+              "W2-02"
+            ],
             "completed": false,
             "task_protocol": {
               "steps": [
@@ -1079,7 +1134,11 @@
               "src/pages/Track.tsx",
               "e2e/nutrition-card.spec.ts"
             ],
-            "depends_on": ["W3-01", "W3-02", "W3-04"],
+            "depends_on": [
+              "W3-01",
+              "W3-02",
+              "W3-04"
+            ],
             "completed": false,
             "task_protocol": {
               "steps": [
@@ -1136,7 +1195,10 @@
               "src/components/track/nutrition/NutritionCard.tsx",
               "e2e/nutrition-card.spec.ts"
             ],
-            "depends_on": ["W2-02", "W1-01"],
+            "depends_on": [
+              "W2-02",
+              "W1-01"
+            ],
             "completed": false,
             "task_protocol": {
               "steps": [
@@ -1187,8 +1249,13 @@
             "title": "End-to-end integration test: full nutrition flow",
             "description": "NEW TASK \u2014 not in v1 plan. Write a comprehensive Playwright E2E test that verifies the FULL flow works end-to-end:\n\n1. Navigate to Track page\n2. Type a food in the search input (e.g., 'white rice')\n3. Add to staging via + button\n4. Adjust portion in staging modal\n5. Click Log Food\n6. Verify food appears in TodayLog\n7. Verify calorie ring updates\n8. Open calorie detail view\n9. Verify food appears under correct meal slot\n10. Delete the food\n11. Verify calorie ring decreases\n12. Log water via water modal\n13. Verify water progress bar updates\n\nThis is the single most important test in the entire plan. If this passes, the feature works.",
             "files_to_read": [],
-            "files_to_modify": ["e2e/nutrition-full-flow.spec.ts"],
-            "depends_on": ["W3-05", "W3-06"],
+            "files_to_modify": [
+              "e2e/nutrition-full-flow.spec.ts"
+            ],
+            "depends_on": [
+              "W3-05",
+              "W3-06"
+            ],
             "completed": false,
             "task_protocol": {
               "steps": [
@@ -1218,7 +1285,9 @@
               "bunx playwright test e2e/nutrition-full-flow.spec.ts",
               "curl -s -o /dev/null -w '%{http_code}' http://localhost:3005"
             ],
-            "outputs": ["e2e/nutrition-full-flow.spec.ts (new)"]
+            "outputs": [
+              "e2e/nutrition-full-flow.spec.ts (new)"
+            ]
           }
         ]
       },
@@ -1240,7 +1309,10 @@
               "src/components/track/nutrition/NutritionCard.tsx",
               "e2e/nutrition-card.spec.ts"
             ],
-            "depends_on": ["W3-05", "W0-03"],
+            "depends_on": [
+              "W3-05",
+              "W0-03"
+            ],
             "completed": false,
             "task_protocol": {
               "steps": [
@@ -1297,7 +1369,9 @@
               "src/components/track/panels/index.ts",
               "e2e/nutrition-card.spec.ts"
             ],
-            "depends_on": ["W4-01"],
+            "depends_on": [
+              "W4-01"
+            ],
             "completed": false,
             "task_protocol": {
               "steps": [
@@ -1353,7 +1427,9 @@
               "src/components/track/today-log/editors/FoodSubRow.tsx",
               "e2e/nutrition-card.spec.ts"
             ],
-            "depends_on": ["W3-05"],
+            "depends_on": [
+              "W3-05"
+            ],
             "completed": false,
             "task_protocol": {
               "steps": [
@@ -1420,7 +1496,9 @@
               "src/components/track/nutrition/CalorieDetailView.tsx",
               "e2e/nutrition-card.spec.ts"
             ],
-            "depends_on": ["W3-05"],
+            "depends_on": [
+              "W3-05"
+            ],
             "completed": false,
             "task_protocol": {
               "steps": [
@@ -1467,7 +1545,9 @@
             "id": "W5-02",
             "title": "Accessibility hardening",
             "description": "Apply D's patterns: aria-modal on all modals, role=dialog, focus management (move focus on open, return on close), focus trap, escape closes, screen reader labels on rings, search results as listbox/option.\n\nPlaywright E2E: Tab through all components \u2192 verify focus order \u2192 verify escape closes modals \u2192 verify aria attributes present.",
-            "files_to_read": ["src/components/CLAUDE.md"],
+            "files_to_read": [
+              "src/components/CLAUDE.md"
+            ],
             "files_to_modify": [
               "src/components/track/nutrition/NutritionCard.tsx",
               "src/components/track/nutrition/StagingModal.tsx",
@@ -1475,7 +1555,9 @@
               "src/components/track/nutrition/CalorieDetailView.tsx",
               "e2e/nutrition-card.spec.ts"
             ],
-            "depends_on": ["W3-05"],
+            "depends_on": [
+              "W3-05"
+            ],
             "completed": false,
             "task_protocol": {
               "steps": [
@@ -1533,7 +1615,9 @@
               "src/components/track/nutrition/__tests__/useNutritionStore.test.ts",
               "e2e/nutrition-card.spec.ts"
             ],
-            "depends_on": ["W3-05"],
+            "depends_on": [
+              "W3-05"
+            ],
             "completed": false,
             "task_protocol": {
               "steps": [
@@ -1588,7 +1672,11 @@
             "description": "Final verification task. Run the ENTIRE test suite (Vitest + Playwright) and fix any failures. This is the gate before merge.\n\nThis task also runs the nutrition-full-flow.spec.ts integration test one final time to confirm end-to-end works after all polish changes.",
             "files_to_read": [],
             "files_to_modify": [],
-            "depends_on": ["W5-01", "W5-02", "W5-03"],
+            "depends_on": [
+              "W5-01",
+              "W5-02",
+              "W5-03"
+            ],
             "completed": false,
             "task_protocol": {
               "steps": [
@@ -1629,7 +1717,10 @@
               "bunx playwright test e2e/nutrition-full-flow.spec.ts",
               "curl -s -o /dev/null -w '%{http_code}' http://localhost:3005"
             ],
-            "outputs": ["docs/WIP.md (updated)", "docs/WORK-QUEUE.md (updated)"]
+            "outputs": [
+              "docs/WIP.md (updated)",
+              "docs/WORK-QUEUE.md (updated)"
+            ]
           }
         ]
       }

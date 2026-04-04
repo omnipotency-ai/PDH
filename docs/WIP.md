@@ -65,20 +65,44 @@ All 4 ingredient subsystems confirmed as pre-built infrastructure for filter pro
 - FOOD_PORTION_DATA must be pre-populated (not empty)
 - Fluid→liquid backfill migration needed
 
-**Wave 1 in progress (Foundation):**
+**Wave 1 complete (Foundation):**
 
-- W1-00: Add type="liquid" to schema — **DONE** (2026-04-03)
-- W1-01: Populate FOOD_PORTION_DATA (all 147 entries, real data)
-- W1-02: Add nutrition goals + favourites to profile
-- W1-03: Build useNutritionData hook
-- W1-04 (NEW): Backfill fluid→liquid migration
+- W1-00: Add type="liquid" to schema — **DONE**
+- W1-01: Populate FOOD_PORTION_DATA (147 entries) — **DONE**
+- W1-02: Add nutrition goals + favourites to profile — **DONE**
+- W1-03: Build useNutritionData hook — **DONE**
+
+**Wave 2 in progress (Core UI) — 2026-04-04:**
+
+- W2-01: useNutritionStore (useReducer + Fuse.js search) — **DONE** (9bd9ea9)
+- W2-02: NutritionCard shell (collapsed + header + search) — **UI BUILT, 3 handler stubs**
+  - handleLogWater: no-op stub, needs useAddSyncedLog (type: "fluid")
+  - handleLogFood: no-op stub, needs useAddSyncedLog (type: "food") from stagingItems
+  - handleDeleteLog: no-op stub, needs useRemoveSyncedLog
+- W2-03: LogFoodModal (staging confirmation + macro totals) — **UI BUILT** (43d3667)
+  - Missing: match status indicators (green tick/orange alert) — decision says "parked for research"
+  - Missing: food thumbnail images (no image data available yet)
+  - Missing: E2E tests
+- W2-04: WaterModal (cyan ring + +/- 200ml) — **UI BUILT** (43d3667)
+  - Missing: E2E tests
+  - Dead code: waterAmount/SET_WATER_AMOUNT in store unused by WaterModal
+- W2-05: CalorieDetailView (breakdown bar + macros + accordions) — **UI BUILT**, extracted to own file (uncommitted)
+  - Delete button renders but does nothing (depends on handleDeleteLog wiring above)
+- W2-06: FavouritesView + FoodFilterView (filter tabs) — **UI BUILT** (43d3667)
+  - recentFoods not scoped to current meal slot (spec says it should be)
+  - Duplicate utility functions across both files
+  - Missing: E2E tests
+
+**Uncommitted work:**
+
+- CalorieDetailView.tsx extracted from NutritionCard.tsx (user directive)
+- .agents/skills/ files (from Codex, should be committed)
 
 **Remaining waves:**
 
-- Wave 2: Core UI (6 agents building components)
-- Wave 3: Integration (wire to existing food pipeline)
-- Wave 4: Migration (non-water drinks → food logging)
-- Wave 5: Polish (dark mode, a11y, tests)
+- Wave 3: Integration (wire to existing food pipeline, error boundary)
+- Wave 4: Migration (non-water drinks → food logging, remove old sections)
+- Wave 5: Polish (dark mode audit, a11y hardening, E2E tests)
 
 ### Wave 2: Filter Bar (static data)
 
