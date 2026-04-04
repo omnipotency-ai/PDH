@@ -407,7 +407,7 @@ function CollapsedView({
 // ── NutritionCard (main export) ──────────────────────────────────────────────
 
 export function NutritionCard() {
-  const { state, dispatch, searchResults, stagingCount } = useNutritionStore();
+  const { state, dispatch, searchResults, stagingCount, stagingTotals } = useNutritionStore();
   const {
     totalCaloriesToday,
     totalMacrosToday,
@@ -733,6 +733,7 @@ export function NutritionCard() {
       <LogFoodModal
         open={state.stagingModalOpen}
         stagedItems={state.stagingItems}
+        stagingTotals={stagingTotals}
         onClose={handleCloseStagingModal}
         onRemoveItem={handleRemoveFromStaging}
         onUpdateQuantity={handleUpdateStagedQuantity}

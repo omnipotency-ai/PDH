@@ -6,21 +6,26 @@
  * Users can log the food, add more items, remove items, or clear all.
  *
  * Reads from FOOD_PORTION_DATA for macro computation.
- * Uses computeStagingTotals from useNutritionStore for aggregation.
+ * Receives stagingTotals as a prop from the parent (memoized in useNutritionStore).
+ *
+ * Uses Base UI Dialog for focus trapping, Escape to close, click-outside
+ * to close, aria-modal, and return-focus-on-close.
  *
  * Ref: docs/plans/Worktree spec/user-annotations/22_log_food_modal_reference.png
- * Decisions: #3 Staging Modal, #13 Aggregation, #21 Natural units, #22 Macros
+ * Decisions: #3 Staging Modal, #13 Aggregation, #19 Prop totals, #20 Memo row, #21 Base UI Dialog
  */
 
+import { Dialog } from "@base-ui/react/dialog";
 import { Minus, Plus, X } from "lucide-react";
-import { useEffect, useRef } from "react";
-import { computeStagingTotals, type StagedItem } from "./useNutritionStore";
+import { memo, useCallback } from "react";
+import type { StagedItem, StagingTotals } from "./useNutritionStore";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
 export interface LogFoodModalProps {
   open: boolean;
   stagedItems: StagedItem[];
+  stagingTotals: StagingTotals;
   onClose: () => void;
   onRemoveItem: (id: string) => void;
   onUpdateQuantity: (id: string, newQuantity: number) => void;
@@ -77,9 +82,9 @@ function getStep(item: StagedItem): number {
   return item.unitWeightG ?? DEFAULT_INCREMENT_G;
 }
 
-// ── Food Item Row ──────────────────────────────────────────────────────────
+// ── Food Item Row (memoized — Finding #20) ────────────────────────────────
 
-function FoodItemRow({
+const FoodItemRow = memo(function FoodItemRow({
   item,
   onUpdateQuantity,
   onRemoveItem,
@@ -141,7 +146,7 @@ function FoodItemRow({
       </button>
     </div>
   );
-}
+});
 
 // ── Macro Pill ──────────────────────────────────────────────────────────────
 
@@ -165,6 +170,7 @@ function MacroPill({ value, label, color }: { value: number; label: string; colo
 export function LogFoodModal({
   open,
   stagedItems,
+  stagingTotals,
   onClose,
   onRemoveItem,
   onUpdateQuantity,
@@ -172,92 +178,27 @@ export function LogFoodModal({
   onLogFood,
   onAddMore,
 }: LogFoodModalProps) {
-  const dialogRef = useRef<HTMLDivElement>(null);
-  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const handleOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      if (!nextOpen) onClose();
+    },
+    [onClose],
+  );
 
-  // ── Focus trap + Escape handler ────────────────────────────────────────
-
-  useEffect(() => {
-    if (!open) return;
-
-    // Save currently focused element to restore later
-    previousFocusRef.current = document.activeElement as HTMLElement | null;
-
-    // Focus the dialog container
-    const timer = setTimeout(() => {
-      dialogRef.current?.focus();
-    }, 0);
-
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
-        return;
-      }
-
-      // Focus trap: Tab cycles within the dialog
-      if (e.key === "Tab" && dialogRef.current) {
-        const focusableElements = dialogRef.current.querySelectorAll<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-        );
-        if (focusableElements.length === 0) return;
-
-        const first = focusableElements[0];
-        const last = focusableElements[focusableElements.length - 1];
-
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener("keydown", handleKeyDown);
-      // Restore focus
-      previousFocusRef.current?.focus();
-    };
-  }, [open, onClose]);
-
-  if (!open) return null;
-
-  // ── Compute totals ─────────────────────────────────────────────────────
-
-  const totals = computeStagingTotals(stagedItems);
   const itemCount = stagedItems.length;
   const itemLabel = itemCount === 1 ? "1 item" : `${itemCount} items`;
 
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        data-slot="log-food-backdrop"
-        className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-
-      {/* Dialog */}
-      <div
-        ref={dialogRef}
-        data-slot="log-food-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Log Food"
-        tabIndex={-1}
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 outline-none"
-      >
-        {/* biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation prevents backdrop click-through; not interactive */}
-        <div
-          className="w-full max-w-md rounded-2xl border border-[var(--color-border-default)] bg-[var(--card)] shadow-xl"
-          onClick={(e) => e.stopPropagation()}
-          onKeyDown={(e) => e.stopPropagation()}
+    <Dialog.Root open={open} onOpenChange={handleOpenChange}>
+      <Dialog.Portal>
+        <Dialog.Backdrop
+          data-slot="log-food-backdrop"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+        />
+        <Dialog.Popup
+          data-slot="log-food-modal"
+          aria-label="Log Food"
+          className="fixed top-1/2 left-1/2 z-50 mx-4 flex w-full max-w-md -translate-x-1/2 -translate-y-1/2 flex-col rounded-2xl border border-[var(--color-border-default)] bg-[var(--card)] p-0 shadow-xl"
         >
           {/* ── Header ─────────────────────────────────────────────── */}
           <div
@@ -265,9 +206,12 @@ export function LogFoodModal({
             className="flex items-start justify-between border-b border-[var(--surface-3)] px-4 pt-4 pb-3"
           >
             <div className="flex flex-col gap-0.5">
-              <h2 className="text-lg font-bold font-display" style={{ color: "var(--orange)" }}>
+              <Dialog.Title
+                className="text-lg font-bold font-display"
+                style={{ color: "var(--orange)" }}
+              >
                 Log Food
-              </h2>
+              </Dialog.Title>
               <span className="text-xs text-[var(--text-muted)]">{itemLabel}</span>
             </div>
 
@@ -282,14 +226,12 @@ export function LogFoodModal({
                   Clear
                 </button>
               )}
-              <button
-                type="button"
+              <Dialog.Close
                 className="flex h-7 w-7 items-center justify-center rounded-md text-[var(--text-faint)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
-                onClick={onClose}
                 aria-label="Close Log Food modal"
               >
                 <X className="h-4 w-4" />
-              </button>
+              </Dialog.Close>
             </div>
           </div>
 
@@ -322,13 +264,20 @@ export function LogFoodModal({
               {/* Total row */}
               <div className="mb-3 flex items-center justify-between">
                 <span className="text-sm font-semibold text-[var(--text)]">Total</span>
-                <span className="text-sm font-bold text-[var(--text)]">{totals.calories} kcal</span>
+                <span className="text-sm font-bold text-[var(--text)]">
+                  {stagingTotals.calories} kcal
+                </span>
               </div>
 
               {/* Macro pills */}
               <div className="flex flex-wrap items-center gap-1.5">
                 {MACRO_PILL_CONFIG.map((m) => (
-                  <MacroPill key={m.key} value={totals[m.key]} label={m.label} color={m.color} />
+                  <MacroPill
+                    key={m.key}
+                    value={stagingTotals[m.key]}
+                    label={m.label}
+                    color={m.color}
+                  />
                 ))}
               </div>
             </div>
@@ -360,8 +309,8 @@ export function LogFoodModal({
               add more...
             </button>
           </div>
-        </div>
-      </div>
-    </>
+        </Dialog.Popup>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
