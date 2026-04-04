@@ -549,7 +549,7 @@
               "W2-01",
               "W1-03"
             ],
-            "completed": false,
+            "completed": true,
             "task_protocol": {
               "steps": [
                 "1. READ the task description, acceptance criteria, and files_to_read thoroughly before writing any code.",
@@ -618,7 +618,7 @@
             "depends_on": [
               "W2-01"
             ],
-            "completed": false,
+            "completed": true,
             "task_protocol": {
               "steps": [
                 "1. READ the task description, acceptance criteria, and files_to_read thoroughly before writing any code.",
@@ -686,7 +686,7 @@
             "depends_on": [
               "W2-01"
             ],
-            "completed": false,
+            "completed": true,
             "task_protocol": {
               "steps": [
                 "1. READ the task description, acceptance criteria, and files_to_read thoroughly before writing any code.",
@@ -753,7 +753,7 @@
             "depends_on": [
               "W2-01"
             ],
-            "completed": false,
+            "completed": true,
             "task_protocol": {
               "steps": [
                 "1. READ the task description, acceptance criteria, and files_to_read thoroughly before writing any code.",
@@ -825,7 +825,7 @@
               "W2-01",
               "W1-02"
             ],
-            "completed": false,
+            "completed": true,
             "task_protocol": {
               "steps": [
                 "1. READ the task description, acceptance criteria, and files_to_read thoroughly before writing any code.",
