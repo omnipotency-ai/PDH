@@ -1,12 +1,5 @@
 import { addDays, format, startOfDay } from "date-fns";
-import {
-  lazy,
-  Suspense,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AiInsightsSection } from "@/components/track/dr-poo/AiInsightsSection";
 
@@ -50,11 +43,7 @@ import { getErrorMessage } from "@/lib/errors";
 import type { HabitConfig } from "@/lib/habitTemplates";
 import { isSleepHabit } from "@/lib/habitTemplates";
 import { normalizeFluidItemName } from "@/lib/normalizeFluidName";
-import {
-  useAddSyncedLog,
-  useRemoveSyncedLog,
-  useUpdateSyncedLog,
-} from "@/lib/sync";
+import { useAddSyncedLog, useRemoveSyncedLog, useUpdateSyncedLog } from "@/lib/sync";
 import { MS_PER_DAY } from "@/lib/timeConstants";
 import { getDisplayWeightUnit } from "@/lib/units";
 import { useStore } from "@/store";
@@ -78,25 +67,15 @@ function toActivityTypeKey(value: string): string {
   return key;
 }
 
-function getHabitsForActivityType(
-  habits: HabitConfig[],
-  activityType: string,
-): HabitConfig[] {
+function getHabitsForActivityType(habits: HabitConfig[], activityType: string): HabitConfig[] {
   if (activityType === "sleep") {
     return habits.filter((habit) => isSleepHabit(habit));
   }
-  return habits.filter(
-    (habit) => toActivityTypeKey(habit.name) === activityType,
-  );
+  return habits.filter((habit) => toActivityTypeKey(habit.name) === activityType);
 }
 
-function getActivityHabitLogValue(
-  habit: HabitConfig,
-  durationMinutes: number,
-): number {
-  return habit.unit === "hours"
-    ? Math.round((durationMinutes / 60) * 100) / 100
-    : durationMinutes;
+function getActivityHabitLogValue(habit: HabitConfig, durationMinutes: number): number {
+  return habit.unit === "hours" ? Math.round((durationMinutes / 60) * 100) / 100 : durationMinutes;
 }
 
 export default function TrackPage() {
@@ -118,8 +97,7 @@ export default function TrackPage() {
   // Auto-trigger LLM matching for food logs with unresolved items (no-op if no API key)
   useFoodLlmMatching();
 
-  const { celebration, celebrateLog, celebrateGoalComplete, clearCelebration } =
-    useCelebration();
+  const { celebration, celebrateLog, celebrateGoalComplete, clearCelebration } = useCelebration();
 
   // useLiveClock fires once per minute, aligned to the clock minute.
   // On each tick we derive a fresh `now` from Date so all downstream
@@ -132,26 +110,15 @@ export default function TrackPage() {
   const todayEnd = todayStart + MS_PER_DAY;
 
   // --- Day statistics (extracted hook) ---
-  const {
-    todayHabitCounts,
-    todayFluidTotalsByName,
-    totalFluidMl,
-    todayBmCount,
-    lastBmTimestamp,
-  } = useDayStats({ logs, todayStart, todayEnd });
+  const { todayHabitCounts, todayFluidTotalsByName, totalFluidMl, todayBmCount, lastBmTimestamp } =
+    useDayStats({ logs, todayStart, todayEnd });
 
-  const selectedDate = useMemo(
-    () => startOfDay(addDays(now, dayOffset)),
-    [now, dayOffset],
-  );
+  const selectedDate = useMemo(() => startOfDay(addDays(now, dayOffset)), [now, dayOffset]);
   const selectedStart = selectedDate.getTime();
   const selectedEnd = addDays(selectedDate, 1).getTime();
 
   const selectedLogs = useMemo(
-    () =>
-      logs.filter(
-        (log) => log.timestamp >= selectedStart && log.timestamp < selectedEnd,
-      ),
+    () => logs.filter((log) => log.timestamp >= selectedStart && log.timestamp < selectedEnd),
     [logs, selectedStart, selectedEnd],
   );
 
@@ -172,9 +139,7 @@ export default function TrackPage() {
 
     const destructiveHabits = habits.filter(
       (habit) =>
-        habit.kind === "destructive" &&
-        typeof habit.dailyCap === "number" &&
-        habit.dailyCap > 0,
+        habit.kind === "destructive" && typeof habit.dailyCap === "number" && habit.dailyCap > 0,
     );
 
     if (destructiveHabits.length === 0) return;
@@ -186,9 +151,7 @@ export default function TrackPage() {
       const total = habitLogs
         .filter(
           (entry) =>
-            entry.habitId === habit.id &&
-            entry.at >= yesterdayStart &&
-            entry.at < yesterdayEnd,
+            entry.habitId === habit.id && entry.at >= yesterdayStart && entry.at < yesterdayEnd,
         )
         .reduce((sum, entry) => sum + entry.value, 0);
 
@@ -242,12 +205,7 @@ export default function TrackPage() {
       }
       setReviewQueueOpen(true);
     } catch (err: unknown) {
-      toast.error(
-        getErrorMessage(
-          err,
-          "Unable to load unresolved items. Check connection.",
-        ),
-      );
+      toast.error(getErrorMessage(err, "Unable to load unresolved items. Check connection."));
     }
   }, [unresolvedQueue]);
   useUnresolvedFoodToast(logs, now.getTime(), handleReviewUnresolved);
@@ -307,21 +265,13 @@ export default function TrackPage() {
   const detailDaySummaries = useMemo(
     () =>
       detailSheetHabit
-        ? daySummaries.filter(
-            (summary) => summary.habitId === detailSheetHabit.id,
-          )
+        ? daySummaries.filter((summary) => summary.habitId === detailSheetHabit.id)
         : [],
     [daySummaries, detailSheetHabit],
   );
 
-  const handlePreviousDay = useCallback(
-    () => setDayOffset((value) => value - 1),
-    [],
-  );
-  const handleNextDay = useCallback(
-    () => setDayOffset((value) => Math.min(value + 1, 0)),
-    [],
-  );
+  const handlePreviousDay = useCallback(() => setDayOffset((value) => value - 1), []);
+  const handleNextDay = useCallback(() => setDayOffset((value) => Math.min(value + 1, 0)), []);
   const handleJumpToToday = useCallback(() => setDayOffset(0), []);
 
   const handleLogBowel = async (state: BowelFormState) => {
@@ -359,9 +309,7 @@ export default function TrackPage() {
             for (const item of items) {
               const normalizedName = normalizeFluidItemName(item?.name);
               const matchingHabit = habits.find(
-                (h) =>
-                  h.logAs === "fluid" &&
-                  normalizeFluidItemName(h.name) === normalizedName,
+                (h) => h.logAs === "fluid" && normalizeFluidItemName(h.name) === normalizedName,
               );
               if (matchingHabit) {
                 removeHabitLog(matchingHabit.id, logToDelete.timestamp);
@@ -374,9 +322,7 @@ export default function TrackPage() {
             removeHabitLog(habitId, logToDelete.timestamp);
           }
         } else if (logToDelete.type === "activity") {
-          const activityType = toActivityTypeKey(
-            String(logToDelete.data?.activityType ?? ""),
-          );
+          const activityType = toActivityTypeKey(String(logToDelete.data?.activityType ?? ""));
           if (activityType === "sleep") {
             for (const habit of habits) {
               if (isSleepHabit(habit)) {
@@ -398,11 +344,7 @@ export default function TrackPage() {
     }
   };
 
-  const handleSave = async (
-    id: string,
-    data: LogPayloadData,
-    timestamp?: number,
-  ) => {
+  const handleSave = async (id: string, data: LogPayloadData, timestamp?: number) => {
     try {
       const log = logs.find((entry) => entry.id === id);
       if (!log) {
@@ -420,15 +362,12 @@ export default function TrackPage() {
 
       if (log.type === "fluid") {
         const nextFluidData = data as FluidLogData;
-        const previousItems = Array.isArray(log.data?.items)
-          ? log.data.items
-          : [];
+        const previousItems = Array.isArray(log.data?.items) ? log.data.items : [];
         for (const item of previousItems) {
           const normalizedName = normalizeFluidItemName(item?.name);
           const matchingHabit = habits.find(
             (habit) =>
-              habit.logAs === "fluid" &&
-              normalizeFluidItemName(habit.name) === normalizedName,
+              habit.logAs === "fluid" && normalizeFluidItemName(habit.name) === normalizedName,
           );
           if (matchingHabit) {
             removeHabitLog(matchingHabit.id, log.timestamp);
@@ -444,8 +383,7 @@ export default function TrackPage() {
 
           const matchingHabit = habits.find(
             (habit) =>
-              habit.logAs === "fluid" &&
-              normalizeFluidItemName(habit.name) === normalizedName,
+              habit.logAs === "fluid" && normalizeFluidItemName(habit.name) === normalizedName,
           );
           if (!matchingHabit) continue;
 
@@ -459,16 +397,13 @@ export default function TrackPage() {
         }
       } else if (log.type === "habit") {
         const nextHabitData = data as HabitLogData;
-        const previousHabitId =
-          typeof log.data?.habitId === "string" ? log.data.habitId : null;
+        const previousHabitId = typeof log.data?.habitId === "string" ? log.data.habitId : null;
         if (previousHabitId) {
           removeHabitLog(previousHabitId, log.timestamp);
         }
 
         const nextHabitId =
-          typeof nextHabitData.habitId === "string"
-            ? nextHabitData.habitId
-            : null;
+          typeof nextHabitData.habitId === "string" ? nextHabitData.habitId : null;
         const nextQuantity = Number(nextHabitData.quantity ?? 1);
         if (nextHabitId && Number.isFinite(nextQuantity) && nextQuantity > 0) {
           addHabitLog({
@@ -481,27 +416,15 @@ export default function TrackPage() {
         }
       } else if (log.type === "activity") {
         const nextActivityData = data as ActivityLogData;
-        const previousActivityType = toActivityTypeKey(
-          String(log.data?.activityType ?? ""),
-        );
-        for (const habit of getHabitsForActivityType(
-          habits,
-          previousActivityType,
-        )) {
+        const previousActivityType = toActivityTypeKey(String(log.data?.activityType ?? ""));
+        for (const habit of getHabitsForActivityType(habits, previousActivityType)) {
           removeHabitLog(habit.id, log.timestamp);
         }
 
-        const nextActivityType = toActivityTypeKey(
-          String(nextActivityData.activityType ?? ""),
-        );
-        const nextDurationMinutes = Number(
-          nextActivityData.durationMinutes ?? 0,
-        );
+        const nextActivityType = toActivityTypeKey(String(nextActivityData.activityType ?? ""));
+        const nextDurationMinutes = Number(nextActivityData.durationMinutes ?? 0);
         if (Number.isFinite(nextDurationMinutes) && nextDurationMinutes > 0) {
-          for (const habit of getHabitsForActivityType(
-            habits,
-            nextActivityType,
-          )) {
+          for (const habit of getHabitsForActivityType(habits, nextActivityType)) {
             addHabitLog({
               id: crypto.randomUUID(),
               habitId: habit.id,
@@ -596,14 +519,10 @@ export default function TrackPage() {
         </section>
 
         {/* ── Tablet (md): Column 2 = TodayLog ── */}
-        {isTablet && (
-          <section className="space-y-5 min-w-0">{todayLog}</section>
-        )}
+        {isTablet && <section className="space-y-5 min-w-0">{todayLog}</section>}
 
         {/* ── Desktop (xl): Column 2 = AiInsights ── */}
-        {isDesktop && (
-          <section className="space-y-5 min-w-0">{aiInsightsSection}</section>
-        )}
+        {isDesktop && <section className="space-y-5 min-w-0">{aiInsightsSection}</section>}
 
         {/* ── Mobile: TodayLog below inputs ── */}
         {isMobile && <aside className="space-y-5 min-w-0">{todayLog}</aside>}
@@ -627,21 +546,12 @@ export default function TrackPage() {
 
       <HabitDetailSheet
         habit={detailSheetHabit}
-        count={
-          detailSheetHabit ? (todayHabitCounts[detailSheetHabit.id] ?? 0) : 0
-        }
+        count={detailSheetHabit ? (todayHabitCounts[detailSheetHabit.id] ?? 0) : 0}
         {...(detailSheetHabit?.logAs === "fluid" && {
-          fluidMl:
-            todayFluidTotalsByName[
-              normalizeFluidItemName(detailSheetHabit.name)
-            ],
+          fluidMl: todayFluidTotalsByName[normalizeFluidItemName(detailSheetHabit.name)],
         })}
         daySummaries={detailDaySummaries}
-        streakSummary={
-          detailSheetHabit
-            ? (streakSummaries[detailSheetHabit.id] ?? null)
-            : null
-        }
+        streakSummary={detailSheetHabit ? (streakSummaries[detailSheetHabit.id] ?? null) : null}
         onClose={handleCloseDetailSheet}
       />
 

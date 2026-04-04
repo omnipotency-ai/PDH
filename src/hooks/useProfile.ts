@@ -43,14 +43,12 @@ export function useHabits() {
   );
 
   const addHabit = useCallback(
-    (habit: HabitConfig) =>
-      patchProfile({ habits: [...profile.habits, habit] }),
+    (habit: HabitConfig) => patchProfile({ habits: [...profile.habits, habit] }),
     [patchProfile, profile.habits],
   );
 
   const removeHabit = useCallback(
-    (habitId: string) =>
-      patchProfile({ habits: profile.habits.filter((h) => h.id !== habitId) }),
+    (habitId: string) => patchProfile({ habits: profile.habits.filter((h) => h.id !== habitId) }),
     [patchProfile, profile.habits],
   );
 
@@ -194,8 +192,7 @@ export function useTransitCalibration() {
   const { profile, patchProfile } = useProfileContext();
 
   const setTransitCalibration = useCallback(
-    (transitCalibration: TransitCalibration) =>
-      patchProfile({ transitCalibration }),
+    (transitCalibration: TransitCalibration) => patchProfile({ transitCalibration }),
     [patchProfile],
   );
 

@@ -76,10 +76,7 @@ export function computeTrend(stat: TrendData): Trend | null {
   if (stat.clearedHistory) return "improving";
 
   // Recent suspect with negative Bayesian status → worsening
-  if (
-    stat.recentSuspect &&
-    (stat.primaryStatus === "watch" || stat.primaryStatus === "avoid")
-  ) {
+  if (stat.recentSuspect && (stat.primaryStatus === "watch" || stat.primaryStatus === "avoid")) {
     return "worsening";
   }
 
@@ -87,8 +84,7 @@ export function computeTrend(stat: TrendData): Trend | null {
   // combinedScore is (codePositive - codeNegative + aiScore), reflecting
   // the net posterior evidence direction.
   if (stat.confidence >= 0.3) {
-    if (stat.combinedScore > 0.5)
-      return stat.primaryStatus === "safe" ? "stable" : "improving";
+    if (stat.combinedScore > 0.5) return stat.primaryStatus === "safe" ? "stable" : "improving";
     if (stat.combinedScore < -0.5) return "worsening";
     return "stable";
   }
@@ -96,11 +92,7 @@ export function computeTrend(stat: TrendData): Trend | null {
   // Low confidence fallback: compare recent vs older outcomes
   const all = stat.recentOutcomes;
   const badScore = (outcomes: typeof all) =>
-    outcomes.reduce(
-      (sum, o) =>
-        sum + (o === "bad" ? 2 : o === "loose" || o === "hard" ? 1 : 0),
-      0,
-    );
+    outcomes.reduce((sum, o) => sum + (o === "bad" ? 2 : o === "loose" || o === "hard" ? 1 : 0), 0);
 
   const midpoint = Math.ceil(all.length / 2);
   const recent = all.slice(0, midpoint);
@@ -122,9 +114,7 @@ export interface AiFlags {
   suspectedCulprits: Set<string>;
 }
 
-export function buildAiFlags(
-  aiHistory: ReturnType<typeof useAiAnalysisHistory>,
-): AiFlags {
+export function buildAiFlags(aiHistory: ReturnType<typeof useAiAnalysisHistory>): AiFlags {
   const suspectedCulprits = new Set<string>();
 
   if (!aiHistory || aiHistory.length === 0) return { suspectedCulprits };

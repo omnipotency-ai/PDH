@@ -19,9 +19,7 @@ function isItemUnresolved(item: FoodItem): boolean {
     item.canonicalName != null &&
     item.canonicalName.length > 0 &&
     item.canonicalName !== "unknown_food" &&
-    (item.resolvedBy === "registry" ||
-      item.resolvedBy === "llm" ||
-      item.resolvedBy === "user")
+    (item.resolvedBy === "registry" || item.resolvedBy === "llm" || item.resolvedBy === "user")
   ) {
     return false;
   }
@@ -35,10 +33,7 @@ function isItemUnresolved(item: FoodItem): boolean {
 /**
  * Find food logs with unresolved items within the 6-hour processing window.
  */
-function findUnresolvedFoodLogs(
-  logs: SyncedLog[],
-  nowMs: number,
-): (FoodLog | LiquidLog)[] {
+function findUnresolvedFoodLogs(logs: SyncedLog[], nowMs: number): (FoodLog | LiquidLog)[] {
   const result: (FoodLog | LiquidLog)[] = [];
   for (const log of logs) {
     if (!isFoodPipelineType(log.type)) continue;

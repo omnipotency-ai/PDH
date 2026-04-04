@@ -106,28 +106,16 @@ export function useNutritionData(): NutritionData {
   }, [logs, todayKey]);
 
   // Derive calorie total.
-  const totalCaloriesToday = useMemo(
-    () => calculateTotalCalories(todayFoodLogs),
-    [todayFoodLogs],
-  );
+  const totalCaloriesToday = useMemo(() => calculateTotalCalories(todayFoodLogs), [todayFoodLogs]);
 
   // Derive macro totals.
-  const totalMacrosToday = useMemo(
-    () => calculateTotalMacros(todayFoodLogs),
-    [todayFoodLogs],
-  );
+  const totalMacrosToday = useMemo(() => calculateTotalMacros(todayFoodLogs), [todayFoodLogs]);
 
   // Derive water intake.
-  const waterIntakeToday = useMemo(
-    () => calculateWaterIntake(todayFluidLogs),
-    [todayFluidLogs],
-  );
+  const waterIntakeToday = useMemo(() => calculateWaterIntake(todayFluidLogs), [todayFluidLogs]);
 
   // Group today's food logs by meal slot.
-  const logsByMealSlot = useMemo(
-    () => groupByMealSlot(todayFoodLogs),
-    [todayFoodLogs],
-  );
+  const logsByMealSlot = useMemo(() => groupByMealSlot(todayFoodLogs), [todayFoodLogs]);
 
   // Calculate calories per meal slot.
   const caloriesByMealSlot = useMemo(() => {

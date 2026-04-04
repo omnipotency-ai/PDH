@@ -1,6 +1,6 @@
 {
   "plan": {
-    "title": "Nutrition Card — Wave-Based Parallel Implementation",
+    "title": "Nutrition Card \u2014 Wave-Based Parallel Implementation",
     "version": "2.0",
     "created": "2026-04-03",
     "totalTasks": 30,
@@ -14,7 +14,7 @@
         "app": "localhost:3005 (TanStack Start dev server)",
         "convex": "Convex dev running alongside (npx convex dev)"
       },
-      "branch": "adams-rib",
+      "branch": "feat/nutrition",
       "verification_commands": {
         "typecheck": "bun run typecheck",
         "build": "bun run build",
@@ -24,19 +24,35 @@
         "e2e": "bunx playwright test",
         "smoke_app": "curl -s -o /dev/null -w '%{http_code}' http://localhost:3005",
         "smoke_convex": "npx convex dev --once 2>&1 | tail -5"
+      },
+      "memory_base": "/Users/peterjamesblizzard/.claude/projects/-Users-peterjamesblizzard-projects-PDH/memory",
+      "annotations_dir": "docs/plans/Worktree spec/user-annotations",
+      "reference_images_dir": "docs/plans/Worktree spec",
+      "visual_verification_protocol": {
+        "description": "Every UI component must be visually verified against annotated reference images BEFORE committing. This prevents building components that don't match the user's locked decisions.",
+        "steps": [
+          "1. After building the component, ensure dev server is running on localhost:3005.",
+          "2. Use Claude-in-Chrome to navigate to the page where the component renders.",
+          "3. Screenshot the rendered component.",
+          "4. Read the reference annotation image listed in the task's visual_reference field.",
+          "5. Compare: does the rendered output match the annotation? Check layout, colors, icons, spacing, text.",
+          "6. If it does NOT match: fix the component, re-render, re-compare. Do NOT commit until it matches.",
+          "7. If it DOES match: proceed to commit."
+        ],
+        "gate": "Orchestrator must visually verify each component before dispatching the next. Components are built SEQUENTIALLY with verification gates, not in parallel."
       }
     },
     "task_protocol_template": {
-      "_comment": "This exact block is embedded in every task under 'task_protocol'. Agents see it inline — no memory dependency.",
+      "_comment": "This exact block is embedded in every task under 'task_protocol'. Agents see it inline \u2014 no memory dependency.",
       "steps": [
         "1. READ the task description, acceptance criteria, and files_to_read thoroughly before writing any code.",
         "2. TDD: Write failing tests FIRST (Convex tests for logic, Vitest for utilities). Watch them fail. Then implement code to make them pass.",
-        "3. Run ALL verification commands in order: bun run typecheck → bun run build → bun run lint:fix → bun run test → bun run format",
-        "4. SMOKE TEST: Verify dev server is still running — curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200. Check Convex dev has no schema errors.",
-        "5. Check acceptance criteria — every single one must pass.",
+        "3. Run ALL verification commands in order: bun run typecheck \u2192 bun run build \u2192 bun run lint:fix \u2192 bun run test \u2192 bun run format",
+        "4. SMOKE TEST: Verify dev server is still running \u2014 curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200. Check Convex dev has no schema errors.",
+        "5. Check acceptance criteria \u2014 every single one must pass.",
         "6. If ANY verification or acceptance criteria fails: git stash your changes, report what failed, do NOT commit broken code.",
         "7. Update docs/WIP.md with task completion status.",
-        "8. Commit to adams-rib branch with descriptive message referencing the task ID (e.g., 'W1-02: Add nutrition goals to profile schema').",
+        "8. Commit to feat/nutrition branch with descriptive message referencing the task ID (e.g., 'W1-02: Add nutrition goals to profile schema').",
         "9. For UI tasks: Browser-test via Claude-in-Chrome on localhost:3005. Verify the component renders, interacts correctly, and console has no errors."
       ],
       "rollback_strategy": "If verification fails after 2 attempts to fix: git stash, report the failure with exact error output, and flag the task as BLOCKED in docs/WIP.md. Do NOT push broken code. Do NOT skip failing tests.",
@@ -69,11 +85,11 @@
             "1. READ every file in files_to_read thoroughly. Do not skim.",
             "2. Produce the deliverable markdown document addressing every point in the description.",
             "3. Include exact file paths and line numbers for every claim.",
-            "4. Include an 'Assumptions Requiring Validation' section at the end — list anything you inferred but could not confirm from code alone.",
+            "4. Include an 'Assumptions Requiring Validation' section at the end \u2014 list anything you inferred but could not confirm from code alone.",
             "5. Verify: cat the output file and confirm it meets the line count minimum.",
-            "6. Commit to adams-rib branch with descriptive message."
+            "6. Commit to feat/nutrition branch with descriptive message."
           ],
-          "rollback_strategy": "Research tasks produce documents only — no rollback needed. If uncertain about a finding, mark it as an assumption, do not guess."
+          "rollback_strategy": "Research tasks produce documents only \u2014 no rollback needed. If uncertain about a finding, mark it as an assumption, do not guess."
         },
         "tasks": [
           {
@@ -81,9 +97,7 @@
             "title": "Audit Agent A components vs real data model",
             "description": "Read all 9 Agent A files and the real domain types. Produce a line-by-line mapping document: for every type, interface, function, and import in Agent A's code, document what the real-app equivalent is (or note it doesn't exist). Key deliverable: a markdown file listing every mock dependency and its replacement.\n\nSpecific mappings needed:\n- mockData.FoodItem -> real FoodRegistryEntry (shared/foodRegistryData.ts) + ingredientProfiles.nutritionPer100g\n- mockData.FoodLogEntry -> real FoodLog (domain.ts) backed by logs table (type='food')\n- mockData.SavedMeal -> no real equivalent (defer or cut)\n- mockData.FOOD_REGISTRY -> shared/foodRegistry.ts FOOD_REGISTRY (148 entries, no macros/portions)\n- mockData.calculateCalories -> must compute from ingredientProfiles.nutritionPer100g.kcal * portion / 100\n- mockData.detectMealSlot -> corrected times: breakfast 5-9am, lunch 1-4pm, dinner 8-11pm, else snack\n- State.waterIntake/waterGoal -> derive from fluid logs (type='fluid', name='Water') in SyncedLogs\n- State.foodLogs -> derive from food logs (type='food') in SyncedLogs\n- State.favourites -> no existing storage; needs new field in profiles\n\nCRITICAL: Also audit the ingredientProfiles table to determine which entries already have nutritionPer100g data (kcal, protein, carbs, fat, sugars, fibre). Document coverage: how many of the 148 registry entries have matching ingredientProfiles with nutrition data? This directly feeds W1-01.",
             "files_to_read": [
-              ".claude/worktrees/agent-a31ddf8f/src/components/track/nutrition/mockData.ts",
-              ".claude/worktrees/agent-a31ddf8f/src/components/track/nutrition/useNutritionStore.ts",
-              ".claude/worktrees/agent-a31ddf8f/src/components/track/nutrition/NutritionCard.tsx",
+              "[COMPLETED — worktree paths were historical, task output at docs/nutrition-card/data-model-mapping.md]",
               "src/types/domain.ts",
               "shared/foodRegistryData.ts",
               "convex/schema.ts",
@@ -91,21 +105,19 @@
               "src/contexts/SyncedLogsContext.tsx",
               "convex/ingredientProfiles.ts"
             ],
-            "files_to_modify": [
-              "docs/nutrition-card/data-model-mapping.md"
-            ],
+            "files_to_modify": ["docs/nutrition-card/data-model-mapping.md"],
             "depends_on": [],
-            "completed": false,
+            "completed": true,
             "task_protocol": {
               "steps": [
                 "1. READ every file in files_to_read thoroughly. Do not skim.",
                 "2. Produce the deliverable markdown document addressing every point in the description.",
                 "3. Include exact file paths and line numbers for every claim.",
-                "4. Include an 'Assumptions Requiring Validation' section at the end — list anything you inferred but could not confirm from code alone.",
+                "4. Include an 'Assumptions Requiring Validation' section at the end \u2014 list anything you inferred but could not confirm from code alone.",
                 "5. Verify: cat the output file and confirm it meets the line count minimum.",
-                "6. Commit to adams-rib branch with descriptive message."
+                "6. Commit to feat/nutrition branch with descriptive message."
               ],
-              "rollback_strategy": "Research tasks produce documents only — no rollback needed. If uncertain about a finding, mark it as an assumption, do not guess.",
+              "rollback_strategy": "Research tasks produce documents only \u2014 no rollback needed. If uncertain about a finding, mark it as an assumption, do not guess.",
               "agent_team": "This task runs 3x independently. Outputs are cross-validated before finalising."
             },
             "acceptance_criteria": [
@@ -119,9 +131,7 @@
             "verification": [
               "cat docs/nutrition-card/data-model-mapping.md | wc -l (should be >120 lines)"
             ],
-            "outputs": [
-              "docs/nutrition-card/data-model-mapping.md"
-            ]
+            "outputs": ["docs/nutrition-card/data-model-mapping.md"]
           },
           {
             "id": "W0-02",
@@ -137,21 +147,19 @@
               "src/components/track/FoodMatchingModal.tsx",
               "src/lib/syncLogs.ts"
             ],
-            "files_to_modify": [
-              "docs/nutrition-card/pipeline-integration.md"
-            ],
+            "files_to_modify": ["docs/nutrition-card/pipeline-integration.md"],
             "depends_on": [],
-            "completed": false,
+            "completed": true,
             "task_protocol": {
               "steps": [
                 "1. READ every file in files_to_read thoroughly. Do not skim.",
                 "2. Produce the deliverable markdown document addressing every point in the description.",
                 "3. Include exact file paths and line numbers for every claim.",
-                "4. Include an 'Assumptions Requiring Validation' section at the end — list anything you inferred but could not confirm from code alone.",
+                "4. Include an 'Assumptions Requiring Validation' section at the end \u2014 list anything you inferred but could not confirm from code alone.",
                 "5. Verify: cat the output file and confirm it meets the line count minimum.",
-                "6. Commit to adams-rib branch with descriptive message."
+                "6. Commit to feat/nutrition branch with descriptive message."
               ],
-              "rollback_strategy": "Research tasks produce documents only — no rollback needed. If uncertain about a finding, mark it as an assumption, do not guess.",
+              "rollback_strategy": "Research tasks produce documents only \u2014 no rollback needed. If uncertain about a finding, mark it as an assumption, do not guess.",
               "agent_team": "This task runs 3x independently. Outputs are cross-validated before finalising."
             },
             "acceptance_criteria": [
@@ -163,9 +171,7 @@
             "verification": [
               "cat docs/nutrition-card/pipeline-integration.md | wc -l (should be >80 lines)"
             ],
-            "outputs": [
-              "docs/nutrition-card/pipeline-integration.md"
-            ]
+            "outputs": ["docs/nutrition-card/pipeline-integration.md"]
           },
           {
             "id": "W0-03",
@@ -178,21 +184,19 @@
               "src/hooks/useProfile.ts",
               "shared/foodRegistryData.ts"
             ],
-            "files_to_modify": [
-              "docs/nutrition-card/fluid-migration.md"
-            ],
+            "files_to_modify": ["docs/nutrition-card/fluid-migration.md"],
             "depends_on": [],
-            "completed": false,
+            "completed": true,
             "task_protocol": {
               "steps": [
                 "1. READ every file in files_to_read thoroughly. Do not skim.",
                 "2. Produce the deliverable markdown document addressing every point in the description.",
                 "3. Include exact file paths and line numbers for every claim.",
-                "4. Include an 'Assumptions Requiring Validation' section at the end — list anything you inferred but could not confirm from code alone.",
+                "4. Include an 'Assumptions Requiring Validation' section at the end \u2014 list anything you inferred but could not confirm from code alone.",
                 "5. Verify: cat the output file and confirm it meets the line count minimum.",
-                "6. Commit to adams-rib branch with descriptive message."
+                "6. Commit to feat/nutrition branch with descriptive message."
               ],
-              "rollback_strategy": "Research tasks produce documents only — no rollback needed. If uncertain about a finding, mark it as an assumption, do not guess.",
+              "rollback_strategy": "Research tasks produce documents only \u2014 no rollback needed. If uncertain about a finding, mark it as an assumption, do not guess.",
               "agent_team": "This task runs 3x independently. Outputs are cross-validated before finalising."
             },
             "acceptance_criteria": [
@@ -204,50 +208,44 @@
             "verification": [
               "cat docs/nutrition-card/fluid-migration.md | wc -l (should be >50 lines)"
             ],
-            "outputs": [
-              "docs/nutrition-card/fluid-migration.md"
-            ]
+            "outputs": ["docs/nutrition-card/fluid-migration.md"]
           },
           {
             "id": "W0-04",
             "title": "Design portion data schema for food registry",
-            "description": "Design the portion data extension for FoodRegistryEntry.\n\nCRITICAL: The ingredientProfiles table in Convex ALREADY has nutritionPer100g data for many entries. This task MUST audit that table first and design a strategy to PULL existing data from ingredientProfiles rather than hallucinating values.\n\nRequired fields per entry:\n- defaultPortionG: number\n- naturalUnit: string | null ('slice', 'piece', 'tsp', 'cup', null)\n- unitWeightG: number | null (weight of one naturalUnit in grams)\n- caloriesPer100g, proteinPer100g, carbsPer100g, fatPer100g, sugarsPer100g, fibrePer100g: number\n\nApproach:\n1. Query ingredientProfiles table to see which entries already have nutritionPer100g\n2. For entries WITH data: map ingredientProfiles.nutritionPer100g fields to the new schema\n3. For entries WITHOUT data: document which ones are missing and create a population strategy (NOT agent-hallucinated values — use USDA FoodData Central or the existing ingredientProfiles API)\n4. Design a seeding script that pulls from ingredientProfiles at build time\n\nDeliverable: TypeScript interfaces + audit of existing data coverage + seeding strategy.",
+            "description": "Design the portion data extension for FoodRegistryEntry.\n\nCRITICAL: The ingredientProfiles table in Convex ALREADY has nutritionPer100g data for many entries. This task MUST audit that table first and design a strategy to PULL existing data from ingredientProfiles rather than hallucinating values.\n\nRequired fields per entry:\n- defaultPortionG: number\n- naturalUnit: string | null ('slice', 'piece', 'tsp', 'cup', null)\n- unitWeightG: number | null (weight of one naturalUnit in grams)\n- caloriesPer100g, proteinPer100g, carbsPer100g, fatPer100g, sugarsPer100g, fibrePer100g: number\n\nApproach:\n1. Query ingredientProfiles table to see which entries already have nutritionPer100g\n2. For entries WITH data: map ingredientProfiles.nutritionPer100g fields to the new schema\n3. For entries WITHOUT data: document which ones are missing and create a population strategy (NOT agent-hallucinated values \u2014 use USDA FoodData Central or the existing ingredientProfiles API)\n4. Design a seeding script that pulls from ingredientProfiles at build time\n\nDeliverable: TypeScript interfaces + audit of existing data coverage + seeding strategy.",
             "files_to_read": [
               "shared/foodRegistryData.ts",
               "shared/foodRegistry.ts",
               "convex/ingredientProfiles.ts",
               "convex/schema.ts"
             ],
-            "files_to_modify": [
-              "docs/nutrition-card/portion-schema-design.md"
-            ],
+            "files_to_modify": ["docs/nutrition-card/portion-schema-design.md"],
             "depends_on": [],
-            "completed": false,
+            "completed": true,
             "task_protocol": {
               "steps": [
                 "1. READ every file in files_to_read thoroughly. Do not skim.",
                 "2. Produce the deliverable markdown document addressing every point in the description.",
                 "3. Include exact file paths and line numbers for every claim.",
-                "4. Include an 'Assumptions Requiring Validation' section at the end — list anything you inferred but could not confirm from code alone.",
+                "4. Include an 'Assumptions Requiring Validation' section at the end \u2014 list anything you inferred but could not confirm from code alone.",
                 "5. Verify: cat the output file and confirm it meets the line count minimum.",
-                "6. Commit to adams-rib branch with descriptive message."
+                "6. Commit to feat/nutrition branch with descriptive message."
               ],
-              "rollback_strategy": "Research tasks produce documents only — no rollback needed. If uncertain about a finding, mark it as an assumption, do not guess.",
+              "rollback_strategy": "Research tasks produce documents only \u2014 no rollback needed. If uncertain about a finding, mark it as an assumption, do not guess.",
               "agent_team": "This task runs 3x independently. Outputs are cross-validated before finalising."
             },
             "acceptance_criteria": [
               "TypeScript interfaces defined for portion data extension",
               "Audit of ingredientProfiles coverage: exact count with/without nutrition data",
-              "Seeding strategy that pulls from ingredientProfiles — NOT hallucinated values",
+              "Seeding strategy that pulls from ingredientProfiles \u2014 NOT hallucinated values",
               "Plan for populating gaps using USDA FoodData Central or equivalent",
               "Includes 'Assumptions Requiring Validation' section"
             ],
             "verification": [
               "cat docs/nutrition-card/portion-schema-design.md | wc -l (should be >100 lines)"
             ],
-            "outputs": [
-              "docs/nutrition-card/portion-schema-design.md"
-            ]
+            "outputs": ["docs/nutrition-card/portion-schema-design.md"]
           }
         ]
       },
@@ -259,7 +257,7 @@
           {
             "id": "W1-01",
             "title": "Add portion + macro data to food registry (seeded from ingredientProfiles)",
-            "description": "Extend FoodRegistryEntryBase with optional portion/macro fields. Create FOOD_PORTION_DATA map. Populate using data from the existing ingredientProfiles Convex table — NOT by hallucinating values.\n\nNew fields (all optional): defaultPortionG, naturalUnit, unitWeightG, caloriesPer100g, proteinPer100g, carbsPer100g, fatPer100g, sugarsPer100g, fibrePer100g.\n\nApproach:\n1. Write a seeding script (scripts/seedPortionData.ts) that queries ingredientProfiles and maps nutritionPer100g to the new fields\n2. For entries without ingredientProfiles data, flag them — do NOT invent values\n3. Create FOOD_PORTION_DATA as a static map seeded from the script output\n4. Add utility functions to shared/foodRegistryUtils.ts:\n   - getPortionData(canonical)\n   - calculateCaloriesForPortion(canonical, portionG)\n   - calculateMacrosForPortion(canonical, portionG) -> {protein, carbs, fat, sugars, fibre}\n\nTDD: Write tests for utility functions FIRST. Tests should verify calculations against known values from ingredientProfiles.\n\nRun assertFoodRegistryInvariants + typecheck.",
+            "description": "Extend FoodRegistryEntryBase with optional portion/macro fields. Create FOOD_PORTION_DATA map. Populate using data from the existing ingredientProfiles Convex table \u2014 NOT by hallucinating values.\n\nNew fields (all optional): defaultPortionG, naturalUnit, unitWeightG, caloriesPer100g, proteinPer100g, carbsPer100g, fatPer100g, sugarsPer100g, fibrePer100g.\n\nApproach:\n1. Write a seeding script (scripts/seedPortionData.ts) that queries ingredientProfiles and maps nutritionPer100g to the new fields\n2. For entries without ingredientProfiles data, flag them \u2014 do NOT invent values\n3. Create FOOD_PORTION_DATA as a static map seeded from the script output\n4. Add utility functions to shared/foodRegistryUtils.ts:\n   - getPortionData(canonical)\n   - calculateCaloriesForPortion(canonical, portionG)\n   - calculateMacrosForPortion(canonical, portionG) -> {protein, carbs, fat, sugars, fibre}\n\nTDD: Write tests for utility functions FIRST. Tests should verify calculations against known values from ingredientProfiles.\n\nRun assertFoodRegistryInvariants + typecheck.",
             "files_to_read": [
               "docs/nutrition-card/portion-schema-design.md",
               "shared/foodRegistryData.ts",
@@ -273,27 +271,25 @@
               "shared/foodRegistry.ts",
               "scripts/seedPortionData.ts"
             ],
-            "depends_on": [
-              "W0-04"
-            ],
-            "completed": false,
+            "depends_on": ["W0-04"],
+            "completed": true,
             "task_protocol": {
               "steps": [
                 "1. READ the task description, acceptance criteria, and files_to_read thoroughly before writing any code.",
                 "2. TDD: Write failing tests FIRST (Vitest for utility functions: getPortionData, calculateCaloriesForPortion, calculateMacrosForPortion). Watch them fail. Then implement code to make them pass.",
-                "3. Run ALL verification commands in order: bun run typecheck → bun run build → bun run lint:fix → bun run test → bun run format",
-                "4. SMOKE TEST: Verify dev server is still running — curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200. Check Convex dev has no schema errors.",
-                "5. Check acceptance criteria — every single one must pass.",
+                "3. Run ALL verification commands in order: bun run typecheck \u2192 bun run build \u2192 bun run lint:fix \u2192 bun run test \u2192 bun run format",
+                "4. SMOKE TEST: Verify dev server is still running \u2014 curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200. Check Convex dev has no schema errors.",
+                "5. Check acceptance criteria \u2014 every single one must pass.",
                 "6. If ANY verification or acceptance criteria fails: git stash your changes, report what failed, do NOT commit broken code.",
                 "7. Update docs/WIP.md with task completion status.",
-                "8. Commit to adams-rib branch with descriptive message referencing the task ID (e.g., 'W1-01: Add portion + macro data to food registry').",
+                "8. Commit to feat/nutrition branch with descriptive message referencing the task ID (e.g., 'W1-01: Add portion + macro data to food registry').",
                 "9. For UI tasks: Browser-test via Claude-in-Chrome on localhost:3005. Verify the component renders, interacts correctly, and console has no errors."
               ],
               "rollback_strategy": "If verification fails after 2 attempts to fix: git stash, report the failure with exact error output, and flag the task as BLOCKED in docs/WIP.md. Do NOT push broken code. Do NOT skip failing tests.",
               "file_conflict_rule": "If another task in your wave modifies the same file, those tasks MUST run sequentially, not in parallel. Check the task's files_to_modify list before starting.",
               "testing_rules": {
-                "tdd_targets": "shared/__tests__/foodPortionData.test.ts — test getPortionData, calculateCaloriesForPortion, calculateMacrosForPortion against known ingredientProfiles values",
-                "forbidden": "NO React component tests. NO mock data for nutrition values — use real ingredientProfiles data."
+                "tdd_targets": "shared/__tests__/foodPortionData.test.ts \u2014 test getPortionData, calculateCaloriesForPortion, calculateMacrosForPortion against known ingredientProfiles values",
+                "forbidden": "NO React component tests. NO mock data for nutrition values \u2014 use real ingredientProfiles data."
               }
             },
             "acceptance_criteria": [
@@ -323,7 +319,7 @@
           {
             "id": "W1-02",
             "title": "Add nutrition goals + favourites to profile schema (combined)",
-            "description": "COMBINED TASK (originally W1-02 + W1-03) to avoid file conflicts — both touch convex/schema.ts, convex/validators.ts, src/hooks/useProfile.ts.\n\nPart A — Nutrition Goals:\nAdd nutritionGoals field to profiles table in Convex: { dailyCalorieGoal: number, dailyWaterGoalMl: number }. Add mutation to update. Add useNutritionGoals() hook with defaults (1800 kcal, 1000ml).\n\nPart B — Favourites:\nAdd foodFavourites: string[] to profiles table (array of canonical names). Add mutations: addFoodFavourite, removeFoodFavourite. Add useFoodFavourites() hook.\n\nCONVEX SCHEMA PUSH: After modifying convex/schema.ts, verify Convex dev picks up the schema change. Run 'npx convex dev --once' and check for errors. If schema push fails (e.g., breaking change on existing data), document the error and flag as BLOCKED.\n\nTDD: Write Convex function tests for mutations FIRST (convex-test). Write utility tests for hooks.",
+            "description": "COMBINED TASK (originally W1-02 + W1-03) to avoid file conflicts \u2014 both touch convex/schema.ts, convex/validators.ts, src/hooks/useProfile.ts.\n\nPart A \u2014 Nutrition Goals:\nAdd nutritionGoals field to profiles table in Convex: { dailyCalorieGoal: number, dailyWaterGoalMl: number }. Add mutation to update. Add useNutritionGoals() hook with defaults (1800 kcal, 1000ml).\n\nPart B \u2014 Favourites:\nAdd foodFavourites: string[] to profiles table (array of canonical names). Add mutations: addFoodFavourite, removeFoodFavourite. Add useFoodFavourites() hook.\n\nCONVEX SCHEMA PUSH: After modifying convex/schema.ts, verify Convex dev picks up the schema change. Run 'npx convex dev --once' and check for errors. If schema push fails (e.g., breaking change on existing data), document the error and flag as BLOCKED.\n\nTDD: Write Convex function tests for mutations FIRST (convex-test). Write utility tests for hooks.",
             "files_to_read": [
               "convex/schema.ts",
               "convex/validators.ts",
@@ -335,26 +331,24 @@
               "convex/schema.ts",
               "src/hooks/useProfile.ts"
             ],
-            "depends_on": [
-              "W0-01"
-            ],
-            "completed": false,
+            "depends_on": ["W0-01"],
+            "completed": true,
             "task_protocol": {
               "steps": [
                 "1. READ the task description, acceptance criteria, and files_to_read thoroughly before writing any code.",
                 "2. TDD: Write failing Convex tests FIRST (convex/*.test.ts) for: updateNutritionGoals mutation, addFoodFavourite mutation, removeFoodFavourite mutation. Watch them fail. Then implement code to make them pass.",
-                "3. Run ALL verification commands in order: bun run typecheck → bun run build → bun run lint:fix → bun run test → bun run format",
+                "3. Run ALL verification commands in order: bun run typecheck \u2192 bun run build \u2192 bun run lint:fix \u2192 bun run test \u2192 bun run format",
                 "4. CONVEX SCHEMA PUSH: After modifying schema.ts, run 'npx convex dev --once 2>&1 | tail -20' and verify no errors. If schema push fails, STOP and report.",
-                "5. SMOKE TEST: Verify dev server is still running — curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
-                "6. Check acceptance criteria — every single one must pass.",
+                "5. SMOKE TEST: Verify dev server is still running \u2014 curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
+                "6. Check acceptance criteria \u2014 every single one must pass.",
                 "7. If ANY verification or acceptance criteria fails: git stash your changes, report what failed, do NOT commit broken code.",
                 "8. Update docs/WIP.md with task completion status.",
-                "9. Commit to adams-rib branch with descriptive message referencing the task ID."
+                "9. Commit to feat/nutrition branch with descriptive message referencing the task ID."
               ],
               "rollback_strategy": "If verification fails after 2 attempts to fix: git stash, report the failure with exact error output, and flag the task as BLOCKED in docs/WIP.md. Do NOT push broken code. Do NOT skip failing tests.",
               "file_conflict_rule": "This is the ONLY task in Wave 1 that touches schema.ts, validators.ts, and useProfile.ts. No parallel conflict.",
               "testing_rules": {
-                "tdd_targets": "convex/__tests__/nutritionGoals.test.ts — test updateNutritionGoals, addFoodFavourite, removeFoodFavourite mutations with convex-test",
+                "tdd_targets": "convex/__tests__/nutritionGoals.test.ts \u2014 test updateNutritionGoals, addFoodFavourite, removeFoodFavourite mutations with convex-test",
                 "forbidden": "NO React component tests. NO mocks."
               }
             },
@@ -387,39 +381,32 @@
           {
             "id": "W1-03",
             "title": "Build useNutritionData hook (real data layer)",
-            "description": "Create src/hooks/useNutritionData.ts that reads from SyncedLogs and Convex.\n\nReturns: todayFoodLogs, todayFluidLogs, totalCaloriesToday, totalMacrosToday (5 values), waterIntakeToday, caloriesByMealSlot, logsByMealSlot, recentFoods.\n\nMealSlot detection: breakfast 5-9am, lunch 1-4pm, dinner 8-11pm, else snack.\n\nThis hook does NOT manage UI state — that stays in useNutritionStore.\n\nTDD: Write tests for the data transformation logic FIRST. Extract pure functions (getMealSlot, calculateTotalCalories, groupByMealSlot) and test them independently before wiring into the hook.",
+            "description": "Create src/hooks/useNutritionData.ts that reads from SyncedLogs and Convex.\n\nReturns: todayFoodLogs, todayFluidLogs, totalCaloriesToday, totalMacrosToday (5 values), waterIntakeToday, caloriesByMealSlot, logsByMealSlot, recentFoods.\n\nMealSlot detection: breakfast 5-9am, lunch 1-4pm, dinner 8-11pm, else snack.\n\nThis hook does NOT manage UI state \u2014 that stays in useNutritionStore.\n\nTDD: Write tests for the data transformation logic FIRST. Extract pure functions (getMealSlot, calculateTotalCalories, groupByMealSlot) and test them independently before wiring into the hook.",
             "files_to_read": [
               "src/contexts/SyncedLogsContext.tsx",
               "src/types/domain.ts",
               "docs/nutrition-card/data-model-mapping.md",
               "shared/foodRegistryUtils.ts"
             ],
-            "files_to_modify": [
-              "src/hooks/useNutritionData.ts"
-            ],
-            "depends_on": [
-              "W0-01",
-              "W0-02",
-              "W1-01",
-              "W1-02"
-            ],
-            "completed": false,
+            "files_to_modify": ["src/hooks/useNutritionData.ts"],
+            "depends_on": ["W0-01", "W0-02", "W1-01", "W1-02"],
+            "completed": true,
             "task_protocol": {
               "steps": [
                 "1. READ the task description, acceptance criteria, and files_to_read thoroughly before writing any code.",
                 "2. TDD: Extract pure functions (getMealSlot, calculateTotalCalories, calculateTotalMacros, groupByMealSlot) into a testable module. Write failing Vitest tests for these functions FIRST. Watch them fail. Then implement.",
                 "3. Wire the pure functions into the useNutritionData hook.",
-                "4. Run ALL verification commands in order: bun run typecheck → bun run build → bun run lint:fix → bun run test → bun run format",
-                "5. SMOKE TEST: Verify dev server is still running — curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
-                "6. Check acceptance criteria — every single one must pass.",
+                "4. Run ALL verification commands in order: bun run typecheck \u2192 bun run build \u2192 bun run lint:fix \u2192 bun run test \u2192 bun run format",
+                "5. SMOKE TEST: Verify dev server is still running \u2014 curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
+                "6. Check acceptance criteria \u2014 every single one must pass.",
                 "7. If ANY verification or acceptance criteria fails: git stash your changes, report what failed, do NOT commit broken code.",
                 "8. Update docs/WIP.md with task completion status.",
-                "9. Commit to adams-rib branch with descriptive message referencing the task ID."
+                "9. Commit to feat/nutrition branch with descriptive message referencing the task ID."
               ],
               "rollback_strategy": "If verification fails after 2 attempts to fix: git stash, report the failure with exact error output, and flag the task as BLOCKED in docs/WIP.md. Do NOT push broken code. Do NOT skip failing tests.",
               "file_conflict_rule": "If another task in your wave modifies the same file, those tasks MUST run sequentially, not in parallel. Check the task's files_to_modify list before starting.",
               "testing_rules": {
-                "tdd_targets": "src/hooks/__tests__/useNutritionData.test.ts — test getMealSlot (boundary times), calculateTotalCalories, calculateTotalMacros, groupByMealSlot",
+                "tdd_targets": "src/hooks/__tests__/useNutritionData.test.ts \u2014 test getMealSlot (boundary times), calculateTotalCalories, calculateTotalMacros, groupByMealSlot",
                 "forbidden": "NO React component tests. NO mocks except vi.useFakeTimers() for meal slot time boundaries."
               }
             },
@@ -449,40 +436,37 @@
       {
         "wave": 2,
         "name": "Core UI",
-        "description": "Port Agent A's modular components into main repo, replacing mock data with real hooks and applying locked visual decisions. Every UI component gets Playwright E2E tests in this wave — NOT deferred to Wave 5.",
+        "description": "Port Agent A's modular components into main repo, replacing mock data with real hooks and applying locked visual decisions. Every UI component gets Playwright E2E tests in this wave \u2014 NOT deferred to Wave 5.",
         "tasks": [
           {
             "id": "W2-01",
             "title": "Build useNutritionStore (UI state only)",
-            "description": "Create useReducer-based hook for UI state: view, searchQuery, stagingItems, modals, mealSlot. Search uses Fuse.js against real FOOD_REGISTRY (threshold 0.4, min 3 chars). Staging aggregates same canonicalName. Staging persists across view changes.\n\nTDD: Write Vitest tests for the reducer FIRST — test every action type, staging aggregation logic, and search threshold behaviour. The reducer is a pure function, perfect for TDD.",
+            "description": "Create useReducer-based hook for UI state: view, searchQuery, stagingItems, modals, mealSlot. Search uses Fuse.js against real FOOD_REGISTRY (threshold 0.4, min 3 chars). Staging aggregates same canonicalName. Staging persists across view changes.\n\nTDD: Write Vitest tests for the reducer FIRST \u2014 test every action type, staging aggregation logic, and search threshold behaviour. The reducer is a pure function, perfect for TDD.",
             "files_to_read": [
-              ".claude/worktrees/agent-a31ddf8f/src/components/track/nutrition/useNutritionStore.ts",
+              "[COMPLETED — output at src/components/track/nutrition/useNutritionStore.ts]",
               "docs/nutrition-card/data-model-mapping.md",
-              "shared/foodRegistry.ts"
+              "shared/foodRegistryData.ts"
             ],
             "files_to_modify": [
               "src/components/track/nutrition/useNutritionStore.ts"
             ],
-            "depends_on": [
-              "W0-01",
-              "W1-01"
-            ],
-            "completed": false,
+            "depends_on": ["W0-01", "W1-01"],
+            "completed": true,
             "task_protocol": {
               "steps": [
                 "1. READ the task description, acceptance criteria, and files_to_read thoroughly before writing any code.",
                 "2. TDD: Write failing Vitest tests FIRST for the reducer: every action type, staging aggregation (same canonicalName collapses), search filtering (threshold 0.4, min 3 chars), staging persistence across view changes. Watch them fail. Then implement.",
-                "3. Run ALL verification commands in order: bun run typecheck → bun run build → bun run lint:fix → bun run test → bun run format",
-                "4. SMOKE TEST: Verify dev server is still running — curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
-                "5. Check acceptance criteria — every single one must pass.",
+                "3. Run ALL verification commands in order: bun run typecheck \u2192 bun run build \u2192 bun run lint:fix \u2192 bun run test \u2192 bun run format",
+                "4. SMOKE TEST: Verify dev server is still running \u2014 curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
+                "5. Check acceptance criteria \u2014 every single one must pass.",
                 "6. If ANY verification or acceptance criteria fails: git stash your changes, report what failed, do NOT commit broken code.",
                 "7. Update docs/WIP.md with task completion status.",
-                "8. Commit to adams-rib branch with descriptive message referencing the task ID."
+                "8. Commit to feat/nutrition branch with descriptive message referencing the task ID."
               ],
               "rollback_strategy": "If verification fails after 2 attempts to fix: git stash, report the failure with exact error output, and flag the task as BLOCKED in docs/WIP.md. Do NOT push broken code. Do NOT skip failing tests.",
               "file_conflict_rule": "If another task in your wave modifies the same file, those tasks MUST run sequentially, not in parallel. Check the task's files_to_modify list before starting.",
               "testing_rules": {
-                "tdd_targets": "src/components/track/nutrition/__tests__/useNutritionStore.test.ts — test all 14+ action types, staging aggregation, search thresholds, view persistence",
+                "tdd_targets": "src/components/track/nutrition/__tests__/useNutritionStore.test.ts \u2014 test all 14+ action types, staging aggregation, search thresholds, view persistence",
                 "forbidden": "NO React component tests. NO mock data imports."
               }
             },
@@ -512,8 +496,18 @@
             "id": "W2-02",
             "title": "Build NutritionCard shell (collapsed + header + input)",
             "description": "Port from Agent A with visual decisions applied: D's header (icon + 'Nutrition'), orange icons, cyan water, D's calorie ring, A's search input, D's orange Log Food button, B's water progress bar. Global escape handler from D. Accessibility from D. Wires to both useNutritionStore and useNutritionData.\n\nPlaywright E2E: Write E2E test that navigates to Track page and verifies: NutritionCard renders, calorie ring visible, search input focusable, Log Food button present.",
+            "visual_reference": [
+              "docs/plans/Worktree spec/user-annotations/16.png",
+              "docs/plans/Worktree spec/03_WIREFRAME_home-screen-collapsed.png"
+            ],
             "files_to_read": [
-              ".claude/worktrees/agent-a31ddf8f/src/components/track/nutrition/NutritionCard.tsx",
+              "{memory_base}/project_nutrition_card_decisions.md \u2014 sections #1 Collapsed Card, #2 Search View, #8-#18 Behavioral",
+              "{memory_base}/feedback_round2_full_comparison.md \u2014 Search section",
+              "{memory_base}/feedback_round2_water_filter.md \u2014 Light/Dark Theme section",
+              "docs/plans/Worktree spec/user-annotations/16.png \u2014 search composite reference",
+              "docs/plans/Worktree spec/03_WIREFRAME_home-screen-collapsed.png",
+              "src/components/track/nutrition/useNutritionStore.ts",
+              "src/hooks/useNutritionData.ts",
               "docs/nutrition-card/data-model-mapping.md",
               "src/index.css"
             ],
@@ -521,29 +515,26 @@
               "src/components/track/nutrition/NutritionCard.tsx",
               "e2e/nutrition-card.spec.ts"
             ],
-            "depends_on": [
-              "W2-01",
-              "W1-03"
-            ],
+            "depends_on": ["W2-01", "W1-03"],
             "completed": false,
             "task_protocol": {
               "steps": [
                 "1. READ the task description, acceptance criteria, and files_to_read thoroughly before writing any code.",
-                "2. Build the NutritionCard component (no TDD for React components — tested via E2E).",
+                "2. Build the NutritionCard component (no TDD for React components \u2014 tested via E2E).",
                 "3. Write Playwright E2E test: navigate to Track page, verify NutritionCard renders with calorie ring, search input, Log Food button.",
-                "4. Run ALL verification commands in order: bun run typecheck → bun run build → bun run lint:fix → bun run test → bun run format",
+                "4. Run ALL verification commands in order: bun run typecheck \u2192 bun run build \u2192 bun run lint:fix \u2192 bun run test \u2192 bun run format",
                 "5. Run Playwright: bunx playwright test e2e/nutrition-card.spec.ts",
-                "6. SMOKE TEST: Verify dev server is still running — curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
-                "7. Check acceptance criteria — every single one must pass.",
+                "6. SMOKE TEST: Verify dev server is still running \u2014 curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
+                "7. Check acceptance criteria \u2014 every single one must pass.",
                 "8. If ANY verification or acceptance criteria fails: git stash your changes, report what failed, do NOT commit broken code.",
                 "9. Update docs/WIP.md with task completion status.",
-                "10. Commit to adams-rib branch with descriptive message referencing the task ID.",
+                "10. Commit to feat/nutrition branch with descriptive message referencing the task ID.",
                 "11. Browser-test via Claude-in-Chrome on localhost:3005. Verify the component renders, interacts correctly, and console has no errors."
               ],
               "rollback_strategy": "If verification fails after 2 attempts to fix: git stash, report the failure with exact error output, and flag the task as BLOCKED in docs/WIP.md. Do NOT push broken code. Do NOT skip failing tests.",
               "file_conflict_rule": "If another task in your wave modifies the same file, those tasks MUST run sequentially, not in parallel.",
               "testing_rules": {
-                "e2e_targets": "e2e/nutrition-card.spec.ts — verify NutritionCard renders on Track page with all key elements",
+                "e2e_targets": "e2e/nutrition-card.spec.ts \u2014 verify NutritionCard renders on Track page with all key elements",
                 "forbidden": "NO React component tests. NO render(). NO React Testing Library."
               }
             },
@@ -573,37 +564,44 @@
           {
             "id": "W2-03",
             "title": "Build StagingModal with match status indicators",
-            "description": "Port from Agent A. Apply: A's centered position, A's row layout, C's 5-macro totals (protein/carbs/fat/sugars/fibre), C's buttons in D's orange, green tick/orange alert for match status. Natural units from V4 (slice/piece/tsp alongside grams). Accessibility: role=dialog, aria-modal, focus trap, escape to close.\n\nPlaywright E2E: Extend e2e/nutrition-card.spec.ts — search for a food, add to staging, verify staging modal opens with correct items, verify macro totals display.",
+            "description": "Port from Agent A. Apply: A's centered position, A's row layout, C's 5-macro totals (protein/carbs/fat/sugars/fibre), C's buttons in D's orange, green tick/orange alert for match status. Natural units from V4 (slice/piece/tsp alongside grams). Accessibility: role=dialog, aria-modal, focus trap, escape to close.\n\nPlaywright E2E: Extend e2e/nutrition-card.spec.ts \u2014 search for a food, add to staging, verify staging modal opens with correct items, verify macro totals display.",
+            "visual_reference": [
+              "docs/plans/Worktree spec/user-annotations/12.png",
+              "docs/plans/Worktree spec/user-annotations/19.png"
+            ],
             "files_to_read": [
-              ".claude/worktrees/agent-a31ddf8f/src/components/track/nutrition/StagingModal.tsx",
+              "{memory_base}/project_nutrition_card_decisions.md \u2014 section #3 Staging Modal, #13 Aggregation, #19 Unknown food, #21 Natural units, #22 Macros",
+              "{memory_base}/feedback_round2_full_comparison.md \u2014 Staging Modal section",
+              "{memory_base}/feedback_round2_water_filter.md \u2014 Staging Area Issues section",
+              "docs/plans/Worktree spec/user-annotations/12.png \u2014 staging modal composite reference",
+              "docs/plans/Worktree spec/user-annotations/19.png \u2014 V4 natural units reference",
+              "src/components/track/nutrition/useNutritionStore.ts \u2014 StagedItem interface, staging actions",
               "docs/nutrition-card/data-model-mapping.md"
             ],
             "files_to_modify": [
               "src/components/track/nutrition/StagingModal.tsx",
               "e2e/nutrition-card.spec.ts"
             ],
-            "depends_on": [
-              "W2-01"
-            ],
+            "depends_on": ["W2-01"],
             "completed": false,
             "task_protocol": {
               "steps": [
                 "1. READ the task description, acceptance criteria, and files_to_read thoroughly before writing any code.",
                 "2. Build the StagingModal component.",
-                "3. Write Playwright E2E test: search food → stage → verify modal, items, macros, match status indicators.",
-                "4. Run ALL verification commands in order: bun run typecheck → bun run build → bun run lint:fix → bun run test → bun run format",
+                "3. Write Playwright E2E test: search food \u2192 stage \u2192 verify modal, items, macros, match status indicators.",
+                "4. Run ALL verification commands in order: bun run typecheck \u2192 bun run build \u2192 bun run lint:fix \u2192 bun run test \u2192 bun run format",
                 "5. Run Playwright: bunx playwright test e2e/nutrition-card.spec.ts",
-                "6. SMOKE TEST: Verify dev server is still running — curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
-                "7. Check acceptance criteria — every single one must pass.",
+                "6. SMOKE TEST: Verify dev server is still running \u2014 curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
+                "7. Check acceptance criteria \u2014 every single one must pass.",
                 "8. If ANY verification or acceptance criteria fails: git stash your changes, report what failed, do NOT commit broken code.",
                 "9. Update docs/WIP.md with task completion status.",
-                "10. Commit to adams-rib branch with descriptive message referencing the task ID.",
+                "10. Commit to feat/nutrition branch with descriptive message referencing the task ID.",
                 "11. Browser-test via Claude-in-Chrome on localhost:3005."
               ],
               "rollback_strategy": "If verification fails after 2 attempts to fix: git stash, report the failure with exact error output, and flag the task as BLOCKED in docs/WIP.md.",
               "file_conflict_rule": "If another task in your wave modifies the same file, those tasks MUST run sequentially, not in parallel.",
               "testing_rules": {
-                "e2e_targets": "e2e/nutrition-card.spec.ts — staging flow: search → add → verify modal content + macros + match status",
+                "e2e_targets": "e2e/nutrition-card.spec.ts \u2014 staging flow: search \u2192 add \u2192 verify modal content + macros + match status",
                 "forbidden": "NO React component tests."
               }
             },
@@ -633,39 +631,43 @@
           {
             "id": "W2-04",
             "title": "Build WaterModal with C/D's composite design",
-            "description": "Combine: A's centered position + prefill animation, B's icon in button, C's ring + plus/minus + buttons (cyan), D's heading + remaining text + escape. Reads waterIntake from useNutritionData, waterGoal from useNutritionGoals. Cyan: #38bdf8 (sky-400).\n\nPlaywright E2E: Extend e2e/nutrition-card.spec.ts — click water icon, verify modal opens, verify +/- controls work, verify ring updates.",
+            "description": "Combine: A's centered position + prefill animation, B's icon in button, C's ring + plus/minus + buttons (cyan), D's heading + remaining text + escape. Reads waterIntake from useNutritionData, waterGoal from useNutritionGoals. Cyan: #38bdf8 (sky-400).\n\nPlaywright E2E: Extend e2e/nutrition-card.spec.ts \u2014 click water icon, verify modal opens, verify +/- controls work, verify ring updates.",
+            "visual_reference": [
+              "docs/plans/Worktree spec/user-annotations/15.png"
+            ],
             "files_to_read": [
-              ".claude/worktrees/agent-a31ddf8f/src/components/track/nutrition/WaterModal.tsx",
-              ".claude/worktrees/agent-a0b4b876/src/components/track/nutrition/WaterModal.tsx",
-              ".claude/worktrees/agent-a73daffd/src/components/track/nutrition/WaterModal.tsx",
+              "{memory_base}/project_nutrition_card_decisions.md \u2014 section #4 Water Modal",
+              "{memory_base}/feedback_round2_full_comparison.md \u2014 Water Modal section",
+              "{memory_base}/feedback_round2_water_filter.md \u2014 Water Modal Winners section",
+              "docs/plans/Worktree spec/user-annotations/15.png \u2014 water modal composite reference",
+              "src/components/track/nutrition/useNutritionStore.ts \u2014 water actions",
+              "src/hooks/useNutritionData.ts \u2014 waterIntakeToday",
               "src/hooks/useHabitLog.ts"
             ],
             "files_to_modify": [
               "src/components/track/nutrition/WaterModal.tsx",
               "e2e/nutrition-card.spec.ts"
             ],
-            "depends_on": [
-              "W2-01"
-            ],
+            "depends_on": ["W2-01"],
             "completed": false,
             "task_protocol": {
               "steps": [
                 "1. READ the task description, acceptance criteria, and files_to_read thoroughly before writing any code.",
                 "2. Build the WaterModal component.",
-                "3. Write Playwright E2E test: click water icon → modal opens → +/- controls → ring updates → escape closes.",
-                "4. Run ALL verification commands in order: bun run typecheck → bun run build → bun run lint:fix → bun run test → bun run format",
+                "3. Write Playwright E2E test: click water icon \u2192 modal opens \u2192 +/- controls \u2192 ring updates \u2192 escape closes.",
+                "4. Run ALL verification commands in order: bun run typecheck \u2192 bun run build \u2192 bun run lint:fix \u2192 bun run test \u2192 bun run format",
                 "5. Run Playwright: bunx playwright test e2e/nutrition-card.spec.ts",
-                "6. SMOKE TEST: Verify dev server is still running — curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
-                "7. Check acceptance criteria — every single one must pass.",
+                "6. SMOKE TEST: Verify dev server is still running \u2014 curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
+                "7. Check acceptance criteria \u2014 every single one must pass.",
                 "8. If ANY verification or acceptance criteria fails: git stash your changes, report what failed, do NOT commit broken code.",
                 "9. Update docs/WIP.md with task completion status.",
-                "10. Commit to adams-rib branch with descriptive message referencing the task ID.",
+                "10. Commit to feat/nutrition branch with descriptive message referencing the task ID.",
                 "11. Browser-test via Claude-in-Chrome on localhost:3005."
               ],
               "rollback_strategy": "If verification fails after 2 attempts to fix: git stash, report the failure with exact error output, and flag the task as BLOCKED in docs/WIP.md.",
               "file_conflict_rule": "If another task in your wave modifies the same file, those tasks MUST run sequentially, not in parallel.",
               "testing_rules": {
-                "e2e_targets": "e2e/nutrition-card.spec.ts — water modal flow: open → +/- → ring → close",
+                "e2e_targets": "e2e/nutrition-card.spec.ts \u2014 water modal flow: open \u2192 +/- \u2192 ring \u2192 close",
                 "forbidden": "NO React component tests."
               }
             },
@@ -695,37 +697,42 @@
           {
             "id": "W2-05",
             "title": "Build CalorieDetailView with B's accordion",
-            "description": "Combine: C's segmented color bar, C's per-slot calories, 5-column macros, B's one-open-at-a-time accordion. Corrected meal times: breakfast 5-9am, lunch 1-4pm, dinner 8-11pm, else snack. Delete button on food rows via removeSyncedLog.\n\nPlaywright E2E: Extend e2e/nutrition-card.spec.ts — tap calorie ring → detail view opens → accordion expands → food items visible → delete button works.",
+            "description": "Combine: C's segmented color bar, C's per-slot calories, 5-column macros, B's one-open-at-a-time accordion. Corrected meal times: breakfast 5-9am, lunch 1-4pm, dinner 8-11pm, else snack. Delete button on food rows via removeSyncedLog.\n\nPlaywright E2E: Extend e2e/nutrition-card.spec.ts \u2014 tap calorie ring \u2192 detail view opens \u2192 accordion expands \u2192 food items visible \u2192 delete button works.",
+            "visual_reference": [
+              "docs/plans/Worktree spec/user-annotations/13.png"
+            ],
             "files_to_read": [
-              ".claude/worktrees/agent-a31ddf8f/src/components/track/nutrition/CalorieDetailView.tsx",
-              ".claude/worktrees/agent-aa467ec9/src/components/nutrition/CalorieDetailView.tsx"
+              "{memory_base}/project_nutrition_card_decisions.md \u2014 section #5 Calorie Detail, #22 Macros",
+              "{memory_base}/feedback_round2_full_comparison.md \u2014 Calorie Detail section",
+              "docs/plans/Worktree spec/user-annotations/13.png \u2014 calorie detail reference",
+              "docs/plans/Worktree spec/08_REFERENCE_daily-plan-meal-slots-calories.png",
+              "src/components/track/nutrition/useNutritionStore.ts",
+              "src/hooks/useNutritionData.ts \u2014 logsByMealSlot, totalMacrosToday"
             ],
             "files_to_modify": [
               "src/components/track/nutrition/CalorieDetailView.tsx",
               "e2e/nutrition-card.spec.ts"
             ],
-            "depends_on": [
-              "W2-01"
-            ],
+            "depends_on": ["W2-01"],
             "completed": false,
             "task_protocol": {
               "steps": [
                 "1. READ the task description, acceptance criteria, and files_to_read thoroughly before writing any code.",
                 "2. Build the CalorieDetailView component.",
-                "3. Write Playwright E2E test: tap calorie ring → detail view → accordion → food items → delete.",
-                "4. Run ALL verification commands in order: bun run typecheck → bun run build → bun run lint:fix → bun run test → bun run format",
+                "3. Write Playwright E2E test: tap calorie ring \u2192 detail view \u2192 accordion \u2192 food items \u2192 delete.",
+                "4. Run ALL verification commands in order: bun run typecheck \u2192 bun run build \u2192 bun run lint:fix \u2192 bun run test \u2192 bun run format",
                 "5. Run Playwright: bunx playwright test e2e/nutrition-card.spec.ts",
-                "6. SMOKE TEST: Verify dev server is still running — curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
-                "7. Check acceptance criteria — every single one must pass.",
+                "6. SMOKE TEST: Verify dev server is still running \u2014 curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
+                "7. Check acceptance criteria \u2014 every single one must pass.",
                 "8. If ANY verification or acceptance criteria fails: git stash your changes, report what failed, do NOT commit broken code.",
                 "9. Update docs/WIP.md with task completion status.",
-                "10. Commit to adams-rib branch with descriptive message referencing the task ID.",
+                "10. Commit to feat/nutrition branch with descriptive message referencing the task ID.",
                 "11. Browser-test via Claude-in-Chrome on localhost:3005."
               ],
               "rollback_strategy": "If verification fails after 2 attempts to fix: git stash, report the failure with exact error output, and flag the task as BLOCKED in docs/WIP.md.",
               "file_conflict_rule": "If another task in your wave modifies the same file, those tasks MUST run sequentially, not in parallel.",
               "testing_rules": {
-                "e2e_targets": "e2e/nutrition-card.spec.ts — calorie detail: open → accordion → items → delete",
+                "e2e_targets": "e2e/nutrition-card.spec.ts \u2014 calorie detail: open \u2192 accordion \u2192 items \u2192 delete",
                 "forbidden": "NO React component tests."
               }
             },
@@ -756,41 +763,45 @@
           {
             "id": "W2-06",
             "title": "Build FavouritesView + filter tabs + barrel export",
-            "description": "FavouritesView: A's design, wired to useFoodFavourites. Filter view: Recent|Frequent|Favourites|All tabs (NOT meal slot tabs). Zero-state = recently logged foods for current meal slot. Create index.ts barrel export.\n\nPlaywright E2E: Extend e2e/nutrition-card.spec.ts — navigate to favourites, verify tabs work, verify zero-state shows recent foods.",
+            "description": "FavouritesView: A's design, wired to useFoodFavourites. Filter view: Recent|Frequent|Favourites|All tabs (NOT meal slot tabs). Zero-state = recently logged foods for current meal slot. Create index.ts barrel export.\n\nPlaywright E2E: Extend e2e/nutrition-card.spec.ts \u2014 navigate to favourites, verify tabs work, verify zero-state shows recent foods.",
+            "visual_reference": [
+              "docs/plans/Worktree spec/user-annotations/17.png"
+            ],
             "files_to_read": [
-              ".claude/worktrees/agent-a31ddf8f/src/components/track/nutrition/FavouritesView.tsx",
-              ".claude/worktrees/agent-a31ddf8f/src/components/track/nutrition/MealSlotFilterView.tsx",
-              "docs/plans/Worktree spec/research-food-filter-patterns.md"
+              "{memory_base}/project_nutrition_card_decisions.md \u2014 sections #6 Favourites, #7 Filter",
+              "{memory_base}/feedback_round2_full_comparison.md \u2014 Favourites section",
+              "{memory_base}/feedback_round2_water_filter.md \u2014 Filter Component section",
+              "docs/plans/Worktree spec/user-annotations/17.png \u2014 favourites reference",
+              "docs/plans/Worktree spec/research-food-filter-patterns.md \u2014 CRITICAL: cross-app research on filter UX",
+              "src/components/track/nutrition/useNutritionStore.ts",
+              "src/hooks/useNutritionData.ts \u2014 recentFoods, frequentFoods"
             ],
             "files_to_modify": [
               "src/components/track/nutrition/FavouritesView.tsx",
-              "src/components/track/nutrition/MealSlotFilterView.tsx",
+              "src/components/track/nutrition/FoodFilterView.tsx",
               "src/components/track/nutrition/index.ts",
               "e2e/nutrition-card.spec.ts"
             ],
-            "depends_on": [
-              "W2-01",
-              "W1-02"
-            ],
+            "depends_on": ["W2-01", "W1-02"],
             "completed": false,
             "task_protocol": {
               "steps": [
                 "1. READ the task description, acceptance criteria, and files_to_read thoroughly before writing any code.",
-                "2. Build the FavouritesView and MealSlotFilterView components + barrel export.",
-                "3. Write Playwright E2E test: navigate to favourites → tabs → zero-state → add favourite.",
-                "4. Run ALL verification commands in order: bun run typecheck → bun run build → bun run lint:fix → bun run test → bun run format",
+                "2. Build the FavouritesView and FoodFilterView components + barrel export.",
+                "3. Write Playwright E2E test: navigate to favourites \u2192 tabs \u2192 zero-state \u2192 add favourite.",
+                "4. Run ALL verification commands in order: bun run typecheck \u2192 bun run build \u2192 bun run lint:fix \u2192 bun run test \u2192 bun run format",
                 "5. Run Playwright: bunx playwright test e2e/nutrition-card.spec.ts",
-                "6. SMOKE TEST: Verify dev server is still running — curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
-                "7. Check acceptance criteria — every single one must pass.",
+                "6. SMOKE TEST: Verify dev server is still running \u2014 curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
+                "7. Check acceptance criteria \u2014 every single one must pass.",
                 "8. If ANY verification or acceptance criteria fails: git stash your changes, report what failed, do NOT commit broken code.",
                 "9. Update docs/WIP.md with task completion status.",
-                "10. Commit to adams-rib branch with descriptive message referencing the task ID.",
+                "10. Commit to feat/nutrition branch with descriptive message referencing the task ID.",
                 "11. Browser-test via Claude-in-Chrome on localhost:3005."
               ],
               "rollback_strategy": "If verification fails after 2 attempts to fix: git stash, report the failure with exact error output, and flag the task as BLOCKED in docs/WIP.md.",
               "file_conflict_rule": "If another task in your wave modifies the same file, those tasks MUST run sequentially, not in parallel.",
               "testing_rules": {
-                "e2e_targets": "e2e/nutrition-card.spec.ts — favourites: tabs → zero-state → add/remove favourite",
+                "e2e_targets": "e2e/nutrition-card.spec.ts \u2014 favourites: tabs \u2192 zero-state \u2192 add/remove favourite",
                 "forbidden": "NO React component tests."
               }
             },
@@ -813,7 +824,7 @@
             ],
             "outputs": [
               "src/components/track/nutrition/FavouritesView.tsx (new)",
-              "src/components/track/nutrition/MealSlotFilterView.tsx (new)",
+              "src/components/track/nutrition/FoodFilterView.tsx (new)",
               "src/components/track/nutrition/index.ts (new)",
               "e2e/nutrition-card.spec.ts (extended)"
             ]
@@ -828,7 +839,7 @@
           {
             "id": "W3-01",
             "title": "Wire Log Food button to food parsing pipeline",
-            "description": "When user has staging items and hits Log Food: reconstruct rawInput from items ('200g chicken breast, 150g white rice'), call handleLogFood from useFoodParsing. For items already matched (matchStatus='matched'), optionally pre-fill items array to skip redundant matching. Clear staging on success. Food logging MUST go through addSyncedLog with type='food'.\n\nTDD: Write Convex test for the food logging flow. Playwright E2E: type food → stage → log → verify appears in TodayLog.",
+            "description": "When user has staging items and hits Log Food: reconstruct rawInput from items ('200g chicken breast, 150g white rice'), call handleLogFood from useFoodParsing. For items already matched (matchStatus='matched'), optionally pre-fill items array to skip redundant matching. Clear staging on success. Food logging MUST go through addSyncedLog with type='food'.\n\nTDD: Write Convex test for the food logging flow. Playwright E2E: type food \u2192 stage \u2192 log \u2192 verify appears in TodayLog.",
             "files_to_read": [
               "src/hooks/useFoodParsing.ts",
               "src/lib/syncLogs.ts",
@@ -840,30 +851,27 @@
               "src/components/track/nutrition/useNutritionStore.ts",
               "e2e/nutrition-card.spec.ts"
             ],
-            "depends_on": [
-              "W2-02",
-              "W0-02"
-            ],
+            "depends_on": ["W2-02", "W0-02"],
             "completed": false,
             "task_protocol": {
               "steps": [
                 "1. READ the task description, acceptance criteria, and files_to_read thoroughly before writing any code.",
-                "2. TDD: Write failing Convex test for the food logging mutation. Write Playwright E2E test for the full flow: type food → stage → Log Food → appears in log.",
+                "2. TDD: Write failing Convex test for the food logging mutation. Write Playwright E2E test for the full flow: type food \u2192 stage \u2192 Log Food \u2192 appears in log.",
                 "3. Implement the wiring code to make tests pass.",
-                "4. Run ALL verification commands in order: bun run typecheck → bun run build → bun run lint:fix → bun run test → bun run format",
+                "4. Run ALL verification commands in order: bun run typecheck \u2192 bun run build \u2192 bun run lint:fix \u2192 bun run test \u2192 bun run format",
                 "5. Run Playwright: bunx playwright test e2e/nutrition-card.spec.ts",
-                "6. SMOKE TEST: Verify dev server is still running — curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
-                "7. Check acceptance criteria — every single one must pass.",
+                "6. SMOKE TEST: Verify dev server is still running \u2014 curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
+                "7. Check acceptance criteria \u2014 every single one must pass.",
                 "8. If ANY verification or acceptance criteria fails: git stash your changes, report what failed, do NOT commit broken code.",
                 "9. Update docs/WIP.md with task completion status.",
-                "10. Commit to adams-rib branch with descriptive message referencing the task ID.",
+                "10. Commit to feat/nutrition branch with descriptive message referencing the task ID.",
                 "11. Browser-test via Claude-in-Chrome on localhost:3005."
               ],
               "rollback_strategy": "If verification fails after 2 attempts to fix: git stash, report the failure with exact error output, and flag the task as BLOCKED in docs/WIP.md.",
               "file_conflict_rule": "If another task in your wave modifies the same file, those tasks MUST run sequentially, not in parallel.",
               "testing_rules": {
                 "tdd_targets": "Convex test for food logging mutation",
-                "e2e_targets": "e2e/nutrition-card.spec.ts — full food logging flow",
+                "e2e_targets": "e2e/nutrition-card.spec.ts \u2014 full food logging flow",
                 "forbidden": "NO React component tests."
               }
             },
@@ -894,7 +902,7 @@
           {
             "id": "W3-02",
             "title": "Wire WaterModal to fluid logging pipeline",
-            "description": "NutritionCard accepts onLogWater prop. Track.tsx passes handleLogFluid('Water', amountMl). Wire water progress data from useNutritionData + useNutritionGoals.\n\nPlaywright E2E: log water → verify progress bar updates → verify water count in calorie detail view.",
+            "description": "NutritionCard accepts onLogWater prop. Track.tsx passes handleLogFluid('Water', amountMl). Wire water progress data from useNutritionData + useNutritionGoals.\n\nPlaywright E2E: log water \u2192 verify progress bar updates \u2192 verify water count in calorie detail view.",
             "files_to_read": [
               "src/hooks/useHabitLog.ts",
               "src/pages/Track.tsx"
@@ -904,29 +912,26 @@
               "src/components/track/nutrition/WaterModal.tsx",
               "e2e/nutrition-card.spec.ts"
             ],
-            "depends_on": [
-              "W2-04",
-              "W1-03"
-            ],
+            "depends_on": ["W2-04", "W1-03"],
             "completed": false,
             "task_protocol": {
               "steps": [
                 "1. READ the task description, acceptance criteria, and files_to_read thoroughly before writing any code.",
-                "2. Write Playwright E2E test: open water modal → log water → progress bar updates.",
+                "2. Write Playwright E2E test: open water modal \u2192 log water \u2192 progress bar updates.",
                 "3. Implement the wiring to make the test pass.",
-                "4. Run ALL verification commands in order: bun run typecheck → bun run build → bun run lint:fix → bun run test → bun run format",
+                "4. Run ALL verification commands in order: bun run typecheck \u2192 bun run build \u2192 bun run lint:fix \u2192 bun run test \u2192 bun run format",
                 "5. Run Playwright: bunx playwright test e2e/nutrition-card.spec.ts",
-                "6. SMOKE TEST: Verify dev server is still running — curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
-                "7. Check acceptance criteria — every single one must pass.",
+                "6. SMOKE TEST: Verify dev server is still running \u2014 curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
+                "7. Check acceptance criteria \u2014 every single one must pass.",
                 "8. If ANY verification or acceptance criteria fails: git stash your changes, report what failed, do NOT commit broken code.",
                 "9. Update docs/WIP.md with task completion status.",
-                "10. Commit to adams-rib branch with descriptive message referencing the task ID.",
+                "10. Commit to feat/nutrition branch with descriptive message referencing the task ID.",
                 "11. Browser-test via Claude-in-Chrome on localhost:3005."
               ],
               "rollback_strategy": "If verification fails after 2 attempts to fix: git stash, report the failure with exact error output, and flag the task as BLOCKED in docs/WIP.md.",
               "file_conflict_rule": "If another task in your wave modifies the same file, those tasks MUST run sequentially, not in parallel.",
               "testing_rules": {
-                "e2e_targets": "e2e/nutrition-card.spec.ts — water logging: modal → log → progress update",
+                "e2e_targets": "e2e/nutrition-card.spec.ts \u2014 water logging: modal \u2192 log \u2192 progress update",
                 "forbidden": "NO React component tests."
               }
             },
@@ -955,7 +960,7 @@
           {
             "id": "W3-03",
             "title": "Wire StagingModal match status to FoodMatchingModal",
-            "description": "Orange alert on unresolved staging items opens a lightweight in-staging registry search (not full FoodMatchingModal — staging items have no logId yet). Use searchFoodDocuments from shared/foodMatching.ts. When matched, update staging item's canonicalName and matchStatus.\n\nPlaywright E2E: stage an unresolved food → tap orange alert → search → select match → verify green tick.",
+            "description": "Orange alert on unresolved staging items opens a lightweight in-staging registry search (not full FoodMatchingModal \u2014 staging items have no logId yet). Use searchFoodDocuments from shared/foodMatching.ts. When matched, update staging item's canonicalName and matchStatus.\n\nPlaywright E2E: stage an unresolved food \u2192 tap orange alert \u2192 search \u2192 select match \u2192 verify green tick.",
             "files_to_read": [
               "src/components/track/FoodMatchingModal.tsx",
               "shared/foodMatching.ts"
@@ -965,29 +970,26 @@
               "src/components/track/nutrition/useNutritionStore.ts",
               "e2e/nutrition-card.spec.ts"
             ],
-            "depends_on": [
-              "W2-03",
-              "W0-02"
-            ],
+            "depends_on": ["W2-03", "W0-02"],
             "completed": false,
             "task_protocol": {
               "steps": [
                 "1. READ the task description, acceptance criteria, and files_to_read thoroughly before writing any code.",
-                "2. Write Playwright E2E test: stage unresolved food → tap alert → search → match → green tick.",
+                "2. Write Playwright E2E test: stage unresolved food \u2192 tap alert \u2192 search \u2192 match \u2192 green tick.",
                 "3. Implement the wiring to make the test pass.",
-                "4. Run ALL verification commands in order: bun run typecheck → bun run build → bun run lint:fix → bun run test → bun run format",
+                "4. Run ALL verification commands in order: bun run typecheck \u2192 bun run build \u2192 bun run lint:fix \u2192 bun run test \u2192 bun run format",
                 "5. Run Playwright: bunx playwright test e2e/nutrition-card.spec.ts",
-                "6. SMOKE TEST: Verify dev server is still running — curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
-                "7. Check acceptance criteria — every single one must pass.",
+                "6. SMOKE TEST: Verify dev server is still running \u2014 curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
+                "7. Check acceptance criteria \u2014 every single one must pass.",
                 "8. If ANY verification or acceptance criteria fails: git stash your changes, report what failed, do NOT commit broken code.",
                 "9. Update docs/WIP.md with task completion status.",
-                "10. Commit to adams-rib branch with descriptive message referencing the task ID.",
+                "10. Commit to feat/nutrition branch with descriptive message referencing the task ID.",
                 "11. Browser-test via Claude-in-Chrome on localhost:3005."
               ],
               "rollback_strategy": "If verification fails after 2 attempts to fix: git stash, report the failure with exact error output, and flag the task as BLOCKED in docs/WIP.md.",
               "file_conflict_rule": "If another task in your wave modifies the same file, those tasks MUST run sequentially, not in parallel.",
               "testing_rules": {
-                "e2e_targets": "e2e/nutrition-card.spec.ts — match resolution: unresolved → search → match → green tick",
+                "e2e_targets": "e2e/nutrition-card.spec.ts \u2014 match resolution: unresolved \u2192 search \u2192 match \u2192 green tick",
                 "forbidden": "NO React component tests."
               }
             },
@@ -1016,35 +1018,31 @@
           {
             "id": "W3-04",
             "title": "Add error boundary around NutritionCard",
-            "description": "NEW TASK — not in v1 plan. Create a NutritionCardErrorBoundary that wraps NutritionCard in Track.tsx. If NutritionCard crashes, show a fallback UI with 'Nutrition card failed to load' message and a retry button. This prevents the entire Track page from dying if NutritionCard has a runtime error.\n\nThe error boundary should log the error to console for debugging.\n\nThis task MUST be completed before W3-05 (mounting in Track page).",
-            "files_to_read": [
-              "src/pages/Track.tsx"
-            ],
+            "description": "NEW TASK \u2014 not in v1 plan. Create a NutritionCardErrorBoundary that wraps NutritionCard in Track.tsx. If NutritionCard crashes, show a fallback UI with 'Nutrition card failed to load' message and a retry button. This prevents the entire Track page from dying if NutritionCard has a runtime error.\n\nThe error boundary should log the error to console for debugging.\n\nThis task MUST be completed before W3-05 (mounting in Track page).",
+            "files_to_read": ["src/pages/Track.tsx"],
             "files_to_modify": [
               "src/components/track/nutrition/NutritionCardErrorBoundary.tsx",
               "e2e/nutrition-card.spec.ts"
             ],
-            "depends_on": [
-              "W2-02"
-            ],
+            "depends_on": ["W2-02"],
             "completed": false,
             "task_protocol": {
               "steps": [
                 "1. READ the task description, acceptance criteria, and files_to_read thoroughly before writing any code.",
                 "2. Build the NutritionCardErrorBoundary component.",
                 "3. Write Playwright E2E test that verifies the error boundary catches errors and shows fallback UI (may need a test-only prop to trigger error).",
-                "4. Run ALL verification commands in order: bun run typecheck → bun run build → bun run lint:fix → bun run test → bun run format",
+                "4. Run ALL verification commands in order: bun run typecheck \u2192 bun run build \u2192 bun run lint:fix \u2192 bun run test \u2192 bun run format",
                 "5. Run Playwright: bunx playwright test e2e/nutrition-card.spec.ts",
-                "6. SMOKE TEST: Verify dev server is still running — curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
-                "7. Check acceptance criteria — every single one must pass.",
+                "6. SMOKE TEST: Verify dev server is still running \u2014 curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
+                "7. Check acceptance criteria \u2014 every single one must pass.",
                 "8. If ANY verification or acceptance criteria fails: git stash your changes, report what failed, do NOT commit broken code.",
                 "9. Update docs/WIP.md with task completion status.",
-                "10. Commit to adams-rib branch with descriptive message referencing the task ID."
+                "10. Commit to feat/nutrition branch with descriptive message referencing the task ID."
               ],
               "rollback_strategy": "If verification fails after 2 attempts to fix: git stash, report the failure with exact error output, and flag the task as BLOCKED in docs/WIP.md.",
               "file_conflict_rule": "If another task in your wave modifies the same file, those tasks MUST run sequentially, not in parallel.",
               "testing_rules": {
-                "e2e_targets": "e2e/nutrition-card.spec.ts — error boundary catches crash and shows fallback",
+                "e2e_targets": "e2e/nutrition-card.spec.ts \u2014 error boundary catches crash and shows fallback",
                 "forbidden": "NO React component tests."
               }
             },
@@ -1072,7 +1070,7 @@
           {
             "id": "W3-05",
             "title": "Mount NutritionCard in Track page (with error boundary)",
-            "description": "Replace FoodSection + FluidSection with NutritionCard (wrapped in NutritionCardErrorBoundary) in Track.tsx. Keep FoodMatchingModal, useFoodLlmMatching, useUnresolvedFoodQueue exactly as-is. Keep old sections alive but not rendered (rollback safety). Keep QuickCapture fluid handling for non-water habits.\n\nPlaywright E2E: Navigate to Track page → verify NutritionCard renders → verify old FoodSection/FluidSection are NOT visible.",
+            "description": "Replace FoodSection + FluidSection with NutritionCard (wrapped in NutritionCardErrorBoundary) in Track.tsx. Keep FoodMatchingModal, useFoodLlmMatching, useUnresolvedFoodQueue exactly as-is. Keep old sections alive but not rendered (rollback safety). Keep QuickCapture fluid handling for non-water habits.\n\nPlaywright E2E: Navigate to Track page \u2192 verify NutritionCard renders \u2192 verify old FoodSection/FluidSection are NOT visible.",
             "files_to_read": [
               "src/pages/Track.tsx",
               "src/components/track/panels/index.ts"
@@ -1081,30 +1079,26 @@
               "src/pages/Track.tsx",
               "e2e/nutrition-card.spec.ts"
             ],
-            "depends_on": [
-              "W3-01",
-              "W3-02",
-              "W3-04"
-            ],
+            "depends_on": ["W3-01", "W3-02", "W3-04"],
             "completed": false,
             "task_protocol": {
               "steps": [
                 "1. READ the task description, acceptance criteria, and files_to_read thoroughly before writing any code.",
-                "2. Write Playwright E2E test: Track page → NutritionCard visible → old sections not visible.",
+                "2. Write Playwright E2E test: Track page \u2192 NutritionCard visible \u2192 old sections not visible.",
                 "3. Implement the mounting + error boundary wrapping.",
-                "4. Run ALL verification commands in order: bun run typecheck → bun run build → bun run lint:fix → bun run test → bun run format",
+                "4. Run ALL verification commands in order: bun run typecheck \u2192 bun run build \u2192 bun run lint:fix \u2192 bun run test \u2192 bun run format",
                 "5. Run Playwright: bunx playwright test e2e/nutrition-card.spec.ts",
-                "6. SMOKE TEST: Verify dev server is still running — curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
-                "7. Check acceptance criteria — every single one must pass.",
+                "6. SMOKE TEST: Verify dev server is still running \u2014 curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
+                "7. Check acceptance criteria \u2014 every single one must pass.",
                 "8. If ANY verification or acceptance criteria fails: git stash your changes, report what failed, do NOT commit broken code.",
                 "9. Update docs/WIP.md with task completion status.",
-                "10. Commit to adams-rib branch with descriptive message referencing the task ID.",
+                "10. Commit to feat/nutrition branch with descriptive message referencing the task ID.",
                 "11. Browser-test via Claude-in-Chrome on localhost:3005."
               ],
               "rollback_strategy": "If verification fails after 2 attempts to fix: git stash, report the failure with exact error output, and flag the task as BLOCKED in docs/WIP.md.",
               "file_conflict_rule": "If another task in your wave modifies the same file, those tasks MUST run sequentially, not in parallel.",
               "testing_rules": {
-                "e2e_targets": "e2e/nutrition-card.spec.ts — Track page renders NutritionCard, not old sections",
+                "e2e_targets": "e2e/nutrition-card.spec.ts \u2014 Track page renders NutritionCard, not old sections",
                 "forbidden": "NO React component tests."
               }
             },
@@ -1132,7 +1126,7 @@
           {
             "id": "W3-06",
             "title": "Wire inline feedback badge and live search",
-            "description": "Staging count badge on Log Food button ('Log Food (3)'). Fuse.js index against real FOOD_REGISTRY. Search results show: canonical name, zone badge, portion info, '+' button to stage.\n\nPlaywright E2E: type 3+ chars → results appear → click + → staging count updates on Log Food button.",
+            "description": "Staging count badge on Log Food button ('Log Food (3)'). Fuse.js index against real FOOD_REGISTRY. Search results show: canonical name, zone badge, portion info, '+' button to stage.\n\nPlaywright E2E: type 3+ chars \u2192 results appear \u2192 click + \u2192 staging count updates on Log Food button.",
             "files_to_read": [
               "shared/foodMatching.ts",
               "shared/foodRegistry.ts"
@@ -1142,29 +1136,26 @@
               "src/components/track/nutrition/NutritionCard.tsx",
               "e2e/nutrition-card.spec.ts"
             ],
-            "depends_on": [
-              "W2-02",
-              "W1-01"
-            ],
+            "depends_on": ["W2-02", "W1-01"],
             "completed": false,
             "task_protocol": {
               "steps": [
                 "1. READ the task description, acceptance criteria, and files_to_read thoroughly before writing any code.",
-                "2. Write Playwright E2E test: type 3+ chars → results → + button → badge updates.",
+                "2. Write Playwright E2E test: type 3+ chars \u2192 results \u2192 + button \u2192 badge updates.",
                 "3. Implement the feature to make the test pass.",
-                "4. Run ALL verification commands in order: bun run typecheck → bun run build → bun run lint:fix → bun run test → bun run format",
+                "4. Run ALL verification commands in order: bun run typecheck \u2192 bun run build \u2192 bun run lint:fix \u2192 bun run test \u2192 bun run format",
                 "5. Run Playwright: bunx playwright test e2e/nutrition-card.spec.ts",
-                "6. SMOKE TEST: Verify dev server is still running — curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
-                "7. Check acceptance criteria — every single one must pass.",
+                "6. SMOKE TEST: Verify dev server is still running \u2014 curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
+                "7. Check acceptance criteria \u2014 every single one must pass.",
                 "8. If ANY verification or acceptance criteria fails: git stash your changes, report what failed, do NOT commit broken code.",
                 "9. Update docs/WIP.md with task completion status.",
-                "10. Commit to adams-rib branch with descriptive message referencing the task ID.",
+                "10. Commit to feat/nutrition branch with descriptive message referencing the task ID.",
                 "11. Browser-test via Claude-in-Chrome on localhost:3005."
               ],
               "rollback_strategy": "If verification fails after 2 attempts to fix: git stash, report the failure with exact error output, and flag the task as BLOCKED in docs/WIP.md.",
               "file_conflict_rule": "If another task in your wave modifies the same file, those tasks MUST run sequentially, not in parallel.",
               "testing_rules": {
-                "e2e_targets": "e2e/nutrition-card.spec.ts — live search: type → results → stage → badge",
+                "e2e_targets": "e2e/nutrition-card.spec.ts \u2014 live search: type \u2192 results \u2192 stage \u2192 badge",
                 "forbidden": "NO React component tests."
               }
             },
@@ -1194,30 +1185,25 @@
           {
             "id": "W3-07",
             "title": "End-to-end integration test: full nutrition flow",
-            "description": "NEW TASK — not in v1 plan. Write a comprehensive Playwright E2E test that verifies the FULL flow works end-to-end:\n\n1. Navigate to Track page\n2. Type a food in the search input (e.g., 'white rice')\n3. Add to staging via + button\n4. Adjust portion in staging modal\n5. Click Log Food\n6. Verify food appears in TodayLog\n7. Verify calorie ring updates\n8. Open calorie detail view\n9. Verify food appears under correct meal slot\n10. Delete the food\n11. Verify calorie ring decreases\n12. Log water via water modal\n13. Verify water progress bar updates\n\nThis is the single most important test in the entire plan. If this passes, the feature works.",
+            "description": "NEW TASK \u2014 not in v1 plan. Write a comprehensive Playwright E2E test that verifies the FULL flow works end-to-end:\n\n1. Navigate to Track page\n2. Type a food in the search input (e.g., 'white rice')\n3. Add to staging via + button\n4. Adjust portion in staging modal\n5. Click Log Food\n6. Verify food appears in TodayLog\n7. Verify calorie ring updates\n8. Open calorie detail view\n9. Verify food appears under correct meal slot\n10. Delete the food\n11. Verify calorie ring decreases\n12. Log water via water modal\n13. Verify water progress bar updates\n\nThis is the single most important test in the entire plan. If this passes, the feature works.",
             "files_to_read": [],
-            "files_to_modify": [
-              "e2e/nutrition-full-flow.spec.ts"
-            ],
-            "depends_on": [
-              "W3-05",
-              "W3-06"
-            ],
+            "files_to_modify": ["e2e/nutrition-full-flow.spec.ts"],
+            "depends_on": ["W3-05", "W3-06"],
             "completed": false,
             "task_protocol": {
               "steps": [
                 "1. READ the task description and the entire e2e/nutrition-card.spec.ts file to understand existing test patterns.",
                 "2. Write the comprehensive E2E test covering all 13 steps in the description.",
                 "3. Run: bunx playwright test e2e/nutrition-full-flow.spec.ts",
-                "4. SMOKE TEST: Verify dev server is still running — curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
+                "4. SMOKE TEST: Verify dev server is still running \u2014 curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
                 "5. If ANY test fails: document the exact failure, identify which Wave 3 task produced the bug, flag it.",
                 "6. Update docs/WIP.md with task completion status.",
-                "7. Commit to adams-rib branch with descriptive message referencing the task ID."
+                "7. Commit to feat/nutrition branch with descriptive message referencing the task ID."
               ],
-              "rollback_strategy": "This task only adds a test file — no rollback needed. If tests fail, they reveal bugs in earlier tasks that need fixing.",
-              "file_conflict_rule": "No conflicts — this creates a new test file.",
+              "rollback_strategy": "This task only adds a test file \u2014 no rollback needed. If tests fail, they reveal bugs in earlier tasks that need fixing.",
+              "file_conflict_rule": "No conflicts \u2014 this creates a new test file.",
               "testing_rules": {
-                "e2e_targets": "e2e/nutrition-full-flow.spec.ts — the critical integration test",
+                "e2e_targets": "e2e/nutrition-full-flow.spec.ts \u2014 the critical integration test",
                 "forbidden": "NO React component tests. NO mocks."
               }
             },
@@ -1232,9 +1218,7 @@
               "bunx playwright test e2e/nutrition-full-flow.spec.ts",
               "curl -s -o /dev/null -w '%{http_code}' http://localhost:3005"
             ],
-            "outputs": [
-              "e2e/nutrition-full-flow.spec.ts (new)"
-            ]
+            "outputs": ["e2e/nutrition-full-flow.spec.ts (new)"]
           }
         ]
       },
@@ -1246,7 +1230,7 @@
           {
             "id": "W4-01",
             "title": "Migrate non-water drinks to food suggestions",
-            "description": "In NutritionCard search zero-state, add 'Common drinks' section from food registry (subcategory: hot_drink, juice, fizzy_drink). Tapping stages with correct portion. Remove FluidSection non-water presets from Track.tsx. Old fluid logs remain valid — no database migration.\n\nPlaywright E2E: open search → see drink suggestions in zero-state → tap one → stages correctly.",
+            "description": "In NutritionCard search zero-state, add 'Common drinks' section from food registry (subcategory: hot_drink, juice, fizzy_drink). Tapping stages with correct portion. Remove FluidSection non-water presets from Track.tsx. Old fluid logs remain valid \u2014 no database migration.\n\nPlaywright E2E: open search \u2192 see drink suggestions in zero-state \u2192 tap one \u2192 stages correctly.",
             "files_to_read": [
               "src/components/track/panels/FluidSection.tsx",
               "shared/foodRegistryData.ts",
@@ -1256,29 +1240,26 @@
               "src/components/track/nutrition/NutritionCard.tsx",
               "e2e/nutrition-card.spec.ts"
             ],
-            "depends_on": [
-              "W3-05",
-              "W0-03"
-            ],
+            "depends_on": ["W3-05", "W0-03"],
             "completed": false,
             "task_protocol": {
               "steps": [
                 "1. READ the task description, acceptance criteria, and files_to_read thoroughly before writing any code.",
-                "2. Write Playwright E2E test: open search → drink suggestions visible → tap → stages correctly.",
+                "2. Write Playwright E2E test: open search \u2192 drink suggestions visible \u2192 tap \u2192 stages correctly.",
                 "3. Implement the feature to make the test pass.",
-                "4. Run ALL verification commands in order: bun run typecheck → bun run build → bun run lint:fix → bun run test → bun run format",
+                "4. Run ALL verification commands in order: bun run typecheck \u2192 bun run build \u2192 bun run lint:fix \u2192 bun run test \u2192 bun run format",
                 "5. Run Playwright: bunx playwright test e2e/nutrition-card.spec.ts",
-                "6. SMOKE TEST: Verify dev server is still running — curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
-                "7. Check acceptance criteria — every single one must pass.",
+                "6. SMOKE TEST: Verify dev server is still running \u2014 curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
+                "7. Check acceptance criteria \u2014 every single one must pass.",
                 "8. If ANY verification or acceptance criteria fails: git stash your changes, report what failed, do NOT commit broken code.",
                 "9. Update docs/WIP.md with task completion status.",
-                "10. Commit to adams-rib branch with descriptive message referencing the task ID.",
+                "10. Commit to feat/nutrition branch with descriptive message referencing the task ID.",
                 "11. Browser-test via Claude-in-Chrome on localhost:3005."
               ],
               "rollback_strategy": "If verification fails after 2 attempts to fix: git stash, report the failure with exact error output, and flag the task as BLOCKED in docs/WIP.md.",
               "file_conflict_rule": "If another task in your wave modifies the same file, those tasks MUST run sequentially, not in parallel.",
               "testing_rules": {
-                "e2e_targets": "e2e/nutrition-card.spec.ts — drink suggestions: zero-state → tap → stage",
+                "e2e_targets": "e2e/nutrition-card.spec.ts \u2014 drink suggestions: zero-state \u2192 tap \u2192 stage",
                 "forbidden": "NO React component tests."
               }
             },
@@ -1306,7 +1287,7 @@
           {
             "id": "W4-02",
             "title": "Remove old FoodSection and FluidSection from Track",
-            "description": "Remove imports and rendering of FoodSection + FluidSection. Keep .tsx files alive (rollback safety). Update panels/index.ts. Ensure QuickCapture still has handleLogFluid for fluid habits. Run typecheck + lint.\n\nPlaywright E2E: Full regression — run ALL existing nutrition E2E tests to ensure nothing broke.",
+            "description": "Remove imports and rendering of FoodSection + FluidSection. Keep .tsx files alive (rollback safety). Update panels/index.ts. Ensure QuickCapture still has handleLogFluid for fluid habits. Run typecheck + lint.\n\nPlaywright E2E: Full regression \u2014 run ALL existing nutrition E2E tests to ensure nothing broke.",
             "files_to_read": [
               "src/pages/Track.tsx",
               "src/components/track/panels/index.ts"
@@ -1316,27 +1297,25 @@
               "src/components/track/panels/index.ts",
               "e2e/nutrition-card.spec.ts"
             ],
-            "depends_on": [
-              "W4-01"
-            ],
+            "depends_on": ["W4-01"],
             "completed": false,
             "task_protocol": {
               "steps": [
                 "1. READ the task description, acceptance criteria, and files_to_read thoroughly before writing any code.",
                 "2. Remove FoodSection + FluidSection imports and rendering.",
-                "3. Run ALL verification commands in order: bun run typecheck → bun run build → bun run lint:fix → bun run test → bun run format",
-                "4. Run FULL Playwright suite: bunx playwright test (not just nutrition tests — full regression)",
-                "5. SMOKE TEST: Verify dev server is still running — curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
-                "6. Check acceptance criteria — every single one must pass.",
+                "3. Run ALL verification commands in order: bun run typecheck \u2192 bun run build \u2192 bun run lint:fix \u2192 bun run test \u2192 bun run format",
+                "4. Run FULL Playwright suite: bunx playwright test (not just nutrition tests \u2014 full regression)",
+                "5. SMOKE TEST: Verify dev server is still running \u2014 curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
+                "6. Check acceptance criteria \u2014 every single one must pass.",
                 "7. If ANY verification or acceptance criteria fails: git stash your changes, report what failed, do NOT commit broken code.",
                 "8. Update docs/WIP.md with task completion status.",
-                "9. Commit to adams-rib branch with descriptive message referencing the task ID.",
+                "9. Commit to feat/nutrition branch with descriptive message referencing the task ID.",
                 "10. Browser-test via Claude-in-Chrome on localhost:3005."
               ],
               "rollback_strategy": "If verification fails after 2 attempts to fix: git stash, report the failure with exact error output, and flag the task as BLOCKED in docs/WIP.md.",
               "file_conflict_rule": "If another task in your wave modifies the same file, those tasks MUST run sequentially, not in parallel.",
               "testing_rules": {
-                "e2e_targets": "bunx playwright test — FULL regression, not just nutrition tests",
+                "e2e_targets": "bunx playwright test \u2014 FULL regression, not just nutrition tests",
                 "forbidden": "NO React component tests."
               }
             },
@@ -1364,7 +1343,7 @@
           {
             "id": "W4-03",
             "title": "Update TodayLog for nutrition card data",
-            "description": "Ensure TodayLog correctly handles: food logs with mealSlot field, water logs (still type='fluid'), non-water drinks now as type='food'. Show mealSlot badge, portion + calorie info from registry.\n\nPlaywright E2E: Log food → verify TodayLog shows mealSlot badge + calorie info. Log water → verify TodayLog shows water entry correctly.",
+            "description": "Ensure TodayLog correctly handles: food logs with mealSlot field, water logs (still type='fluid'), non-water drinks now as type='food'. Show mealSlot badge, portion + calorie info from registry.\n\nPlaywright E2E: Log food \u2192 verify TodayLog shows mealSlot badge + calorie info. Log water \u2192 verify TodayLog shows water entry correctly.",
             "files_to_read": [
               "src/components/track/today-log/groups/FoodGroupRow.tsx",
               "src/components/track/today-log/editors/FoodSubRow.tsx"
@@ -1374,28 +1353,26 @@
               "src/components/track/today-log/editors/FoodSubRow.tsx",
               "e2e/nutrition-card.spec.ts"
             ],
-            "depends_on": [
-              "W3-05"
-            ],
+            "depends_on": ["W3-05"],
             "completed": false,
             "task_protocol": {
               "steps": [
                 "1. READ the task description, acceptance criteria, and files_to_read thoroughly before writing any code.",
-                "2. Write Playwright E2E test: log food → TodayLog shows mealSlot badge + calories. Log water → TodayLog shows water.",
+                "2. Write Playwright E2E test: log food \u2192 TodayLog shows mealSlot badge + calories. Log water \u2192 TodayLog shows water.",
                 "3. Implement the changes to make tests pass.",
-                "4. Run ALL verification commands in order: bun run typecheck → bun run build → bun run lint:fix → bun run test → bun run format",
+                "4. Run ALL verification commands in order: bun run typecheck \u2192 bun run build \u2192 bun run lint:fix \u2192 bun run test \u2192 bun run format",
                 "5. Run Playwright: bunx playwright test e2e/nutrition-card.spec.ts",
-                "6. SMOKE TEST: Verify dev server is still running — curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
-                "7. Check acceptance criteria — every single one must pass.",
+                "6. SMOKE TEST: Verify dev server is still running \u2014 curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
+                "7. Check acceptance criteria \u2014 every single one must pass.",
                 "8. If ANY verification or acceptance criteria fails: git stash your changes, report what failed, do NOT commit broken code.",
                 "9. Update docs/WIP.md with task completion status.",
-                "10. Commit to adams-rib branch with descriptive message referencing the task ID.",
+                "10. Commit to feat/nutrition branch with descriptive message referencing the task ID.",
                 "11. Browser-test via Claude-in-Chrome on localhost:3005."
               ],
               "rollback_strategy": "If verification fails after 2 attempts to fix: git stash, report the failure with exact error output, and flag the task as BLOCKED in docs/WIP.md.",
               "file_conflict_rule": "If another task in your wave modifies the same file, those tasks MUST run sequentially, not in parallel.",
               "testing_rules": {
-                "e2e_targets": "e2e/nutrition-card.spec.ts — TodayLog: food with mealSlot badge, water entry",
+                "e2e_targets": "e2e/nutrition-card.spec.ts \u2014 TodayLog: food with mealSlot badge, water entry",
                 "forbidden": "NO React component tests."
               }
             },
@@ -1426,12 +1403,12 @@
       {
         "wave": 5,
         "name": "Polish",
-        "description": "Dark mode, accessibility, edge cases, and full regression. Tests for earlier waves are already done — this wave focuses on visual polish, a11y hardening, and edge cases that weren't covered.",
+        "description": "Dark mode, accessibility, edge cases, and full regression. Tests for earlier waves are already done \u2014 this wave focuses on visual polish, a11y hardening, and edge cases that weren't covered.",
         "tasks": [
           {
             "id": "W5-01",
             "title": "Dark mode and CSS variable audit",
-            "description": "Audit all Nutrition card components for correct dark/light mode. All colors must use CSS variables. Test glass-card system, ring SVGs, modal backdrops, hover states, zone badges in both themes.\n\nPlaywright E2E: Toggle dark/light mode → verify no hardcoded colors break → verify ring SVGs render in both modes.",
+            "description": "Audit all Nutrition card components for correct dark/light mode. All colors must use CSS variables. Test glass-card system, ring SVGs, modal backdrops, hover states, zone badges in both themes.\n\nPlaywright E2E: Toggle dark/light mode \u2192 verify no hardcoded colors break \u2192 verify ring SVGs render in both modes.",
             "files_to_read": [
               "src/index.css",
               "src/components/track/nutrition/*.tsx"
@@ -1443,28 +1420,26 @@
               "src/components/track/nutrition/CalorieDetailView.tsx",
               "e2e/nutrition-card.spec.ts"
             ],
-            "depends_on": [
-              "W3-05"
-            ],
+            "depends_on": ["W3-05"],
             "completed": false,
             "task_protocol": {
               "steps": [
                 "1. READ the task description, acceptance criteria, and files_to_read thoroughly before writing any code.",
-                "2. Audit all components for hardcoded hex values — replace with CSS variables.",
-                "3. Write Playwright E2E test: toggle dark/light mode → verify components render correctly in both.",
-                "4. Run ALL verification commands in order: bun run typecheck → bun run build → bun run lint:fix → bun run test → bun run format",
+                "2. Audit all components for hardcoded hex values \u2014 replace with CSS variables.",
+                "3. Write Playwright E2E test: toggle dark/light mode \u2192 verify components render correctly in both.",
+                "4. Run ALL verification commands in order: bun run typecheck \u2192 bun run build \u2192 bun run lint:fix \u2192 bun run test \u2192 bun run format",
                 "5. Run Playwright: bunx playwright test e2e/nutrition-card.spec.ts",
-                "6. SMOKE TEST: Verify dev server is still running — curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
-                "7. Check acceptance criteria — every single one must pass.",
+                "6. SMOKE TEST: Verify dev server is still running \u2014 curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
+                "7. Check acceptance criteria \u2014 every single one must pass.",
                 "8. If ANY verification or acceptance criteria fails: git stash your changes, report what failed, do NOT commit broken code.",
                 "9. Update docs/WIP.md with task completion status.",
-                "10. Commit to adams-rib branch with descriptive message referencing the task ID.",
-                "11. Browser-test via Claude-in-Chrome on localhost:3005 — test BOTH dark and light mode."
+                "10. Commit to feat/nutrition branch with descriptive message referencing the task ID.",
+                "11. Browser-test via Claude-in-Chrome on localhost:3005 \u2014 test BOTH dark and light mode."
               ],
               "rollback_strategy": "If verification fails after 2 attempts to fix: git stash, report the failure with exact error output, and flag the task as BLOCKED in docs/WIP.md.",
               "file_conflict_rule": "If another task in your wave modifies the same file, those tasks MUST run sequentially, not in parallel.",
               "testing_rules": {
-                "e2e_targets": "e2e/nutrition-card.spec.ts — dark/light mode toggle verification",
+                "e2e_targets": "e2e/nutrition-card.spec.ts \u2014 dark/light mode toggle verification",
                 "forbidden": "NO React component tests."
               }
             },
@@ -1491,10 +1466,8 @@
           {
             "id": "W5-02",
             "title": "Accessibility hardening",
-            "description": "Apply D's patterns: aria-modal on all modals, role=dialog, focus management (move focus on open, return on close), focus trap, escape closes, screen reader labels on rings, search results as listbox/option.\n\nPlaywright E2E: Tab through all components → verify focus order → verify escape closes modals → verify aria attributes present.",
-            "files_to_read": [
-              "src/components/CLAUDE.md"
-            ],
+            "description": "Apply D's patterns: aria-modal on all modals, role=dialog, focus management (move focus on open, return on close), focus trap, escape closes, screen reader labels on rings, search results as listbox/option.\n\nPlaywright E2E: Tab through all components \u2192 verify focus order \u2192 verify escape closes modals \u2192 verify aria attributes present.",
+            "files_to_read": ["src/components/CLAUDE.md"],
             "files_to_modify": [
               "src/components/track/nutrition/NutritionCard.tsx",
               "src/components/track/nutrition/StagingModal.tsx",
@@ -1502,28 +1475,26 @@
               "src/components/track/nutrition/CalorieDetailView.tsx",
               "e2e/nutrition-card.spec.ts"
             ],
-            "depends_on": [
-              "W3-05"
-            ],
+            "depends_on": ["W3-05"],
             "completed": false,
             "task_protocol": {
               "steps": [
                 "1. READ the task description, acceptance criteria, and files_to_read thoroughly before writing any code.",
                 "2. Add aria attributes, focus management, focus traps to all modal components.",
-                "3. Write Playwright E2E test: tab navigation → focus order → escape closes → aria attributes present.",
-                "4. Run ALL verification commands in order: bun run typecheck → bun run build → bun run lint:fix → bun run test → bun run format",
+                "3. Write Playwright E2E test: tab navigation \u2192 focus order \u2192 escape closes \u2192 aria attributes present.",
+                "4. Run ALL verification commands in order: bun run typecheck \u2192 bun run build \u2192 bun run lint:fix \u2192 bun run test \u2192 bun run format",
                 "5. Run Playwright: bunx playwright test e2e/nutrition-card.spec.ts",
-                "6. SMOKE TEST: Verify dev server is still running — curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
-                "7. Check acceptance criteria — every single one must pass.",
+                "6. SMOKE TEST: Verify dev server is still running \u2014 curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
+                "7. Check acceptance criteria \u2014 every single one must pass.",
                 "8. If ANY verification or acceptance criteria fails: git stash your changes, report what failed, do NOT commit broken code.",
                 "9. Update docs/WIP.md with task completion status.",
-                "10. Commit to adams-rib branch with descriptive message referencing the task ID.",
-                "11. Browser-test via Claude-in-Chrome on localhost:3005 — test keyboard navigation."
+                "10. Commit to feat/nutrition branch with descriptive message referencing the task ID.",
+                "11. Browser-test via Claude-in-Chrome on localhost:3005 \u2014 test keyboard navigation."
               ],
               "rollback_strategy": "If verification fails after 2 attempts to fix: git stash, report the failure with exact error output, and flag the task as BLOCKED in docs/WIP.md.",
               "file_conflict_rule": "If another task in your wave modifies the same file, those tasks MUST run sequentially, not in parallel.",
               "testing_rules": {
-                "e2e_targets": "e2e/nutrition-card.spec.ts — a11y: tab navigation, focus traps, aria attributes",
+                "e2e_targets": "e2e/nutrition-card.spec.ts \u2014 a11y: tab navigation, focus traps, aria attributes",
                 "forbidden": "NO React component tests."
               }
             },
@@ -1562,9 +1533,7 @@
               "src/components/track/nutrition/__tests__/useNutritionStore.test.ts",
               "e2e/nutrition-card.spec.ts"
             ],
-            "depends_on": [
-              "W3-05"
-            ],
+            "depends_on": ["W3-05"],
             "completed": false,
             "task_protocol": {
               "steps": [
@@ -1572,20 +1541,20 @@
                 "2. TDD: Write failing Vitest tests for edge cases in the reducer: goal=0, rapid +/- bounds, special char sanitization, 20+ staging warning. Watch them fail. Then fix.",
                 "3. Write Playwright E2E tests: zero-state rendering, empty staging disables Log Food.",
                 "4. Implement edge case handling in components.",
-                "5. Run ALL verification commands in order: bun run typecheck → bun run build → bun run lint:fix → bun run test → bun run format",
+                "5. Run ALL verification commands in order: bun run typecheck \u2192 bun run build \u2192 bun run lint:fix \u2192 bun run test \u2192 bun run format",
                 "6. Run Playwright: bunx playwright test e2e/nutrition-card.spec.ts",
-                "7. SMOKE TEST: Verify dev server is still running — curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
-                "8. Check acceptance criteria — every single one must pass.",
+                "7. SMOKE TEST: Verify dev server is still running \u2014 curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
+                "8. Check acceptance criteria \u2014 every single one must pass.",
                 "9. If ANY verification or acceptance criteria fails: git stash your changes, report what failed, do NOT commit broken code.",
                 "10. Update docs/WIP.md with task completion status.",
-                "11. Commit to adams-rib branch with descriptive message referencing the task ID.",
-                "12. Browser-test via Claude-in-Chrome on localhost:3005 — test each edge case."
+                "11. Commit to feat/nutrition branch with descriptive message referencing the task ID.",
+                "12. Browser-test via Claude-in-Chrome on localhost:3005 \u2014 test each edge case."
               ],
               "rollback_strategy": "If verification fails after 2 attempts to fix: git stash, report the failure with exact error output, and flag the task as BLOCKED in docs/WIP.md.",
               "file_conflict_rule": "If another task in your wave modifies the same file, those tasks MUST run sequentially, not in parallel.",
               "testing_rules": {
-                "tdd_targets": "useNutritionStore.test.ts — edge cases: goal=0, rapid +/-, special chars, 20+ staging",
-                "e2e_targets": "e2e/nutrition-card.spec.ts — zero-state, empty staging disabled",
+                "tdd_targets": "useNutritionStore.test.ts \u2014 edge cases: goal=0, rapid +/-, special chars, 20+ staging",
+                "e2e_targets": "e2e/nutrition-card.spec.ts \u2014 zero-state, empty staging disabled",
                 "forbidden": "NO React component tests."
               }
             },
@@ -1619,38 +1588,34 @@
             "description": "Final verification task. Run the ENTIRE test suite (Vitest + Playwright) and fix any failures. This is the gate before merge.\n\nThis task also runs the nutrition-full-flow.spec.ts integration test one final time to confirm end-to-end works after all polish changes.",
             "files_to_read": [],
             "files_to_modify": [],
-            "depends_on": [
-              "W5-01",
-              "W5-02",
-              "W5-03"
-            ],
+            "depends_on": ["W5-01", "W5-02", "W5-03"],
             "completed": false,
             "task_protocol": {
               "steps": [
-                "1. Run bun run test — ALL unit/Convex tests must pass.",
-                "2. Run bunx playwright test — ALL E2E tests must pass.",
-                "3. Run bunx playwright test e2e/nutrition-full-flow.spec.ts — the critical integration test must pass.",
-                "4. Run bun run typecheck && bun run build && bun run lint:fix — zero errors.",
+                "1. Run bun run test \u2014 ALL unit/Convex tests must pass.",
+                "2. Run bunx playwright test \u2014 ALL E2E tests must pass.",
+                "3. Run bunx playwright test e2e/nutrition-full-flow.spec.ts \u2014 the critical integration test must pass.",
+                "4. Run bun run typecheck && bun run build && bun run lint:fix \u2014 zero errors.",
                 "5. SMOKE TEST: curl -s -o /dev/null -w '%{http_code}' http://localhost:3005 must return 200.",
                 "6. If ANY failure: fix it, re-run everything, repeat until green.",
                 "7. Update docs/WIP.md with final completion status.",
                 "8. Update docs/WORK-QUEUE.md marking the entire nutrition card feature as COMPLETE.",
-                "9. Commit to adams-rib branch: 'W5-04: Full regression — all tests green, feature complete'."
+                "9. Commit to feat/nutrition branch: 'W5-04: Full regression \u2014 all tests green, feature complete'."
               ],
               "rollback_strategy": "If a failure cannot be fixed: document it in docs/WIP.md as a known issue with severity and workaround. Do not mark the feature as complete.",
-              "file_conflict_rule": "No conflicts — this is a verification-only task.",
+              "file_conflict_rule": "No conflicts \u2014 this is a verification-only task.",
               "testing_rules": {
-                "scope": "ALL tests — bun run test + bunx playwright test",
+                "scope": "ALL tests \u2014 bun run test + bunx playwright test",
                 "forbidden": "Do NOT skip any failing tests. Do NOT mark tests as .skip."
               }
             },
             "acceptance_criteria": [
-              "bun run test — ALL pass, zero failures",
-              "bunx playwright test — ALL pass, zero failures",
-              "bunx playwright test e2e/nutrition-full-flow.spec.ts — passes",
-              "bun run typecheck — zero errors",
-              "bun run build — succeeds",
-              "bun run lint:fix — zero errors",
+              "bun run test \u2014 ALL pass, zero failures",
+              "bunx playwright test \u2014 ALL pass, zero failures",
+              "bunx playwright test e2e/nutrition-full-flow.spec.ts \u2014 passes",
+              "bun run typecheck \u2014 zero errors",
+              "bun run build \u2014 succeeds",
+              "bun run lint:fix \u2014 zero errors",
               "Dev server returns 200 on localhost:3005",
               "docs/WIP.md updated",
               "docs/WORK-QUEUE.md updated"
@@ -1664,10 +1629,7 @@
               "bunx playwright test e2e/nutrition-full-flow.spec.ts",
               "curl -s -o /dev/null -w '%{http_code}' http://localhost:3005"
             ],
-            "outputs": [
-              "docs/WIP.md (updated)",
-              "docs/WORK-QUEUE.md (updated)"
-            ]
+            "outputs": ["docs/WIP.md (updated)", "docs/WORK-QUEUE.md (updated)"]
           }
         ]
       }

@@ -18,9 +18,7 @@ export interface UnresolvedQueueItem {
  * Build a flat queue of all pending food items from today's logs.
  * Only includes items with status "pending" (not "expired" or "resolved").
  */
-export function useUnresolvedFoodQueue(
-  logs: SyncedLog[],
-): UnresolvedQueueItem[] {
+export function useUnresolvedFoodQueue(logs: SyncedLog[]): UnresolvedQueueItem[] {
   return useMemo(() => {
     const queue: UnresolvedQueueItem[] = [];
 
@@ -41,8 +39,7 @@ export function useUnresolvedFoodQueue(
           queue.push({
             logId: log.id,
             itemIndex: i,
-            foodName:
-              item.parsedName ?? item.name ?? item.userSegment ?? "Food",
+            foodName: item.parsedName ?? item.name ?? item.userSegment ?? "Food",
             rawInput,
             logTimestamp: log.timestamp,
             item,
