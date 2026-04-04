@@ -40,32 +40,28 @@ All 4 ingredient subsystems confirmed as pre-built infrastructure for filter pro
 
 ## Upcoming Work Queue
 
-### Wave 1: Meal Logging (Wave 0 complete, Wave 1 next)
+### feat/nutrition — Meal Logging Refactor
 
-**Status:** Wave 0 research complete (2026-04-03). 16 adversarial agents produced 4 cross-validated docs. User reviewed assumptions and made 5 decisions. Plan updated for Wave 1.
 **Branch:** `feat/nutrition`
 **PRD:** `docs/design/meal-logging.md`
 **Decisions:** `memory/project_nutrition_card_decisions.md` + `memory/project_wave0_decisions.md`
-**Plan:** `docs/plans/nutrition-card-implementation-plan.json` (needs updates per next-session-prompt)
-**Research docs:** `docs/nutrition-card/*.md` (4 final + 12 raw analyses)
-**Next session prompt:** `docs/design/next-session-prompt.md`
+**Plan:** `docs/plans/nutrition-card-implementation-plan.json`
+**Test count:** 1393 passing, 0 failures (as of 2026-04-04)
 
-**Wave 0 completed tasks:**
+---
+
+#### Wave 0: Research — COMPLETE (2026-04-03)
 
 - W0-01: Data model mapping (147 entries, mock→real gaps documented)
 - W0-02: Pipeline integration (Option B confirmed — rawInput + empty items)
 - W0-03: Fluid migration (3 presets mapped, water stays fluid)
 - W0-04: Portion schema design (separate FOOD_PORTION_DATA, seeding strategy)
 
-**Key Wave 0 user decisions:**
+User decisions: `type: "liquid"` log type, coffee composite, 1,850 kcal/day goal, pre-populated FOOD_PORTION_DATA, fluid→liquid backfill.
 
-- New `type: "liquid"` log type (food, liquid, fluid)
-- Coffee composite: 200ml water + 50ml skimmed milk + coffee = 250ml
-- Calorie goal: 1,850 kcal/day
-- FOOD_PORTION_DATA must be pre-populated (not empty)
-- Fluid→liquid backfill migration needed
+---
 
-**Wave 1 complete (Foundation) — 2026-04-04:**
+#### Wave 1: Foundation — COMPLETE (commits 95b3032, f346aba, 74e2489)
 
 - W1-00: Add type="liquid" to schema + all consumers — **DONE** (`a8f21d0` + `1cf848c`)
 - W1-01: Populate FOOD_PORTION_DATA (147 entries, real USDA data) — **DONE** (`38267d5` + `1ac20e7`)
@@ -73,29 +69,36 @@ All 4 ingredient subsystems confirmed as pre-built infrastructure for filter pro
 - W1-03: Build useNutritionData hook + pure utils — **DONE** (`c261f67`)
 - W1-04: Backfill fluid→liquid migration — **DONE** (`3cedd80`)
 
-**Wave 1 stats:** 8 commits, 50 test files, 1312 tests passing, 0 failures.
+---
 
-**Remaining waves:**
+#### Wave 2: Core UI — COMPLETE (commits 7daece1, 2bd26e5, 23cfee6, 8ad0790)
 
-- Wave 2: Core UI (6 agents building components)
-- Wave 3: Integration (wire to existing food pipeline)
-- Wave 4: Migration (non-water drinks → food logging)
-- Wave 5: Polish (dark mode, a11y, tests)
+- useNutritionStore: consolidated macros, portion cap, search perf, type safety — **DONE** (`2bd26e5`)
+- CalorieDetailView: consolidated macros, typed props, memo accordion — **DONE** (`23cfee6`)
+- useNutritionData: stale todayKey/mealSlot fix, FoodPipelineLog types — **DONE** (`7daece1`)
+- FavouritesView + FoodRow: shared FoodRow, filterToKnownFoods — **DONE** (`8ad0790`)
+- nutritionUtils: consolidated shared meal slot + formatting utilities — **DONE** (`95b3032`)
 
-### Wave 2: Filter Bar (static data)
+---
 
-**Status:** design prompt exists at `docs/design/filter-prompt.md`
-**Goal:** Composable filter bar on Patterns database page using classification + digestion risk data from static food registry.
-**Dependency:** None — all data exists in `shared/foodRegistryData.ts`. Can run in parallel with Wave 1.
+#### Wave 3: Integration — MOSTLY COMPLETE (2026-04-04)
 
-### Wave 3: Live User Data in Filter
+- Agent K (FoodFilterView Frequent tab): **DONE** (`034636f`)
+- Agent I (NutritionCard viewRef + headerIcons): **DONE** (`8abdc96`)
+- Agent J (LogFoodModal Base UI Dialog): **DONE** (`965c376`) — latest commit
+- W3-04 (Error boundary): **IN PROGRESS**
+- W3-07 (E2E test): **PENDING**
 
-**Status:** needs planning
-**Goal:** Wire ingredientExposures + ingredientOverrides to filter bar (status column, exposure counts, user verdicts). Expand override enum from safe/watch/avoid to building/like/dislike/watch/avoid.
-**Dependency:** Wave 2 (filter bar must exist first).
+---
 
-### Wave 4: Nutrition Enrichment
+#### Wave 4: Migration — IN PROGRESS (Agents M, O, P dispatched 2026-04-04)
 
-**Status:** needs planning
-**Goal:** Batch job to populate ingredientProfiles.nutritionPer100g from OpenFoodFacts API, then wire kcal/fibre filters to filter bar.
-**Dependency:** Wave 2 (filter bar) + ingredientProfiles infrastructure (already built).
+---
+
+#### Wave 5: Polish — IN PROGRESS (Agent S dispatched 2026-04-04)
+
+Remaining items in Waves 5-6:
+
+- NutritionCard polish (Agent Q): pending
+- LogFoodModal polish (Agent R): pending
+- Shared constants (Agent T): pending

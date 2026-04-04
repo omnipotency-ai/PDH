@@ -3,7 +3,7 @@
 > **Single source of truth** for all remediation, bugs, and tech debt.
 >
 > **Created:** 2026-03-17
-> **Last updated:** 2026-04-03
+> **Last updated:** 2026-04-04
 
 ---
 
@@ -33,7 +33,7 @@
 
 ## Priority: Logging UX Redesign
 
-> PRD: `docs/design/meal-logging.md` (merged). All 22 decisions locked (2026-04-03). Implementation plan: `docs/plans/nutrition-card-implementation-plan.json` (26 tasks, 6 waves).
+> PRD: `docs/design/meal-logging.md` (merged). All 22 decisions locked (2026-04-03). Implementation plan: `docs/plans/nutrition-card-implementation-plan.json` (26 tasks, 6 waves). Waves 1-2 complete. Wave 3 mostly complete. Waves 4-5 in progress (2026-04-04).
 
 | ID     | Title                             | Sev  | Description                                                                                                                            | Status |
 | ------ | --------------------------------- | ---- | -------------------------------------------------------------------------------------------------------------------------------------- | ------ |
