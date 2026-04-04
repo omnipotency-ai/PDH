@@ -53,9 +53,7 @@ export function WaterModal({
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const amountRef = useRef(STEP_ML);
 
-  // We track the selected amount in a ref + state to avoid stale closures
-  // but still trigger re-renders when it changes.
-  const [amount, setAmountState] = useAmountState(STEP_ML);
+  const [amount, setAmountState] = useState(STEP_ML);
 
   // Reset amount when modal opens
   useEffect(() => {
@@ -189,7 +187,10 @@ export function WaterModal({
         >
           <div className="flex items-center gap-2">
             <Droplet className="h-5 w-5" style={{ color: WATER_COLOR }} />
-            <h2 className="font-display text-lg font-semibold" style={{ color: "var(--text)" }}>
+            <h2
+              className="font-display text-lg font-semibold"
+              style={{ color: "var(--text)" }}
+            >
               Log Water
             </h2>
           </div>
@@ -254,12 +255,18 @@ export function WaterModal({
         </div>
 
         {/* Status text */}
-        <p className="mb-6 text-sm font-medium" style={{ color: "var(--text-muted)" }}>
+        <p
+          className="mb-6 text-sm font-medium"
+          style={{ color: "var(--text-muted)" }}
+        >
           {goalReached ? "Goal Reached!" : `${percentOfGoal}% of daily Goal`}
         </p>
 
         {/* Amount selector */}
-        <div data-slot="water-modal-amount" className="mb-6 flex items-center gap-4">
+        <div
+          data-slot="water-modal-amount"
+          className="mb-6 flex items-center gap-4"
+        >
           <button
             type="button"
             onClick={handleDecrement}
@@ -280,7 +287,10 @@ export function WaterModal({
             style={{ color: "var(--text)" }}
           >
             {amount}{" "}
-            <span className="text-sm font-normal" style={{ color: "var(--text-muted)" }}>
+            <span
+              className="text-sm font-normal"
+              style={{ color: "var(--text-muted)" }}
+            >
               ml
             </span>
           </span>
@@ -302,7 +312,10 @@ export function WaterModal({
         </div>
 
         {/* Bottom row: Cancel + Log Water */}
-        <div data-slot="water-modal-actions" className="flex w-full items-center justify-between">
+        <div
+          data-slot="water-modal-actions"
+          className="flex w-full items-center justify-between"
+        >
           <button
             type="button"
             onClick={onClose}
@@ -329,15 +342,4 @@ export function WaterModal({
       </div>
     </div>
   );
-}
-
-// ── Amount state hook ──────────────────────────────────────────────────────────
-
-/**
- * Simple state wrapper for the water amount.
- * Extracted to keep the component body clean.
- */
-function useAmountState(initial: number) {
-  const [amount, setAmount] = useState(initial);
-  return [amount, setAmount] as const;
 }

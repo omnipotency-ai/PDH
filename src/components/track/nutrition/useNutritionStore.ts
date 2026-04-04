@@ -2,24 +2,34 @@
  * useNutritionStore — UI state management for the Nutrition Card.
  *
  * Manages ephemeral UI state: view mode, search query, staging items,
- * modal open/close, water amount, meal slot selection.
+ * modal open/close, meal slot selection.
  *
  * Does NOT hold: foodLogs, calories, macros, water intake — those
  * come from useNutritionData (read-only Convex data hook).
+ *
+ * Note: WaterModal manages its own local amount state internally.
  *
  * Uses useReducer (decision #9). The reducer is a pure function,
  * exported for direct testing.
  */
 
 import { FOOD_PORTION_DATA } from "@shared/foodPortionData";
-import { FOOD_REGISTRY, type FoodRegistryEntry } from "@shared/foodRegistryData";
+import {
+  FOOD_REGISTRY,
+  type FoodRegistryEntry,
+} from "@shared/foodRegistryData";
 import Fuse from "fuse.js";
 import { useMemo, useReducer } from "react";
 import { getMealSlot, type MealSlot } from "@/lib/nutritionUtils";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
-export type NutritionView = "collapsed" | "search" | "favourites" | "foodFilter" | "calorieDetail";
+export type NutritionView =
+  | "collapsed"
+  | "search"
+  | "favourites"
+  | "foodFilter"
+  | "calorieDetail";
 
 export interface StagedItem {
   /** Unique ID for this staging row. */
@@ -54,8 +64,6 @@ export interface NutritionState {
   stagingItems: StagedItem[];
   stagingModalOpen: boolean;
   waterModalOpen: boolean;
-  /** Millilitres, for the water modal slider. */
-  waterAmount: number;
   /** Auto-detected from time, user can override. */
   activeMealSlot: MealSlot;
   /** For browsing logs by slot. */
@@ -73,7 +81,6 @@ export type NutritionAction =
   | { type: "CLOSE_STAGING_MODAL" }
   | { type: "OPEN_WATER_MODAL" }
   | { type: "CLOSE_WATER_MODAL" }
-  | { type: "SET_WATER_AMOUNT"; amount: number }
   | { type: "SET_ACTIVE_MEAL_SLOT"; slot: MealSlot }
   | { type: "SET_FILTER_MEAL_SLOT"; slot: MealSlot }
   | { type: "RESET_AFTER_LOG" };
@@ -156,7 +163,10 @@ export function createStagedItem(canonicalName: string): StagedItem | null {
  * Recompute all macro fields for a new portion weight.
  * Preserves id, canonicalName, displayName, naturalUnit, unitWeightG.
  */
-export function recalculateMacros(item: StagedItem, newPortionG: number): StagedItem {
+export function recalculateMacros(
+  item: StagedItem,
+  newPortionG: number,
+): StagedItem {
   const macros = computeMacrosFromPortion(item.canonicalName, newPortionG);
   return {
     ...item,
@@ -168,7 +178,9 @@ export function recalculateMacros(item: StagedItem, newPortionG: number): Staged
 /**
  * Compute aggregate totals for a list of staging items.
  */
-export function computeStagingTotals(items: ReadonlyArray<StagedItem>): StagingTotals {
+export function computeStagingTotals(
+  items: ReadonlyArray<StagedItem>,
+): StagingTotals {
   let calories = 0;
   let protein = 0;
   let carbs = 0;
@@ -197,7 +209,10 @@ export function computeStagingTotals(items: ReadonlyArray<StagedItem>): StagingT
 
 // ── Reducer ─────────────────────────────────────────────────────────────────
 
-export function nutritionReducer(state: NutritionState, action: NutritionAction): NutritionState {
+export function nutritionReducer(
+  state: NutritionState,
+  action: NutritionAction,
+): NutritionState {
   switch (action.type) {
     case "SET_VIEW":
       return { ...state, view: action.view, searchQuery: "" };
@@ -216,7 +231,8 @@ export function nutritionReducer(state: NutritionState, action: NutritionAction)
       if (existingIndex !== -1) {
         // Aggregate: increment portion by unitWeightG or defaultPortionG
         const existing = state.stagingItems[existingIndex];
-        const increment = portionData.unitWeightG ?? portionData.defaultPortionG;
+        const increment =
+          portionData.unitWeightG ?? portionData.defaultPortionG;
         const newPortionG = existing.portionG + increment;
         const updated = recalculateMacros(existing, newPortionG);
 
@@ -234,7 +250,9 @@ export function nutritionReducer(state: NutritionState, action: NutritionAction)
     case "REMOVE_FROM_STAGING":
       return {
         ...state,
-        stagingItems: state.stagingItems.filter((item) => item.id !== action.id),
+        stagingItems: state.stagingItems.filter(
+          (item) => item.id !== action.id,
+        ),
       };
 
     case "ADJUST_STAGING_PORTION": {
@@ -262,15 +280,7 @@ export function nutritionReducer(state: NutritionState, action: NutritionAction)
       return { ...state, waterModalOpen: true };
 
     case "CLOSE_WATER_MODAL":
-      return { ...state, waterModalOpen: false, waterAmount: 200 };
-
-    case "SET_WATER_AMOUNT": {
-      const clamped = Math.max(50, Math.min(2000, action.amount));
-      return {
-        ...state,
-        waterAmount: Number.isFinite(clamped) ? clamped : 200,
-      };
-    }
+      return { ...state, waterModalOpen: false };
 
     case "SET_ACTIVE_MEAL_SLOT":
       return { ...state, activeMealSlot: action.slot };
@@ -294,11 +304,14 @@ export function nutritionReducer(state: NutritionState, action: NutritionAction)
 
 // ── Fuse.js search index (module-level singleton) ───────────────────────────
 
-const fuseIndex = new Fuse<FoodRegistryEntry>(FOOD_REGISTRY as FoodRegistryEntry[], {
-  keys: ["canonical", "examples"],
-  threshold: 0.4,
-  includeScore: true,
-});
+const fuseIndex = new Fuse<FoodRegistryEntry>(
+  FOOD_REGISTRY as FoodRegistryEntry[],
+  {
+    keys: ["canonical", "examples"],
+    threshold: 0.4,
+    includeScore: true,
+  },
+);
 
 /**
  * Search the food registry using Fuse.js fuzzy search.
@@ -320,7 +333,6 @@ function createInitialState(): NutritionState {
     stagingItems: [],
     stagingModalOpen: false,
     waterModalOpen: false,
-    waterAmount: 200,
     activeMealSlot: getMealSlot(Date.now()),
     filterMealSlot: "breakfast",
   };
@@ -329,9 +341,16 @@ function createInitialState(): NutritionState {
 // ── Hook ────────────────────────────────────────────────────────────────────
 
 export function useNutritionStore() {
-  const [state, dispatch] = useReducer(nutritionReducer, undefined, createInitialState);
+  const [state, dispatch] = useReducer(
+    nutritionReducer,
+    undefined,
+    createInitialState,
+  );
 
-  const searchResults = useMemo(() => searchFoodRegistry(state.searchQuery), [state.searchQuery]);
+  const searchResults = useMemo(
+    () => searchFoodRegistry(state.searchQuery),
+    [state.searchQuery],
+  );
 
   const stagingTotals = useMemo(
     () => computeStagingTotals(state.stagingItems),

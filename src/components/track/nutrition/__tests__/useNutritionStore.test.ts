@@ -23,7 +23,6 @@ function makeState(overrides?: Partial<NutritionState>): NutritionState {
     stagingItems: [],
     stagingModalOpen: false,
     waterModalOpen: false,
-    waterAmount: 200,
     activeMealSlot: "snack",
     filterMealSlot: "breakfast",
     ...overrides,
@@ -42,8 +41,14 @@ function assertDefined<T>(value: T | null | undefined, label?: string): T {
 
 describe("createStagedItem", () => {
   it("creates a StagedItem for a known canonical food (white rice)", () => {
-    const item = assertDefined(createStagedItem("white rice"), "white rice staged item");
-    const portion = assertDefined(FOOD_PORTION_DATA.get("white rice"), "white rice portion data");
+    const item = assertDefined(
+      createStagedItem("white rice"),
+      "white rice staged item",
+    );
+    const portion = assertDefined(
+      FOOD_PORTION_DATA.get("white rice"),
+      "white rice portion data",
+    );
 
     expect(item.canonicalName).toBe("white rice");
     expect(item.portionG).toBe(portion.defaultPortionG);
@@ -58,29 +63,51 @@ describe("createStagedItem", () => {
 
   it("populates naturalUnit and unitWeightG for foods that have them (toast)", () => {
     const item = assertDefined(createStagedItem("toast"), "toast staged item");
-    const portion = assertDefined(FOOD_PORTION_DATA.get("toast"), "toast portion data");
+    const portion = assertDefined(
+      FOOD_PORTION_DATA.get("toast"),
+      "toast portion data",
+    );
 
     expect(item.naturalUnit).toBe(portion.naturalUnit);
     expect(item.unitWeightG).toBe(portion.unitWeightG);
   });
 
   it("omits naturalUnit/unitWeightG for foods without them (white rice)", () => {
-    const item = assertDefined(createStagedItem("white rice"), "white rice staged item");
+    const item = assertDefined(
+      createStagedItem("white rice"),
+      "white rice staged item",
+    );
     expect(item.naturalUnit).toBeUndefined();
     expect(item.unitWeightG).toBeUndefined();
   });
 
   it("computes all 5 macros correctly", () => {
-    const item = assertDefined(createStagedItem("white rice"), "white rice staged item");
-    const portion = assertDefined(FOOD_PORTION_DATA.get("white rice"), "white rice portion data");
+    const item = assertDefined(
+      createStagedItem("white rice"),
+      "white rice staged item",
+    );
+    const portion = assertDefined(
+      FOOD_PORTION_DATA.get("white rice"),
+      "white rice portion data",
+    );
     const scale = portion.defaultPortionG / 100;
 
     // Each macro = per100g * scale, rounded to 1 decimal
-    expect(item.protein).toBe(Math.round((portion.proteinPer100g ?? 0) * scale * 10) / 10);
-    expect(item.carbs).toBe(Math.round((portion.carbsPer100g ?? 0) * scale * 10) / 10);
-    expect(item.fat).toBe(Math.round((portion.fatPer100g ?? 0) * scale * 10) / 10);
-    expect(item.sugars).toBe(Math.round((portion.sugarsPer100g ?? 0) * scale * 10) / 10);
-    expect(item.fiber).toBe(Math.round((portion.fiberPer100g ?? 0) * scale * 10) / 10);
+    expect(item.protein).toBe(
+      Math.round((portion.proteinPer100g ?? 0) * scale * 10) / 10,
+    );
+    expect(item.carbs).toBe(
+      Math.round((portion.carbsPer100g ?? 0) * scale * 10) / 10,
+    );
+    expect(item.fat).toBe(
+      Math.round((portion.fatPer100g ?? 0) * scale * 10) / 10,
+    );
+    expect(item.sugars).toBe(
+      Math.round((portion.sugarsPer100g ?? 0) * scale * 10) / 10,
+    );
+    expect(item.fiber).toBe(
+      Math.round((portion.fiberPer100g ?? 0) * scale * 10) / 10,
+    );
   });
 
   it("returns null for unknown canonical food", () => {
@@ -89,7 +116,10 @@ describe("createStagedItem", () => {
   });
 
   it("uses the canonical name from the registry entry as displayName", () => {
-    const item = assertDefined(createStagedItem("ripe banana"), "ripe banana staged item");
+    const item = assertDefined(
+      createStagedItem("ripe banana"),
+      "ripe banana staged item",
+    );
     expect(item.displayName).toBe("ripe banana");
   });
 });
@@ -101,14 +131,25 @@ describe("recalculateMacros", () => {
     const item = assertDefined(createStagedItem("white rice"), "white rice");
     const updated = recalculateMacros(item, 100);
 
-    const portion = assertDefined(FOOD_PORTION_DATA.get("white rice"), "white rice portion data");
+    const portion = assertDefined(
+      FOOD_PORTION_DATA.get("white rice"),
+      "white rice portion data",
+    );
     expect(updated.portionG).toBe(100);
     expect(updated.calories).toBe(Math.round(portion.caloriesPer100g ?? 0));
-    expect(updated.protein).toBe(Math.round((portion.proteinPer100g ?? 0) * 10) / 10);
-    expect(updated.carbs).toBe(Math.round((portion.carbsPer100g ?? 0) * 10) / 10);
+    expect(updated.protein).toBe(
+      Math.round((portion.proteinPer100g ?? 0) * 10) / 10,
+    );
+    expect(updated.carbs).toBe(
+      Math.round((portion.carbsPer100g ?? 0) * 10) / 10,
+    );
     expect(updated.fat).toBe(Math.round((portion.fatPer100g ?? 0) * 10) / 10);
-    expect(updated.sugars).toBe(Math.round((portion.sugarsPer100g ?? 0) * 10) / 10);
-    expect(updated.fiber).toBe(Math.round((portion.fiberPer100g ?? 0) * 10) / 10);
+    expect(updated.sugars).toBe(
+      Math.round((portion.sugarsPer100g ?? 0) * 10) / 10,
+    );
+    expect(updated.fiber).toBe(
+      Math.round((portion.fiberPer100g ?? 0) * 10) / 10,
+    );
   });
 
   it("preserves id, canonicalName, displayName, naturalUnit, unitWeightG", () => {
@@ -185,7 +226,10 @@ describe("reducer ADD_TO_STAGING", () => {
       type: "ADD_TO_STAGING",
       canonicalName: "white rice",
     });
-    const portion = assertDefined(FOOD_PORTION_DATA.get("white rice"), "white rice portion data");
+    const portion = assertDefined(
+      FOOD_PORTION_DATA.get("white rice"),
+      "white rice portion data",
+    );
 
     expect(next.stagingItems).toHaveLength(1);
     expect(next.stagingItems[0].canonicalName).toBe("white rice");
@@ -208,9 +252,13 @@ describe("reducer ADD_TO_STAGING", () => {
     // Should still be 1 item, but with increased portion
     expect(s2.stagingItems).toHaveLength(1);
 
-    const toastPortion = assertDefined(FOOD_PORTION_DATA.get("toast"), "toast portion data");
+    const toastPortion = assertDefined(
+      FOOD_PORTION_DATA.get("toast"),
+      "toast portion data",
+    );
     expect(s2.stagingItems[0].portionG).toBe(
-      toastPortion.defaultPortionG + (toastPortion.unitWeightG ?? toastPortion.defaultPortionG),
+      toastPortion.defaultPortionG +
+        (toastPortion.unitWeightG ?? toastPortion.defaultPortionG),
     );
   });
 
@@ -245,10 +293,16 @@ describe("reducer ADD_TO_STAGING", () => {
       canonicalName: "toast",
     });
 
-    const toastPortion = assertDefined(FOOD_PORTION_DATA.get("toast"), "toast portion data");
+    const toastPortion = assertDefined(
+      FOOD_PORTION_DATA.get("toast"),
+      "toast portion data",
+    );
     const newPortionG =
-      toastPortion.defaultPortionG + (toastPortion.unitWeightG ?? toastPortion.defaultPortionG);
-    const expectedCal = Math.round(((toastPortion.caloriesPer100g ?? 0) * newPortionG) / 100);
+      toastPortion.defaultPortionG +
+      (toastPortion.unitWeightG ?? toastPortion.defaultPortionG);
+    const expectedCal = Math.round(
+      ((toastPortion.caloriesPer100g ?? 0) * newPortionG) / 100,
+    );
     expect(s2.stagingItems[0].calories).toBe(expectedCal);
   });
 
@@ -304,8 +358,13 @@ describe("reducer ADJUST_STAGING_PORTION", () => {
     const expectedPortionG = item.portionG + 50;
     expect(next.stagingItems[0].portionG).toBe(expectedPortionG);
 
-    const portion = assertDefined(FOOD_PORTION_DATA.get("white rice"), "white rice portion data");
-    const expectedCal = Math.round(((portion.caloriesPer100g ?? 0) * expectedPortionG) / 100);
+    const portion = assertDefined(
+      FOOD_PORTION_DATA.get("white rice"),
+      "white rice portion data",
+    );
+    const expectedCal = Math.round(
+      ((portion.caloriesPer100g ?? 0) * expectedPortionG) / 100,
+    );
     expect(next.stagingItems[0].calories).toBe(expectedCal);
   });
 
@@ -378,42 +437,10 @@ describe("reducer water modal actions", () => {
     expect(next.waterModalOpen).toBe(true);
   });
 
-  it("CLOSE_WATER_MODAL sets waterModalOpen to false and resets waterAmount to 200", () => {
-    const state = makeState({ waterModalOpen: true, waterAmount: 500 });
+  it("CLOSE_WATER_MODAL sets waterModalOpen to false", () => {
+    const state = makeState({ waterModalOpen: true });
     const next = nutritionReducer(state, { type: "CLOSE_WATER_MODAL" });
     expect(next.waterModalOpen).toBe(false);
-    expect(next.waterAmount).toBe(200);
-  });
-});
-
-// ── Reducer: SET_WATER_AMOUNT ───────────────────────────────────────────────
-
-describe("reducer SET_WATER_AMOUNT", () => {
-  it("sets waterAmount to the given value", () => {
-    const state = makeState();
-    const next = nutritionReducer(state, {
-      type: "SET_WATER_AMOUNT",
-      amount: 350,
-    });
-    expect(next.waterAmount).toBe(350);
-  });
-
-  it("clamps waterAmount to minimum 50ml", () => {
-    const state = makeState();
-    const next = nutritionReducer(state, {
-      type: "SET_WATER_AMOUNT",
-      amount: 10,
-    });
-    expect(next.waterAmount).toBe(50);
-  });
-
-  it("clamps negative value to 50ml", () => {
-    const state = makeState();
-    const next = nutritionReducer(state, {
-      type: "SET_WATER_AMOUNT",
-      amount: -100,
-    });
-    expect(next.waterAmount).toBe(50);
   });
 });
 
