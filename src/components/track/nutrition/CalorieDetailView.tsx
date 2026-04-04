@@ -12,9 +12,10 @@
 
 import { FOOD_PORTION_DATA } from "@shared/foodPortionData";
 import { ChevronDown, ChevronUp, Flame, Trash2 } from "lucide-react";
-import { useState } from "react";
-import type { MealSlot } from "@/lib/nutritionUtils";
+import React, { useCallback, useState } from "react";
+import { computeMacrosForPortion, type MealSlot } from "@/lib/nutritionUtils";
 import type { SyncedLog } from "@/lib/sync";
+import type { FoodItem } from "@/types/domain";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -30,7 +31,7 @@ export interface CalorieDetailViewProps {
     fiber: number;
   };
   caloriesByMealSlot: Record<MealSlot, number>;
-  logsByMealSlot: Record<MealSlot, SyncedLog[]>;
+  logsByMealSlot: Record<MealSlot, FoodPipelineLog[]>;
   onDeleteLog: (logId: string) => void;
 }
 
@@ -89,13 +90,11 @@ const MACRO_CONFIG: ReadonlyArray<{
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-// biome-ignore lint/suspicious/noExplicitAny: SyncedLog data is loosely typed
-function getFoodItems(log: FoodPipelineLog): Array<Record<string, any>> {
-  return Array.isArray(log.data?.items) ? log.data.items : [];
+function getFoodItems(log: FoodPipelineLog): FoodItem[] {
+  return log.data.items;
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: SyncedLog item shape is dynamic
-function getDisplayName(item: Record<string, any>): string {
+function getDisplayName(item: FoodItem): string {
   return (
     item.canonicalName ??
     item.parsedName ??
@@ -119,29 +118,25 @@ const ZERO_MACROS = {
   portionG: 0,
 };
 
-// biome-ignore lint/suspicious/noExplicitAny: SyncedLog item shape is dynamic
-function getItemMacros(item: Record<string, any>) {
+/**
+ * Resolve effective portion weight and compute macros for a single food item.
+ * Delegates scaling to the consolidated `computeMacrosForPortion()`.
+ */
+function getItemMacros(item: FoodItem) {
   const canonical = item.canonicalName;
   if (canonical == null) return ZERO_MACROS;
 
-  const portionData = FOOD_PORTION_DATA.get(canonical);
-  if (!portionData) return ZERO_MACROS;
+  // Resolve effective portion weight (mirrors getEffectivePortionG in nutritionUtils)
+  let portionG = 0;
+  if (item.quantity != null && item.quantity > 0) {
+    portionG = item.quantity;
+  } else {
+    const portionData = FOOD_PORTION_DATA.get(canonical);
+    portionG = portionData?.defaultPortionG ?? 0;
+  }
 
-  const portionG =
-    item.quantity != null && item.quantity > 0
-      ? item.quantity
-      : portionData.defaultPortionG;
-  const scale = portionG / 100;
-
-  return {
-    calories: Math.round((portionData.caloriesPer100g ?? 0) * scale),
-    protein: Math.round((portionData.proteinPer100g ?? 0) * scale * 10) / 10,
-    carbs: Math.round((portionData.carbsPer100g ?? 0) * scale * 10) / 10,
-    fat: Math.round((portionData.fatPer100g ?? 0) * scale * 10) / 10,
-    sugars: Math.round((portionData.sugarsPer100g ?? 0) * scale * 10) / 10,
-    fiber: Math.round((portionData.fiberPer100g ?? 0) * scale * 10) / 10,
-    portionG,
-  };
+  const macros = computeMacrosForPortion(canonical, portionG);
+  return { ...macros, portionG };
 }
 
 // ── Meal Breakdown Bar ────────────────────────────────────────────────────
@@ -235,19 +230,21 @@ function MacroRow({
 
 // ── Meal Slot Accordion ───────────────────────────────────────────────────
 
-function MealSlotAccordion({
+const MealSlotAccordion = React.memo(function MealSlotAccordion({
   config,
   logs,
   totalCalories,
   isOpen,
-  onToggle,
+  slot,
+  setOpenSlot,
   onDeleteLog,
 }: {
   config: (typeof MEAL_SLOT_CONFIG)[number];
   logs: FoodPipelineLog[];
   totalCalories: number;
   isOpen: boolean;
-  onToggle: () => void;
+  slot: MealSlot;
+  setOpenSlot: React.Dispatch<React.SetStateAction<MealSlot | null>>;
   onDeleteLog: (logId: string) => void;
 }) {
   const itemCount = logs.reduce(
@@ -255,6 +252,12 @@ function MealSlotAccordion({
     0,
   );
   const hasEntries = itemCount > 0;
+
+  const handleToggle = useCallback(() => {
+    if (hasEntries) {
+      setOpenSlot((prev) => (prev === slot ? null : slot));
+    }
+  }, [hasEntries, setOpenSlot, slot]);
 
   return (
     <div
@@ -265,9 +268,7 @@ function MealSlotAccordion({
       <button
         type="button"
         className="flex w-full items-center gap-3 px-2 py-3 text-left transition-colors hover:bg-[var(--surface-2)]"
-        onClick={() => {
-          if (hasEntries) onToggle();
-        }}
+        onClick={handleToggle}
         aria-expanded={isOpen}
         aria-label={`${config.label}: ${hasEntries ? `${totalCalories} kcal, ${itemCount} items` : "No entries"}`}
         disabled={!hasEntries}
@@ -366,7 +367,7 @@ function MealSlotAccordion({
       )}
     </div>
   );
-}
+});
 
 // ── CalorieDetailView ─────────────────────────────────────────────────────
 
@@ -392,12 +393,11 @@ export function CalorieDetailView({
           <MealSlotAccordion
             key={config.slot}
             config={config}
-            logs={logsByMealSlot[config.slot] as FoodPipelineLog[]}
+            logs={logsByMealSlot[config.slot]}
             totalCalories={caloriesByMealSlot[config.slot]}
             isOpen={openSlot === config.slot}
-            onToggle={() =>
-              setOpenSlot(openSlot === config.slot ? null : config.slot)
-            }
+            slot={config.slot}
+            setOpenSlot={setOpenSlot}
             onDeleteLog={onDeleteLog}
           />
         ))}
