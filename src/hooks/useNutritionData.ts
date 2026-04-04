@@ -6,7 +6,7 @@
  */
 
 import { isFoodPipelineType } from "@shared/logTypeUtils";
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSyncedLogsContext } from "@/contexts/SyncedLogsContext";
 import { useNutritionGoals } from "@/hooks/useProfile";
 import {
@@ -40,12 +40,28 @@ function getSevenDaysAgoMidnight(): number {
   return now.getTime();
 }
 
+/** Milliseconds from now until the next local midnight. */
+function msUntilNextMidnight(): number {
+  const now = new Date();
+  const tomorrow = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate() + 1,
+  );
+  return tomorrow.getTime() - now.getTime();
+}
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 /** Food or liquid SyncedLog narrowed to food pipeline types. */
-type FoodPipelineLog = SyncedLog & { type: "food" | "liquid" };
+export type FoodPipelineLog = SyncedLog & { type: "food" | "liquid" };
+
+/** Type guard: narrows a SyncedLog to FoodPipelineLog via discriminated union. */
+function isFoodPipelineLog(log: SyncedLog): log is FoodPipelineLog {
+  return isFoodPipelineType(log.type);
+}
 
 /** Fluid SyncedLog narrowed to fluid type. */
 type FluidSyncedLog = SyncedLog & { type: "fluid" };
@@ -82,6 +98,46 @@ export interface NutritionData {
 }
 
 // ---------------------------------------------------------------------------
+// Hook: useTodayKey — recomputes when the calendar day changes
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns a stable "today" key (midnight timestamp as string) that updates
+ * when the calendar day changes — via a midnight-aligned timer and
+ * visibilitychange listener.
+ */
+function useTodayKey(): string {
+  const [todayKey, setTodayKey] = useState(() => String(getTodayMidnight()));
+
+  const checkDayChange = useCallback(() => {
+    const currentMidnight = String(getTodayMidnight());
+    setTodayKey((prev) => (prev !== currentMidnight ? currentMidnight : prev));
+  }, []);
+
+  useEffect(() => {
+    // Timer aligned to next midnight (+ 100ms buffer to avoid edge-case).
+    const timerId = setTimeout(() => {
+      checkDayChange();
+    }, msUntilNextMidnight() + 100);
+
+    // Also check when tab becomes visible (user returns after midnight).
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        checkDayChange();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      clearTimeout(timerId);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [checkDayChange, todayKey]);
+
+  return todayKey;
+}
+
+// ---------------------------------------------------------------------------
 // Hook
 // ---------------------------------------------------------------------------
 
@@ -89,12 +145,9 @@ export function useNutritionData(): NutritionData {
   const logs = useSyncedLogsContext();
   const { dailyCalorieGoal, dailyWaterGoalMl } = useNutritionGoals();
 
-  // Stable "today" key so memos only recompute when the calendar day changes,
-  // not on every render. The key is the midnight timestamp as a string.
-  const todayKey = useMemo(() => {
-    const midnight = getTodayMidnight();
-    return String(midnight);
-  }, []);
+  // Stable "today" key that updates on day boundaries (midnight timer +
+  // visibilitychange). Downstream memos recompute when the day changes.
+  const todayKey = useTodayKey();
 
   // Split logs into today's food+liquid and fluid logs.
   const { todayFoodLogs, todayFluidLogs } = useMemo(() => {
@@ -105,10 +158,10 @@ export function useNutritionData(): NutritionData {
     for (const log of logs) {
       if (log.timestamp < todayMidnight) continue;
 
-      if (isFoodPipelineType(log.type)) {
-        foodLogs.push(log as FoodPipelineLog);
+      if (isFoodPipelineLog(log)) {
+        foodLogs.push(log);
       } else if (log.type === "fluid") {
-        fluidLogs.push(log as FluidSyncedLog);
+        fluidLogs.push(log);
       }
     }
 
@@ -116,16 +169,28 @@ export function useNutritionData(): NutritionData {
   }, [logs, todayKey]);
 
   // Derive calorie total.
-  const totalCaloriesToday = useMemo(() => calculateTotalCalories(todayFoodLogs), [todayFoodLogs]);
+  const totalCaloriesToday = useMemo(
+    () => calculateTotalCalories(todayFoodLogs),
+    [todayFoodLogs],
+  );
 
   // Derive macro totals.
-  const totalMacrosToday = useMemo(() => calculateTotalMacros(todayFoodLogs), [todayFoodLogs]);
+  const totalMacrosToday = useMemo(
+    () => calculateTotalMacros(todayFoodLogs),
+    [todayFoodLogs],
+  );
 
   // Derive water intake.
-  const waterIntakeToday = useMemo(() => calculateWaterIntake(todayFluidLogs), [todayFluidLogs]);
+  const waterIntakeToday = useMemo(
+    () => calculateWaterIntake(todayFluidLogs),
+    [todayFluidLogs],
+  );
 
   // Group today's food logs by meal slot.
-  const logsByMealSlot = useMemo(() => groupByMealSlot(todayFoodLogs), [todayFoodLogs]);
+  const logsByMealSlot = useMemo(
+    () => groupByMealSlot(todayFoodLogs),
+    [todayFoodLogs],
+  );
 
   // Calculate calories per meal slot.
   const caloriesByMealSlot = useMemo(() => {
@@ -141,8 +206,10 @@ export function useNutritionData(): NutritionData {
     return result;
   }, [logsByMealSlot]);
 
-  // Current meal slot based on time of day.
-  const currentMealSlot = useMemo(() => getCurrentMealSlot(), [todayKey]);
+  // Current meal slot based on time of day. No memo — getCurrentMealSlot() is
+  // cheap (one Date + a short loop) and recomputes on every render triggered
+  // by Convex subscription updates, keeping the slot fresh.
+  const currentMealSlot = getCurrentMealSlot();
 
   // Recent foods: canonical names from last 7 days, most recent first, deduped, max 50.
   // Computes both all-slot and per-slot lists in one pass.
@@ -158,12 +225,11 @@ export function useNutritionData(): NutritionData {
       const log = logs[i];
       if (log.timestamp < sevenDaysAgo) break;
 
-      if (!isFoodPipelineType(log.type)) continue;
+      if (!isFoodPipelineLog(log)) continue;
 
-      const foodLog = log as FoodPipelineLog;
       const logSlot = getMealSlot(log.timestamp);
 
-      for (const item of foodLog.data.items) {
+      for (const item of log.data.items) {
         const canonical = item.canonicalName;
         if (canonical == null) continue;
 
