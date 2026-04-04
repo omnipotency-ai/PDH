@@ -304,29 +304,49 @@ function SearchResultRow({
 function SearchView({
   searchQuery,
   searchResults,
+  stagingCount,
   onQueryChange,
   onClear,
   onSelect,
+  onOpenStagingModal,
   inputRef,
 }: {
   searchQuery: string;
   searchResults: FoodRegistryEntry[];
+  stagingCount: number;
   onQueryChange: (query: string) => void;
   onClear: () => void;
   onSelect: (canonicalName: string) => void;
+  onOpenStagingModal: () => void;
   inputRef: React.RefObject<HTMLInputElement | null>;
 }) {
   return (
     <div data-slot="search-view" className="space-y-2">
-      <NutritionSearchInput
-        value={searchQuery}
-        onChange={onQueryChange}
-        onFocus={() => {
-          /* Already in search view */
-        }}
-        onClear={onClear}
-        inputRef={inputRef}
-      />
+      <div className="flex items-center gap-2">
+        <NutritionSearchInput
+          value={searchQuery}
+          onChange={onQueryChange}
+          onFocus={() => {
+            /* Already in search view */
+          }}
+          onClear={onClear}
+          inputRef={inputRef}
+        />
+        {stagingCount > 0 && (
+          <button
+            type="button"
+            data-slot="open-staging-button"
+            className="shrink-0 rounded-full bg-[var(--orange)] px-6 py-3 text-base font-semibold text-white transition-colors hover:brightness-110 active:brightness-95"
+            onClick={onOpenStagingModal}
+            aria-label="Review staged food items"
+          >
+            Log Food
+            <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-white/20 px-1 text-[10px] font-bold">
+              {stagingCount}
+            </span>
+          </button>
+        )}
+      </div>
 
       {searchQuery.trim().length > 0 && searchQuery.trim().length < 3 && (
         <p className="px-3 py-2 text-xs text-[var(--text-faint)]">
@@ -536,6 +556,10 @@ export function NutritionCard() {
     dispatch({ type: "CLOSE_STAGING_MODAL" });
   }, [dispatch]);
 
+  const handleOpenStagingModal = useCallback(() => {
+    dispatch({ type: "OPEN_STAGING_MODAL" });
+  }, [dispatch]);
+
   const handleRemoveFromStaging = useCallback(
     (canonicalName: string) => {
       const item = state.stagingItems.find(
@@ -682,9 +706,11 @@ export function NutritionCard() {
         <SearchView
           searchQuery={state.searchQuery}
           searchResults={searchResults}
+          stagingCount={stagingCount}
           onQueryChange={handleSearchChange}
           onClear={handleSearchClear}
           onSelect={handleSelectFood}
+          onOpenStagingModal={handleOpenStagingModal}
           inputRef={searchInputRef}
         />
       )}
