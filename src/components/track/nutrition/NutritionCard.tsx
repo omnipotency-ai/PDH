@@ -13,7 +13,7 @@
 import { FOOD_PORTION_DATA } from "@shared/foodPortionData";
 import type { FoodRegistryEntry } from "@shared/foodRegistryData";
 import { Camera, Droplet, Heart, Mic, SlidersHorizontal, UtensilsCrossed, X } from "lucide-react";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { useNutritionData } from "@/hooks/useNutritionData";
@@ -429,17 +429,22 @@ export function NutritionCard() {
   const stagingItemsRef = useRef(state.stagingItems);
   stagingItemsRef.current = state.stagingItems;
 
+  // Snapshot ref for view — allows the Escape handler to read current view
+  // without re-registering the listener on every view transition.
+  const viewRef = useRef(state.view);
+  viewRef.current = state.view;
+
   // ── Global escape handler (decision #15) ─────────────────────────────────
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape" && state.view !== "collapsed") {
+      if (e.key === "Escape" && viewRef.current !== "collapsed") {
         e.preventDefault();
         dispatch({ type: "SET_VIEW", view: "collapsed" });
       }
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [state.view, dispatch]);
+  }, [dispatch]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
@@ -579,33 +584,36 @@ export function NutritionCard() {
 
   // ── Header icons ─────────────────────────────────────────────────────────
 
-  const headerIcons = (
-    <div className="ml-auto flex items-center gap-3">
-      <button
-        type="button"
-        className="rounded-md p-1 transition-colors hover:bg-[var(--surface-2)]"
-        aria-label="Favourites"
-        onClick={() => dispatch({ type: "SET_VIEW", view: "favourites" })}
-      >
-        <Heart className="h-5 w-5" style={{ color: "var(--orange)" }} />
-      </button>
-      <button
-        type="button"
-        className="rounded-md p-1 transition-colors hover:bg-[var(--surface-2)]"
-        aria-label="Filter foods"
-        onClick={() => dispatch({ type: "SET_VIEW", view: "foodFilter" })}
-      >
-        <SlidersHorizontal className="h-5 w-5" style={{ color: "var(--orange)" }} />
-      </button>
-      <button
-        type="button"
-        className="rounded-md p-1 transition-colors hover:bg-[var(--surface-2)]"
-        aria-label="Log water"
-        onClick={handleOpenWater}
-      >
-        <Droplet className="h-5 w-5" style={{ color: "#42BCB8" }} />
-      </button>
-    </div>
+  const headerIcons = useMemo(
+    () => (
+      <div className="ml-auto flex items-center gap-3">
+        <button
+          type="button"
+          className="rounded-md p-1 transition-colors hover:bg-[var(--surface-2)]"
+          aria-label="Favourites"
+          onClick={() => dispatch({ type: "SET_VIEW", view: "favourites" })}
+        >
+          <Heart className="h-5 w-5" style={{ color: "var(--orange)" }} />
+        </button>
+        <button
+          type="button"
+          className="rounded-md p-1 transition-colors hover:bg-[var(--surface-2)]"
+          aria-label="Filter foods"
+          onClick={() => dispatch({ type: "SET_VIEW", view: "foodFilter" })}
+        >
+          <SlidersHorizontal className="h-5 w-5" style={{ color: "var(--orange)" }} />
+        </button>
+        <button
+          type="button"
+          className="rounded-md p-1 transition-colors hover:bg-[var(--surface-2)]"
+          aria-label="Log water"
+          onClick={handleOpenWater}
+        >
+          <Droplet className="h-5 w-5" style={{ color: "#42BCB8" }} />
+        </button>
+      </div>
+    ),
+    [dispatch, handleOpenWater],
   );
 
   // ── Render ───────────────────────────────────────────────────────────────
