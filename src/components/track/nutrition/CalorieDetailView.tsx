@@ -8,14 +8,21 @@
  * 5-column macros, B's one-open-at-a-time accordion.
  * Corrected meal times: breakfast 5-9am, lunch 1-4pm, dinner 8-11pm, else snack.
  * Delete button on food rows via removeSyncedLog.
+ *
+ * Fixes applied:
+ *   #39  — dotColor removed; single `color` field in MEAL_SLOT_CONFIG.
+ *   #40  — accordion uses CSS grid-rows transition instead of instant show/hide.
+ *   #41  — food item keys use canonicalName/parsedName instead of array index.
+ *   #43  — getDisplayName, getFoodItems, getItemMacros moved to nutritionUtils.ts.
+ *   #54  — empty state when no meal entries exist across all slots.
+ *   #64/#65 — no Record<string,any>, no biome-ignore; all types from domain.
+ *   #78  — itemCount memoized inside MealSlotAccordion.
  */
 
-import { FOOD_PORTION_DATA } from "@shared/foodPortionData";
 import { ChevronDown, ChevronUp, Flame, Trash2 } from "lucide-react";
-import React, { useCallback, useState } from "react";
-import { computeMacrosForPortion, type MealSlot } from "@/lib/nutritionUtils";
+import React, { useCallback, useMemo, useState } from "react";
+import { getDisplayName, getFoodItems, getItemMacros, type MealSlot } from "@/lib/nutritionUtils";
 import type { SyncedLog } from "@/lib/sync";
-import type { FoodItem } from "@/types/domain";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -37,42 +44,25 @@ export interface CalorieDetailViewProps {
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
-/** Meal slot display config. */
+/**
+ * Meal slot display config.
+ * #39: `color` is the single field; dotColor was redundant and has been removed.
+ */
 const MEAL_SLOT_CONFIG: ReadonlyArray<{
   slot: MealSlot;
   label: string;
   time: string;
   color: string;
-  dotColor: string;
 }> = [
   {
     slot: "breakfast",
     label: "Breakfast",
     time: "07:00",
     color: "var(--orange)",
-    dotColor: "var(--orange)",
   },
-  {
-    slot: "lunch",
-    label: "Lunch",
-    time: "13:00",
-    color: "#34d399",
-    dotColor: "#34d399",
-  },
-  {
-    slot: "dinner",
-    label: "Dinner",
-    time: "20:00",
-    color: "#a78bfa",
-    dotColor: "#a78bfa",
-  },
-  {
-    slot: "snack",
-    label: "Snack",
-    time: "15:00",
-    color: "#fbbf24",
-    dotColor: "#fbbf24",
-  },
+  { slot: "lunch", label: "Lunch", time: "13:00", color: "#34d399" },
+  { slot: "dinner", label: "Dinner", time: "20:00", color: "#a78bfa" },
+  { slot: "snack", label: "Snack", time: "15:00", color: "#fbbf24" },
 ];
 
 /** Macro display config. */
@@ -90,53 +80,8 @@ const MACRO_CONFIG: ReadonlyArray<{
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-function getFoodItems(log: FoodPipelineLog): FoodItem[] {
-  return log.data.items;
-}
-
-function getDisplayName(item: FoodItem): string {
-  return (
-    item.canonicalName ??
-    item.parsedName ??
-    item.name ??
-    item.userSegment ??
-    "Unknown food"
-  );
-}
-
 function capitalize(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1);
-}
-
-const ZERO_MACROS = {
-  calories: 0,
-  protein: 0,
-  carbs: 0,
-  fat: 0,
-  sugars: 0,
-  fiber: 0,
-  portionG: 0,
-};
-
-/**
- * Resolve effective portion weight and compute macros for a single food item.
- * Delegates scaling to the consolidated `computeMacrosForPortion()`.
- */
-function getItemMacros(item: FoodItem) {
-  const canonical = item.canonicalName;
-  if (canonical == null) return ZERO_MACROS;
-
-  // Resolve effective portion weight (mirrors getEffectivePortionG in nutritionUtils)
-  let portionG = 0;
-  if (item.quantity != null && item.quantity > 0) {
-    portionG = item.quantity;
-  } else {
-    const portionData = FOOD_PORTION_DATA.get(canonical);
-    portionG = portionData?.defaultPortionG ?? 0;
-  }
-
-  const macros = computeMacrosForPortion(canonical, portionG);
-  return { ...macros, portionG };
 }
 
 // ── Meal Breakdown Bar ────────────────────────────────────────────────────
@@ -146,10 +91,7 @@ function MealBreakdownBar({
 }: {
   caloriesByMealSlot: Record<MealSlot, number>;
 }) {
-  const total = MEAL_SLOT_CONFIG.reduce(
-    (sum, s) => sum + caloriesByMealSlot[s.slot],
-    0,
-  );
+  const total = MEAL_SLOT_CONFIG.reduce((sum, s) => sum + caloriesByMealSlot[s.slot], 0);
 
   return (
     <div data-slot="meal-breakdown" className="space-y-2">
@@ -173,13 +115,13 @@ function MealBreakdownBar({
         })}
       </div>
 
-      {/* Legend */}
+      {/* Legend — uses config.color for dot (#39: no dotColor) */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
         {MEAL_SLOT_CONFIG.map((config) => (
           <div key={config.slot} className="flex items-center gap-1.5">
             <span
               className="inline-block h-2.5 w-2.5 rounded-full"
-              style={{ backgroundColor: config.dotColor }}
+              style={{ backgroundColor: config.color }}
               aria-hidden="true"
             />
             <span className="text-xs text-[var(--text-muted)]">
@@ -209,19 +151,14 @@ function MacroRow({
   };
 }) {
   return (
-    <div
-      data-slot="macro-summary"
-      className="flex items-start justify-between gap-1 px-1"
-    >
+    <div data-slot="macro-summary" className="flex items-start justify-between gap-1 px-1">
       {MACRO_CONFIG.map((m) => (
         <div key={m.key} className="flex flex-col items-center gap-0.5">
           <span className="text-lg font-bold" style={{ color: m.color }}>
             {macros[m.key]}
             <span className="text-sm font-normal">g</span>
           </span>
-          <span className="text-[10px] text-[var(--text-faint)]">
-            {m.label}
-          </span>
+          <span className="text-[10px] text-[var(--text-faint)]">{m.label}</span>
         </div>
       ))}
     </div>
@@ -247,9 +184,10 @@ const MealSlotAccordion = React.memo(function MealSlotAccordion({
   setOpenSlot: React.Dispatch<React.SetStateAction<MealSlot | null>>;
   onDeleteLog: (logId: string) => void;
 }) {
-  const itemCount = logs.reduce(
-    (acc, log) => acc + getFoodItems(log).length,
-    0,
+  // #78: memoize itemCount to avoid re-traversing logs on every render.
+  const itemCount = useMemo(
+    () => logs.reduce((acc, log) => acc + getFoodItems(log).length, 0),
+    [logs],
   );
   const hasEntries = itemCount > 0;
 
@@ -274,14 +212,10 @@ const MealSlotAccordion = React.memo(function MealSlotAccordion({
         disabled={!hasEntries}
       >
         {/* Time */}
-        <span className="w-12 shrink-0 text-xs text-[var(--text-faint)]">
-          {config.time}
-        </span>
+        <span className="w-12 shrink-0 text-xs text-[var(--text-faint)]">{config.time}</span>
 
         {/* Meal name */}
-        <span className="font-semibold text-sm text-[var(--text)]">
-          {config.label}
-        </span>
+        <span className="font-semibold text-sm text-[var(--text)]">{config.label}</span>
 
         {/* Count badge */}
         {hasEntries && (
@@ -300,71 +234,79 @@ const MealSlotAccordion = React.memo(function MealSlotAccordion({
 
         {/* Calories or "No entries" */}
         {hasEntries ? (
-          <span className="text-sm text-[var(--text-muted)]">
-            {totalCalories} kcal
-          </span>
+          <span className="text-sm text-[var(--text-muted)]">{totalCalories} kcal</span>
         ) : (
-          <span className="text-xs italic text-[var(--text-faint)]">
-            No entries
-          </span>
+          <span className="text-xs italic text-[var(--text-faint)]">No entries</span>
         )}
 
         {/* Chevron */}
         {hasEntries && (
           <span className="ml-1 text-[var(--text-faint)]" aria-hidden="true">
-            {isOpen ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
+            {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </span>
         )}
       </button>
 
-      {/* Expanded: food items */}
-      {isOpen && hasEntries && (
-        <div className="space-y-1 pb-2 pl-14 pr-2">
-          {logs.flatMap((log) =>
-            getFoodItems(log).map((item, idx) => {
-              const macros = getItemMacros(item);
-              const displayName = capitalize(getDisplayName(item));
-              return (
-                <div
-                  key={`${log.id}-${idx}`}
-                  className="flex items-start justify-between gap-2 rounded-lg px-2 py-2 hover:bg-[var(--surface-2)]"
-                >
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-sm font-semibold text-[var(--text)]">
-                      {displayName}
-                    </span>
-                    <span className="text-[11px] text-[var(--text-faint)]">
-                      {macros.portionG}g &middot; {macros.protein}g P &middot;{" "}
-                      {macros.carbs}g C &middot; {macros.fat}g F
-                    </span>
+      {/*
+       * #40: CSS grid-rows transition for smooth expand/collapse.
+       * grid-rows-[0fr] collapses the inner div to zero height.
+       * grid-rows-[1fr] expands it to natural height.
+       * The inner div needs overflow-hidden so the grid can actually collapse it.
+       */}
+      <div
+        className={[
+          "grid transition-[grid-template-rows] duration-300 ease-in-out",
+          isOpen && hasEntries ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+        ].join(" ")}
+        aria-hidden={!isOpen}
+      >
+        <div className="overflow-hidden">
+          <div className="space-y-1 pb-2 pl-14 pr-2">
+            {logs.flatMap((log) =>
+              getFoodItems(log).map((item) => {
+                const macros = getItemMacros(item);
+                const displayName = capitalize(getDisplayName(item));
+                // #41: stable key uses canonicalName or parsedName; falls back to
+                // name, then userSegment. log.id scopes it to this log entry.
+                const itemKey = `${log.id}-${item.canonicalName ?? item.parsedName ?? item.name ?? item.userSegment ?? displayName}`;
+                return (
+                  <div
+                    key={itemKey}
+                    className="flex items-start justify-between gap-2 rounded-lg px-2 py-2 hover:bg-[var(--surface-2)]"
+                  >
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-sm font-semibold text-[var(--text)]">
+                        {displayName}
+                      </span>
+                      <span className="text-[11px] text-[var(--text-faint)]">
+                        {macros.portionG}g &middot; {macros.protein}g P &middot; {macros.carbs}g C
+                        &middot; {macros.fat}g F
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span
+                        className="flex items-center gap-1 text-sm font-semibold"
+                        style={{ color: "var(--orange)" }}
+                      >
+                        <Flame className="h-3.5 w-3.5" aria-hidden="true" />
+                        {macros.calories}
+                      </span>
+                      <button
+                        type="button"
+                        className="rounded-md p-1 text-[var(--text-faint)] transition-colors hover:bg-[var(--surface-3)] hover:text-[var(--red)]"
+                        aria-label={`Delete ${displayName}`}
+                        onClick={() => onDeleteLog(log.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="flex items-center gap-1 text-sm font-semibold"
-                      style={{ color: "var(--orange)" }}
-                    >
-                      <Flame className="h-3.5 w-3.5" aria-hidden="true" />
-                      {macros.calories}
-                    </span>
-                    <button
-                      type="button"
-                      className="rounded-md p-1 text-[var(--text-faint)] transition-colors hover:bg-[var(--surface-3)] hover:text-[var(--red)]"
-                      aria-label={`Delete ${displayName}`}
-                      onClick={() => onDeleteLog(log.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              );
-            }),
-          )}
+                );
+              }),
+            )}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 });
@@ -379,6 +321,17 @@ export function CalorieDetailView({
 }: CalorieDetailViewProps) {
   const [openSlot, setOpenSlot] = useState<MealSlot | null>(null);
 
+  // #54: compute whether any food has been logged today, for the empty state.
+  const totalEntryCount = useMemo(
+    () =>
+      MEAL_SLOT_CONFIG.reduce(
+        (sum, config) =>
+          sum + logsByMealSlot[config.slot].reduce((acc, log) => acc + getFoodItems(log).length, 0),
+        0,
+      ),
+    [logsByMealSlot],
+  );
+
   return (
     <div data-slot="calorie-detail" className="space-y-4">
       {/* Meal breakdown bar */}
@@ -389,6 +342,22 @@ export function CalorieDetailView({
 
       {/* Meal slot accordions (one open at a time) */}
       <div className="overflow-hidden rounded-xl border border-[var(--surface-3)] bg-[var(--surface-1)]">
+        {/* #54: top-level empty state when no food has been logged today */}
+        {totalEntryCount === 0 && (
+          <div
+            className="flex flex-col items-center gap-1 px-4 py-6 text-center"
+            role="status"
+            aria-label="No food logged today"
+          >
+            <span className="text-sm font-medium text-[var(--text-muted)]">
+              No food logged today
+            </span>
+            <span className="text-xs text-[var(--text-faint)]">
+              Log a meal to see your breakdown here.
+            </span>
+          </div>
+        )}
+
         {MEAL_SLOT_CONFIG.map((config) => (
           <MealSlotAccordion
             key={config.slot}

@@ -226,9 +226,7 @@ export function groupByMealSlot<T extends { timestamp: number }>(
  */
 function isWaterItem(name: string): boolean {
   const lower = name.toLowerCase().trim();
-  return (
-    lower === "water" || lower.startsWith("water ") || lower.endsWith(" water")
-  );
+  return lower === "water" || lower.startsWith("water ") || lower.endsWith(" water");
 }
 
 // ---------------------------------------------------------------------------
@@ -242,9 +240,7 @@ function isWaterItem(name: string): boolean {
  * including variants like "Water (still)" and "Sparkling Water").
  * Converts liters to ml when unit is "l" (case-insensitive).
  */
-export function calculateWaterIntake(
-  fluidLogs: ReadonlyArray<{ data: FluidLogData }>,
-): number {
+export function calculateWaterIntake(fluidLogs: ReadonlyArray<{ data: FluidLogData }>): number {
   let totalMl = 0;
 
   for (const log of fluidLogs) {
@@ -371,13 +367,7 @@ export function getFoodItems(log: { data: { items: FoodItem[] } }): FoodItem[] {
  * Priority: canonicalName → parsedName → name → userSegment → "Unknown food".
  */
 export function getDisplayName(item: FoodItem): string {
-  return (
-    item.canonicalName ??
-    item.parsedName ??
-    item.name ??
-    item.userSegment ??
-    "Unknown food"
-  );
+  return item.canonicalName ?? item.parsedName ?? item.name ?? item.userSegment ?? "Unknown food";
 }
 
 // ---------------------------------------------------------------------------
