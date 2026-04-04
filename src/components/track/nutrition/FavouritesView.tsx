@@ -9,7 +9,11 @@
 
 import { FOOD_PORTION_DATA } from "@shared/foodPortionData";
 import { ArrowLeft, Heart, Plus } from "lucide-react";
-import { formatPortion, getDefaultCalories, titleCase } from "./nutritionUtils";
+import {
+  formatPortion,
+  getDefaultCalories,
+  titleCase,
+} from "@/lib/nutritionUtils";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 

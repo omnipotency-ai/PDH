@@ -14,7 +14,11 @@ import { FOOD_PORTION_DATA } from "@shared/foodPortionData";
 import { FOOD_REGISTRY } from "@shared/foodRegistryData";
 import { ArrowLeft, Clock, Heart, List, Plus, Star } from "lucide-react";
 import { useMemo, useState } from "react";
-import { formatPortion, getDefaultCalories, titleCase } from "./nutritionUtils";
+import {
+  formatPortion,
+  getDefaultCalories,
+  titleCase,
+} from "@/lib/nutritionUtils";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 

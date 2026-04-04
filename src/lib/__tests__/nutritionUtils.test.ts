@@ -1,12 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { FluidLogData, FoodLogData } from "@/types/domain";
 import {
+  MEAL_SLOT_BOUNDARIES,
   calculateTotalCalories,
   calculateTotalMacros,
   calculateWaterIntake,
+  computeMacrosForPortion,
+  filterToKnownFoods,
+  formatPortion,
   getCurrentMealSlot,
+  getDefaultCalories,
   getMealSlot,
   groupByMealSlot,
+  titleCase,
 } from "../nutritionUtils";
 
 // ---------------------------------------------------------------------------
@@ -113,6 +119,8 @@ describe("getMealSlot", () => {
 // ---------------------------------------------------------------------------
 
 describe("getCurrentMealSlot", () => {
+  // getCurrentMealSlot now uses the same MEAL_SLOT_BOUNDARIES as getMealSlot.
+
   it("returns breakfast for 6am", () => {
     expect(getCurrentMealSlot(new Date(2026, 3, 3, 6, 0, 0))).toBe("breakfast");
   });
@@ -121,46 +129,36 @@ describe("getCurrentMealSlot", () => {
     expect(getCurrentMealSlot(new Date(2026, 3, 3, 5, 0, 0))).toBe("breakfast");
   });
 
-  it("returns breakfast for 10:59am (end of window)", () => {
-    expect(getCurrentMealSlot(new Date(2026, 3, 3, 10, 59, 0))).toBe(
-      "breakfast",
-    );
+  it("returns snack for 9am (past breakfast window)", () => {
+    expect(getCurrentMealSlot(new Date(2026, 3, 3, 9, 0, 0))).toBe("snack");
   });
 
-  it("returns lunch for exactly 11am", () => {
-    expect(getCurrentMealSlot(new Date(2026, 3, 3, 11, 0, 0))).toBe("lunch");
+  it("returns snack for 11am (gap between breakfast and lunch)", () => {
+    expect(getCurrentMealSlot(new Date(2026, 3, 3, 11, 0, 0))).toBe("snack");
   });
 
   it("returns lunch for 1pm", () => {
     expect(getCurrentMealSlot(new Date(2026, 3, 3, 13, 0, 0))).toBe("lunch");
   });
 
-  it("returns lunch for 1:59pm (end of window)", () => {
-    expect(getCurrentMealSlot(new Date(2026, 3, 3, 13, 59, 0))).toBe("lunch");
+  it("returns lunch for 3:59pm (end of lunch window)", () => {
+    expect(getCurrentMealSlot(new Date(2026, 3, 3, 15, 59, 0))).toBe("lunch");
   });
 
-  it("returns snack for exactly 2pm", () => {
-    expect(getCurrentMealSlot(new Date(2026, 3, 3, 14, 0, 0))).toBe("snack");
-  });
-
-  it("returns snack for 4:59pm (end of window)", () => {
-    expect(getCurrentMealSlot(new Date(2026, 3, 3, 16, 59, 0))).toBe("snack");
-  });
-
-  it("returns dinner for exactly 5pm", () => {
-    expect(getCurrentMealSlot(new Date(2026, 3, 3, 17, 0, 0))).toBe("dinner");
+  it("returns snack for 4pm (past lunch window)", () => {
+    expect(getCurrentMealSlot(new Date(2026, 3, 3, 16, 0, 0))).toBe("snack");
   });
 
   it("returns dinner for 8pm", () => {
     expect(getCurrentMealSlot(new Date(2026, 3, 3, 20, 0, 0))).toBe("dinner");
   });
 
-  it("returns dinner for 8:59pm (end of window)", () => {
-    expect(getCurrentMealSlot(new Date(2026, 3, 3, 20, 59, 0))).toBe("dinner");
+  it("returns dinner for 10:59pm (end of dinner window)", () => {
+    expect(getCurrentMealSlot(new Date(2026, 3, 3, 22, 59, 0))).toBe("dinner");
   });
 
-  it("returns snack for exactly 9pm (after dinner window)", () => {
-    expect(getCurrentMealSlot(new Date(2026, 3, 3, 21, 0, 0))).toBe("snack");
+  it("returns snack for 11pm (past dinner window)", () => {
+    expect(getCurrentMealSlot(new Date(2026, 3, 3, 23, 0, 0))).toBe("snack");
   });
 
   it("returns snack for midnight", () => {
@@ -179,6 +177,14 @@ describe("getCurrentMealSlot", () => {
     // Just verify it returns a valid MealSlot without throwing
     const result = getCurrentMealSlot();
     expect(["breakfast", "lunch", "dinner", "snack"]).toContain(result);
+  });
+
+  it("matches getMealSlot for all boundary hours", () => {
+    // Both functions should return the same result for any hour
+    for (let h = 0; h < 24; h++) {
+      const d = new Date(2026, 3, 3, h, 0, 0);
+      expect(getCurrentMealSlot(d)).toBe(getMealSlot(d.getTime()));
+    }
   });
 });
 
@@ -393,5 +399,161 @@ describe("calculateWaterIntake", () => {
       makeFluidLog([{ name: "Water", quantity: 500, unit: "ml" }]),
     ];
     expect(calculateWaterIntake(logs)).toBe(750);
+  });
+
+  // Fix #35: water name matching variants
+  it("matches 'Water (still)'", () => {
+    const logs = [
+      makeFluidLog([{ name: "Water (still)", quantity: 250, unit: "ml" }]),
+    ];
+    expect(calculateWaterIntake(logs)).toBe(250);
+  });
+
+  it("matches 'Sparkling Water'", () => {
+    const logs = [
+      makeFluidLog([{ name: "Sparkling Water", quantity: 500, unit: "ml" }]),
+    ];
+    expect(calculateWaterIntake(logs)).toBe(500);
+  });
+
+  it("matches 'still water' (lowercase)", () => {
+    const logs = [
+      makeFluidLog([{ name: "still water", quantity: 300, unit: "ml" }]),
+    ];
+    expect(calculateWaterIntake(logs)).toBe(300);
+  });
+
+  it("does not match 'Watermelon Juice'", () => {
+    // "watermelon juice" starts with "water" but the next char is not a space
+    const logs = [
+      makeFluidLog([{ name: "Watermelon Juice", quantity: 200, unit: "ml" }]),
+    ];
+    expect(calculateWaterIntake(logs)).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// MEAL_SLOT_BOUNDARIES
+// ---------------------------------------------------------------------------
+
+describe("MEAL_SLOT_BOUNDARIES", () => {
+  it("is exported and has 3 entries", () => {
+    expect(MEAL_SLOT_BOUNDARIES).toHaveLength(3);
+  });
+
+  it("contains breakfast, lunch, dinner", () => {
+    const slots = MEAL_SLOT_BOUNDARIES.map(([, , slot]) => slot);
+    expect(slots).toEqual(["breakfast", "lunch", "dinner"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// titleCase
+// ---------------------------------------------------------------------------
+
+describe("titleCase", () => {
+  it("capitalizes single word", () => {
+    expect(titleCase("chicken")).toBe("Chicken");
+  });
+
+  it("capitalizes multiple words", () => {
+    expect(titleCase("white rice")).toBe("White Rice");
+  });
+
+  it("handles empty string", () => {
+    expect(titleCase("")).toBe("");
+  });
+
+  it("preserves already-capitalized words", () => {
+    expect(titleCase("Ripe Banana")).toBe("Ripe Banana");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// formatPortion
+// ---------------------------------------------------------------------------
+
+describe("formatPortion", () => {
+  it("returns empty string for unknown food", () => {
+    expect(formatPortion("alien food")).toBe("");
+  });
+
+  it("returns gram format for amorphous foods", () => {
+    const result = formatPortion("white rice");
+    expect(result).toMatch(/^\d+g$/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getDefaultCalories
+// ---------------------------------------------------------------------------
+
+describe("getDefaultCalories", () => {
+  it("returns 0 for unknown food", () => {
+    expect(getDefaultCalories("alien food")).toBe(0);
+  });
+
+  it("computes calories for white rice default portion", () => {
+    // white rice: caloriesPer100g = 130, defaultPortionG = 180 → 234
+    expect(getDefaultCalories("white rice")).toBe(234);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// computeMacrosForPortion
+// ---------------------------------------------------------------------------
+
+describe("computeMacrosForPortion", () => {
+  it("returns all zeros for unknown food", () => {
+    expect(computeMacrosForPortion("alien food", 100)).toEqual({
+      calories: 0,
+      protein: 0,
+      carbs: 0,
+      fat: 0,
+      sugars: 0,
+      fiber: 0,
+    });
+  });
+
+  it("computes correct values for white rice 200g", () => {
+    // white rice per 100g: cal=130, protein=2.7, carbs=28.2, fat=0.3, sugars=0, fiber=0.4
+    const result = computeMacrosForPortion("white rice", 200);
+    expect(result.calories).toBe(260);
+    expect(result.protein).toBeCloseTo(5.4, 1);
+    expect(result.carbs).toBeCloseTo(56.4, 1);
+    expect(result.fat).toBeCloseTo(0.6, 1);
+    expect(result.sugars).toBeCloseTo(0, 1);
+    expect(result.fiber).toBeCloseTo(0.8, 1);
+  });
+
+  it("returns zeros for 0g portion", () => {
+    const result = computeMacrosForPortion("white rice", 0);
+    expect(result.calories).toBe(0);
+    expect(result.protein).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// filterToKnownFoods
+// ---------------------------------------------------------------------------
+
+describe("filterToKnownFoods", () => {
+  it("returns empty array for empty input", () => {
+    expect(filterToKnownFoods([])).toEqual([]);
+  });
+
+  it("filters out unknown foods", () => {
+    const result = filterToKnownFoods([
+      "white rice",
+      "alien food",
+      "ripe banana",
+    ]);
+    expect(result).toContain("white rice");
+    expect(result).toContain("ripe banana");
+    expect(result).not.toContain("alien food");
+  });
+
+  it("returns empty array when all foods are unknown", () => {
+    expect(filterToKnownFoods(["alien food", "space gruel"])).toEqual([]);
   });
 });
