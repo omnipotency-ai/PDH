@@ -19,16 +19,11 @@
 import { Dialog } from "@base-ui/react/dialog";
 import { Droplet, Minus, Plus, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { CircularProgressRing } from "./CircularProgressRing";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 const WATER_COLOR = "#42BCB8";
-const WATER_COLOR_MUTED = "rgba(66, 188, 184, 0.12)";
-
-const RING_SIZE = 160;
-const RING_STROKE = 10;
-const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2;
-const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 const STEP_ML = 200;
 const MIN_ML = 0;
@@ -87,10 +82,11 @@ export function WaterModal({
   // Compute ring progress: based on what the total WOULD be after logging
   const projectedTotal = currentIntakeMl + amount;
   const safeGoal = goalMl > 0 ? goalMl : 1;
-  const progressFraction = Math.min(projectedTotal / safeGoal, 1);
-  const strokeDashoffset = RING_CIRCUMFERENCE * (1 - progressFraction);
-  const percentOfGoal = Math.round((projectedTotal / safeGoal) * 100);
+  // Cap at 100 so the status text never shows ">100% of daily goal"
+  const percentOfGoal = Math.min(Math.round((projectedTotal / safeGoal) * 100), 100);
   const goalReached = projectedTotal >= goalMl;
+  // #59: remaining never goes negative
+  const remainingMl = Math.max(0, goalMl - currentIntakeMl);
 
   return (
     <Dialog.Root open={open} onOpenChange={handleOpenChange}>
@@ -133,66 +129,24 @@ export function WaterModal({
           </div>
 
           {/* Progress Ring */}
-          <div data-slot="water-modal-ring" className="relative mb-2">
-            <svg
-              width={RING_SIZE}
-              height={RING_SIZE}
-              viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
-              className="rotate-[-90deg]"
-              role="img"
-              aria-label={`Water intake progress: ${projectedTotal} of ${goalMl} millilitres`}
-            >
-              <title>Water intake progress</title>
-              {/* Background track */}
-              <circle
-                cx={RING_SIZE / 2}
-                cy={RING_SIZE / 2}
-                r={RING_RADIUS}
-                fill="none"
-                stroke={WATER_COLOR_MUTED}
-                strokeWidth={RING_STROKE}
-              />
-              {/* Progress arc */}
-              <circle
-                cx={RING_SIZE / 2}
-                cy={RING_SIZE / 2}
-                r={RING_RADIUS}
-                fill="none"
-                stroke={WATER_COLOR}
-                strokeWidth={RING_STROKE}
-                strokeLinecap="round"
-                strokeDasharray={RING_CIRCUMFERENCE}
-                strokeDashoffset={strokeDashoffset}
-                style={{ transition: "stroke-dashoffset 0.4s ease" }}
-              />
-            </svg>
-            {/* Center text */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span
-                className="font-display text-2xl font-bold tabular-nums"
-                style={{ color: "var(--text)" }}
-              >
-                {projectedTotal}
-              </span>
-              <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-                / {goalMl} ml
-              </span>
-            </div>
+          <div data-slot="water-modal-ring" className="mb-2">
+            <CircularProgressRing
+              value={projectedTotal}
+              goal={goalMl}
+              color={WATER_COLOR}
+              ariaLabel={`Water intake progress: ${projectedTotal} of ${goalMl} millilitres`}
+            />
           </div>
 
           {/* Status text */}
-          <p
-            className="mb-6 text-sm font-medium"
-            style={{ color: "var(--text-muted)" }}
-          >
-            {goalReached ? "Goal Reached!" : `${percentOfGoal}% of daily Goal`}
+          <p className="mb-6 text-sm font-medium" style={{ color: "var(--text-muted)" }}>
+            {goalReached
+              ? "Goal Reached!"
+              : `${remainingMl} ml remaining (${percentOfGoal}% of daily goal)`}
           </p>
 
           {/* Amount selector */}
-          <div
-            data-slot="water-modal-amount"
-            className="mb-6 flex items-center gap-4"
-          >
+          <div data-slot="water-modal-amount" className="mb-6 flex items-center gap-4">
             <button
               type="button"
               onClick={handleDecrement}
@@ -213,10 +167,7 @@ export function WaterModal({
               style={{ color: "var(--text)" }}
             >
               {amount}{" "}
-              <span
-                className="text-sm font-normal"
-                style={{ color: "var(--text-muted)" }}
-              >
+              <span className="text-sm font-normal" style={{ color: "var(--text-muted)" }}>
                 ml
               </span>
             </span>
@@ -238,10 +189,7 @@ export function WaterModal({
           </div>
 
           {/* Bottom row: Cancel + Log Water */}
-          <div
-            data-slot="water-modal-actions"
-            className="flex w-full items-center justify-between"
-          >
+          <div data-slot="water-modal-actions" className="flex w-full items-center justify-between">
             <Dialog.Close
               className="px-4 py-2 text-sm font-medium transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2"
               style={{ color: "var(--text-muted)" }}

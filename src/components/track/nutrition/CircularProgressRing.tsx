@@ -26,6 +26,7 @@ interface CircularProgressRingProps {
   color: string;
   size?: number;
   strokeWidth?: number;
+  ariaLabel?: string;
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
@@ -36,6 +37,7 @@ export function CircularProgressRing({
   color,
   size = RING.SIZE,
   strokeWidth = RING.STROKE,
+  ariaLabel,
 }: CircularProgressRingProps) {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -52,7 +54,7 @@ export function CircularProgressRing({
         viewBox={`0 0 ${size} ${size}`}
         className="rotate-[-90deg]"
         role="img"
-        aria-label={`Progress: ${value} of ${goal}`}
+        aria-label={ariaLabel ?? `Progress: ${value} of ${goal}`}
       >
         <title>Progress ring</title>
         {/* Background track */}
