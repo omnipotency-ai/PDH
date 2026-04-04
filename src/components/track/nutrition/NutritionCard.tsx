@@ -22,8 +22,11 @@ import {
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useRef } from "react";
+import { toast } from "sonner";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { useNutritionData } from "@/hooks/useNutritionData";
+import { getErrorMessage } from "@/lib/errors";
+import { useAddSyncedLog, useRemoveSyncedLog } from "@/lib/sync";
 import { useFoodFavourites } from "@/hooks/useProfile";
 import { CalorieDetailView } from "./CalorieDetailView";
 import { FavouritesView } from "./FavouritesView";
@@ -444,6 +447,8 @@ export function NutritionCard() {
     recentFoods,
   } = useNutritionData();
   const { favourites } = useFoodFavourites();
+  const addSyncedLog = useAddSyncedLog();
+  const removeSyncedLog = useRemoveSyncedLog();
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -497,11 +502,20 @@ export function NutritionCard() {
   }, [dispatch]);
 
   const handleLogWater = useCallback(
-    (_amountMl: number) => {
-      // TODO: wire to actual fluid logging (FluidSection pattern)
-      dispatch({ type: "CLOSE_WATER_MODAL" });
+    async (amountMl: number) => {
+      try {
+        await addSyncedLog({
+          timestamp: Date.now(),
+          type: "fluid",
+          data: { items: [{ name: "Water", quantity: amountMl, unit: "ml" }] },
+        });
+        toast(`Water ${amountMl}ml logged`);
+        dispatch({ type: "CLOSE_WATER_MODAL" });
+      } catch (err) {
+        toast.error(getErrorMessage(err, "Failed to log water"));
+      }
     },
-    [dispatch],
+    [addSyncedLog, dispatch],
   );
 
   const handleSelectFood = useCallback(
@@ -562,9 +576,17 @@ export function NutritionCard() {
     });
   }, [dispatch]);
 
-  const handleDeleteLog = useCallback((_logId: string) => {
-    // TODO: wire to useRemoveSyncedLog
-  }, []);
+  const handleDeleteLog = useCallback(
+    async (logId: string) => {
+      try {
+        await removeSyncedLog(logId);
+        toast("Entry deleted");
+      } catch (err) {
+        toast.error(getErrorMessage(err, "Failed to delete entry"));
+      }
+    },
+    [removeSyncedLog],
+  );
 
   const handleBackToCollapsed = useCallback(() => {
     dispatch({ type: "SET_VIEW", view: "collapsed" });
