@@ -563,10 +563,26 @@ export function NutritionCard() {
     dispatch({ type: "CLEAR_STAGING" });
   }, [dispatch]);
 
-  const handleLogFood = useCallback(() => {
-    // TODO: wire to actual food logging pipeline
-    dispatch({ type: "RESET_AFTER_LOG" });
-  }, [dispatch]);
+  const handleLogFood = useCallback(async () => {
+    try {
+      await addSyncedLog({
+        timestamp: Date.now(),
+        type: "food",
+        data: {
+          items: state.stagingItems.map((item) => ({
+            canonicalName: item.canonicalName,
+            parsedName: item.displayName,
+            quantity: item.portionG,
+            unit: "g",
+          })),
+        },
+      });
+      toast(`${state.stagingItems.length} item(s) logged`);
+      dispatch({ type: "RESET_AFTER_LOG" });
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to log food"));
+    }
+  }, [addSyncedLog, state.stagingItems, dispatch]);
 
   const handleAddMore = useCallback(() => {
     dispatch({ type: "CLOSE_STAGING_MODAL" });
