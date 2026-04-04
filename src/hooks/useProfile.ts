@@ -24,10 +24,7 @@ export function useUnitSystem() {
     [patchProfile],
   );
 
-  return useMemo(
-    () => ({ unitSystem: profile.unitSystem, setUnitSystem }),
-    [profile.unitSystem, setUnitSystem],
-  );
+  return { unitSystem: profile.unitSystem, setUnitSystem };
 }
 
 // ---------------------------------------------------------------------------
@@ -83,10 +80,10 @@ export function useHealthProfile() {
 
   const setHealthProfile = useCallback(
     (updates: Partial<HealthProfile>) => {
-      const merged: HealthProfile = {
+      const merged = {
         ...profile.healthProfile,
         ...updates,
-      } as HealthProfile;
+      };
       return patchProfile({ healthProfile: merged });
     },
     [patchProfile, profile.healthProfile],
@@ -135,10 +132,7 @@ export function useSleepGoal() {
     [patchProfile, profile.sleepGoal],
   );
 
-  return useMemo(
-    () => ({ sleepGoal: profile.sleepGoal, setSleepGoal }),
-    [profile.sleepGoal, setSleepGoal],
-  );
+  return { sleepGoal: profile.sleepGoal, setSleepGoal };
 }
 
 // ---------------------------------------------------------------------------
@@ -154,10 +148,7 @@ export function useAiPreferences() {
     [patchProfile, profile.aiPreferences],
   );
 
-  return useMemo(
-    () => ({ aiPreferences: profile.aiPreferences, setAiPreferences }),
-    [profile.aiPreferences, setAiPreferences],
-  );
+  return { aiPreferences: profile.aiPreferences, setAiPreferences };
 }
 
 // ---------------------------------------------------------------------------
@@ -209,7 +200,11 @@ export function useTransitCalibration() {
 // useNutritionGoals
 // ---------------------------------------------------------------------------
 
-export function useNutritionGoals() {
+export function useNutritionGoals(): {
+  dailyCalorieGoal: number;
+  dailyWaterGoalMl: number;
+  setNutritionGoals: (updates: Partial<NutritionGoals>) => void;
+} {
   const { profile, patchProfile } = useProfileContext();
 
   const setNutritionGoals = useCallback(
@@ -220,13 +215,10 @@ export function useNutritionGoals() {
     [patchProfile, profile.nutritionGoals],
   );
 
-  return useMemo(
-    () => ({
-      ...profile.nutritionGoals,
-      setNutritionGoals,
-    }),
-    [profile.nutritionGoals, setNutritionGoals],
-  );
+  return {
+    ...profile.nutritionGoals,
+    setNutritionGoals,
+  };
 }
 
 // ---------------------------------------------------------------------------

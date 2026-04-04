@@ -65,45 +65,22 @@ All 4 ingredient subsystems confirmed as pre-built infrastructure for filter pro
 - FOOD_PORTION_DATA must be pre-populated (not empty)
 - Fluid→liquid backfill migration needed
 
-**Wave 1 complete (Foundation):**
+**Wave 1 complete (Foundation) — 2026-04-04:**
 
-- W1-00: Add type="liquid" to schema — **DONE**
-- W1-01: Populate FOOD_PORTION_DATA (147 entries) — **DONE**
-- W1-02: Add nutrition goals + favourites to profile — **DONE**
-- W1-03: Build useNutritionData hook — **DONE**
+- W1-00: Add type="liquid" to schema + all consumers — **DONE** (`a8f21d0` + `1cf848c`)
+- W1-01: Populate FOOD_PORTION_DATA (147 entries, real USDA data) — **DONE** (`38267d5` + `1ac20e7`)
+- W1-02: Add nutrition goals + favourites to profile — **DONE** (`f471c58`)
+- W1-03: Build useNutritionData hook + pure utils — **DONE** (`c261f67`)
+- W1-04: Backfill fluid→liquid migration — **DONE** (`3cedd80`)
 
-**Wave 2 COMPLETE (Core UI) — 2026-04-04:**
-
-- W2-01: useNutritionStore — **DONE** (9bd9ea9, 45 tests)
-- W2-02: NutritionCard shell — **DONE** (7f1f981 → 649aade wired all 3 handlers)
-  - handleLogWater: wired to useAddSyncedLog type:"fluid" with toast
-  - handleLogFood: wired to useAddSyncedLog type:"food" from stagingItems with toast
-  - handleDeleteLog: wired to useRemoveSyncedLog with toast
-- W2-03: LogFoodModal — **DONE** (43d3667 UI, E2E tests added)
-  - Match status indicators deferred: all staging items come from registry = always matched. Only meaningful when freeform/voice entry (WQ-410) is added.
-- W2-04: WaterModal — **DONE** (43d3667 UI, 14 E2E tests added)
-  - Dead code cleaned: waterAmount/SET_WATER_AMOUNT removed (d0aa31a)
-- W2-05: CalorieDetailView — **DONE** (85d32dc extracted to own file, 10 E2E tests added)
-- W2-06: FavouritesView + FoodFilterView — **DONE** (43d3667 UI, E2E tests added)
-  - Duplicate utils extracted to nutritionUtils.ts (9a08449)
-  - recentFoods scoped to meal slot with global fallback (d9c3837, 16 unit tests)
-  - Staging count badge added to SearchView (1635d1d)
-
-**Cleanup done this session:**
-
-- Extracted CalorieDetailView.tsx from NutritionCard.tsx (user directive) — 85d32dc
-- Removed dead waterAmount/SET_WATER_AMOUNT from store — d0aa31a
-- Extracted shared nutritionUtils.ts — 9a08449
-- Added getCurrentMealSlot + scoped recentFoods — d9c3837
-- Added .agents/skills/ (Codex) — 85d32dc
-
-**Verification:** typecheck, build, 1370 unit tests (51 files) all passing.
+**Wave 1 stats:** 8 commits, 50 test files, 1312 tests passing, 0 failures.
 
 **Remaining waves:**
 
-- Wave 3: Integration (wire to existing food pipeline, error boundary, mount in Track page)
-- Wave 4: Migration (non-water drinks → food logging, remove old sections)
-- Wave 5: Polish (dark mode audit, a11y hardening, full E2E regression)
+- Wave 2: Core UI (6 agents building components)
+- Wave 3: Integration (wire to existing food pipeline)
+- Wave 4: Migration (non-water drinks → food logging)
+- Wave 5: Polish (dark mode, a11y, tests)
 
 ### Wave 2: Filter Bar (static data)
 

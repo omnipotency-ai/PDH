@@ -7,18 +7,22 @@
  * and a (+) button to add to staging.
  *
  * Uses FOOD_PORTION_DATA for calories/portions — no mock data.
- * "Frequent" tab is a placeholder until frequency tracking is built.
+ * "Frequent" tab counts canonicalName occurrences in the 14-day log window.
  */
 
 import { FOOD_PORTION_DATA } from "@shared/foodPortionData";
 import { FOOD_REGISTRY } from "@shared/foodRegistryData";
-import { ArrowLeft, Clock, Heart, List, Plus, Star } from "lucide-react";
+import { isFoodPipelineType } from "@shared/logTypeUtils";
+import { ArrowLeft, Clock, Heart, List, Star } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useSyncedLogsContext } from "@/contexts/SyncedLogsContext";
 import {
+  filterToKnownFoods,
   formatPortion,
   getDefaultCalories,
   titleCase,
 } from "@/lib/nutritionUtils";
+import { FoodRow } from "./FoodRow";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -35,6 +39,14 @@ interface TabConfig {
   id: FilterTab;
   label: string;
   icon: typeof Clock;
+}
+
+/** Precomputed row data — resolved once in the displayedItems memo. */
+interface ResolvedFoodItem {
+  canonicalName: string;
+  displayName: string;
+  portion: string;
+  calories: number;
 }
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -58,8 +70,10 @@ export function FoodFilterView({
   onBack,
 }: FoodFilterViewProps) {
   const [activeTab, setActiveTab] = useState<FilterTab>("recent");
+  const logs = useSyncedLogsContext();
 
   // Build the "All" list: every canonical food in FOOD_PORTION_DATA, sorted alphabetically.
+  // Fix #27: slice applied inside memo rather than in displayedItems.
   const allFoods = useMemo(() => {
     const names: string[] = [];
     for (const entry of FOOD_REGISTRY) {
@@ -68,44 +82,100 @@ export function FoodFilterView({
       }
     }
     names.sort((a, b) => a.localeCompare(b));
-    return names;
+    return names.slice(0, MAX_ITEMS_PER_TAB);
   }, []);
 
-  // Filter recent and favourites to only foods with portion data.
+  // Fix #25: use filterToKnownFoods instead of inline FOOD_PORTION_DATA.has()
   const validRecentFoods = useMemo(
-    () =>
-      recentFoods
-        .filter((name) => FOOD_PORTION_DATA.has(name))
-        .slice(0, MAX_ITEMS_PER_TAB),
+    () => filterToKnownFoods(recentFoods).slice(0, MAX_ITEMS_PER_TAB),
     [recentFoods],
   );
 
   const validFavourites = useMemo(
-    () =>
-      favourites
-        .filter((name) => FOOD_PORTION_DATA.has(name))
-        .slice(0, MAX_ITEMS_PER_TAB),
+    () => filterToKnownFoods(favourites).slice(0, MAX_ITEMS_PER_TAB),
     [favourites],
   );
 
-  // Frequent: for now, same as recent (frequency tracking not yet built).
-  // This is a placeholder — the data source will change when frequency
-  // tracking is implemented.
-  const frequentFoods = validRecentFoods;
+  // Fix #26: Compute frequency map from 14-day logs.
+  // Count how many times each canonicalName appears across all food pipeline logs.
+  const frequentFoods = useMemo(() => {
+    const frequencyMap = new Map<string, number>();
 
-  // Select items based on active tab.
-  const displayedItems = useMemo(() => {
+    for (const log of logs) {
+      if (!isFoodPipelineType(log.type)) continue;
+
+      const data = log.data as {
+        items: ReadonlyArray<{ canonicalName?: string | null }>;
+      };
+      for (const item of data.items) {
+        const canonical = item.canonicalName;
+        if (canonical == null) continue;
+        frequencyMap.set(canonical, (frequencyMap.get(canonical) ?? 0) + 1);
+      }
+    }
+
+    // Sort by frequency descending, filter to known foods, take top N.
+    const sorted = [...frequencyMap.entries()].sort((a, b) => b[1] - a[1]).map(([name]) => name);
+
+    return filterToKnownFoods(sorted).slice(0, MAX_ITEMS_PER_TAB);
+  }, [logs]);
+
+  // Frequency counts for display labels (only used by Frequent tab).
+  const frequencyCountMap = useMemo(() => {
+    const countMap = new Map<string, number>();
+
+    for (const log of logs) {
+      if (!isFoodPipelineType(log.type)) continue;
+
+      const data = log.data as {
+        items: ReadonlyArray<{ canonicalName?: string | null }>;
+      };
+      for (const item of data.items) {
+        const canonical = item.canonicalName;
+        if (canonical == null) continue;
+        countMap.set(canonical, (countMap.get(canonical) ?? 0) + 1);
+      }
+    }
+
+    return countMap;
+  }, [logs]);
+
+  // Fix #31: Precompute resolved props in displayedItems memo.
+  // Each item has canonicalName, displayName, portion, and calories pre-resolved.
+  const displayedItems: ResolvedFoodItem[] = useMemo(() => {
+    let names: string[];
     switch (activeTab) {
       case "recent":
-        return validRecentFoods;
+        names = validRecentFoods;
+        break;
       case "frequent":
-        return frequentFoods;
+        names = frequentFoods;
+        break;
       case "favourites":
-        return validFavourites;
+        names = validFavourites;
+        break;
       case "all":
-        return allFoods.slice(0, MAX_ITEMS_PER_TAB);
+        names = allFoods;
+        break;
     }
-  }, [activeTab, validRecentFoods, frequentFoods, validFavourites, allFoods]);
+
+    return names.map((canonicalName) => {
+      const portion = formatPortion(canonicalName);
+      const calories = getDefaultCalories(canonicalName);
+      const count = activeTab === "frequent" ? frequencyCountMap.get(canonicalName) : undefined;
+
+      // For Frequent tab, prepend the logged count to the portion string.
+      const portionDisplay =
+        count != null && count > 0 ? `Logged ${count}x${portion ? ` · ${portion}` : ""}` : portion;
+
+      return {
+        canonicalName,
+        displayName: titleCase(canonicalName),
+        portion: portionDisplay,
+        calories,
+      };
+    });
+  }, [activeTab, validRecentFoods, frequentFoods, validFavourites, allFoods, frequencyCountMap]);
 
   const favouriteSet = useMemo(() => new Set(favourites), [favourites]);
 
@@ -157,7 +227,7 @@ export function FoodFilterView({
         })}
       </div>
 
-      {/* Tab panel */}
+      {/* Tab panel — Fix #30: use shared FoodRow instead of local FoodFilterRow */}
       <div
         id={`filter-panel-${activeTab}`}
         role="tabpanel"
@@ -167,14 +237,14 @@ export function FoodFilterView({
           <EmptyTabState tab={activeTab} />
         ) : (
           <ul className="space-y-1" aria-label={`${activeTab} foods`}>
-            {displayedItems.map((canonicalName) => (
-              <FoodFilterRow
-                key={canonicalName}
-                canonicalName={canonicalName}
-                displayName={titleCase(canonicalName)}
-                portion={formatPortion(canonicalName)}
-                calories={getDefaultCalories(canonicalName)}
-                isFavourite={favouriteSet.has(canonicalName)}
+            {displayedItems.map((item) => (
+              <FoodRow
+                key={item.canonicalName}
+                canonicalName={item.canonicalName}
+                displayName={item.displayName}
+                portion={item.portion}
+                calories={item.calories}
+                isFavourite={favouriteSet.has(item.canonicalName)}
                 onAdd={onAddToStaging}
               />
             ))}
@@ -214,63 +284,5 @@ function EmptyTabState({ tab }: { tab: FilterTab }) {
       <p className="text-sm text-[var(--text-muted)]">{title}</p>
       <p className="text-xs text-[var(--text-faint)]">{subtitle}</p>
     </div>
-  );
-}
-
-// ── FoodFilterRow ────────────────────────────────────────────────────────────
-
-function FoodFilterRow({
-  canonicalName,
-  displayName,
-  portion,
-  calories,
-  isFavourite,
-  onAdd,
-}: {
-  canonicalName: string;
-  displayName: string;
-  portion: string;
-  calories: number;
-  isFavourite: boolean;
-  onAdd: (canonicalName: string) => void;
-}) {
-  return (
-    <li
-      data-slot="food-filter-row"
-      className="flex list-none items-center gap-3 rounded-lg px-2 py-2.5 transition-colors hover:bg-[var(--surface-2)]"
-    >
-      {/* Favourite indicator */}
-      <Heart
-        className={`h-4 w-4 shrink-0 ${isFavourite ? "fill-current" : ""}`}
-        style={{ color: isFavourite ? "var(--orange)" : "var(--text-faint)" }}
-        aria-hidden="true"
-      />
-
-      {/* Food name */}
-      <span className="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--text)]">
-        {displayName}
-      </span>
-
-      {/* Portion + calories */}
-      <span className="shrink-0 text-xs text-[var(--text-muted)]">
-        {portion}
-        {portion && calories > 0 ? " · " : ""}
-        {calories > 0 ? `${calories} kcal` : ""}
-      </span>
-
-      {/* Add button */}
-      <button
-        type="button"
-        onClick={() => onAdd(canonicalName)}
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors"
-        style={{
-          backgroundColor: "rgba(249, 115, 22, 0.15)",
-          color: "var(--orange)",
-        }}
-        aria-label={`Add ${displayName} to staging`}
-      >
-        <Plus className="h-4 w-4" />
-      </button>
-    </li>
   );
 }

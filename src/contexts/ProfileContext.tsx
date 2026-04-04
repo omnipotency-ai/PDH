@@ -1,12 +1,5 @@
 import { useMutation, useQuery } from "convex/react";
-import {
-  createContext,
-  type ReactNode,
-  useCallback,
-  useContext,
-  useMemo,
-  useRef,
-} from "react";
+import { createContext, type ReactNode, useCallback, useContext, useMemo, useRef } from "react";
 import type { HabitConfig } from "@/lib/habitTemplates";
 import { getDefaultHabitTemplates } from "@/lib/habitTemplates";
 import type { SleepGoal } from "@/lib/streaks";
@@ -106,22 +99,15 @@ function resolveProfile(
   return {
     unitSystem: raw.unitSystem ?? DEFAULT_PROFILE.unitSystem,
     habits: (raw.habits ?? DEFAULT_PROFILE.habits) as HabitConfig[],
-    fluidPresets: (raw.fluidPresets ??
-      DEFAULT_PROFILE.fluidPresets) as FluidPreset[],
+    fluidPresets: (raw.fluidPresets ?? DEFAULT_PROFILE.fluidPresets) as FluidPreset[],
     sleepGoal: raw.sleepGoal ?? DEFAULT_PROFILE.sleepGoal,
     healthProfile: hp ?? DEFAULT_PROFILE.healthProfile,
-    aiPreferences: (raw.aiPreferences ??
-      DEFAULT_PROFILE.aiPreferences) as AiPreferences,
-    foodPersonalisation:
-      raw.foodPersonalisation ?? DEFAULT_PROFILE.foodPersonalisation,
-    transitCalibration:
-      raw.transitCalibration ?? DEFAULT_PROFILE.transitCalibration,
+    aiPreferences: (raw.aiPreferences ?? DEFAULT_PROFILE.aiPreferences) as AiPreferences,
+    foodPersonalisation: raw.foodPersonalisation ?? DEFAULT_PROFILE.foodPersonalisation,
+    transitCalibration: raw.transitCalibration ?? DEFAULT_PROFILE.transitCalibration,
     nutritionGoals:
-      (raw.nutritionGoals as NutritionGoals | undefined) ??
-      DEFAULT_PROFILE.nutritionGoals,
-    foodFavourites:
-      (raw.foodFavourites as string[] | undefined) ??
-      DEFAULT_PROFILE.foodFavourites,
+      (raw.nutritionGoals as NutritionGoals | undefined) ?? DEFAULT_PROFILE.nutritionGoals,
+    foodFavourites: (raw.foodFavourites as string[] | undefined) ?? DEFAULT_PROFILE.foodFavourites,
   };
 }
 

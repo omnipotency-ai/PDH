@@ -22,8 +22,8 @@ export interface LogFoodModalProps {
   open: boolean;
   stagedItems: StagedItem[];
   onClose: () => void;
-  onRemoveItem: (canonicalName: string) => void;
-  onUpdateQuantity: (canonicalName: string, newQuantity: number) => void;
+  onRemoveItem: (id: string) => void;
+  onUpdateQuantity: (id: string, newQuantity: number) => void;
   onClearAll: () => void;
   onLogFood: () => void;
   onAddMore: () => void;
@@ -85,8 +85,8 @@ function FoodItemRow({
   onRemoveItem,
 }: {
   item: StagedItem;
-  onUpdateQuantity: (canonicalName: string, newQuantity: number) => void;
-  onRemoveItem: (canonicalName: string) => void;
+  onUpdateQuantity: (id: string, newQuantity: number) => void;
+  onRemoveItem: (id: string) => void;
 }) {
   const step = getStep(item);
   const canDecrement = item.portionG > step;
@@ -109,7 +109,7 @@ function FoodItemRow({
         <button
           type="button"
           className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--color-border-default)] text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] disabled:opacity-40 disabled:cursor-not-allowed"
-          onClick={() => onUpdateQuantity(item.canonicalName, item.portionG - step)}
+          onClick={() => onUpdateQuantity(item.id, item.portionG - step)}
           disabled={!canDecrement}
           aria-label={`Decrease ${item.displayName} portion`}
         >
@@ -123,7 +123,7 @@ function FoodItemRow({
         <button
           type="button"
           className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--color-border-default)] text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)]"
-          onClick={() => onUpdateQuantity(item.canonicalName, item.portionG + step)}
+          onClick={() => onUpdateQuantity(item.id, item.portionG + step)}
           aria-label={`Increase ${item.displayName} portion`}
         >
           <Plus className="h-3.5 w-3.5" />
@@ -134,7 +134,7 @@ function FoodItemRow({
       <button
         type="button"
         className="ml-1 flex h-6 w-6 items-center justify-center rounded-md text-[var(--text-faint)] transition-colors hover:bg-[var(--surface-3)] hover:text-[var(--red)]"
-        onClick={() => onRemoveItem(item.canonicalName)}
+        onClick={() => onRemoveItem(item.id)}
         aria-label={`Remove ${item.displayName}`}
       >
         <X className="h-3.5 w-3.5" />

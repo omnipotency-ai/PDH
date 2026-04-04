@@ -14,26 +14,14 @@
  */
 
 import { FOOD_PORTION_DATA } from "@shared/foodPortionData";
-import {
-  FOOD_REGISTRY,
-  type FoodRegistryEntry,
-} from "@shared/foodRegistryData";
+import { FOOD_REGISTRY, type FoodRegistryEntry } from "@shared/foodRegistryData";
 import Fuse from "fuse.js";
 import { useDeferredValue, useMemo, useReducer } from "react";
-import {
-  computeMacrosForPortion,
-  getMealSlot,
-  type MealSlot,
-} from "@/lib/nutritionUtils";
+import { computeMacrosForPortion, getMealSlot, type MealSlot } from "@/lib/nutritionUtils";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
-export type NutritionView =
-  | "collapsed"
-  | "search"
-  | "favourites"
-  | "foodFilter"
-  | "calorieDetail";
+export type NutritionView = "collapsed" | "search" | "favourites" | "foodFilter" | "calorieDetail";
 
 export interface StagedItem {
   /** Unique ID for this staging row. */
@@ -143,10 +131,7 @@ export function createStagedItem(canonicalName: string): StagedItem | null {
  * Recompute all macro fields for a new portion weight.
  * Preserves id, canonicalName, displayName, naturalUnit, unitWeightG.
  */
-export function recalculateMacros(
-  item: StagedItem,
-  newPortionG: number,
-): StagedItem {
+export function recalculateMacros(item: StagedItem, newPortionG: number): StagedItem {
   const macros = computeMacrosForPortion(item.canonicalName, newPortionG);
   return {
     ...item,
@@ -158,9 +143,7 @@ export function recalculateMacros(
 /**
  * Compute aggregate totals for a list of staging items.
  */
-export function computeStagingTotals(
-  items: ReadonlyArray<StagedItem>,
-): StagingTotals {
+export function computeStagingTotals(items: ReadonlyArray<StagedItem>): StagingTotals {
   let calories = 0;
   let protein = 0;
   let carbs = 0;
@@ -189,15 +172,9 @@ export function computeStagingTotals(
 
 // ── Reducer ─────────────────────────────────────────────────────────────────
 
-export function nutritionReducer(
-  state: NutritionState,
-  action: NutritionAction,
-): NutritionState {
+export function nutritionReducer(state: NutritionState, action: NutritionAction): NutritionState {
   // Reset lastRemovedItem on every action; ADJUST_STAGING_PORTION overrides below.
-  const base =
-    state.lastRemovedItem !== null
-      ? { ...state, lastRemovedItem: null }
-      : state;
+  const base = state.lastRemovedItem !== null ? { ...state, lastRemovedItem: null } : state;
 
   switch (action.type) {
     case "SET_VIEW":
@@ -217,8 +194,7 @@ export function nutritionReducer(
       if (existingIndex !== -1) {
         // Aggregate: increment portion by unitWeightG or defaultPortionG
         const existing = base.stagingItems[existingIndex];
-        const increment =
-          portionData.unitWeightG ?? portionData.defaultPortionG;
+        const increment = portionData.unitWeightG ?? portionData.defaultPortionG;
         const newPortionG = existing.portionG + increment;
         const updated = recalculateMacros(existing, newPortionG);
 
@@ -333,16 +309,9 @@ function createInitialState(): NutritionState {
 // ── Hook ────────────────────────────────────────────────────────────────────
 
 export function useNutritionStore() {
-  const [state, dispatch] = useReducer(
-    nutritionReducer,
-    undefined,
-    createInitialState,
-  );
+  const [state, dispatch] = useReducer(nutritionReducer, undefined, createInitialState);
 
-  const searchResults = useMemo(
-    () => searchFoodRegistry(state.searchQuery),
-    [state.searchQuery],
-  );
+  const searchResults = useMemo(() => searchFoodRegistry(state.searchQuery), [state.searchQuery]);
 
   // Fix #28: Defer search results so staging interactions don't block search rendering.
   const deferredSearchResults = useDeferredValue(searchResults);

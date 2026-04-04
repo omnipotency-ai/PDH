@@ -12,22 +12,14 @@
 
 import { FOOD_PORTION_DATA } from "@shared/foodPortionData";
 import type { FoodRegistryEntry } from "@shared/foodRegistryData";
-import {
-  Camera,
-  Droplet,
-  Heart,
-  Mic,
-  SlidersHorizontal,
-  UtensilsCrossed,
-  X,
-} from "lucide-react";
+import { Camera, Droplet, Heart, Mic, SlidersHorizontal, UtensilsCrossed, X } from "lucide-react";
 import { useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { useNutritionData } from "@/hooks/useNutritionData";
+import { useFoodFavourites } from "@/hooks/useProfile";
 import { getErrorMessage } from "@/lib/errors";
 import { useAddSyncedLog, useRemoveSyncedLog } from "@/lib/sync";
-import { useFoodFavourites } from "@/hooks/useProfile";
 import { CalorieDetailView } from "./CalorieDetailView";
 import { FavouritesView } from "./FavouritesView";
 import { FoodFilterView } from "./FoodFilterView";
@@ -100,9 +92,7 @@ function CalorieRing({
         </svg>
         {/* Center text inside ring */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-sm font-bold text-[var(--text)]">
-            {remaining}
-          </span>
+          <span className="text-sm font-bold text-[var(--text)]">{remaining}</span>
           <span className="text-[10px] text-[var(--text-faint)]">left</span>
         </div>
       </div>
@@ -110,12 +100,8 @@ function CalorieRing({
       {/* Stats beside ring + progress bar below text */}
       <div className="flex flex-1 flex-col items-start gap-1.5 text-left">
         <div className="flex items-baseline gap-1.5">
-          <span className="text-3xl font-bold text-[var(--text)]">
-            {consumed}
-          </span>
-          <span className="text-base text-[var(--text-muted)]">
-            / {goal} kcal
-          </span>
+          <span className="text-3xl font-bold text-[var(--text)]">{consumed}</span>
+          <span className="text-base text-[var(--text-muted)]">/ {goal} kcal</span>
         </div>
         <CalorieProgressBar consumed={consumed} goal={goal} />
       </div>
@@ -125,13 +111,7 @@ function CalorieRing({
 
 // ── Calorie Progress Bar ────────────────────────────────────────────────────
 
-function CalorieProgressBar({
-  consumed,
-  goal,
-}: {
-  consumed: number;
-  goal: number;
-}) {
+function CalorieProgressBar({ consumed, goal }: { consumed: number; goal: number }) {
   const progress = goal > 0 ? Math.min(consumed / goal, 1) : 0;
   const percentage = Math.round(progress * 100);
 
@@ -178,11 +158,7 @@ function WaterProgressRow({
       onClick={onOpenModal}
       aria-label={`Water: ${intakeMl} of ${goalMl} ml. Tap to log water.`}
     >
-      <Droplet
-        className="h-5 w-5 shrink-0"
-        style={{ color: "#42BCB8" }}
-        aria-hidden="true"
-      />
+      <Droplet className="h-5 w-5 shrink-0" style={{ color: "#42BCB8" }} aria-hidden="true" />
       <span className="shrink-0 text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
         Water
       </span>
@@ -269,13 +245,9 @@ function SearchResultRow({
 }) {
   const portionData = FOOD_PORTION_DATA.get(entry.canonical);
   const calories = portionData
-    ? Math.round(
-        ((portionData.caloriesPer100g ?? 0) * portionData.defaultPortionG) /
-          100,
-      )
+    ? Math.round(((portionData.caloriesPer100g ?? 0) * portionData.defaultPortionG) / 100)
     : 0;
-  const portionLabel =
-    portionData?.naturalUnit ?? `${portionData?.defaultPortionG ?? 0}g`;
+  const portionLabel = portionData?.naturalUnit ?? `${portionData?.defaultPortionG ?? 0}g`;
 
   return (
     <button
@@ -285,16 +257,10 @@ function SearchResultRow({
       onClick={() => onSelect(entry.canonical)}
     >
       <div className="flex flex-col gap-0.5">
-        <span className="text-sm font-medium text-[var(--text)]">
-          {entry.canonical}
-        </span>
-        <span className="text-[10px] text-[var(--text-faint)]">
-          {portionLabel}
-        </span>
+        <span className="text-sm font-medium text-[var(--text)]">{entry.canonical}</span>
+        <span className="text-[10px] text-[var(--text-faint)]">{portionLabel}</span>
       </div>
-      <span className="text-xs font-medium text-[var(--text-muted)]">
-        {calories} kcal
-      </span>
+      <span className="text-xs font-medium text-[var(--text-muted)]">{calories} kcal</span>
     </button>
   );
 }
@@ -349,9 +315,7 @@ function SearchView({
       </div>
 
       {searchQuery.trim().length > 0 && searchQuery.trim().length < 3 && (
-        <p className="px-3 py-2 text-xs text-[var(--text-faint)]">
-          Type at least 3 characters...
-        </p>
+        <p className="px-3 py-2 text-xs text-[var(--text-faint)]">Type at least 3 characters...</p>
       )}
 
       {searchResults.length > 0 && (
@@ -361,11 +325,7 @@ function SearchView({
           aria-label="Search results"
         >
           {searchResults.map((entry) => (
-            <SearchResultRow
-              key={entry.canonical}
-              entry={entry}
-              onSelect={onSelect}
-            />
+            <SearchResultRow key={entry.canonical} entry={entry} onSelect={onSelect} />
           ))}
         </div>
       )}
@@ -411,11 +371,7 @@ function CollapsedView({
   return (
     <div data-slot="collapsed-view" className="space-y-4">
       {/* ── Calorie section: ring + stats + progress bar ─── */}
-      <CalorieRing
-        consumed={consumed}
-        goal={goal}
-        onExpand={onExpandCalories}
-      />
+      <CalorieRing consumed={consumed} goal={goal} onExpand={onExpandCalories} />
 
       {/* ── Search + Log Food (same row) ─── */}
       <div className="flex items-center gap-2">
@@ -443,11 +399,7 @@ function CollapsedView({
       </div>
 
       {/* ── Water row (compact, at bottom) ─── */}
-      <WaterProgressRow
-        intakeMl={waterIntakeMl}
-        goalMl={waterGoalMl}
-        onOpenModal={onOpenWater}
-      />
+      <WaterProgressRow intakeMl={waterIntakeMl} goalMl={waterGoalMl} onOpenModal={onOpenWater} />
     </div>
   );
 }
@@ -471,6 +423,11 @@ export function NutritionCard() {
   const removeSyncedLog = useRemoveSyncedLog();
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Snapshot ref for stagingItems — allows callbacks to read current items
+  // without listing state.stagingItems as a dependency (avoids callback churn).
+  const stagingItemsRef = useRef(state.stagingItems);
+  stagingItemsRef.current = state.stagingItems;
 
   // ── Global escape handler (decision #15) ─────────────────────────────────
   useEffect(() => {
@@ -538,13 +495,6 @@ export function NutritionCard() {
     [addSyncedLog, dispatch],
   );
 
-  const handleSelectFood = useCallback(
-    (canonicalName: string) => {
-      dispatch({ type: "ADD_TO_STAGING", canonicalName });
-    },
-    [dispatch],
-  );
-
   const handleAddToStaging = useCallback(
     (canonicalName: string) => {
       dispatch({ type: "ADD_TO_STAGING", canonicalName });
@@ -561,26 +511,21 @@ export function NutritionCard() {
   }, [dispatch]);
 
   const handleRemoveFromStaging = useCallback(
-    (canonicalName: string) => {
-      const item = state.stagingItems.find(
-        (i) => i.canonicalName === canonicalName,
-      );
-      if (item) dispatch({ type: "REMOVE_FROM_STAGING", id: item.id });
+    (id: string) => {
+      dispatch({ type: "REMOVE_FROM_STAGING", id });
     },
-    [dispatch, state.stagingItems],
+    [dispatch],
   );
 
   const handleUpdateStagedQuantity = useCallback(
-    (canonicalName: string, newQuantity: number) => {
-      const item = state.stagingItems.find(
-        (i) => i.canonicalName === canonicalName,
-      );
+    (id: string, newQuantity: number) => {
+      const item = stagingItemsRef.current.find((i) => i.id === id);
       if (item) {
         const delta = newQuantity - item.portionG;
-        dispatch({ type: "ADJUST_STAGING_PORTION", id: item.id, delta });
+        dispatch({ type: "ADJUST_STAGING_PORTION", id, delta });
       }
     },
-    [dispatch, state.stagingItems],
+    [dispatch],
   );
 
   const handleClearStaging = useCallback(() => {
@@ -650,10 +595,7 @@ export function NutritionCard() {
         aria-label="Filter foods"
         onClick={() => dispatch({ type: "SET_VIEW", view: "foodFilter" })}
       >
-        <SlidersHorizontal
-          className="h-5 w-5"
-          style={{ color: "var(--orange)" }}
-        />
+        <SlidersHorizontal className="h-5 w-5" style={{ color: "var(--orange)" }} />
       </button>
       <button
         type="button"
@@ -709,7 +651,7 @@ export function NutritionCard() {
           stagingCount={stagingCount}
           onQueryChange={handleSearchChange}
           onClear={handleSearchClear}
-          onSelect={handleSelectFood}
+          onSelect={handleAddToStaging}
           onOpenStagingModal={handleOpenStagingModal}
           inputRef={searchInputRef}
         />

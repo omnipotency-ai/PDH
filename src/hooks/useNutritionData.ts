@@ -43,11 +43,7 @@ function getSevenDaysAgoMidnight(): number {
 /** Milliseconds from now until the next local midnight. */
 function msUntilNextMidnight(): number {
   const now = new Date();
-  const tomorrow = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate() + 1,
-  );
+  const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
   return tomorrow.getTime() - now.getTime();
 }
 
@@ -169,30 +165,19 @@ export function useNutritionData(): NutritionData {
   }, [logs, todayKey]);
 
   // Derive calorie total.
-  const totalCaloriesToday = useMemo(
-    () => calculateTotalCalories(todayFoodLogs),
-    [todayFoodLogs],
-  );
+  const totalCaloriesToday = useMemo(() => calculateTotalCalories(todayFoodLogs), [todayFoodLogs]);
 
   // Derive macro totals.
-  const totalMacrosToday = useMemo(
-    () => calculateTotalMacros(todayFoodLogs),
-    [todayFoodLogs],
-  );
+  const totalMacrosToday = useMemo(() => calculateTotalMacros(todayFoodLogs), [todayFoodLogs]);
 
   // Derive water intake.
-  const waterIntakeToday = useMemo(
-    () => calculateWaterIntake(todayFluidLogs),
-    [todayFluidLogs],
-  );
+  const waterIntakeToday = useMemo(() => calculateWaterIntake(todayFluidLogs), [todayFluidLogs]);
 
   // Group today's food logs by meal slot.
-  const logsByMealSlot = useMemo(
-    () => groupByMealSlot(todayFoodLogs),
-    [todayFoodLogs],
-  );
+  const logsByMealSlot = useMemo(() => groupByMealSlot(todayFoodLogs), [todayFoodLogs]);
 
   // Calculate calories per meal slot.
+  // Intentionally simple: 4 calls over small arrays. Single-pass accumulation not worth the complexity.
   const caloriesByMealSlot = useMemo(() => {
     const result: Record<MealSlot, number> = {
       breakfast: 0,
@@ -221,8 +206,7 @@ export function useNutritionData(): NutritionData {
     const slotResult: string[] = [];
 
     // Logs arrive descending (most recent first) from Convex query. Iterate forward.
-    for (let i = 0; i < logs.length; i++) {
-      const log = logs[i];
+    for (const log of logs) {
       if (log.timestamp < sevenDaysAgo) break;
 
       if (!isFoodPipelineLog(log)) continue;
@@ -246,7 +230,7 @@ export function useNutritionData(): NutritionData {
         }
       }
 
-      // Early exit once both lists are full
+      // Early exit only if both lists are full — slot list may never reach 50
       if (allResult.length >= 50 && slotResult.length >= 50) break;
     }
 
@@ -257,8 +241,8 @@ export function useNutritionData(): NutritionData {
   }, [logs, currentMealSlot]);
 
   // Fall back to global recents if no slot-specific foods exist.
-  const recentFoods =
-    slotRecentFoods.length > 0 ? slotRecentFoods : allRecentFoods;
+  // Both branches are stable memo references — no new array allocated
+  const recentFoods = slotRecentFoods.length > 0 ? slotRecentFoods : allRecentFoods;
 
   return {
     todayFoodLogs,
