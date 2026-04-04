@@ -7,13 +7,15 @@
  * Uses FOOD_PORTION_DATA for calories/portions — no mock data.
  */
 
-import { FOOD_PORTION_DATA } from "@shared/foodPortionData";
-import { ArrowLeft, Heart, Plus } from "lucide-react";
+import { ArrowLeft, Heart } from "lucide-react";
+import { useMemo } from "react";
 import {
+  filterToKnownFoods,
   formatPortion,
   getDefaultCalories,
   titleCase,
 } from "@/lib/nutritionUtils";
+import { FoodRow } from "./FoodRow";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -31,8 +33,9 @@ export function FavouritesView({
   onBack,
 }: FavouritesViewProps) {
   // Filter to only foods that exist in FOOD_PORTION_DATA
-  const validFavourites = favourites.filter((name) =>
-    FOOD_PORTION_DATA.has(name),
+  const validFavourites = useMemo(
+    () => filterToKnownFoods(favourites),
+    [favourites],
   );
 
   return (
@@ -63,79 +66,18 @@ export function FavouritesView({
         </div>
       ) : (
         <ul className="space-y-1" aria-label="Favourite foods">
-          {validFavourites.map((canonicalName) => {
-            const portion = formatPortion(canonicalName);
-            const calories = getDefaultCalories(canonicalName);
-
-            return (
-              <FavouriteRow
-                key={canonicalName}
-                canonicalName={canonicalName}
-                displayName={titleCase(canonicalName)}
-                portion={portion}
-                calories={calories}
-                onAdd={onAddToStaging}
-              />
-            );
-          })}
+          {validFavourites.map((canonicalName) => (
+            <FoodRow
+              key={canonicalName}
+              canonicalName={canonicalName}
+              displayName={titleCase(canonicalName)}
+              portion={formatPortion(canonicalName)}
+              calories={getDefaultCalories(canonicalName)}
+              onAdd={onAddToStaging}
+            />
+          ))}
         </ul>
       )}
     </div>
-  );
-}
-
-// ── FavouriteRow ─────────────────────────────────────────────────────────────
-
-function FavouriteRow({
-  canonicalName,
-  displayName,
-  portion,
-  calories,
-  onAdd,
-}: {
-  canonicalName: string;
-  displayName: string;
-  portion: string;
-  calories: number;
-  onAdd: (canonicalName: string) => void;
-}) {
-  return (
-    <li
-      data-slot="favourite-row"
-      className="flex list-none items-center gap-3 rounded-lg px-2 py-2.5 transition-colors hover:bg-[var(--surface-2)]"
-    >
-      {/* Heart icon */}
-      <Heart
-        className="h-5 w-5 shrink-0 fill-current"
-        style={{ color: "var(--orange)" }}
-        aria-hidden="true"
-      />
-
-      {/* Food name */}
-      <span className="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--text)]">
-        {displayName}
-      </span>
-
-      {/* Portion + calories */}
-      <span className="shrink-0 text-xs text-[var(--text-muted)]">
-        {portion}
-        {portion && calories > 0 ? " · " : ""}
-        {calories > 0 ? `${calories} kcal` : ""}
-      </span>
-
-      {/* Add button */}
-      <button
-        type="button"
-        onClick={() => onAdd(canonicalName)}
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors"
-        style={{
-          backgroundColor: "rgba(249, 115, 22, 0.15)",
-          color: "var(--orange)",
-        }}
-        aria-label={`Add ${displayName} to staging`}
-      >
-        <Plus className="h-4 w-4" />
-      </button>
-    </li>
   );
 }
