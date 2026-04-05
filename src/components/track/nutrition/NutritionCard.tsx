@@ -1,10 +1,10 @@
 /**
  * NutritionCard — main nutrition UI on the Track page.
  *
- * Manages collapsed view (calorie ring + stats, water bar, search row,
- * meal breakdown bar, macro row, meal slot accordions) and search view.
- * Placeholder slots for future sub-components (StagingModal, WaterModal,
- * CalorieDetail expansion, Favourites, Filter).
+ * The collapsed card (CalorieRing, search bar, Log Food button,
+ * WaterProgressRow) is ALWAYS visible. Secondary panels (CalorieDetail,
+ * Favourites, FoodFilter) render BELOW the water bar, one at a time.
+ * Search results appear inline below the water bar when the user types.
  *
  * State: useNutritionStore (ephemeral UI via useReducer)
  * Data: useNutritionData (read-only Convex-derived)
@@ -189,13 +189,11 @@ function WaterProgressRow({
 function NutritionSearchInput({
   value,
   onChange,
-  onFocus,
   onClear,
   inputRef,
 }: {
   value: string;
   onChange: (value: string) => void;
-  onFocus: () => void;
   onClear: () => void;
   inputRef: React.RefObject<HTMLInputElement | null>;
 }) {
@@ -214,7 +212,6 @@ function NutritionSearchInput({
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        onFocus={onFocus}
         placeholder="Search or type a food..."
         className="w-full rounded-xl border border-[var(--color-border-default)] bg-[var(--surface-2)] py-3 pl-[4.5rem] pr-10 text-base text-[var(--text)] placeholder:text-[var(--text-faint)] transition-colors focus:border-[var(--orange)] focus:outline-none focus:ring-1 focus:ring-[var(--orange)]"
         aria-label="Search foods"
@@ -265,145 +262,6 @@ function SearchResultRow({
   );
 }
 
-// ── Search View ──────────────────────────────────────────────────────────────
-
-function SearchView({
-  searchQuery,
-  searchResults,
-  stagingCount,
-  onQueryChange,
-  onClear,
-  onSelect,
-  onOpenStagingModal,
-  inputRef,
-}: {
-  searchQuery: string;
-  searchResults: FoodRegistryEntry[];
-  stagingCount: number;
-  onQueryChange: (query: string) => void;
-  onClear: () => void;
-  onSelect: (canonicalName: string) => void;
-  onOpenStagingModal: () => void;
-  inputRef: React.RefObject<HTMLInputElement | null>;
-}) {
-  return (
-    <div data-slot="search-view" className="space-y-2">
-      <div className="flex items-center gap-2">
-        <NutritionSearchInput
-          value={searchQuery}
-          onChange={onQueryChange}
-          onFocus={() => {
-            /* Already in search view */
-          }}
-          onClear={onClear}
-          inputRef={inputRef}
-        />
-        {stagingCount > 0 && (
-          <button
-            type="button"
-            data-slot="open-staging-button"
-            className="shrink-0 rounded-full bg-[var(--orange)] px-6 py-3 text-base font-semibold text-white transition-colors hover:brightness-110 active:brightness-95"
-            onClick={onOpenStagingModal}
-            aria-label="Review staged food items"
-          >
-            Log Food
-            <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-white/20 px-1 text-[10px] font-bold">
-              {stagingCount}
-            </span>
-          </button>
-        )}
-      </div>
-
-      {searchQuery.trim().length > 0 && searchQuery.trim().length < 3 && (
-        <p className="px-3 py-2 text-xs text-[var(--text-faint)]">Type at least 3 characters...</p>
-      )}
-
-      {searchResults.length > 0 && (
-        <div
-          className="max-h-64 space-y-0.5 overflow-y-auto"
-          role="listbox"
-          aria-label="Search results"
-        >
-          {searchResults.map((entry) => (
-            <SearchResultRow key={entry.canonical} entry={entry} onSelect={onSelect} />
-          ))}
-        </div>
-      )}
-
-      {searchQuery.trim().length >= 3 && searchResults.length === 0 && (
-        <p className="px-3 py-4 text-center text-xs text-[var(--text-faint)]">
-          No foods found for &ldquo;{searchQuery}&rdquo;
-        </p>
-      )}
-    </div>
-  );
-}
-
-// ── Collapsed View ───────────────────────────────────────────────────────────
-
-function CollapsedView({
-  consumed,
-  goal,
-  waterIntakeMl,
-  waterGoalMl,
-  stagingCount,
-  searchQuery,
-  onExpandCalories,
-  onOpenWater,
-  onSearchFocus,
-  onSearchChange,
-  onSearchClear,
-  searchInputRef,
-}: {
-  consumed: number;
-  goal: number;
-  waterIntakeMl: number;
-  waterGoalMl: number;
-  stagingCount: number;
-  searchQuery: string;
-  onExpandCalories: () => void;
-  onOpenWater: () => void;
-  onSearchFocus: () => void;
-  onSearchChange: (value: string) => void;
-  onSearchClear: () => void;
-  searchInputRef: React.RefObject<HTMLInputElement | null>;
-}) {
-  return (
-    <div data-slot="collapsed-view" className="space-y-4">
-      {/* ── Calorie section: ring + stats + progress bar ─── */}
-      <CalorieRing consumed={consumed} goal={goal} onExpand={onExpandCalories} />
-
-      {/* ── Search + Log Food (same row) ─── */}
-      <div className="flex items-center gap-2">
-        <NutritionSearchInput
-          value={searchQuery}
-          onChange={onSearchChange}
-          onFocus={onSearchFocus}
-          onClear={onSearchClear}
-          inputRef={searchInputRef}
-        />
-        <button
-          type="button"
-          data-slot="log-food-button"
-          className="shrink-0 rounded-full bg-[var(--orange)] px-6 py-3 text-base font-semibold text-white transition-colors hover:brightness-110 active:brightness-95"
-          onClick={onSearchFocus}
-          aria-label="Log food"
-        >
-          Log Food
-          {stagingCount > 0 && (
-            <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-white/20 px-1 text-[10px] font-bold">
-              {stagingCount}
-            </span>
-          )}
-        </button>
-      </div>
-
-      {/* ── Water row (compact, at bottom) ─── */}
-      <WaterProgressRow intakeMl={waterIntakeMl} goalMl={waterGoalMl} onOpenModal={onOpenWater} />
-    </div>
-  );
-}
-
 // ── NutritionCard (main export) ──────────────────────────────────────────────
 
 export function NutritionCard() {
@@ -434,12 +292,27 @@ export function NutritionCard() {
   const viewRef = useRef(state.view);
   viewRef.current = state.view;
 
+  // Snapshot ref for searchQuery — allows the Escape handler to read current query.
+  const searchQueryRef = useRef(state.searchQuery);
+  searchQueryRef.current = state.searchQuery;
+
   // ── Global escape handler (decision #15) ─────────────────────────────────
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape" && viewRef.current !== "collapsed") {
+      if (e.key !== "Escape") return;
+
+      // First: if search has text, clear it.
+      if (searchQueryRef.current.length > 0) {
         e.preventDefault();
-        dispatch({ type: "SET_VIEW", view: "collapsed" });
+        dispatch({ type: "SET_SEARCH_QUERY", query: "" });
+        return;
+      }
+
+      // Second: if a panel is open, close it.
+      if (viewRef.current !== "none") {
+        e.preventDefault();
+        dispatch({ type: "SET_VIEW", view: viewRef.current });
+        return;
       }
     }
     window.addEventListener("keydown", handleKeyDown);
@@ -447,13 +320,6 @@ export function NutritionCard() {
   }, [dispatch]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
-
-  const handleSearchFocus = useCallback(() => {
-    dispatch({ type: "SET_VIEW", view: "search" });
-    requestAnimationFrame(() => {
-      searchInputRef.current?.focus();
-    });
-  }, [dispatch]);
 
   const handleSearchChange = useCallback(
     (query: string) => {
@@ -467,13 +333,10 @@ export function NutritionCard() {
     searchInputRef.current?.focus();
   }, [dispatch]);
 
-  // Bug 3 fix: toggle between collapsed and calorieDetail
+  // Toggle between none and calorieDetail
   const handleExpandCalories = useCallback(() => {
-    dispatch({
-      type: "SET_VIEW",
-      view: state.view === "calorieDetail" ? "collapsed" : "calorieDetail",
-    });
-  }, [dispatch, state.view]);
+    dispatch({ type: "SET_VIEW", view: "calorieDetail" });
+  }, [dispatch]);
 
   const handleOpenWater = useCallback(() => {
     dispatch({ type: "OPEN_WATER_MODAL" });
@@ -509,10 +372,6 @@ export function NutritionCard() {
 
   const handleCloseStagingModal = useCallback(() => {
     dispatch({ type: "CLOSE_STAGING_MODAL" });
-  }, [dispatch]);
-
-  const handleOpenStagingModal = useCallback(() => {
-    dispatch({ type: "OPEN_STAGING_MODAL" });
   }, [dispatch]);
 
   const handleRemoveFromStaging = useCallback(
@@ -560,7 +419,6 @@ export function NutritionCard() {
 
   const handleAddMore = useCallback(() => {
     dispatch({ type: "CLOSE_STAGING_MODAL" });
-    dispatch({ type: "SET_VIEW", view: "search" });
     requestAnimationFrame(() => {
       searchInputRef.current?.focus();
     });
@@ -578,9 +436,28 @@ export function NutritionCard() {
     [removeSyncedLog],
   );
 
-  const handleBackToCollapsed = useCallback(() => {
-    dispatch({ type: "SET_VIEW", view: "collapsed" });
+  const handleBackToNone = useCallback(() => {
+    dispatch({ type: "SET_VIEW", view: state.view });
+  }, [dispatch, state.view]);
+
+  // Log Food button: if items staged, open staging modal. Otherwise, focus search.
+  const handleLogFoodButton = useCallback(() => {
+    if (stagingItemsRef.current.length > 0) {
+      dispatch({ type: "OPEN_STAGING_MODAL" });
+    } else {
+      searchInputRef.current?.focus();
+    }
   }, [dispatch]);
+
+  // ── Derived state ───────────────────────────────────────────────────────
+
+  const hasSearchResults = state.searchQuery.trim().length >= 3 && searchResults.length > 0;
+
+  const hasSearchQueryButNoResults =
+    state.searchQuery.trim().length >= 3 && searchResults.length === 0;
+
+  const isTypingShortQuery =
+    state.searchQuery.trim().length > 0 && state.searchQuery.trim().length < 3;
 
   // ── Header icons ─────────────────────────────────────────────────────────
 
@@ -633,103 +510,96 @@ export function NutritionCard() {
         {headerIcons}
       </SectionHeader>
 
-      {/* Collapsed view (default) — compact: ring + search + water */}
-      {state.view === "collapsed" && (
-        <CollapsedView
-          consumed={totalCaloriesToday}
-          goal={calorieGoal}
-          waterIntakeMl={waterIntakeToday}
-          waterGoalMl={waterGoal}
-          stagingCount={stagingCount}
-          searchQuery={state.searchQuery}
-          onExpandCalories={handleExpandCalories}
-          onOpenWater={handleOpenWater}
-          onSearchFocus={handleSearchFocus}
-          onSearchChange={handleSearchChange}
-          onSearchClear={handleSearchClear}
-          searchInputRef={searchInputRef}
-        />
-      )}
+      {/* ── ALWAYS VISIBLE: Calorie ring ─── */}
+      <CalorieRing
+        consumed={totalCaloriesToday}
+        goal={calorieGoal}
+        onExpand={handleExpandCalories}
+      />
 
-      {/* Search view */}
-      {state.view === "search" && (
-        <SearchView
-          searchQuery={state.searchQuery}
-          searchResults={searchResults}
-          stagingCount={stagingCount}
-          onQueryChange={handleSearchChange}
+      {/* ── ALWAYS VISIBLE: Search + Log Food button (same row) ─── */}
+      <div className="flex items-center gap-2">
+        <NutritionSearchInput
+          value={state.searchQuery}
+          onChange={handleSearchChange}
           onClear={handleSearchClear}
-          onSelect={handleAddToStaging}
-          onOpenStagingModal={handleOpenStagingModal}
           inputRef={searchInputRef}
         />
+        <button
+          type="button"
+          data-slot="log-food-button"
+          className="shrink-0 rounded-full bg-[var(--orange)] px-6 py-3 text-base font-semibold text-white transition-colors hover:brightness-110 active:brightness-95"
+          onClick={handleLogFoodButton}
+          aria-label={stagingCount > 0 ? "Review staged food items" : "Log food"}
+        >
+          Log Food
+          {stagingCount > 0 && (
+            <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-white/20 px-1 text-[10px] font-bold">
+              {stagingCount}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* ── ALWAYS VISIBLE: Water progress row ─── */}
+      <WaterProgressRow
+        intakeMl={waterIntakeToday}
+        goalMl={waterGoal}
+        onOpenModal={handleOpenWater}
+      />
+
+      {/* ── SEARCH RESULTS — inline, shown when query has results ─── */}
+      {isTypingShortQuery && (
+        <p className="px-3 py-2 text-xs text-[var(--text-faint)]">Type at least 3 characters...</p>
       )}
 
-      {/* Calorie detail view — expanded: ring + water + search + breakdown + macros + accordions */}
-      {state.view === "calorieDetail" && (
-        <div data-slot="calorie-detail-view" className="space-y-4">
-          <CalorieRing
-            consumed={totalCaloriesToday}
-            goal={calorieGoal}
-            onExpand={handleExpandCalories}
-          />
-          <WaterProgressRow
-            intakeMl={waterIntakeToday}
-            goalMl={waterGoal}
-            onOpenModal={handleOpenWater}
-          />
-          <div className="flex items-center gap-2">
-            <NutritionSearchInput
-              value={state.searchQuery}
-              onChange={handleSearchChange}
-              onFocus={handleSearchFocus}
-              onClear={handleSearchClear}
-              inputRef={searchInputRef}
-            />
-            <button
-              type="button"
-              data-slot="log-food-button"
-              className="shrink-0 rounded-full bg-[var(--orange)] px-6 py-3 text-base font-semibold text-white transition-colors hover:brightness-110 active:brightness-95"
-              onClick={handleSearchFocus}
-              aria-label="Log food"
-            >
-              Log Food
-              {stagingCount > 0 && (
-                <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-white/20 px-1 text-[10px] font-bold">
-                  {stagingCount}
-                </span>
-              )}
-            </button>
-          </div>
-          <CalorieDetailView
-            macros={totalMacrosToday}
-            caloriesByMealSlot={caloriesByMealSlot}
-            logsByMealSlot={logsByMealSlot}
-            onDeleteLog={handleDeleteLog}
-          />
+      {hasSearchResults && (
+        <div
+          data-slot="search-results"
+          className="max-h-64 space-y-0.5 overflow-y-auto"
+          role="listbox"
+          aria-label="Search results"
+        >
+          {searchResults.map((entry) => (
+            <SearchResultRow key={entry.canonical} entry={entry} onSelect={handleAddToStaging} />
+          ))}
         </div>
       )}
 
-      {/* FavouritesView */}
+      {hasSearchQueryButNoResults && (
+        <p className="px-3 py-4 text-center text-xs text-[var(--text-faint)]">
+          No foods found for &ldquo;{state.searchQuery}&rdquo;
+        </p>
+      )}
+
+      {/* ── SECONDARY PANELS — one at a time, below water bar ─── */}
+      {state.view === "calorieDetail" && (
+        <CalorieDetailView
+          macros={totalMacrosToday}
+          caloriesByMealSlot={caloriesByMealSlot}
+          logsByMealSlot={logsByMealSlot}
+          onDeleteLog={handleDeleteLog}
+        />
+      )}
+
       {state.view === "favourites" && (
         <FavouritesView
           favourites={favourites}
           onAddToStaging={handleAddToStaging}
-          onBack={handleBackToCollapsed}
+          onBack={handleBackToNone}
         />
       )}
 
-      {/* FoodFilterView */}
       {state.view === "foodFilter" && (
         <FoodFilterView
           recentFoods={recentFoods}
           favourites={favourites}
           onAddToStaging={handleAddToStaging}
-          onBack={handleBackToCollapsed}
+          onBack={handleBackToNone}
         />
       )}
 
-      {/* LogFoodModal (staging) */}
+      {/* ── MODALS (unchanged) ─── */}
       <LogFoodModal
         open={state.stagingModalOpen}
         stagedItems={state.stagingItems}
@@ -742,7 +612,6 @@ export function NutritionCard() {
         onAddMore={handleAddMore}
       />
 
-      {/* WaterModal */}
       <WaterModal
         open={state.waterModalOpen}
         onClose={handleCloseWater}

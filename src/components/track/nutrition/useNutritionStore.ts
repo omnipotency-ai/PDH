@@ -26,7 +26,7 @@ import {
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
-export type NutritionView = "collapsed" | "search" | "favourites" | "foodFilter" | "calorieDetail";
+export type NutritionView = "none" | "favourites" | "foodFilter" | "calorieDetail";
 
 export interface StagedItem {
   /** Unique ID for this staging row. */
@@ -209,7 +209,11 @@ export function nutritionReducer(state: NutritionState, action: NutritionAction)
 
   switch (action.type) {
     case "SET_VIEW":
-      return { ...base, view: action.view, searchQuery: "" };
+      // Toggle: if already on the requested panel, collapse to "none".
+      return {
+        ...base,
+        view: action.view === base.view ? "none" : action.view,
+      };
 
     case "SET_SEARCH_QUERY":
       return { ...base, searchQuery: action.query };
@@ -293,7 +297,7 @@ export function nutritionReducer(state: NutritionState, action: NutritionAction)
         ...base,
         stagingItems: [],
         stagingModalOpen: false,
-        view: "collapsed",
+        view: "none",
         searchQuery: "",
       };
 
@@ -326,7 +330,7 @@ export function searchFoodRegistry(query: string): FoodRegistryEntry[] {
 
 function createInitialState(): NutritionState {
   return {
-    view: "collapsed",
+    view: "none",
     searchQuery: "",
     stagingItems: [],
     stagingModalOpen: false,

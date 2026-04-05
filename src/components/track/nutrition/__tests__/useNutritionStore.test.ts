@@ -21,7 +21,7 @@ import {
  */
 function makeState(overrides?: Partial<NutritionState>): NutritionState {
   return {
-    view: "collapsed",
+    view: "none",
     searchQuery: "",
     stagingItems: [],
     stagingModalOpen: false,
@@ -165,25 +165,49 @@ describe("recalculateMacros", () => {
 // ── Reducer: SET_VIEW ───────────────────────────────────────────────────────
 
 describe("reducer SET_VIEW", () => {
-  it("changes view to the requested mode", () => {
-    const state = makeState({ view: "collapsed" });
-    const next = nutritionReducer(state, { type: "SET_VIEW", view: "search" });
-    expect(next.view).toBe("search");
+  it("changes view to the requested panel", () => {
+    const state = makeState({ view: "none" });
+    const next = nutritionReducer(state, {
+      type: "SET_VIEW",
+      view: "favourites",
+    });
+    expect(next.view).toBe("favourites");
   });
 
-  it("clears searchQuery on view change", () => {
+  it("toggles to none when setting the same view (toggle behavior)", () => {
+    const state = makeState({ view: "favourites" });
+    const next = nutritionReducer(state, {
+      type: "SET_VIEW",
+      view: "favourites",
+    });
+    expect(next.view).toBe("none");
+  });
+
+  it("switches between panels without going through none", () => {
+    const state = makeState({ view: "favourites" });
+    const next = nutritionReducer(state, {
+      type: "SET_VIEW",
+      view: "foodFilter",
+    });
+    expect(next.view).toBe("foodFilter");
+  });
+
+  it("does not clear searchQuery on view change", () => {
     const state = makeState({ searchQuery: "hello" });
     const next = nutritionReducer(state, {
       type: "SET_VIEW",
       view: "favourites",
     });
-    expect(next.searchQuery).toBe("");
+    expect(next.searchQuery).toBe("hello");
   });
 
   it("preserves staging items across view changes (decision #14)", () => {
     const item = assertDefined(createStagedItem("toast"), "toast");
     const state = makeState({ stagingItems: [item] });
-    const next = nutritionReducer(state, { type: "SET_VIEW", view: "search" });
+    const next = nutritionReducer(state, {
+      type: "SET_VIEW",
+      view: "calorieDetail",
+    });
     expect(next.stagingItems).toHaveLength(1);
     expect(next.stagingItems[0].canonicalName).toBe("toast");
   });
@@ -499,19 +523,19 @@ describe("reducer SET_FILTER_MEAL_SLOT", () => {
 // ── Reducer: RESET_AFTER_LOG ────────────────────────────────────────────────
 
 describe("reducer RESET_AFTER_LOG", () => {
-  it("clears staging, closes staging modal, resets view to collapsed, clears search", () => {
+  it("clears staging, closes staging modal, resets view to none, clears search", () => {
     const item = assertDefined(createStagedItem("toast"), "toast");
     const state = makeState({
       stagingItems: [item],
       stagingModalOpen: true,
-      view: "search",
+      view: "calorieDetail",
       searchQuery: "toast",
     });
     const next = nutritionReducer(state, { type: "RESET_AFTER_LOG" });
 
     expect(next.stagingItems).toHaveLength(0);
     expect(next.stagingModalOpen).toBe(false);
-    expect(next.view).toBe("collapsed");
+    expect(next.view).toBe("none");
     expect(next.searchQuery).toBe("");
   });
 
