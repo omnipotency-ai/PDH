@@ -17,7 +17,7 @@
  */
 
 import { Dialog } from "@base-ui/react/dialog";
-import { Droplet, Minus, Plus, X } from "lucide-react";
+import { Droplets, Minus, Plus, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { CircularProgressRing } from "./CircularProgressRing";
 
@@ -111,7 +111,7 @@ export function WaterModal({
             className="mb-6 flex w-full items-center justify-between"
           >
             <div className="flex items-center gap-2">
-              <Droplet className="h-5 w-5" style={{ color: WATER_COLOR }} />
+              <Droplets className="h-5 w-5" style={{ color: WATER_COLOR }} />
               <Dialog.Title
                 className="font-display text-lg font-semibold"
                 style={{ color: "var(--text)" }}
@@ -188,26 +188,19 @@ export function WaterModal({
             </button>
           </div>
 
-          {/* Bottom row: Cancel + Log Water */}
-          <div data-slot="water-modal-actions" className="flex w-full items-center justify-between">
-            <Dialog.Close
-              className="px-4 py-2 text-sm font-medium transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2"
-              style={{ color: "var(--text-muted)" }}
-            >
-              Cancel
-            </Dialog.Close>
-
+          {/* Bottom row: Log Water (centered) */}
+          <div data-slot="water-modal-actions" className="flex w-full items-center justify-center">
             <button
               type="button"
               onClick={handleLogWater}
               disabled={amount <= 0}
-              className="inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-colors disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2"
+              className="inline-flex items-center gap-2 rounded-lg px-6 py-2.5 text-sm font-semibold text-white transition-colors disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2"
               style={{
                 background: WATER_COLOR,
                 boxShadow: "0 0 12px rgba(66, 188, 184, 0.3)",
               }}
             >
-              <Droplet className="h-4 w-4" />
+              <Droplets className="h-4 w-4" />
               Log Water
             </button>
           </div>

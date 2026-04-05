@@ -14,7 +14,7 @@ import { FOOD_PORTION_DATA } from "@shared/foodPortionData";
 import type { FoodRegistryEntry } from "@shared/foodRegistryData";
 import {
   Camera,
-  Droplet,
+  Droplets,
   Heart,
   Mic,
   Plus,
@@ -174,7 +174,7 @@ function WaterProgressRow({
       onClick={onOpenModal}
       aria-label={`Water: ${intakeMl} of ${goalMl} ml. Tap to log water.`}
     >
-      <Droplet className="h-5 w-5 shrink-0" style={{ color: "#42BCB8" }} aria-hidden="true" />
+      <Droplets className="h-5 w-5 shrink-0" style={{ color: "#42BCB8" }} aria-hidden="true" />
       <span className="shrink-0 text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
         Water
       </span>
@@ -610,7 +610,7 @@ export function NutritionCard() {
           aria-label="Log water"
           onClick={handleOpenWater}
         >
-          <Droplet className="h-5 w-5" style={{ color: "#42BCB8" }} />
+          <Droplets className="h-5 w-5" style={{ color: "#42BCB8" }} />
         </button>
       </div>
     ),
