@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { buildRawNutritionLogData, buildStagedNutritionLogData } from "../nutritionLogging";
+import {
+  buildRawNutritionLogData,
+  buildStagedNutritionLogData,
+} from "../nutritionLogging";
 import type { StagedItem } from "../useNutritionStore";
 
 function makeStagedItem(overrides?: Partial<StagedItem>): StagedItem {
@@ -8,6 +11,7 @@ function makeStagedItem(overrides?: Partial<StagedItem>): StagedItem {
     canonicalName: "toast",
     displayName: "Toast",
     portionG: 60,
+    isLiquid: false,
     calories: 150,
     protein: 4,
     carbs: 24,
@@ -20,11 +24,13 @@ function makeStagedItem(overrides?: Partial<StagedItem>): StagedItem {
 
 describe("buildRawNutritionLogData", () => {
   it("creates a raw-input parser payload with mealSlot", () => {
-    expect(buildRawNutritionLogData(" two toast, honey ", "breakfast")).toEqual({
-      rawInput: "two toast, honey",
-      items: [],
-      mealSlot: "breakfast",
-    });
+    expect(buildRawNutritionLogData(" two toast, honey ", "breakfast")).toEqual(
+      {
+        rawInput: "two toast, honey",
+        items: [],
+        mealSlot: "breakfast",
+      },
+    );
   });
 
   it("returns null for empty raw input", () => {

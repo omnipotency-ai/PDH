@@ -7,7 +7,15 @@
  */
 
 import { FOOD_PORTION_DATA } from "@shared/foodPortionData";
+import { FOOD_REGISTRY } from "@shared/foodRegistryData";
 import type { FluidLogData, FoodItem, FoodLogData } from "@/types/domain";
+
+/** O(1) lookup set for canonical names of liquid foods (category "drink" or "beverage"). */
+const LIQUID_CANONICALS: ReadonlySet<string> = new Set(
+  FOOD_REGISTRY.filter(
+    (entry) => entry.category === "drink" || entry.category === "beverage",
+  ).map((entry) => entry.canonical),
+);
 
 // ---------------------------------------------------------------------------
 // Types

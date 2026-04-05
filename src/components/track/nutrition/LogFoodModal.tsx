@@ -58,21 +58,24 @@ const DEFAULT_INCREMENT_G = 10;
 /**
  * Format a portion weight for display.
  * Shows natural unit count alongside grams when available.
- * e.g. "150g" or "2 slices (72g)"
+ * Uses "ml" suffix for liquids, "g" for solids.
+ * e.g. "150g", "240ml", or "2 slices (72g)"
  */
 function formatPortion(item: StagedItem): string {
+  const suffix = item.isLiquid ? "ml" : "g";
+
   if (
     item.naturalUnit != null &&
     item.unitWeightG != null &&
     item.unitWeightG > 0
   ) {
     const unitCount = Math.round((item.portionG / item.unitWeightG) * 10) / 10;
-    // Show as "Ng" if unit count is not a clean number
+    // Show as "N unit(s) (Xg/ml)" if unit count is a clean number
     if (unitCount === Math.round(unitCount) && unitCount > 0) {
-      return `${unitCount} ${item.naturalUnit}${unitCount !== 1 ? "s" : ""} (${Math.round(item.portionG)}g)`;
+      return `${unitCount} ${item.naturalUnit}${unitCount !== 1 ? "s" : ""} (${Math.round(item.portionG)}${suffix})`;
     }
   }
-  return `${Math.round(item.portionG)}g`;
+  return `${Math.round(item.portionG)}${suffix}`;
 }
 
 /**
