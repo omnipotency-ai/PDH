@@ -17,6 +17,7 @@ import {
   Droplet,
   Heart,
   Mic,
+  Plus,
   SlidersHorizontal,
   UtensilsCrossed,
   X,
@@ -107,9 +108,7 @@ function CalorieRing({
         </svg>
         {/* Center text inside ring */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-sm font-bold text-[var(--text)]">
-            {remaining}
-          </span>
+          <span className="text-sm font-bold text-[var(--text)]">{remaining}</span>
           <span className="text-[10px] text-[var(--text-faint)]">left</span>
         </div>
       </div>
@@ -117,12 +116,8 @@ function CalorieRing({
       {/* Stats beside ring + progress bar below text */}
       <div className="flex flex-1 flex-col items-start gap-1.5 text-left">
         <div className="flex items-baseline gap-1.5">
-          <span className="text-3xl font-bold text-[var(--text)]">
-            {consumed}
-          </span>
-          <span className="text-base text-[var(--text-muted)]">
-            / {goal} kcal
-          </span>
+          <span className="text-3xl font-bold text-[var(--text)]">{consumed}</span>
+          <span className="text-base text-[var(--text-muted)]">/ {goal} kcal</span>
         </div>
         <CalorieProgressBar consumed={consumed} goal={goal} />
       </div>
@@ -132,13 +127,7 @@ function CalorieRing({
 
 // ── Calorie Progress Bar ────────────────────────────────────────────────────
 
-function CalorieProgressBar({
-  consumed,
-  goal,
-}: {
-  consumed: number;
-  goal: number;
-}) {
+function CalorieProgressBar({ consumed, goal }: { consumed: number; goal: number }) {
   const progress = goal > 0 ? Math.min(consumed / goal, 1) : 0;
   const percentage = Math.round(progress * 100);
 
@@ -185,11 +174,7 @@ function WaterProgressRow({
       onClick={onOpenModal}
       aria-label={`Water: ${intakeMl} of ${goalMl} ml. Tap to log water.`}
     >
-      <Droplet
-        className="h-5 w-5 shrink-0"
-        style={{ color: "#42BCB8" }}
-        aria-hidden="true"
-      />
+      <Droplet className="h-5 w-5 shrink-0" style={{ color: "#42BCB8" }} aria-hidden="true" />
       <span className="shrink-0 text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
         Water
       </span>
@@ -268,6 +253,14 @@ function NutritionSearchInput({
   );
 }
 
+// ── Zone badge helpers ──────────────────────────────────────────────────────
+
+const ZONE_COLORS: Record<1 | 2 | 3, string> = {
+  1: "#34d399", // green
+  2: "#fbbf24", // yellow
+  3: "#f97316", // orange
+};
+
 // ── Search Result Row ────────────────────────────────────────────────────────
 
 function SearchResultRow({
@@ -283,13 +276,11 @@ function SearchResultRow({
 }) {
   const portionData = FOOD_PORTION_DATA.get(entry.canonical);
   const calories = portionData
-    ? Math.round(
-        ((portionData.caloriesPer100g ?? 0) * portionData.defaultPortionG) /
-          100,
-      )
+    ? Math.round(((portionData.caloriesPer100g ?? 0) * portionData.defaultPortionG) / 100)
     : 0;
-  const portionLabel =
-    portionData?.naturalUnit ?? `${portionData?.defaultPortionG ?? 0}g`;
+  const portionLabel = portionData?.naturalUnit ?? `${portionData?.defaultPortionG ?? 0}g`;
+
+  const zoneColor = ZONE_COLORS[entry.zone];
 
   return (
     <div
@@ -322,16 +313,30 @@ function SearchResultRow({
         onClick={() => onSelect(entry.canonical)}
       >
         <div className="flex flex-col gap-0.5">
-          <span className="text-sm font-medium text-[var(--text)]">
-            {entry.canonical}
-          </span>
-          <span className="text-[10px] text-[var(--text-faint)]">
-            {portionLabel}
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm font-medium text-[var(--text)]">{entry.canonical}</span>
+            {/* Zone badge */}
+            <span
+              className="rounded-full px-1.5 py-0.5 text-[9px] font-bold leading-none"
+              style={{ backgroundColor: zoneColor, color: "white" }}
+              title={`Zone ${entry.zone}`}
+            >
+              Z{entry.zone}
+            </span>
+          </div>
+          <span className="text-[10px] text-[var(--text-faint)]">{portionLabel}</span>
         </div>
-        <span className="text-xs font-medium text-[var(--text-muted)]">
-          {calories} kcal
-        </span>
+        <span className="text-xs font-medium text-[var(--text-muted)]">{calories} kcal</span>
+      </button>
+
+      {/* Explicit + button */}
+      <button
+        type="button"
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--orange)] text-white transition-colors hover:brightness-110 active:brightness-95"
+        onClick={() => onSelect(entry.canonical)}
+        aria-label={`Add ${entry.canonical} to staging`}
+      >
+        <Plus className="h-4 w-4" aria-hidden="true" />
       </button>
     </div>
   );
@@ -340,8 +345,7 @@ function SearchResultRow({
 // ── NutritionCard (main export) ──────────────────────────────────────────────
 
 export function NutritionCard() {
-  const { state, dispatch, searchResults, stagingCount, stagingTotals } =
-    useNutritionStore();
+  const { state, dispatch, searchResults, stagingCount, stagingTotals } = useNutritionStore();
   const {
     totalCaloriesToday,
     totalMacrosToday,
@@ -403,16 +407,11 @@ export function NutritionCard() {
   }, []);
 
   // Filter recentFoods to only those with known portion data
-  const knownRecentFoods = useMemo(
-    () => filterToKnownFoods(recentFoods),
-    [recentFoods],
-  );
+  const knownRecentFoods = useMemo(() => filterToKnownFoods(recentFoods), [recentFoods]);
 
   // Whether to show the recent foods zero-state
   const showRecentZeroState =
-    searchFocused &&
-    state.searchQuery.trim().length === 0 &&
-    knownRecentFoods.length > 0;
+    searchFocused && state.searchQuery.trim().length === 0 && knownRecentFoods.length > 0;
 
   // ── Global escape handler (decision #15) ─────────────────────────────────
   useEffect(() => {
@@ -569,8 +568,7 @@ export function NutritionCard() {
 
   // ── Derived state ───────────────────────────────────────────────────────
 
-  const hasSearchResults =
-    state.searchQuery.trim().length >= 3 && searchResults.length > 0;
+  const hasSearchResults = state.searchQuery.trim().length >= 3 && searchResults.length > 0;
 
   const hasSearchQueryButNoResults =
     state.searchQuery.trim().length >= 3 && searchResults.length === 0;
@@ -597,10 +595,7 @@ export function NutritionCard() {
           aria-label="Filter foods"
           onClick={() => dispatch({ type: "SET_VIEW", view: "foodFilter" })}
         >
-          <SlidersHorizontal
-            className="h-5 w-5"
-            style={{ color: "var(--orange)" }}
-          />
+          <SlidersHorizontal className="h-5 w-5" style={{ color: "var(--orange)" }} />
         </button>
         <button
           type="button"
@@ -654,9 +649,7 @@ export function NutritionCard() {
           data-slot="log-food-button"
           className="shrink-0 rounded-full bg-[var(--orange)] px-6 py-3 text-base font-semibold text-white transition-colors hover:brightness-110 active:brightness-95"
           onClick={handleLogFoodButton}
-          aria-label={
-            stagingCount > 0 ? "Review staged food items" : "Log food"
-          }
+          aria-label={stagingCount > 0 ? "Review staged food items" : "Log food"}
         >
           Log Food
           {stagingCount > 0 && (
@@ -668,10 +661,7 @@ export function NutritionCard() {
       </div>
 
       {/* ── Logging to: Meal label ─── */}
-      <span
-        data-slot="meal-slot-label"
-        className="text-xs text-[var(--text-muted)]"
-      >
+      <span data-slot="meal-slot-label" className="text-xs text-[var(--text-muted)]">
         Logging to: {titleCase(state.activeMealSlot)}
       </span>
 
@@ -688,10 +678,7 @@ export function NutritionCard() {
           <h3 className="px-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
             Recent
           </h3>
-          <ul
-            className="max-h-64 space-y-0.5 overflow-y-auto"
-            aria-label="Recent foods"
-          >
+          <ul className="max-h-64 space-y-0.5 overflow-y-auto" aria-label="Recent foods">
             {knownRecentFoods.slice(0, 10).map((canonical) => (
               <FoodRow
                 key={canonical}
@@ -708,9 +695,7 @@ export function NutritionCard() {
 
       {/* ── SEARCH RESULTS — inline, shown when query has results ─── */}
       {isTypingShortQuery && (
-        <p className="px-3 py-2 text-xs text-[var(--text-faint)]">
-          Type at least 3 characters...
-        </p>
+        <p className="px-3 py-2 text-xs text-[var(--text-faint)]">Type at least 3 characters...</p>
       )}
 
       {hasSearchResults && (
