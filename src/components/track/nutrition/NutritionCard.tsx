@@ -12,7 +12,15 @@
 
 import { FOOD_PORTION_DATA } from "@shared/foodPortionData";
 import type { FoodRegistryEntry } from "@shared/foodRegistryData";
-import { Camera, Droplet, Heart, Mic, SlidersHorizontal, UtensilsCrossed, X } from "lucide-react";
+import {
+  Camera,
+  Droplet,
+  Heart,
+  Mic,
+  SlidersHorizontal,
+  UtensilsCrossed,
+  X,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -99,7 +107,9 @@ function CalorieRing({
         </svg>
         {/* Center text inside ring */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-sm font-bold text-[var(--text)]">{remaining}</span>
+          <span className="text-sm font-bold text-[var(--text)]">
+            {remaining}
+          </span>
           <span className="text-[10px] text-[var(--text-faint)]">left</span>
         </div>
       </div>
@@ -107,8 +117,12 @@ function CalorieRing({
       {/* Stats beside ring + progress bar below text */}
       <div className="flex flex-1 flex-col items-start gap-1.5 text-left">
         <div className="flex items-baseline gap-1.5">
-          <span className="text-3xl font-bold text-[var(--text)]">{consumed}</span>
-          <span className="text-base text-[var(--text-muted)]">/ {goal} kcal</span>
+          <span className="text-3xl font-bold text-[var(--text)]">
+            {consumed}
+          </span>
+          <span className="text-base text-[var(--text-muted)]">
+            / {goal} kcal
+          </span>
         </div>
         <CalorieProgressBar consumed={consumed} goal={goal} />
       </div>
@@ -118,7 +132,13 @@ function CalorieRing({
 
 // ── Calorie Progress Bar ────────────────────────────────────────────────────
 
-function CalorieProgressBar({ consumed, goal }: { consumed: number; goal: number }) {
+function CalorieProgressBar({
+  consumed,
+  goal,
+}: {
+  consumed: number;
+  goal: number;
+}) {
   const progress = goal > 0 ? Math.min(consumed / goal, 1) : 0;
   const percentage = Math.round(progress * 100);
 
@@ -165,7 +185,11 @@ function WaterProgressRow({
       onClick={onOpenModal}
       aria-label={`Water: ${intakeMl} of ${goalMl} ml. Tap to log water.`}
     >
-      <Droplet className="h-5 w-5 shrink-0" style={{ color: "#42BCB8" }} aria-hidden="true" />
+      <Droplet
+        className="h-5 w-5 shrink-0"
+        style={{ color: "#42BCB8" }}
+        aria-hidden="true"
+      />
       <span className="shrink-0 text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
         Water
       </span>
@@ -248,37 +272,76 @@ function NutritionSearchInput({
 
 function SearchResultRow({
   entry,
+  isFavourite,
   onSelect,
+  onToggleFavourite,
 }: {
   entry: FoodRegistryEntry;
+  isFavourite: boolean;
   onSelect: (canonicalName: string) => void;
+  onToggleFavourite: (canonicalName: string) => void;
 }) {
   const portionData = FOOD_PORTION_DATA.get(entry.canonical);
   const calories = portionData
-    ? Math.round(((portionData.caloriesPer100g ?? 0) * portionData.defaultPortionG) / 100)
+    ? Math.round(
+        ((portionData.caloriesPer100g ?? 0) * portionData.defaultPortionG) /
+          100,
+      )
     : 0;
-  const portionLabel = portionData?.naturalUnit ?? `${portionData?.defaultPortionG ?? 0}g`;
+  const portionLabel =
+    portionData?.naturalUnit ?? `${portionData?.defaultPortionG ?? 0}g`;
 
   return (
-    <button
-      type="button"
+    <div
       data-slot="search-result"
-      className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left transition-colors hover:bg-[var(--surface-2)]"
-      onClick={() => onSelect(entry.canonical)}
+      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 transition-colors hover:bg-[var(--surface-2)]"
     >
-      <div className="flex flex-col gap-0.5">
-        <span className="text-sm font-medium text-[var(--text)]">{entry.canonical}</span>
-        <span className="text-[10px] text-[var(--text-faint)]">{portionLabel}</span>
-      </div>
-      <span className="text-xs font-medium text-[var(--text-muted)]">{calories} kcal</span>
-    </button>
+      {/* Heart toggle */}
+      <button
+        type="button"
+        className="shrink-0 p-0"
+        onClick={() => onToggleFavourite(entry.canonical)}
+        aria-label={
+          isFavourite
+            ? `Remove ${entry.canonical} from favourites`
+            : `Add ${entry.canonical} to favourites`
+        }
+      >
+        <Heart
+          className={`h-4 w-4 ${isFavourite ? "fill-current" : ""}`}
+          style={{
+            color: isFavourite ? "var(--orange)" : "var(--text-faint)",
+          }}
+        />
+      </button>
+
+      {/* Clickable area for adding to staging */}
+      <button
+        type="button"
+        className="flex flex-1 items-center justify-between text-left"
+        onClick={() => onSelect(entry.canonical)}
+      >
+        <div className="flex flex-col gap-0.5">
+          <span className="text-sm font-medium text-[var(--text)]">
+            {entry.canonical}
+          </span>
+          <span className="text-[10px] text-[var(--text-faint)]">
+            {portionLabel}
+          </span>
+        </div>
+        <span className="text-xs font-medium text-[var(--text-muted)]">
+          {calories} kcal
+        </span>
+      </button>
+    </div>
   );
 }
 
 // ── NutritionCard (main export) ──────────────────────────────────────────────
 
 export function NutritionCard() {
-  const { state, dispatch, searchResults, stagingCount, stagingTotals } = useNutritionStore();
+  const { state, dispatch, searchResults, stagingCount, stagingTotals } =
+    useNutritionStore();
   const {
     totalCaloriesToday,
     totalMacrosToday,
@@ -289,7 +352,7 @@ export function NutritionCard() {
     logsByMealSlot,
     recentFoods,
   } = useNutritionData();
-  const { favourites } = useFoodFavourites();
+  const { favourites, toggleFavourite, isFavourite } = useFoodFavourites();
   const addSyncedLog = useAddSyncedLog();
   const removeSyncedLog = useRemoveSyncedLog();
 
@@ -340,11 +403,16 @@ export function NutritionCard() {
   }, []);
 
   // Filter recentFoods to only those with known portion data
-  const knownRecentFoods = useMemo(() => filterToKnownFoods(recentFoods), [recentFoods]);
+  const knownRecentFoods = useMemo(
+    () => filterToKnownFoods(recentFoods),
+    [recentFoods],
+  );
 
   // Whether to show the recent foods zero-state
   const showRecentZeroState =
-    searchFocused && state.searchQuery.trim().length === 0 && knownRecentFoods.length > 0;
+    searchFocused &&
+    state.searchQuery.trim().length === 0 &&
+    knownRecentFoods.length > 0;
 
   // ── Global escape handler (decision #15) ─────────────────────────────────
   useEffect(() => {
@@ -501,7 +569,8 @@ export function NutritionCard() {
 
   // ── Derived state ───────────────────────────────────────────────────────
 
-  const hasSearchResults = state.searchQuery.trim().length >= 3 && searchResults.length > 0;
+  const hasSearchResults =
+    state.searchQuery.trim().length >= 3 && searchResults.length > 0;
 
   const hasSearchQueryButNoResults =
     state.searchQuery.trim().length >= 3 && searchResults.length === 0;
@@ -528,7 +597,10 @@ export function NutritionCard() {
           aria-label="Filter foods"
           onClick={() => dispatch({ type: "SET_VIEW", view: "foodFilter" })}
         >
-          <SlidersHorizontal className="h-5 w-5" style={{ color: "var(--orange)" }} />
+          <SlidersHorizontal
+            className="h-5 w-5"
+            style={{ color: "var(--orange)" }}
+          />
         </button>
         <button
           type="button"
@@ -582,7 +654,9 @@ export function NutritionCard() {
           data-slot="log-food-button"
           className="shrink-0 rounded-full bg-[var(--orange)] px-6 py-3 text-base font-semibold text-white transition-colors hover:brightness-110 active:brightness-95"
           onClick={handleLogFoodButton}
-          aria-label={stagingCount > 0 ? "Review staged food items" : "Log food"}
+          aria-label={
+            stagingCount > 0 ? "Review staged food items" : "Log food"
+          }
         >
           Log Food
           {stagingCount > 0 && (
@@ -594,7 +668,10 @@ export function NutritionCard() {
       </div>
 
       {/* ── Logging to: Meal label ─── */}
-      <span data-slot="meal-slot-label" className="text-xs text-[var(--text-muted)]">
+      <span
+        data-slot="meal-slot-label"
+        className="text-xs text-[var(--text-muted)]"
+      >
         Logging to: {titleCase(state.activeMealSlot)}
       </span>
 
@@ -611,7 +688,10 @@ export function NutritionCard() {
           <h3 className="px-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
             Recent
           </h3>
-          <ul className="max-h-64 space-y-0.5 overflow-y-auto" aria-label="Recent foods">
+          <ul
+            className="max-h-64 space-y-0.5 overflow-y-auto"
+            aria-label="Recent foods"
+          >
             {knownRecentFoods.slice(0, 10).map((canonical) => (
               <FoodRow
                 key={canonical}
@@ -628,7 +708,9 @@ export function NutritionCard() {
 
       {/* ── SEARCH RESULTS — inline, shown when query has results ─── */}
       {isTypingShortQuery && (
-        <p className="px-3 py-2 text-xs text-[var(--text-faint)]">Type at least 3 characters...</p>
+        <p className="px-3 py-2 text-xs text-[var(--text-faint)]">
+          Type at least 3 characters...
+        </p>
       )}
 
       {hasSearchResults && (
@@ -639,7 +721,13 @@ export function NutritionCard() {
           aria-label="Search results"
         >
           {searchResults.map((entry) => (
-            <SearchResultRow key={entry.canonical} entry={entry} onSelect={handleAddToStaging} />
+            <SearchResultRow
+              key={entry.canonical}
+              entry={entry}
+              isFavourite={isFavourite(entry.canonical)}
+              onSelect={handleAddToStaging}
+              onToggleFavourite={toggleFavourite}
+            />
           ))}
         </div>
       )}
