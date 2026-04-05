@@ -1,3 +1,8 @@
+> **Ref:** `docs/plans/2026-04-05-nutrition-card-fix.md`
+> **Updated:** 2026-04-05
+> **Version:** 1.0
+> **History:** v1.0 (2026-04-05) — standardized doc header
+
 # Nutrition Card — Fix All Deviations from Spec
 
 > **Status:** COMPLETE (2026-04-05). All 12 tasks executed and committed on `feat/nutrition`.

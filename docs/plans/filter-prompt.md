@@ -1,3 +1,8 @@
+> **Ref:** `docs/plans/filter-prompt.md`
+> **Updated:** 2026-04-05
+> **Version:** 1.0
+> **History:** v1.0 (2026-04-05) — standardized doc header
+
 # Food Registry Multi-Filter System
 
 > **Status:** NOT STARTED — this is Data Integration Plan Wave 2. Depends on nothing; can begin when Meal Logging (Wave 1) is stable.

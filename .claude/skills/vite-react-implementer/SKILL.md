@@ -382,7 +382,30 @@ The codebase is **actively being refactored**. Surrounding code may reflect old 
 3. Plan approach before writing
 4. Implement methodically, following file reading protocol
 5. Verify: type correctness, no suppressed errors, correct imports, no unused variables
-6. Report completion with decisions made and open questions
+6. **Update WIP** (see below)
+7. Report completion with decisions made and open questions
+
+### WIP Update (MANDATORY)
+
+After every task completion, **prepend** an entry to `docs/WIP.md` immediately below the active initiative's header. This is non-negotiable — the WIP is how the system tracks what happened.
+
+**Format:**
+
+```markdown
+### [WQ task ID] — [short title] (YYYY-MM-DD HH:MM)
+
+- **Commit:** `abc1234`
+- **Files:** list of files changed
+- **What:** 1-2 sentence summary of what was done
+- **Decisions:** any non-obvious choices made (or "None")
+```
+
+**Rules:**
+
+- Newest entries go at the top of the active initiative section
+- Include the git commit hash (run `git rev-parse --short HEAD` after committing)
+- If you don't have a WQ task ID, use the plan task ID (e.g., W4-01)
+- Never edit or remove existing WIP entries — append only
 
 ### What NOT to Do
 

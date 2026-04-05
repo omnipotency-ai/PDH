@@ -1,3 +1,8 @@
+> **Ref:** `docs/plans/next-session-prompt.md`
+> **Updated:** 2026-04-05
+> **Version:** 1.0
+> **History:** v1.0 (2026-04-05) — standardized doc header
+
 # Next Session — Nutrition Card Remaining Work
 
 ## Context

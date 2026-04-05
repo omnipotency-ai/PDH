@@ -1,3 +1,8 @@
+> **Ref:** `docs/ai/cross-tool-collaboration.md`
+> **Updated:** 2026-04-05
+> **Version:** 1.0
+> **History:** v1.0 (2026-04-05) — standardized doc header
+
 # Cross-Tool Collaboration
 
 This repo is actively worked on with both Claude Code and Codex. The goal is not to make both tools do the same job. The goal is to give each tool a clear lane and a clean handoff format.
@@ -104,22 +109,28 @@ Use this for UI tasks.
 
 ```md
 Goal:
+
 - <user-visible outcome>
 
 Scope:
+
 - <exact files or directories>
 
 Read first:
+
 - <repo docs>
 - <screenshots or memory files>
 
 Constraints:
+
 - <rules, exclusions, architecture constraints>
 
 Verification:
+
 - <commands to run>
 - <manual checks to perform>
 
 Deliverable:
+
 - <implementation, review, screenshots, docs update, etc.>
 ```

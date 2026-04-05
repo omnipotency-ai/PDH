@@ -9,16 +9,16 @@ import { isFoodPipelineType } from "@shared/logTypeUtils";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSyncedLogsContext } from "@/contexts/SyncedLogsContext";
 import { useNutritionGoals } from "@/hooks/useProfile";
+import { getDateScopedTimestamp } from "@/lib/dateUtils";
 import {
   calculateTotalCalories,
   calculateTotalMacros,
-  calculateWaterIntake,
-  getCurrentMealSlot,
   getMealSlot,
   groupByMealSlot,
   type MacroTotals,
   type MealSlot,
 } from "@/lib/nutritionUtils";
+import { MS_PER_DAY } from "@/lib/timeConstants";
 import type { SyncedLog } from "@/lib/sync";
 
 // ---------------------------------------------------------------------------
@@ -29,14 +29,6 @@ import type { SyncedLog } from "@/lib/sync";
 function getTodayMidnight(): number {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
-  return now.getTime();
-}
-
-/** Midnight 7 days ago in the user's local timezone. */
-function getSevenDaysAgoMidnight(): number {
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  now.setDate(now.getDate() - 7);
   return now.getTime();
 }
 
@@ -63,19 +55,19 @@ function isFoodPipelineLog(log: SyncedLog): log is FoodPipelineLog {
 type FluidSyncedLog = SyncedLog & { type: "fluid" };
 
 export interface NutritionData {
-  /** Food + liquid logs for today. */
+  /** Food + liquid logs for the active day. */
   todayFoodLogs: FoodPipelineLog[];
-  /** Fluid logs for today. */
+  /** Fluid logs for the active day. */
   todayFluidLogs: FluidSyncedLog[];
-  /** Total estimated calories from today's food + liquid logs. */
+  /** Total estimated calories from the active day's food + liquid logs. */
   totalCaloriesToday: number;
-  /** Macronutrient totals from today's food + liquid logs. */
+  /** Macronutrient totals from the active day's food + liquid logs. */
   totalMacrosToday: MacroTotals;
-  /** Total water intake today in ml. */
+  /** Total water intake for the active day in ml. */
   waterIntakeToday: number;
-  /** Calorie subtotal per meal slot from today's food + liquid logs. */
+  /** Calorie subtotal per meal slot from the active day's food + liquid logs. */
   caloriesByMealSlot: Record<MealSlot, number>;
-  /** Today's food + liquid logs grouped by meal slot. */
+  /** Active-day food + liquid logs grouped by meal slot. */
   logsByMealSlot: Record<MealSlot, FoodPipelineLog[]>;
   /** Daily calorie goal from profile. */
   calorieGoal: number;
@@ -91,6 +83,40 @@ export interface NutritionData {
   recentFoods: string[];
   /** Canonical food names from the last 7 days (all slots), most recent first, deduped, max 50. */
   allRecentFoods: string[];
+}
+
+export function getNutritionDayBounds(targetDate?: Date): {
+  startMs: number;
+  endMs: number;
+} {
+  const date = targetDate ? new Date(targetDate) : new Date();
+  date.setHours(0, 0, 0, 0);
+  const startMs = date.getTime();
+  return { startMs, endMs: startMs + MS_PER_DAY };
+}
+
+export function splitNutritionLogsForWindow(
+  logs: ReadonlyArray<SyncedLog>,
+  startMs: number,
+  endMs: number,
+): {
+  todayFoodLogs: FoodPipelineLog[];
+  todayFluidLogs: FluidSyncedLog[];
+} {
+  const foodLogs: FoodPipelineLog[] = [];
+  const fluidLogs: FluidSyncedLog[] = [];
+
+  for (const log of logs) {
+    if (log.timestamp < startMs || log.timestamp >= endMs) continue;
+
+    if (isFoodPipelineLog(log)) {
+      foodLogs.push(log);
+    } else if (log.type === "fluid") {
+      fluidLogs.push(log);
+    }
+  }
+
+  return { todayFoodLogs: foodLogs, todayFluidLogs: fluidLogs };
 }
 
 // ---------------------------------------------------------------------------
@@ -137,7 +163,7 @@ function useTodayKey(): string {
 // Hook
 // ---------------------------------------------------------------------------
 
-export function useNutritionData(): NutritionData {
+export function useNutritionData(targetDate?: Date): NutritionData {
   const logs = useSyncedLogsContext();
   const { dailyCalorieGoal, dailyWaterGoalMl } = useNutritionGoals();
 
@@ -145,24 +171,18 @@ export function useNutritionData(): NutritionData {
   // visibilitychange). Downstream memos recompute when the day changes.
   const todayKey = useTodayKey();
 
-  // Split logs into today's food+liquid and fluid logs.
-  const { todayFoodLogs, todayFluidLogs } = useMemo(() => {
-    const todayMidnight = Number(todayKey);
-    const foodLogs: FoodPipelineLog[] = [];
-    const fluidLogs: FluidSyncedLog[] = [];
+  const { startMs: selectedDayStart, endMs: selectedDayEnd } = useMemo(
+    () => getNutritionDayBounds(targetDate),
+    [targetDate],
+  );
+  const activeDayStart = targetDate ? selectedDayStart : Number(todayKey);
+  const activeDayEnd = targetDate ? selectedDayEnd : activeDayStart + MS_PER_DAY;
 
-    for (const log of logs) {
-      if (log.timestamp < todayMidnight) continue;
-
-      if (isFoodPipelineLog(log)) {
-        foodLogs.push(log);
-      } else if (log.type === "fluid") {
-        fluidLogs.push(log);
-      }
-    }
-
-    return { todayFoodLogs: foodLogs, todayFluidLogs: fluidLogs };
-  }, [logs, todayKey]);
+  // Split logs into active-day food+liquid and fluid logs.
+  const { todayFoodLogs, todayFluidLogs } = useMemo(
+    () => splitNutritionLogsForWindow(logs, activeDayStart, activeDayEnd),
+    [logs, activeDayStart, activeDayEnd],
+  );
 
   // Derive calorie total.
   const totalCaloriesToday = useMemo(() => calculateTotalCalories(todayFoodLogs), [todayFoodLogs]);
@@ -171,7 +191,15 @@ export function useNutritionData(): NutritionData {
   const totalMacrosToday = useMemo(() => calculateTotalMacros(todayFoodLogs), [todayFoodLogs]);
 
   // Derive water intake.
-  const waterIntakeToday = useMemo(() => calculateWaterIntake(todayFluidLogs), [todayFluidLogs]);
+  const waterIntakeToday = useMemo(() => {
+    let total = 0;
+    for (const log of todayFluidLogs) {
+      for (const item of log.data.items) {
+        total += Number(item.quantity ?? 0);
+      }
+    }
+    return total;
+  }, [todayFluidLogs]);
 
   // Group today's food logs by meal slot.
   const logsByMealSlot = useMemo(() => groupByMealSlot(todayFoodLogs), [todayFoodLogs]);
@@ -191,15 +219,15 @@ export function useNutritionData(): NutritionData {
     return result;
   }, [logsByMealSlot]);
 
-  // Current meal slot based on time of day. No memo — getCurrentMealSlot() is
-  // cheap (one Date + a short loop) and recomputes on every render triggered
-  // by Convex subscription updates, keeping the slot fresh.
-  const currentMealSlot = getCurrentMealSlot();
+  // Current meal slot based on the active day plus the current clock time.
+  const currentMealSlot = targetDate
+    ? getMealSlot(getDateScopedTimestamp(targetDate))
+    : getMealSlot(Date.now());
 
   // Recent foods: canonical names from last 7 days, most recent first, deduped, max 50.
   // Computes both all-slot and per-slot lists in one pass.
   const { slotRecentFoods, allRecentFoods } = useMemo(() => {
-    const sevenDaysAgo = getSevenDaysAgoMidnight();
+    const sevenDaysAgo = activeDayStart - 7 * MS_PER_DAY;
     const seenAll = new Set<string>();
     const seenSlot = new Set<string>();
     const allResult: string[] = [];
@@ -207,6 +235,7 @@ export function useNutritionData(): NutritionData {
 
     // Logs arrive descending (most recent first) from Convex query. Iterate forward.
     for (const log of logs) {
+      if (log.timestamp >= activeDayEnd) continue;
       if (log.timestamp < sevenDaysAgo) break;
 
       if (!isFoodPipelineLog(log)) continue;
@@ -238,7 +267,7 @@ export function useNutritionData(): NutritionData {
       slotRecentFoods: slotResult.slice(0, 50),
       allRecentFoods: allResult.slice(0, 50),
     };
-  }, [logs, currentMealSlot]);
+  }, [logs, currentMealSlot, activeDayEnd, activeDayStart]);
 
   // Fall back to global recents if no slot-specific foods exist.
   // Both branches are stable memo references — no new array allocated

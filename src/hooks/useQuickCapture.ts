@@ -20,7 +20,7 @@ interface UseQuickCaptureOptions {
   removeSyncedLog: (id: string) => Promise<unknown>;
   removeHabitLog: (habitId: string, at: number) => void;
   /** Called when the user taps "Edit" on a post-log toast. Receives the synced log ID. */
-  onRequestEdit: (logId: string) => void;
+  onRequestEdit: (logId: string, captureOffset?: number) => void;
   captureTimestamp?: number;
   captureStart?: number;
   captureEnd?: number;

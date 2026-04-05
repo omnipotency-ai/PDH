@@ -1,9 +1,12 @@
+> **Ref:** `docs/plans/data-integration-plan.md`
+> **Updated:** 2026-04-05
+> **Version:** 1.0
+> **History:** v1.0 (2026-04-05) — standardized doc header, added wave status
+
 # Data Integration Plan
 
 > Ties together the 4 build waves for food logging, filter bar, user data, and nutrition enrichment.
 > Defines the shared data layer, wave dependencies, and handoff points.
->
-> **Last updated:** 2026-04-05
 
 ## Wave Overview
 

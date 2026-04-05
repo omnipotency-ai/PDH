@@ -1,4 +1,5 @@
-import { addDays, format, startOfDay } from "date-fns";
+import { addDays, differenceInCalendarDays, format, startOfDay } from "date-fns";
+import { CalendarDays } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AiInsightsSection } from "@/components/track/dr-poo/AiInsightsSection";
@@ -18,7 +19,10 @@ import { QuickCapture } from "@/components/track/quick-capture";
 import { HabitDetailSheet } from "@/components/track/quick-capture/HabitDetailSheet";
 import { TodayStatusRow } from "@/components/track/TodayStatusRow";
 import { TodayLog } from "@/components/track/today-log";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import { ConfettiBurst } from "@/components/ui/Confetti";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useResponsiveShellMode } from "@/components/ui/responsive-shell";
 import { useSyncedLogsContext } from "@/contexts/SyncedLogsContext";
 import { useAiInsights } from "@/hooks/useAiInsights";
@@ -34,6 +38,7 @@ import { useUnresolvedFoodQueue } from "@/hooks/useUnresolvedFoodQueue";
 import { useUnresolvedFoodToast } from "@/hooks/useUnresolvedFoodToast";
 import { useWeeklySummaryAutoTrigger } from "@/hooks/useWeeklySummaryAutoTrigger";
 import { bristolToConsistency, normalizeEpisodesCount } from "@/lib/analysis";
+import { getDateScopedTimestamp } from "@/lib/dateUtils";
 import { formatLocalDateKey } from "@/lib/dateUtils";
 import { getErrorMessage } from "@/lib/errors";
 import type { HabitConfig } from "@/lib/habitTemplates";
@@ -52,6 +57,50 @@ import type {
 } from "@/types/domain";
 
 type LogPayloadData = LogDataMap[LogType];
+
+function TrackDatePicker({
+  selectedDate,
+  todayDate,
+  onSelect,
+}: {
+  selectedDate: Date;
+  todayDate: Date;
+  onSelect: (date: Date) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const label =
+    differenceInCalendarDays(selectedDate, todayDate) === 0
+      ? "Today"
+      : format(selectedDate, "EEE, MMM d");
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          className="h-9 gap-2 rounded-full border-teal-500/20 bg-white/60 px-4 text-xs font-semibold text-teal-700 hover:bg-teal-50 dark:border-teal-400/20 dark:bg-slate-900/40 dark:text-teal-300 dark:hover:bg-slate-900"
+        >
+          <CalendarDays className="h-4 w-4" aria-hidden="true" />
+          <span>{label}</span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar
+          mode="single"
+          selected={selectedDate}
+          onSelect={(date) => {
+            if (!date) return;
+            onSelect(date);
+            setOpen(false);
+          }}
+          disabled={(date) => startOfDay(date) > todayDate}
+          defaultMonth={selectedDate}
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 function toActivityTypeKey(value: string): string {
   const key = value
@@ -100,18 +149,29 @@ export default function TrackPage() {
   // computations (todayStart, selectedDate, formatted header) stay current.
   useLiveClock();
   const now = new Date();
-  const [dayOffset, setDayOffset] = useState(0);
+  const [selectedDate, setSelectedDate] = useState(() => startOfDay(new Date()));
 
   const todayStart = useMemo(() => startOfDay(now).getTime(), [now]);
   const todayEnd = todayStart + MS_PER_DAY;
-
-  // --- Day statistics (extracted hook) ---
-  const { todayHabitCounts, todayFluidTotalsByName, totalFluidMl, todayBmCount, lastBmTimestamp } =
-    useDayStats({ logs, todayStart, todayEnd });
-
-  const selectedDate = useMemo(() => startOfDay(addDays(now, dayOffset)), [now, dayOffset]);
+  const todayDate = useMemo(() => startOfDay(now), [now]);
+  const dayOffset = useMemo(
+    () => differenceInCalendarDays(selectedDate, todayDate),
+    [selectedDate, todayDate],
+  );
   const selectedStart = selectedDate.getTime();
   const selectedEnd = addDays(selectedDate, 1).getTime();
+  const selectedCaptureTimestamp = useMemo(
+    () => (dayOffset === 0 ? undefined : getDateScopedTimestamp(selectedDate, now)),
+    [dayOffset, now, selectedDate],
+  );
+
+  // --- Day statistics (actual today + selected day) ---
+  const { todayHabitCounts, todayFluidTotalsByName, totalFluidMl, todayBmCount, lastBmTimestamp } =
+    useDayStats({ logs, todayStart, todayEnd });
+  const {
+    todayHabitCounts: selectedHabitCounts,
+    todayFluidTotalsByName: selectedFluidTotalsByName,
+  } = useDayStats({ logs, todayStart: selectedStart, todayEnd: selectedEnd });
 
   const selectedLogs = useMemo(
     () => logs.filter((log) => log.timestamp >= selectedStart && log.timestamp < selectedEnd),
@@ -213,11 +273,17 @@ export default function TrackPage() {
   // --- Auto-edit state: set by toast "Edit" button, consumed by TodayLog ---
   const [autoEditLogId, setAutoEditLogId] = useState<string | null>(null);
 
-  const handleRequestEdit = useCallback((logId: string) => {
-    // Ensure we're viewing today so the entry is visible
-    setDayOffset(0);
-    setAutoEditLogId(logId);
-  }, []);
+  const handleRequestEdit = useCallback(
+    (logId: string, captureOffset = 0) => {
+      const matchingLog = logs.find((entry) => entry.id === logId);
+      const nextDate = matchingLog
+        ? startOfDay(new Date(matchingLog.timestamp))
+        : startOfDay(addDays(new Date(), captureOffset));
+      setSelectedDate(nextDate);
+      setAutoEditLogId(logId);
+    },
+    [logs],
+  );
 
   const handleAutoEditHandled = useCallback(() => {
     setAutoEditLogId(null);
@@ -235,15 +301,19 @@ export default function TrackPage() {
   } = useQuickCapture({
     afterSave,
     celebrateGoalComplete,
-    todayHabitCounts,
-    todayFluidTotalsByName,
+    todayHabitCounts: selectedHabitCounts,
+    todayFluidTotalsByName: selectedFluidTotalsByName,
     streakSummaries,
     logs,
-    todayStart,
-    todayEnd,
+    todayStart: selectedStart,
+    todayEnd: selectedEnd,
     removeSyncedLog,
     removeHabitLog,
     onRequestEdit: handleRequestEdit,
+    ...(selectedCaptureTimestamp !== undefined && { captureTimestamp: selectedCaptureTimestamp }),
+    captureStart: selectedStart,
+    captureEnd: selectedEnd,
+    captureOffset: dayOffset,
   });
 
   // Detail day summaries for habit detail sheet (depends on daySummaries from useHabitStreaks)
@@ -255,9 +325,26 @@ export default function TrackPage() {
     [daySummaries, detailSheetHabit],
   );
 
-  const handlePreviousDay = useCallback(() => setDayOffset((value) => value - 1), []);
-  const handleNextDay = useCallback(() => setDayOffset((value) => Math.min(value + 1, 0)), []);
-  const handleJumpToToday = useCallback(() => setDayOffset(0), []);
+  const handlePreviousDay = useCallback(
+    () => setSelectedDate((value) => startOfDay(addDays(value, -1))),
+    [],
+  );
+  const handleNextDay = useCallback(
+    () =>
+      setSelectedDate((value) => {
+        const next = startOfDay(addDays(value, 1));
+        return next.getTime() > todayDate.getTime() ? todayDate : next;
+      }),
+    [todayDate],
+  );
+  const handleJumpToToday = useCallback(() => setSelectedDate(todayDate), [todayDate]);
+  const handleSelectDate = useCallback(
+    (date: Date) => {
+      const normalized = startOfDay(date);
+      setSelectedDate(normalized.getTime() > todayDate.getTime() ? todayDate : normalized);
+    },
+    [todayDate],
+  );
 
   const handleLogBowel = async (state: BowelFormState) => {
     const consistencyTag = bristolToConsistency(state.bristolCode);
@@ -446,8 +533,8 @@ export default function TrackPage() {
   const quickCapture = (
     <QuickCapture
       habits={habits}
-      todayHabitCounts={todayHabitCounts}
-      todayFluidMl={todayFluidTotalsByName}
+      todayHabitCounts={selectedHabitCounts}
+      todayFluidMl={selectedFluidTotalsByName}
       onTap={handleQuickCaptureTap}
       onLogSleepHours={handleLogSleepQuickCapture}
       onLogActivityMinutes={handleLogActivityQuickCapture}
@@ -487,6 +574,11 @@ export default function TrackPage() {
             <p className="font-monaco text-xs uppercase tracking-[0.2em] text-teal-600 dark:text-teal-400 shrink-0">
               {format(now, "E · d MMMM · HH:mm")}
             </p>
+            <TrackDatePicker
+              selectedDate={selectedDate}
+              todayDate={todayDate}
+              onSelect={handleSelectDate}
+            />
           </div>
           <div className="flex justify-center">{todayStatusRow}</div>
           {isDesktop && <div />}
@@ -497,9 +589,19 @@ export default function TrackPage() {
         {/* ── Column 1: Input forms ── */}
         <section className="space-y-3 min-w-0">
           <NutritionCardErrorBoundary>
-            <NutritionCard />
+            <NutritionCard
+              selectedDate={selectedDate}
+              {...(selectedCaptureTimestamp !== undefined && {
+                captureTimestamp: selectedCaptureTimestamp,
+              })}
+            />
           </NutritionCardErrorBoundary>
-          <BowelSection onSave={handleLogBowel} />
+          <BowelSection
+            onSave={handleLogBowel}
+            {...(selectedCaptureTimestamp !== undefined && {
+              captureTimestamp: selectedCaptureTimestamp,
+            })}
+          />
           {quickCapture}
           {!isDesktop && aiInsightsSection}
         </section>
@@ -532,9 +634,9 @@ export default function TrackPage() {
 
       <HabitDetailSheet
         habit={detailSheetHabit}
-        count={detailSheetHabit ? (todayHabitCounts[detailSheetHabit.id] ?? 0) : 0}
+        count={detailSheetHabit ? (selectedHabitCounts[detailSheetHabit.id] ?? 0) : 0}
         {...(detailSheetHabit?.logAs === "fluid" && {
-          fluidMl: todayFluidTotalsByName[normalizeFluidItemName(detailSheetHabit.name)],
+          fluidMl: selectedFluidTotalsByName[normalizeFluidItemName(detailSheetHabit.name)],
         })}
         daySummaries={detailDaySummaries}
         streakSummary={detailSheetHabit ? (streakSummaries[detailSheetHabit.id] ?? null) : null}

@@ -1,6 +1,23 @@
-# Meal Logging PRD
+> **Ref:** `docs/plans/archive/meal-logging-prd.md`
+> **Updated:** 2026-04-05
+> **Version:** 1.0
+> **History:** v1.0 (2026-04-05) — standardized doc header
+> **Archived:** 2026-04-05 — consumed into `nutrition-card-implementation-plan.json`. See deviations below.
 
-> **Status:** ACTIVE — Waves 0-3 complete, spec deviation fix complete (2026-04-05). W4-01, W4-03, W5 remaining.
+# Meal Logging PRD (ARCHIVED)
+
+> **Status:** ARCHIVED — consumed into implementation plan. Waves 0-3 + spec fix complete. W4/W5 remaining.
+>
+> **Deviations from this PRD:**
+>
+> - Filter UX changed from meal-slot-scoped chips to Recent|Frequent|Favourites|All tabs (user decision)
+> - Staging area is a modal (LogFoodModal), not inline on page (user decision)
+> - NutritionCard lives on Track page, not a standalone `/food` route (nav restructure deferred)
+> - Recipe system deferred (structuredIngredients, slotDefaults, "Save as recipe") — folded into Food Registry initiative
+> - Voice/mic input deferred to Voice/Conversational Logging initiative
+> - Barcode scanning deferred — added to roadmap as parking lot
+> - Nutrition label capture deferred — folded into Photo Food Parsing initiative
+> - 4-tab navigation (Home/Track/Food/Insights) deferred — added to roadmap as initiative
 >
 > Redesign of the food logging experience for PDH. Replaces the current single text field
 > with a chip-based, slot-aware meal builder that minimises friction for daily use.

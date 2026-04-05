@@ -1,3 +1,8 @@
+> **Ref:** `docs/plans/archive/Worktree spec/2026-04-04/consolidated-review.md`
+> **Updated:** 2026-04-05
+> **Version:** 1.0 (ARCHIVED)
+> **History:** v1.0 (2026-04-05) — archived from active plans
+
 # Review Findings Status — MINOR + NICE-TO-HAVE
 
 **Updated:** 2026-04-04

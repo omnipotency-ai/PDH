@@ -1,9 +1,9 @@
 ---
-name: sub-agent-development
-description: Coordinate plan execution through sub-agents working in parallel. Use when the user provides an implementation plan (typically from docs/plans/) and wants it executed by dispatching sub-agents that work independently on tasks with dependency-aware phasing. Triggers on "sub-agent development", "subagent driven development", "execute plan with sub-agents", or when asked to run a plan through agents. PDH-specific version with per-task spec review, quality review, and project-ops doc maintenance.
+name: subagent-driven-development
+description: Coordinate plan execution through sub-agents working in parallel. Use when the user provides an implementation plan (typically from docs/plans/) and wants it executed by dispatching sub-agents that work independently on tasks with dependency-aware phasing. Triggers on "sub-agent development", "subagent driven development", "execute plan with sub-agents", or when asked to run a plan through agents. Overrides the superpowers version with PDH-specific doc integration, per-task spec+quality review cycle, and project-ops flow.
 ---
 
-# Sub-Agent Development — PDH
+# Subagent-Driven Development — PDH
 
 Execute plans by dispatching subagents in dependency-aware phases. Each task gets a full cycle: implement -> spec audit -> fix -> quality audit -> triage. One subagent per job. Orchestrator triages findings and maintains docs.
 
@@ -26,9 +26,7 @@ You are the **coordinator**. You read the plan, dispatch agents, triage findings
 
 Read the plan file. Extract every task with full text. Identify dependencies.
 
-### Step 2: Build the Execution Graph
-
-Group tasks into **phases**. Within a phase, all tasks are independent and run in parallel. Phases execute sequentially.
+Group into **phases**. Within a phase, all tasks are independent and run in parallel. Phases execute sequentially.
 
 ```
 Phase 1: [Task A, Task B]     <- independent, parallel
