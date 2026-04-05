@@ -44,7 +44,7 @@ export function CircularProgressRing({
   const safeGoal = goal > 0 ? goal : 1;
   const progressFraction = Math.min(value / safeGoal, 1);
   const strokeDashoffset = circumference * (1 - progressFraction);
-  const colorMuted = `${color}1F`; // ~12% opacity hex suffix
+  const colorMuted = `color-mix(in srgb, ${color} 12%, transparent)`;
 
   return (
     <div data-slot="circular-progress-ring" className="relative">

@@ -50,7 +50,9 @@ export const FoodRow = memo(function FoodRow({
           onClick={() => onToggleFavourite(canonicalName)}
           className="shrink-0 p-0"
           aria-label={
-            isFilled ? `Remove ${displayName} from favourites` : `Add ${displayName} to favourites`
+            isFilled
+              ? `Remove ${displayName} from favourites`
+              : `Add ${displayName} to favourites`
           }
         >
           <Heart
@@ -84,7 +86,7 @@ export const FoodRow = memo(function FoodRow({
         onClick={() => onAdd(canonicalName)}
         className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors"
         style={{
-          backgroundColor: "rgba(249, 115, 22, 0.15)",
+          backgroundColor: "color-mix(in srgb, var(--orange) 15%, transparent)",
           color: "var(--orange)",
         }}
         aria-label={`Add ${displayName} to staging`}

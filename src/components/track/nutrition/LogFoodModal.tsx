@@ -112,13 +112,13 @@ const FoodItemRow = memo(function FoodItemRow({
           {FOOD_PORTION_DATA.has(item.canonicalName) ? (
             <CheckCircle
               className="h-3.5 w-3.5 shrink-0"
-              style={{ color: "#34d399" }}
+              style={{ color: "var(--emerald)" }}
               aria-label="Matched food"
             />
           ) : (
             <AlertCircle
               className="h-3.5 w-3.5 shrink-0"
-              style={{ color: "#f97316" }}
+              style={{ color: "var(--orange)" }}
               aria-label="Unmatched food"
             />
           )}
@@ -137,7 +137,7 @@ const FoodItemRow = memo(function FoodItemRow({
           disabled={!canDecrement}
           aria-label={`Decrease ${item.displayName} portion`}
         >
-          <Minus className="h-3.5 w-3.5" />
+          <Minus className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
 
         <span className="min-w-[60px] text-center text-sm font-medium text-[var(--text)]">
@@ -150,7 +150,7 @@ const FoodItemRow = memo(function FoodItemRow({
           onClick={() => onUpdateQuantity(item.id, item.portionG + step)}
           aria-label={`Increase ${item.displayName} portion`}
         >
-          <Plus className="h-3.5 w-3.5" />
+          <Plus className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
       </div>
 
@@ -161,7 +161,7 @@ const FoodItemRow = memo(function FoodItemRow({
         onClick={() => onRemoveItem(item.id)}
         aria-label={`Remove ${item.displayName}`}
       >
-        <X className="h-3.5 w-3.5" />
+        <X className="h-3.5 w-3.5" aria-hidden="true" />
       </button>
     </div>
   );
@@ -224,7 +224,6 @@ export function LogFoodModal({
         />
         <Dialog.Popup
           data-slot="log-food-modal"
-          aria-label="Log Food"
           className="fixed top-1/2 left-1/2 z-50 mx-4 flex w-full max-w-md -translate-x-1/2 -translate-y-1/2 flex-col rounded-2xl border border-[var(--color-border-default)] bg-[var(--card)] p-0 shadow-xl"
         >
           {/* ── Header ─────────────────────────────────────────────── */}
@@ -259,7 +258,7 @@ export function LogFoodModal({
                 className="flex h-7 w-7 items-center justify-center rounded-md text-[var(--text-faint)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
                 aria-label="Close Log Food modal"
               >
-                <X className="h-4 w-4" />
+                <X className="h-4 w-4" aria-hidden="true" />
               </Dialog.Close>
             </div>
           </div>

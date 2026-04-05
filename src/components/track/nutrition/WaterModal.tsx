@@ -96,12 +96,10 @@ export function WaterModal({
       <Dialog.Portal>
         <Dialog.Backdrop
           data-slot="water-modal-overlay"
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ background: "rgba(0, 0, 0, 0.5)" }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
         />
         <Dialog.Popup
           data-slot="water-modal"
-          aria-label="Log Water"
           className="fixed top-1/2 left-1/2 z-50 mx-4 flex w-full max-w-sm -translate-x-1/2 -translate-y-1/2 flex-col items-center rounded-2xl p-6 shadow-lg"
           style={{
             background: "var(--surface-1)",
@@ -114,7 +112,11 @@ export function WaterModal({
             className="mb-6 flex w-full items-center justify-between"
           >
             <div className="flex items-center gap-2">
-              <Droplets className="h-5 w-5" style={{ color: WATER_COLOR }} />
+              <Droplets
+                className="h-5 w-5"
+                style={{ color: WATER_COLOR }}
+                aria-hidden="true"
+              />
               <Dialog.Title
                 className="font-display text-lg font-semibold"
                 style={{ color: "var(--text)" }}
@@ -127,7 +129,7 @@ export function WaterModal({
               style={{ color: "var(--text-muted)" }}
               aria-label="Close"
             >
-              <X className="h-4 w-4" />
+              <X className="h-4 w-4" aria-hidden="true" />
             </Dialog.Close>
           </div>
 
@@ -142,14 +144,14 @@ export function WaterModal({
           </div>
 
           {/* Status text */}
-          <p
+          <Dialog.Description
             className="mb-6 text-sm font-medium"
             style={{ color: "var(--text-muted)" }}
           >
             {goalReached
               ? "Goal Reached!"
               : `${remainingMl} ml remaining (${percentOfGoal}% of daily goal)`}
-          </p>
+          </Dialog.Description>
 
           {/* Amount selector */}
           <div
@@ -168,12 +170,14 @@ export function WaterModal({
               }}
               aria-label="Decrease amount"
             >
-              <Minus className="h-4 w-4" />
+              <Minus className="h-4 w-4" aria-hidden="true" />
             </button>
 
             <span
               className="min-w-[80px] text-center font-display text-lg font-semibold tabular-nums"
               style={{ color: "var(--text)" }}
+              aria-live="polite"
+              aria-atomic="true"
             >
               {amount}{" "}
               <span
@@ -196,7 +200,7 @@ export function WaterModal({
               }}
               aria-label="Increase amount"
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
 
@@ -215,7 +219,7 @@ export function WaterModal({
                 boxShadow: "0 0 12px var(--water-glow)",
               }}
             >
-              <Droplets className="h-4 w-4" />
+              <Droplets className="h-4 w-4" aria-hidden="true" />
               Log Water
             </button>
           </div>
