@@ -527,7 +527,14 @@ export function NutritionCard() {
           })),
         },
       });
-      toast(`${state.stagingItems.length} item(s) logged`);
+      const hasUnmatched = state.stagingItems.some(
+        (item) => !FOOD_PORTION_DATA.has(item.canonicalName),
+      );
+      if (hasUnmatched) {
+        toast.info("Food logged — matching in background");
+      } else {
+        toast(`${state.stagingItems.length} item(s) logged`);
+      }
       dispatch({ type: "RESET_AFTER_LOG" });
     } catch (err) {
       toast.error(getErrorMessage(err, "Failed to log food"));

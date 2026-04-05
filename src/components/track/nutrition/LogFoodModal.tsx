@@ -16,7 +16,8 @@
  */
 
 import { Dialog } from "@base-ui/react/dialog";
-import { Minus, Plus, X } from "lucide-react";
+import { FOOD_PORTION_DATA } from "@shared/foodPortionData";
+import { AlertCircle, CheckCircle, Minus, Plus, X } from "lucide-react";
 import { memo, useCallback } from "react";
 import type { StagedItem, StagingTotals } from "./useNutritionStore";
 
@@ -101,10 +102,23 @@ const FoodItemRow = memo(function FoodItemRow({
       data-slot="log-food-item"
       className="flex items-center justify-between gap-2 rounded-lg px-2 py-2"
     >
-      {/* Left: name + calories */}
+      {/* Left: name + match indicator + calories */}
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="truncate text-sm font-semibold text-[var(--text)]">
+        <span className="flex items-center gap-1 truncate text-sm font-semibold text-[var(--text)]">
           {capitalize(item.displayName)}
+          {FOOD_PORTION_DATA.has(item.canonicalName) ? (
+            <CheckCircle
+              className="h-3.5 w-3.5 shrink-0"
+              style={{ color: "#34d399" }}
+              aria-label="Matched food"
+            />
+          ) : (
+            <AlertCircle
+              className="h-3.5 w-3.5 shrink-0"
+              style={{ color: "#f97316" }}
+              aria-label="Unmatched food"
+            />
+          )}
         </span>
         <span className="text-xs text-[var(--text-faint)]">{item.calories} kcal</span>
       </div>
