@@ -18,8 +18,8 @@ import {
   type MacroTotals,
   type MealSlot,
 } from "@/lib/nutritionUtils";
-import { MS_PER_DAY } from "@/lib/timeConstants";
 import type { SyncedLog } from "@/lib/sync";
+import { MS_PER_DAY } from "@/lib/timeConstants";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -30,13 +30,6 @@ function getTodayMidnight(): number {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
   return now.getTime();
-}
-
-/** Milliseconds from now until the next local midnight. */
-function msUntilNextMidnight(): number {
-  const now = new Date();
-  const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-  return tomorrow.getTime() - now.getTime();
 }
 
 // ---------------------------------------------------------------------------
@@ -137,10 +130,16 @@ function useTodayKey(): string {
   }, []);
 
   useEffect(() => {
+    const currentDayStartMs = Number(todayKey);
+    const nextMidnightMs = currentDayStartMs + MS_PER_DAY;
+
     // Timer aligned to next midnight (+ 100ms buffer to avoid edge-case).
-    const timerId = setTimeout(() => {
-      checkDayChange();
-    }, msUntilNextMidnight() + 100);
+    const timerId = setTimeout(
+      () => {
+        checkDayChange();
+      },
+      Math.max(0, nextMidnightMs - Date.now()) + 100,
+    );
 
     // Also check when tab becomes visible (user returns after midnight).
     const onVisibilityChange = () => {

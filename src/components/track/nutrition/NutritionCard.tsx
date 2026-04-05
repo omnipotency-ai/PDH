@@ -417,14 +417,16 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
   const searchQueryRef = useRef(state.searchQuery);
   searchQueryRef.current = state.searchQuery;
 
+  // ── Search focus state (local, not in reducer) ──────────────────────────
+  const [searchFocused, setSearchFocused] = useState(false);
+  const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchFocusedRef = useRef(false);
+  searchFocusedRef.current = searchFocused;
+
   useEffect(() => {
     if (state.activeMealSlot === currentMealSlot) return;
     dispatch({ type: "SET_ACTIVE_MEAL_SLOT", slot: currentMealSlot });
   }, [currentMealSlot, dispatch, state.activeMealSlot]);
-
-  // ── Search focus state (local, not in reducer) ──────────────────────────
-  const [searchFocused, setSearchFocused] = useState(false);
-  const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleSearchFocus = useCallback(() => {
     // Cancel any pending blur timeout (user re-focused quickly)
@@ -460,6 +462,12 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
 
   // Whether to show the recent foods section within the zero-state
   const showRecentZeroState = showSearchZeroState && knownRecentFoods.length > 0;
+  const surfaceSlot =
+    state.view !== "none"
+      ? undefined
+      : searchFocused || state.searchQuery.trim().length > 0
+        ? "search-view"
+        : "collapsed-view";
 
   // ── Global escape handler (decision #15) ─────────────────────────────────
   useEffect(() => {
@@ -473,10 +481,17 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
         return;
       }
 
+      if (searchFocusedRef.current) {
+        e.preventDefault();
+        setSearchFocused(false);
+        searchInputRef.current?.blur();
+        return;
+      }
+
       // Second: if a panel is open, close it.
       if (viewRef.current !== "none") {
         e.preventDefault();
-        dispatch({ type: "SET_VIEW", view: viewRef.current });
+        dispatch({ type: "SET_VIEW", view: "none" });
         return;
       }
     }
@@ -626,8 +641,10 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
   );
 
   const handleBackToNone = useCallback(() => {
-    dispatch({ type: "SET_VIEW", view: state.view });
-  }, [dispatch, state.view]);
+    dispatch({ type: "SET_VIEW", view: "none" });
+    setSearchFocused(false);
+    searchInputRef.current?.blur();
+  }, [dispatch]);
 
   // Log Food button: if items staged, open staging modal. Otherwise, focus search.
   const handleLogFoodButton = useCallback(() => {
@@ -725,39 +742,41 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
         onExpand={handleExpandCalories}
       />
 
-      {/* ── ALWAYS VISIBLE: Search + Log Food button (same row) ─── */}
-      <div className="flex items-center gap-2">
-        <NutritionSearchInput
-          value={state.searchQuery}
-          onChange={handleSearchChange}
-          onClear={handleSearchClear}
-          onFocus={handleSearchFocus}
-          onBlur={handleSearchBlur}
-          onSubmit={handleSearchSubmit}
-          inputRef={searchInputRef}
-          hasResults={hasSearchResults}
-        />
-        <button
-          type="button"
-          data-slot="log-food-button"
-          className="shrink-0 rounded-full bg-[var(--orange)] px-6 py-3 text-base font-semibold text-white transition-colors hover:brightness-110 active:brightness-95"
-          onClick={handleLogFoodButton}
-          aria-label={stagingCount > 0 ? "Review staged food items" : "Log food"}
-        >
-          Log Food
-          {stagingCount > 0 && (
-            <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-white/20 px-1 text-[10px] font-bold">
-              {stagingCount}
-            </span>
-          )}
-        </button>
-      </div>
+      {/* ── Search + Log Food button state container ─── */}
+      <div {...(surfaceSlot !== undefined && { "data-slot": surfaceSlot })} className="space-y-3">
+        <div className="flex items-center gap-2">
+          <NutritionSearchInput
+            value={state.searchQuery}
+            onChange={handleSearchChange}
+            onClear={handleSearchClear}
+            onFocus={handleSearchFocus}
+            onBlur={handleSearchBlur}
+            onSubmit={handleSearchSubmit}
+            inputRef={searchInputRef}
+            hasResults={hasSearchResults}
+          />
+          <button
+            type="button"
+            data-slot="log-food-button"
+            className="shrink-0 rounded-full bg-[var(--orange)] px-6 py-3 text-base font-semibold text-white transition-colors hover:brightness-110 active:brightness-95"
+            onClick={handleLogFoodButton}
+            aria-label={stagingCount > 0 ? "Review staged food items" : "Log food"}
+          >
+            Log Food
+            {stagingCount > 0 && (
+              <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-white/20 px-1 text-[10px] font-bold">
+                {stagingCount}
+              </span>
+            )}
+          </button>
+        </div>
 
-      {/* ── Logging to: Meal label ─── */}
-      <span data-slot="meal-slot-label" className="text-xs text-[var(--text-muted)]">
-        Logging to: {titleCase(state.activeMealSlot)}
-        {selectedDateLabel ? ` · ${selectedDateLabel}` : ""}
-      </span>
+        {/* ── Logging to: Meal label ─── */}
+        <span data-slot="meal-slot-label" className="text-xs text-[var(--text-muted)]">
+          Logging to: {titleCase(state.activeMealSlot)}
+          {selectedDateLabel ? ` · ${selectedDateLabel}` : ""}
+        </span>
+      </div>
 
       {/* ── ALWAYS VISIBLE: Water progress row ─── */}
       <WaterProgressRow

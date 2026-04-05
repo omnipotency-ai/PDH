@@ -64,11 +64,7 @@ const DEFAULT_INCREMENT_G = 10;
 function formatPortion(item: StagedItem): string {
   const suffix = item.isLiquid ? "ml" : "g";
 
-  if (
-    item.naturalUnit != null &&
-    item.unitWeightG != null &&
-    item.unitWeightG > 0
-  ) {
+  if (item.naturalUnit != null && item.unitWeightG != null && item.unitWeightG > 0) {
     const unitCount = Math.round((item.portionG / item.unitWeightG) * 10) / 10;
     // Show as "N unit(s) (Xg/ml)" if unit count is a clean number
     if (unitCount === Math.round(unitCount) && unitCount > 0) {
@@ -123,9 +119,7 @@ const FoodItemRow = memo(function FoodItemRow({
             />
           )}
         </span>
-        <span className="text-xs text-[var(--text-faint)]">
-          {item.calories} kcal
-        </span>
+        <span className="text-xs text-[var(--text-faint)]">{item.calories} kcal</span>
       </div>
 
       {/* Center: quantity controls */}
@@ -169,15 +163,7 @@ const FoodItemRow = memo(function FoodItemRow({
 
 // ── Macro Pill ──────────────────────────────────────────────────────────────
 
-function MacroPill({
-  value,
-  label,
-  color,
-}: {
-  value: number;
-  label: string;
-  color: string;
-}) {
+function MacroPill({ value, label, color }: { value: number; label: string; color: string }) {
   return (
     <div
       data-slot="macro-pill"
@@ -224,6 +210,9 @@ export function LogFoodModal({
         />
         <Dialog.Popup
           data-slot="log-food-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Log Food"
           className="fixed top-1/2 left-1/2 z-50 mx-4 flex w-full max-w-md -translate-x-1/2 -translate-y-1/2 flex-col rounded-2xl border border-[var(--color-border-default)] bg-[var(--card)] p-0 shadow-xl"
         >
           {/* ── Header ─────────────────────────────────────────────── */}
@@ -238,9 +227,7 @@ export function LogFoodModal({
               >
                 Log Food
               </Dialog.Title>
-              <span className="text-xs text-[var(--text-muted)]">
-                {itemLabel}
-              </span>
+              <span className="text-xs text-[var(--text-muted)]">{itemLabel}</span>
             </div>
 
             <div className="flex items-center gap-2">
@@ -264,10 +251,7 @@ export function LogFoodModal({
           </div>
 
           {/* ── Food items list ─────────────────────────────────────── */}
-          <div
-            data-slot="log-food-items"
-            className="max-h-64 overflow-y-auto px-4 py-2"
-          >
+          <div data-slot="log-food-items" className="max-h-64 overflow-y-auto px-4 py-2">
             {stagedItems.length === 0 ? (
               <p className="py-6 text-center text-sm italic text-[var(--text-faint)]">
                 No items staged. Tap "add more..." to search.
@@ -294,9 +278,7 @@ export function LogFoodModal({
             >
               {/* Total row */}
               <div className="mb-3 flex items-center justify-between">
-                <span className="text-sm font-semibold text-[var(--text)]">
-                  Total
-                </span>
+                <span className="text-sm font-semibold text-[var(--text)]">Total</span>
                 <span className="text-sm font-bold text-[var(--text)]">
                   {stagingTotals.calories} kcal
                 </span>

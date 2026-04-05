@@ -18,6 +18,7 @@ interface FoodRowProps {
   displayName: string;
   portion: string;
   calories: number;
+  dataSlot?: string;
   /** When undefined, heart is always filled (e.g. FavouritesView). */
   isFavourite?: boolean;
   onAdd: (canonicalName: string) => void;
@@ -31,6 +32,7 @@ export const FoodRow = memo(function FoodRow({
   displayName,
   portion,
   calories,
+  dataSlot = "food-row",
   isFavourite,
   onAdd,
   onToggleFavourite,
@@ -40,7 +42,7 @@ export const FoodRow = memo(function FoodRow({
 
   return (
     <li
-      data-slot="food-row"
+      data-slot={dataSlot}
       className="flex list-none items-center gap-3 rounded-lg px-2 py-2.5 transition-colors hover:bg-[var(--surface-2)]"
     >
       {/* Heart icon */}
@@ -50,9 +52,7 @@ export const FoodRow = memo(function FoodRow({
           onClick={() => onToggleFavourite(canonicalName)}
           className="shrink-0 p-0"
           aria-label={
-            isFilled
-              ? `Remove ${displayName} from favourites`
-              : `Add ${displayName} to favourites`
+            isFilled ? `Remove ${displayName} from favourites` : `Add ${displayName} to favourites`
           }
         >
           <Heart

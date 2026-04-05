@@ -1,3 +1,8 @@
+> **Ref:** `docs/plans/archive/specification.md`
+> **Updated:** 2026-04-05
+> **Version:** 1.0 (ARCHIVED)
+> **History:** v1.0 (2026-04-05) — archived, superseded by individual PRDs
+
 # Post-Anastomosis Food Reintegration Mobile App — Design Specification
 
 ## PHASE 0: Product Framing, Assumptions, and Scope
@@ -826,125 +831,35 @@ Covers restaurant meals, homemade dishes, and personal custom items.
 
 All items below should be inserted into `food_items` with `is_starter_seed = true`.
 
-1) Hydration & Clear Liquids — Stage 0/1
-    1. Water
-    2. Oral rehydration solution
-    3. Diluted apple juice
-    4. Clear chicken broth
-    5. Clear vegetable broth
-    6. Coconut water
-    7. Peppermint tea
-    8. Chamomile tea
-    9. Gelatin dessert
-    10. Electrolyte ice pop
+1. Hydration & Clear Liquids — Stage 0/1
+   1. Water
+   2. Oral rehydration solution
+   3. Diluted apple juice
+   4. Clear chicken broth
+   5. Clear vegetable broth
+   6. Coconut water
+   7. Peppermint tea
+   8. Chamomile tea
+   9. Gelatin dessert
+   10. Electrolyte ice pop
 
-2) Gentle Starches — Stage 1
-    11. White toast
-    12. Saltine crackers
-    13. Plain white rice
-    14. Cream of rice cereal
-    15. Plain pasta
-    16. Rice noodles
-    17. Mashed potatoes without skin
-    18. Plain bagel
-    19. English muffin
-    20. Plain pancakes
+2. Gentle Starches — Stage 1 11. White toast 12. Saltine crackers 13. Plain white rice 14. Cream of rice cereal 15. Plain pasta 16. Rice noodles 17. Mashed potatoes without skin 18. Plain bagel 19. English muffin 20. Plain pancakes
 
-3) Soft Proteins — Stage 1/2
-    21. Scrambled eggs
-    22. Poached eggs
-    23. Egg white omelet
-    24. Baked cod
-    25. Baked tilapia
-    26. Shredded chicken breast
-    27. Lean ground turkey
-    28. Tender turkey meatballs
-    29. Soft tofu
-    30. Lean deli turkey
+3. Soft Proteins — Stage 1/2 21. Scrambled eggs 22. Poached eggs 23. Egg white omelet 24. Baked cod 25. Baked tilapia 26. Shredded chicken breast 27. Lean ground turkey 28. Tender turkey meatballs 29. Soft tofu 30. Lean deli turkey
 
-4) Dairy & Alternatives — Stage 1/2
-    31. Plain yogurt
-    32. Greek yogurt
-    33. Lactose-free yogurt
-    34. Cottage cheese
-    35. Kefir
-    36. Lactose-free milk
-    37. Soy milk
-    38. Oat milk
-    39. Vanilla pudding
-    40. Mild cheddar cheese
+4. Dairy & Alternatives — Stage 1/2 31. Plain yogurt 32. Greek yogurt 33. Lactose-free yogurt 34. Cottage cheese 35. Kefir 36. Lactose-free milk 37. Soy milk 38. Oat milk 39. Vanilla pudding 40. Mild cheddar cheese
 
-5) Soft Fruits — Stage 2
-    41. Banana
-    42. Applesauce
-    43. Stewed peeled apple
-    44. Canned peaches
-    45. Canned pears
-    46. Ripe cantaloupe
-    47. Ripe honeydew
-    48. Papaya
-    49. Mango puree
-    50. Avocado
+5. Soft Fruits — Stage 2 41. Banana 42. Applesauce 43. Stewed peeled apple 44. Canned peaches 45. Canned pears 46. Ripe cantaloupe 47. Ripe honeydew 48. Papaya 49. Mango puree 50. Avocado
 
-6) Cooked Vegetables — Stage 2
-    51. Cooked carrots
-    52. Butternut squash puree
-    53. Pumpkin puree
-    54. Peeled zucchini, cooked
-    55. Peeled yellow squash, cooked
-    56. Green beans, cooked soft
-    57. Spinach, cooked and chopped
-    58. Cooked beets
-    59. Cooked parsnips
-    60. Cooked turnips
+6. Cooked Vegetables — Stage 2 51. Cooked carrots 52. Butternut squash puree 53. Pumpkin puree 54. Peeled zucchini, cooked 55. Peeled yellow squash, cooked 56. Green beans, cooked soft 57. Spinach, cooked and chopped 58. Cooked beets 59. Cooked parsnips 60. Cooked turnips
 
-7) Simple Mixed Meals — Stage 2
-    61. Chicken noodle soup
-    62. Rice congee
-    63. Cream of wheat
-    64. Polenta
-    65. Oatmeal
-    66. Mild macaroni and cheese
-    67. Turkey rice soup
-    68. Mashed potato bowl with chicken
-    69. Tuna salad sandwich on white bread
-    70. Plain ramen with soft egg
+7. Simple Mixed Meals — Stage 2 61. Chicken noodle soup 62. Rice congee 63. Cream of wheat 64. Polenta 65. Oatmeal 66. Mild macaroni and cheese 67. Turkey rice soup 68. Mashed potato bowl with chicken 69. Tuna salad sandwich on white bread 70. Plain ramen with soft egg
 
-8) Fats, Spreads, and Simple Condiments — Stage 2/3
-    71. Butter
-    72. Olive oil
-    73. Mayonnaise
-    74. Smooth peanut butter
-    75. Smooth almond butter
-    76. Jam without seeds
-    77. Maple syrup
-    78. Mild gravy
-    79. Soy sauce
-    80. Smooth hummus
+8. Fats, Spreads, and Simple Condiments — Stage 2/3 71. Butter 72. Olive oil 73. Mayonnaise 74. Smooth peanut butter 75. Smooth almond butter 76. Jam without seeds 77. Maple syrup 78. Mild gravy 79. Soy sauce 80. Smooth hummus
 
-9) Moderate Challenge Foods — Stage 3
-    81. Whole wheat toast
-    82. Brown rice
-    83. Quinoa
-    84. Blueberries
-    85. Strawberries
-    86. Cooked broccoli
-    87. Cooked cauliflower
-    88. Pureed lentil soup
-    89. Decaf coffee
-    90. Mild curry chicken
+9. Moderate Challenge Foods — Stage 3 81. Whole wheat toast 82. Brown rice 83. Quinoa 84. Blueberries 85. Strawberries 86. Cooked broccoli 87. Cooked cauliflower 88. Pureed lentil soup 89. Decaf coffee 90. Mild curry chicken
 
-10) Higher Challenge Foods — Stage 4
-    91. Salad greens
-    92. Raw apple with skin
-    93. Popcorn
-    94. Almonds
-    95. Corn kernels
-    96. Black beans
-    97. Carbonated soda
-    98. Regular coffee
-    99. Spicy salsa
-    100. Fried chicken
+10. Higher Challenge Foods — Stage 4 91. Salad greens 92. Raw apple with skin 93. Popcorn 94. Almonds 95. Corn kernels 96. Black beans 97. Carbonated soda 98. Regular coffee 99. Spicy salsa 100. Fried chicken
 
 ### 2.7 Tracking & Logging Tables
 
@@ -952,7 +867,7 @@ All items below should be inserted into `food_items` with `is_starter_seed = tru
 
 - captureEvents: `userID`: `v.id("users")`, `captureType`: `v.union(v.literal("text"), v.literal("voice"), v.literal("form"), v.literal("barcode"))`, `rawText`: `v.optional(v.string())`, `transcript`: `v.optional(v.string())` voice-to-text result, `parserStatus`: `v.union(v.literal("pending"), v.literal("parsed"), v.literal("failed"), v.literal("skipped"))`, `parseConfidence`: `v.optional(v.number())`, `parsedPayload`: `v.optional(v.object())` structured output from parser, `createdAt`: `v.number()`
 
- Indexes: `by_userId` [`userId`], `by_parserStatus_createdAt` [`parserStatus`, `createdAt`]
+Indexes: `by_userId` [`userId`], `by_parserStatus_createdAt` [`parserStatus`, `createdAt`]
 
 - mealLogs: `userId`: `v.id("users")`, `occurredAt`: `v.number()`, `mealType`: `v.union(v.literal("breakfast"), v.literal("lunch"), v.literal("dinner"), v.literal("snack"), v.literal("drink"))`, `captureMethod`: `v.union(v.literal("manual"), v.literal("text_nlp"), v.literal("voice_nlp"), v.literal("barcode"), v.literal("form"))`, `notes`: `v.optional(v.string())`, `createdAt`: `v.number()`
 
@@ -960,9 +875,9 @@ All items below should be inserted into `food_items` with `is_starter_seed = tru
 
 - mealLogItems: `mealLogId`: `v.id("mealLogs")`, `foodItemId`: `v.optional(v.id("foodItems"))`, `userFoodItemId`: `v.optional(v.id("userFoodItems"))`, `brandProductId`: `v.optional(v.id("brandProducts"))`, `quantityValue`: `v.optional(v.number())`, `quantityUnit`: `v.optional(v.string())`, `portionEstimateConfidence`: `v.optional(v.number())`, `preparationMethod`: `v.optional(v.string())`, `isNewFood`: `v.boolean()` — defaults to false, `nutritionSnapshot`: `v.optional(v.any())` — point-in-time nutrition data, `riskTagSnapshot`: `v.optional(v.array(v.string()))` — point-in-time risk tags, `experimentId`: `v.optional(v.id("foodExperiments"))`, `stimulantMgExtracted`: `v.optional(v.number())`, `sequenceNo`: `v.number()`
 
- Constraint: exactly one of `foodItemId`, `userFoodItemId`, or `brandProductId` must be populated per item.
+Constraint: exactly one of `foodItemId`, `userFoodItemId`, or `brandProductId` must be populated per item.
 
- Indexes: `by_mealLogId` [`mealLogId`]
+Indexes: `by_mealLogId` [`mealLogId`]
 
 #### Output and Symptoms
 
@@ -1363,13 +1278,13 @@ Regulatory note:
 
 #### Recommended layered design
 
-  1. Safety layer
-  2. Context retrieval layer
-  3. Deterministic recommendation engine
-  4. Personality Routing Layer
-  5. LLM response generator
-  6. Memory updater
-  7. Artifact construction layer
+1. Safety layer
+2. Context retrieval layer
+3. Deterministic recommendation engine
+4. Personality Routing Layer
+5. LLM response generator
+6. Memory updater
+7. Artifact construction layer
 
 ##### 1. **Safety layer**
 
@@ -1400,7 +1315,6 @@ Regulatory note:
     - research-backed constraints
     - user-specific data models
     - outputs structured data for LLM explanation and artifact construction
-  
 - **Deterministic vs Generative Responsibility Boundary**
   - The deterministic system defines:
     - food safety rules
@@ -1657,7 +1571,7 @@ All personalities must obey the same safety policy and non-judgmental tone, be p
   - solution-oriented rather than restrictive
   - avoids unnecessary theory
 
-#### Motivational Personality — `motivational` — “Coach” *(Default)*
+#### Motivational Personality — `motivational` — “Coach” _(Default)_
 
 - **Role:**
   - Recovery support and accountability partner
@@ -1730,7 +1644,7 @@ All personalities must obey the same safety policy and non-judgmental tone, be p
 - proactive level
 - explanation depth
 
- Brevity and explanation depth work independently. A "concise + thorough" combination means short delivery with nothing omitted. A "detailed + brief" combination means longer prose but sticking to surface-level explanation. The personality style layers on top of both
+Brevity and explanation depth work independently. A "concise + thorough" combination means short delivery with nothing omitted. A "detailed + brief" combination means longer prose but sticking to surface-level explanation. The personality style layers on top of both
 
 ### 4.8 Suggestion Algorithm
 

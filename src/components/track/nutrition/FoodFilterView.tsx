@@ -242,6 +242,7 @@ export function FoodFilterView({
             {displayedItems.map((item) => (
               <FoodRow
                 key={item.canonicalName}
+                dataSlot="food-filter-row"
                 canonicalName={item.canonicalName}
                 displayName={item.displayName}
                 portion={item.portion}

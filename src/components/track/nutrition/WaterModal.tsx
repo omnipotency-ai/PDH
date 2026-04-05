@@ -23,7 +23,7 @@ import { CircularProgressRing } from "./CircularProgressRing";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-const WATER_COLOR = "var(--water)";
+const WATER_COLOR = "#42BCB8";
 
 const STEP_ML = 200;
 const MIN_ML = 0;
@@ -83,10 +83,7 @@ export function WaterModal({
   const projectedTotal = currentIntakeMl + amount;
   const safeGoal = goalMl > 0 ? goalMl : 1;
   // Cap at 100 so the status text never shows ">100% of daily goal"
-  const percentOfGoal = Math.min(
-    Math.round((projectedTotal / safeGoal) * 100),
-    100,
-  );
+  const percentOfGoal = Math.min(Math.round((projectedTotal / safeGoal) * 100), 100);
   const goalReached = projectedTotal >= goalMl;
   // #59: remaining never goes negative
   const remainingMl = Math.max(0, goalMl - currentIntakeMl);
@@ -100,6 +97,9 @@ export function WaterModal({
         />
         <Dialog.Popup
           data-slot="water-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Log Water"
           className="fixed top-1/2 left-1/2 z-50 mx-4 flex w-full max-w-sm -translate-x-1/2 -translate-y-1/2 flex-col items-center rounded-2xl p-6 shadow-lg"
           style={{
             background: "var(--surface-1)",
@@ -112,11 +112,7 @@ export function WaterModal({
             className="mb-6 flex w-full items-center justify-between"
           >
             <div className="flex items-center gap-2">
-              <Droplets
-                className="h-5 w-5"
-                style={{ color: WATER_COLOR }}
-                aria-hidden="true"
-              />
+              <Droplets className="h-5 w-5" style={{ color: WATER_COLOR }} aria-hidden="true" />
               <Dialog.Title
                 className="font-display text-lg font-semibold"
                 style={{ color: "var(--text)" }}
@@ -154,10 +150,7 @@ export function WaterModal({
           </Dialog.Description>
 
           {/* Amount selector */}
-          <div
-            data-slot="water-modal-amount"
-            className="mb-6 flex items-center gap-4"
-          >
+          <div data-slot="water-modal-amount" className="mb-6 flex items-center gap-4">
             <button
               type="button"
               onClick={handleDecrement}
@@ -180,10 +173,7 @@ export function WaterModal({
               aria-atomic="true"
             >
               {amount}{" "}
-              <span
-                className="text-sm font-normal"
-                style={{ color: "var(--text-muted)" }}
-              >
+              <span className="text-sm font-normal" style={{ color: "var(--text-muted)" }}>
                 ml
               </span>
             </span>
@@ -207,8 +197,15 @@ export function WaterModal({
           {/* Bottom row: Log Water (centered) */}
           <div
             data-slot="water-modal-actions"
-            className="flex w-full items-center justify-center"
+            className="flex w-full items-center justify-center gap-3"
           >
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex items-center rounded-lg border border-[var(--color-border-default)] px-5 py-2.5 text-sm font-semibold text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)]"
+            >
+              Cancel
+            </button>
             <button
               type="button"
               onClick={handleLogWater}
@@ -216,7 +213,7 @@ export function WaterModal({
               className="inline-flex items-center gap-2 rounded-lg px-6 py-2.5 text-sm font-semibold text-white transition-colors disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2"
               style={{
                 background: WATER_COLOR,
-                boxShadow: "0 0 12px var(--water-glow)",
+                boxShadow: "0 0 12px color-mix(in srgb, #42BCB8 45%, transparent)",
               }}
             >
               <Droplets className="h-4 w-4" aria-hidden="true" />

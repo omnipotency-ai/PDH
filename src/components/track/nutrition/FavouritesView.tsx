@@ -62,6 +62,7 @@ export function FavouritesView({ favourites, onAddToStaging, onBack }: Favourite
           {validFavourites.map((canonicalName) => (
             <FoodRow
               key={canonicalName}
+              dataSlot="favourite-row"
               canonicalName={canonicalName}
               displayName={titleCase(canonicalName)}
               portion={formatPortion(canonicalName)}

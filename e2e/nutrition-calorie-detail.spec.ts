@@ -51,8 +51,7 @@ test.describe("CalorieDetailView", () => {
     // CalorieDetailView should now be visible
     await expect(getCalorieDetailView(page)).toBeVisible();
 
-    // Collapsed view should be gone
-    await expect(collapsedView).not.toBeVisible();
+    await expect(collapsedView).not.toBeAttached();
   });
 
   test("CalorieDetailView shows meal breakdown bar", async ({ page }) => {
@@ -125,7 +124,7 @@ test.describe("CalorieDetailView", () => {
 
     // Get all accordion buttons
     const calorieDetail = getCalorieDetail(page);
-    const accordionButtons = calorieDetail.locator('[data-slot="meal-slot-accordion"] button');
+    const accordionButtons = calorieDetail.locator('[data-slot="meal-slot-accordion"] > button');
 
     // All accordions should initially have aria-expanded=false
     const count = await accordionButtons.count();
@@ -207,7 +206,7 @@ test.describe("CalorieDetailView", () => {
     await expect(getCalorieDetailView(page)).toBeVisible();
 
     const calorieDetail = getCalorieDetail(page);
-    const accordionButtons = calorieDetail.locator('[data-slot="meal-slot-accordion"] button');
+    const accordionButtons = calorieDetail.locator('[data-slot="meal-slot-accordion"] > button');
 
     // Find an enabled (non-empty) accordion and open it
     const count = await accordionButtons.count();
@@ -244,7 +243,7 @@ test.describe("CalorieDetailView", () => {
     await expect(getCalorieDetailView(page)).toBeVisible();
 
     const calorieDetail = getCalorieDetail(page);
-    const accordionButtons = calorieDetail.locator('[data-slot="meal-slot-accordion"] button');
+    const accordionButtons = calorieDetail.locator('[data-slot="meal-slot-accordion"] > button');
 
     // Find an enabled accordion and check for delete buttons on food items
     const count = await accordionButtons.count();
@@ -303,11 +302,9 @@ test.describe("CalorieDetailView", () => {
     await calorieRing.click();
     await expect(getCalorieDetailView(page)).toBeVisible();
 
-    // Tap the calorie ring again (it's still visible in detail view)
-    // The ring is re-rendered inside the calorieDetail view
-    const detailRing = getCalorieDetailView(page).locator('[data-slot="calorie-ring"]');
-    await expect(detailRing).toBeVisible();
-    await detailRing.click();
+    // Tap the persistent calorie ring again to collapse the detail view.
+    await expect(calorieRing).toBeVisible();
+    await calorieRing.click();
 
     // Should return to collapsed view
     const collapsedView = nutritionCard.locator('[data-slot="collapsed-view"]');
@@ -326,20 +323,20 @@ test.describe("CalorieDetailView", () => {
     const detailView = getCalorieDetailView(page);
     await expect(detailView).toBeVisible();
 
-    // CalorieRing should still be visible
-    const calorieRing = detailView.locator('[data-slot="calorie-ring"]');
+    // CalorieRing should still be visible in the shared NutritionCard shell
+    const calorieRing = getNutritionCard(page).locator('[data-slot="calorie-ring"]');
     await expect(calorieRing).toBeVisible();
 
-    // WaterProgressRow should still be visible
-    const waterProgress = detailView.locator('[data-slot="water-progress"]');
+    // WaterProgressRow should still be visible in the shared shell
+    const waterProgress = getNutritionCard(page).locator('[data-slot="water-progress"]');
     await expect(waterProgress).toBeVisible();
 
-    // SearchInput should still be visible
-    const searchInput = detailView.locator('[data-slot="nutrition-search"]');
+    // SearchInput should still be visible in the shared shell
+    const searchInput = getNutritionCard(page).locator('[data-slot="nutrition-search"]');
     await expect(searchInput).toBeVisible();
 
-    // Log Food button should still be visible
-    const logFoodButton = detailView.locator('[data-slot="log-food-button"]');
+    // Log Food button should still be visible in the shared shell
+    const logFoodButton = getNutritionCard(page).locator('[data-slot="log-food-button"]');
     await expect(logFoodButton).toBeVisible();
   });
 });

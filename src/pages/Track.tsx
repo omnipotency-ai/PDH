@@ -20,8 +20,8 @@ import { HabitDetailSheet } from "@/components/track/quick-capture/HabitDetailSh
 import { TodayStatusRow } from "@/components/track/TodayStatusRow";
 import { TodayLog } from "@/components/track/today-log";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import { ConfettiBurst } from "@/components/ui/Confetti";
+import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useResponsiveShellMode } from "@/components/ui/responsive-shell";
 import { useSyncedLogsContext } from "@/contexts/SyncedLogsContext";
@@ -32,14 +32,13 @@ import { useDayStats } from "@/hooks/useDayStats";
 import { useFoodLlmMatching } from "@/hooks/useFoodLlmMatching";
 import { useHabitStreaks } from "@/hooks/useHabitStreaks";
 import { useLiveClock } from "@/hooks/useLiveClock";
-import { useHabits, useUnitSystem } from "@/hooks/useProfile";
+import { useAiPreferences, useHabits, useUnitSystem } from "@/hooks/useProfile";
 import { useQuickCapture } from "@/hooks/useQuickCapture";
 import { useUnresolvedFoodQueue } from "@/hooks/useUnresolvedFoodQueue";
 import { useUnresolvedFoodToast } from "@/hooks/useUnresolvedFoodToast";
 import { useWeeklySummaryAutoTrigger } from "@/hooks/useWeeklySummaryAutoTrigger";
 import { bristolToConsistency, normalizeEpisodesCount } from "@/lib/analysis";
-import { getDateScopedTimestamp } from "@/lib/dateUtils";
-import { formatLocalDateKey } from "@/lib/dateUtils";
+import { formatLocalDateKey, getDateScopedTimestamp } from "@/lib/dateUtils";
 import { getErrorMessage } from "@/lib/errors";
 import type { HabitConfig } from "@/lib/habitTemplates";
 import { isSleepHabit } from "@/lib/habitTemplates";
@@ -130,11 +129,12 @@ export default function TrackPage() {
   const updateSyncedLog = useUpdateSyncedLog();
 
   const { habits } = useHabits();
+  const { aiPreferences } = useAiPreferences();
   const addHabitLog = useStore((state) => state.addHabitLog);
   const removeHabitLog = useStore((state) => state.removeHabitLog);
   const { unitSystem } = useUnitSystem();
   const weightUnit = getDisplayWeightUnit(unitSystem);
-  const { sendNow } = useAiInsights();
+  const { sendNow, triggerAnalysis } = useAiInsights();
 
   // Auto-generate weekly summary when a Sunday 18:00 boundary passes
   useWeeklySummaryAutoTrigger();
@@ -365,6 +365,10 @@ export default function TrackPage() {
       },
     });
     afterSave();
+    void triggerAnalysis({
+      bristolScore: state.bristolCode,
+      autoSendEnabled: (aiPreferences.reportTriggerMode ?? "auto") === "auto",
+    });
   };
 
   const handleDelete = async (id: string) => {

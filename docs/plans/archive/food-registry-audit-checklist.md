@@ -1,3 +1,8 @@
+> **Ref:** `docs/plans/archive/food-registry-audit-checklist.md`
+> **Updated:** 2026-04-05
+> **Version:** 1.0 (ARCHIVED)
+> **History:** v1.0 (2026-04-05) — archived as reference template
+
 # Food Registry Audit Checklist
 
 **Purpose:** Template for a dedicated session to walk through every entry in `shared/foodRegistry.ts` and verify correctness. Work through the registry top-to-bottom (Zone 1A → 1B → 2 → 3), one entry at a time.

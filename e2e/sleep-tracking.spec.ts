@@ -13,6 +13,50 @@ test.describe("Sleep tracking", () => {
   const getQuickCapture = (page: import("@playwright/test").Page) =>
     page.locator('[data-slot="quick-capture"]');
 
+  const getSleepTileButton = (page: import("@playwright/test").Page) =>
+    getQuickCapture(page).getByRole("button", { name: /^Sleep:/ }).first();
+
+  async function openSleepPopover(page: import("@playwright/test").Page) {
+    const hoursInput = page.locator("#duration-popover-hours");
+    const minsInput = page.locator("#duration-popover-mins");
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await getSleepTileButton(page).click();
+      try {
+        await expect(hoursInput).toBeVisible({ timeout: 2500 });
+        await expect(minsInput).toBeVisible({ timeout: 2500 });
+        return;
+      } catch (error) {
+        if (attempt === 2) throw error;
+        await page.keyboard.press("Escape").catch(() => {});
+      }
+    }
+  }
+
+  async function logSleepDuration(
+    page: import("@playwright/test").Page,
+    hours: string,
+    minutes: string,
+  ) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        await openSleepPopover(page);
+
+        const hoursInput = page.locator("#duration-popover-hours");
+        const minsInput = page.locator("#duration-popover-mins");
+
+        await hoursInput.fill(hours, { timeout: 2500 });
+        await minsInput.fill(minutes, { timeout: 2500 });
+        await minsInput.press("Enter");
+        await expect(hoursInput).not.toBeVisible({ timeout: 5000 });
+        return;
+      } catch (error) {
+        if (attempt === 2) throw error;
+        await page.keyboard.press("Escape").catch(() => {});
+      }
+    }
+  }
+
   test("sleep tile exists in Quick Capture", async ({ page }) => {
     await page.goto("/");
     await expect(page.locator("#root")).toBeVisible();
@@ -21,61 +65,20 @@ test.describe("Sleep tracking", () => {
     await expect(quickCapture).toBeVisible();
 
     // Find Sleep tile
-    const sleepTile = quickCapture.locator('[data-slot="quick-capture-tile"]', {
-      has: page.locator('text="Sleep"'),
-    });
-    await expect(sleepTile).toBeVisible();
+    await expect(getSleepTileButton(page)).toBeVisible();
   });
 
   test("tapping Sleep opens sleep entry drawer", async ({ page }) => {
     await page.goto("/");
     await expect(page.locator("#root")).toBeVisible();
 
-    const quickCapture = getQuickCapture(page);
-    const sleepTile = quickCapture.locator('[data-slot="quick-capture-tile"]', {
-      has: page.locator('text="Sleep"'),
-    });
-
-    // Tap the Sleep tile
-    await sleepTile.click();
-    await page.waitForTimeout(300);
-
-    // Should see the sleep entry drawer/dialog with Hours and Minutes selectors
-    const hoursLabel = page.locator("text=Hours").first();
-    const minutesLabel = page.locator("text=Minutes").first();
-
-    await expect(hoursLabel).toBeVisible();
-    await expect(minutesLabel).toBeVisible();
+    await openSleepPopover(page);
   });
 
   test("can select hours and minutes and log sleep", async ({ page }) => {
     await page.goto("/");
     await expect(page.locator("#root")).toBeVisible();
 
-    const quickCapture = getQuickCapture(page);
-    const sleepTile = quickCapture.locator('[data-slot="quick-capture-tile"]', {
-      has: page.locator('text="Sleep"'),
-    });
-
-    // Tap the Sleep tile
-    await sleepTile.click();
-
-    // Wait for the popover inputs to be visible before interacting
-    const hoursInput = page.locator("#duration-popover-hours");
-    const minsInput = page.locator("#duration-popover-mins");
-    await expect(hoursInput).toBeVisible();
-    await expect(minsInput).toBeVisible();
-
-    // Fill in 7 hours using the text input
-    await hoursInput.fill("7");
-
-    // Fill in 30 minutes using the text input
-    await minsInput.fill("30");
-
-    // Submit via Enter (DurationEntryPopover saves on Enter, no Save button)
-    await minsInput.press("Enter");
-
-    // Popover should close — verify using the popover-specific hours input
-    await expect(hoursInput).not.toBeVisible();
+    await logSleepDuration(page, "7", "30");
   });
 });

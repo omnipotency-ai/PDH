@@ -19,6 +19,11 @@ test.describe("Settings page", () => {
     await page.goto("/settings");
 
     await expect(page.getByText(/Privacy by default/i).first()).toBeVisible();
-    await expect(page.getByText(/Your OpenAI API key is never sent to the cloud\./i)).toBeVisible();
+    await expect(
+      page.getByText(/Your OpenAI API key is stored securely on our servers/i),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/Settings changes are saved to the cloud immediately/i),
+    ).toBeVisible();
   });
 });

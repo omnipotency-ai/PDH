@@ -15,21 +15,19 @@ function todayDayKey(): string {
 export function SyncedLogsProvider({ children }: { children: ReactNode }) {
   const dayKey = todayDayKey();
 
-  const { fourteenDaysAgoMs, endOfTodayMs } = useMemo(() => {
-    const now = new Date();
-
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const fourteenDaysAgo = new Date(startOfToday);
-    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
-
-    const endOfToday = new Date(startOfToday);
-    endOfToday.setDate(endOfToday.getDate() + 1);
-    // End of today = start of tomorrow (exclusive upper bound)
-    return {
-      fourteenDaysAgoMs: fourteenDaysAgo.getTime(),
-      endOfTodayMs: endOfToday.getTime(),
-    };
+  const now = useMemo(() => {
+    const [year, month, day] = dayKey.split("-").map(Number);
+    return new Date(year, month, day);
   }, [dayKey]);
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const fourteenDaysAgo = new Date(startOfToday);
+  fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+
+  const endOfToday = new Date(startOfToday);
+  endOfToday.setDate(endOfToday.getDate() + 1);
+  const fourteenDaysAgoMs = fourteenDaysAgo.getTime();
+  // End of today = start of tomorrow (exclusive upper bound)
+  const endOfTodayMs = endOfToday.getTime();
 
   const logs = useSyncedLogsByRange(fourteenDaysAgoMs, endOfTodayMs);
   const { habits } = useHabits();

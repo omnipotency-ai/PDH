@@ -15,8 +15,6 @@ import type {
   DrPooReply,
   HealthProfile,
   LogEntry,
-  OutputFormat,
-  OutputLength,
   Register,
   StructuredFoodAssessment,
 } from "@/types/domain";
@@ -961,51 +959,6 @@ function buildSubstanceContext(profile: HealthProfile, lifestyleRecreational: st
   return lifestyleRecreational === "yes" && recreationalDetailParts.length > 0
     ? `- Recreational pattern: ${recreationalDetailParts.join(" | ")}`
     : "";
-}
-
-// ─── Per-section axis helpers ─────────────────────────────────────────────────
-
-function buildStructureDirective(format: OutputFormat): string {
-  switch (format) {
-    case "narrative":
-      return `STRUCTURE: Use flowing prose throughout. Short paragraphs, no bullet points except inside mealPlan items arrays. Summary should be written as connected prose sentences. Reasoning fields should read as concise sentences, not lists.`;
-    case "mixed":
-      return `STRUCTURE: Use prose for contextual commentary (summary, reasoning fields) and bullet points for actionable items (mealPlan, suggestions). Summary should be prose sentences; use a bullet or two only if it genuinely aids clarity. This is the default balanced format.`;
-    case "structured":
-      return `STRUCTURE: Use bullet points and short phrases throughout. Summary should be bulleted highlights — one key point per bullet. Reasoning fields should be concise bullet lists. Prioritise scanability over narrative flow.`;
-  }
-}
-
-function buildLengthDirective(length: OutputLength): string {
-  switch (length) {
-    case "concise":
-      return `LENGTH: EXTREMELY BRIEF. This is the concise mode — the patient wants only the essentials, fast.
-- Summary: very short — 1–3 key points only. Lead with the most important finding. No elaboration or preamble.
-- clinicalReasoning: 2–3 short sentences max. Skip background the patient already knows.
-- Reasoning fields: 1 short sentence each. No elaboration.
-- Suggestions: max 2. One line each.
-- educationalInsight: 1 sentence max, or omit if nothing novel.
-- Omit pleasantries, preambles, and filler. No educational digressions. Just the facts and actions.
-- If the patient asked a direct question, answer it directly, then stop.
-- Exception: always include safety warnings in full, even in concise mode.`;
-    case "standard":
-      return `LENGTH: BALANCED. This is the standard mode — a comfortable mix of insight and brevity.
-- Summary: moderate length — cover the main trend, any notable shift, and one actionable point. Do not pad.
-- clinicalReasoning: 4–6 sentences with enough reasoning to be useful.
-- Reasoning fields: 1–2 sentences each with context.
-- Suggestions: up to configured max. Be helpful without being verbose.
-- educationalInsight: 2–3 sentences. Include one educational insight the patient may not know.
-- This is the default balanced length. Be helpful without being verbose.`;
-    case "detailed":
-      return `LENGTH: COMPREHENSIVE. This is the detailed mode — the patient wants to understand the science and reasoning.
-- Summary: thorough — explain the WHY behind each observation, not just the WHAT. Cover all meaningful trends and their implications.
-- clinicalReasoning: 6–10 sentences with full physiological rationale. Include mechanism of action, relevant anatomy, and how the data points connect. Use markdown bold for key findings and italics for caveats.
-- Reasoning fields: multi-sentence with physiological rationale and educational context.
-- Suggestions: up to configured max. Each suggestion should include a brief explanation of WHY it helps.
-- educationalInsight: 3–5 sentences. Include a genuinely educational insight with physiological explanation. Teach the patient something about their body.
-- Include section headings where helpful. Cross-reference between food, fluid, and bowel data explicitly.
-- The patient chose detailed because they want depth. Do not hold back on educational content.`;
-  }
 }
 
 function buildSystemPrompt(profile: HealthProfile, prefs: AiPreferences): string {

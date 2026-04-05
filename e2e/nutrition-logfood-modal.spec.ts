@@ -65,9 +65,11 @@ async function searchAndSelectFood(
   await expect(resultsList).toBeVisible();
 
   // Click the result matching the expected canonical name
-  const result = resultsList.locator('[data-slot="search-result"]', { hasText: expectedCanonical });
+  const result = resultsList.locator(
+    `[data-slot="search-result"][aria-label^="${expectedCanonical},"]`,
+  );
   await expect(result).toBeVisible();
-  await result.click();
+  await result.locator('button[aria-label$="to staging"]').click();
 }
 
 /**
@@ -75,7 +77,7 @@ async function searchAndSelectFood(
  * Assumes items are already staged and the search view is visible.
  */
 async function openLogFoodModal(page: import("@playwright/test").Page) {
-  const stagingButton = page.locator('[data-slot="open-staging-button"]');
+  const stagingButton = page.locator('[data-slot="log-food-button"]');
   await expect(stagingButton).toBeVisible();
   await stagingButton.click();
 
@@ -94,7 +96,7 @@ test.describe("LogFoodModal", () => {
     await searchAndSelectFood(page, "toast", "toast");
 
     // After selecting a food, the "Log Food" button with staging count should appear
-    const stagingButton = page.locator('[data-slot="open-staging-button"]');
+    const stagingButton = page.locator('[data-slot="log-food-button"]');
     await expect(stagingButton).toBeVisible();
     await expect(stagingButton).toContainText("Log Food");
     // Should show count badge "1"
@@ -186,7 +188,7 @@ test.describe("LogFoodModal", () => {
     await expect(page.locator('[data-slot="search-view"]')).toBeVisible();
 
     // Staging button should still show count of 1 (staging preserved)
-    const stagingButton = page.locator('[data-slot="open-staging-button"]');
+    const stagingButton = page.locator('[data-slot="log-food-button"]');
     await expect(stagingButton).toBeVisible();
     await expect(stagingButton).toContainText("1");
   });
@@ -208,9 +210,10 @@ test.describe("LogFoodModal", () => {
     // Should return to collapsed view (staging cleared, view reset)
     await expect(page.locator('[data-slot="collapsed-view"]')).toBeVisible();
 
-    // The staging button should not be visible (no staged items)
-    const stagingButton = page.locator('[data-slot="open-staging-button"]');
-    await expect(stagingButton).not.toBeVisible();
+    // The CTA should be back to its default state with no staging badge
+    const stagingButton = page.locator('[data-slot="log-food-button"]');
+    await expect(stagingButton).toBeVisible();
+    await expect(stagingButton).toHaveText("Log Food");
   });
 
   test("modal shows macro totals (calories, protein, carbs, fat, sugars, fibre)", async ({
@@ -246,7 +249,7 @@ test.describe("LogFoodModal", () => {
     await openLogFoodModal(page);
 
     // Check role="dialog" and aria-modal="true"
-    const dialog = page.locator('[role="dialog"][aria-modal="true"]');
+    const dialog = page.locator('[data-slot="log-food-modal"][role="dialog"][aria-modal="true"]');
     await expect(dialog).toBeVisible();
 
     // Check aria-label
@@ -281,7 +284,7 @@ test.describe("LogFoodModal", () => {
     await searchAndSelectFood(page, "toast", "toast");
 
     // Staging button should show "1"
-    const stagingButton = page.locator('[data-slot="open-staging-button"]');
+    const stagingButton = page.locator('[data-slot="log-food-button"]');
     await expect(stagingButton).toContainText("1");
 
     // Clear search and stage second food: egg
@@ -296,7 +299,7 @@ test.describe("LogFoodModal", () => {
     // Open modal and verify both items
     await openLogFoodModal(page);
 
-    const foodItems = page.locator('[data-slot="log-food-item"]');
+    const foodItems = page.locator('[data-slot="log-food-modal"] [data-slot="log-food-item"]');
     await expect(foodItems).toHaveCount(2);
 
     // Both should be visible
@@ -330,7 +333,7 @@ test.describe("LogFoodModal", () => {
     await removeToast.click();
 
     // Only egg should remain
-    const foodItems = page.locator('[data-slot="log-food-item"]');
+    const foodItems = page.locator('[data-slot="log-food-modal"] [data-slot="log-food-item"]');
     await expect(foodItems).toHaveCount(1);
 
     const modal = page.locator('[data-slot="log-food-modal"]');

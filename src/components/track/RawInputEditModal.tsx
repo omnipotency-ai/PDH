@@ -111,6 +111,7 @@ export function RawInputEditModal({
     currentRawInput,
     currentNotes,
     logId,
+    logType,
     logTimestamp,
     updateSyncedLog,
     onOpenChange,

@@ -26,9 +26,9 @@ import { expect, test } from "./fixtures";
 const SEL = {
   root: "#root",
   // Track page
-  foodSection: "section.glass-card-food",
-  foodInput: 'input[placeholder="eg. Ham sandwich"]',
-  logFoodButton: "button:has-text('Log Food')",
+  nutritionCard: '[data-slot="nutrition-card"]',
+  foodInput: 'input[aria-label="Search foods"]',
+  logFoodButton: '[data-slot="log-food-button"]',
   foodGroupButton: 'button:has-text("Food intake")',
   dotResolved: '[data-slot="resolution-dot"][aria-label="Matched"]',
   // Navigation
@@ -64,8 +64,10 @@ async function navigateToPatterns(page: Page) {
 }
 
 async function logFoodOnTrack(page: Page, text: string) {
-  const section = page.locator(SEL.foodSection);
-  const input = section.locator(SEL.foodInput);
+  const section = page.locator(SEL.nutritionCard);
+  await expect(section).toBeVisible();
+  const input = section.locator(SEL.foodInput).first();
+  await expect(input).toBeVisible();
   await input.fill(text);
   await section.locator(SEL.logFoodButton).click();
   await expect(input).toHaveValue("");

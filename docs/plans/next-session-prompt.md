@@ -1,86 +1,62 @@
 > **Ref:** `docs/plans/next-session-prompt.md`
-> **Updated:** 2026-04-05
-> **Version:** 1.0
-> **History:** v1.0 (2026-04-05) — standardized doc header
+> **Updated:** 2026-04-05 19:00
+> **Version:** .0
+> **History:**
+>
+> - v3.0 (2026-04-05 19:00) — updated after Waves 4-5 completion
+> - v2.0 (2026-04-05) — updated HEAD/tests after W4-5 dispatch
+> - v1.0 (2026-04-05) — standardized doc header
 
-# Next Session — Nutrition Card Remaining Work
+# Next Session — Nutrition Card Post-Implementation
 
 ## Context
 
-Waves 0-3 complete. A 31-deviation spec fix (12 tasks) was executed on 2026-04-05, fixing architecture, increments, units, water modal, search, favourites, filter tabs, macros, match indicators, old section removal, and visual polish. Branch is ready for remaining Wave 4 items and Wave 5 polish.
+All 6 waves complete. Waves 4-5 were executed via subagent-driven development on 2026-04-05, completing drink suggestions, TodayLog wiring, dark mode audit, accessibility hardening, edge cases, and full regression. Browser testing and E2E test work is in progress.
 
 **Branch:** `feat/nutrition`
-**HEAD:** `809771c` (E2E test committed)
-**Tests:** 1414 passing, 0 failures (2026-04-05)
+**HEAD:** `01b32e6` (+ uncommitted work in progress)
+**Tests:** 1430 passing, 0 failures (2026-04-05)
 
 ## What to read first
 
-1. `docs/plans/2026-04-05-nutrition-card-fix.md` — the 12-task fix plan (all complete)
-2. `docs/plans/nutrition-card-implementation-plan.json` — original 6-wave plan
-3. `memory/project_nutrition_card_decisions.md` — all 22 locked visual + behavioral decisions
-4. `memory/project_meal_logging_prd_complete.md` — full project status
-5. `docs/WIP.md` — wave-by-wave progress log
+1. `docs/WIP.md` — wave-by-wave progress log (all waves marked complete)
+2. `docs/WORK-QUEUE.md` — all tasks marked done with commit hashes
+3. `docs/plans/nutrition-card-implementation-plan-*.json` — original 6-wave plan
+4. `memory/project_nutrition_card_decisions.md` — all 22 locked visual + behavioral decisions
 
-## Current state
+## What was done this session (Waves 4-5)
 
-### Spec Deviation Fix — COMPLETE (2026-04-05)
+### Wave 4 — Migration
 
-12 tasks executed via sequential/parallel agent dispatch. Key commits:
+| Commit    | What                                                                               |
+| --------- | ---------------------------------------------------------------------------------- |
+| `db1b2d4` | W4-01: Common Drinks section in search zero-state                                  |
+| `269ccc7` | W4-01 fix: `isLiquid` flag on StagedItem, "ml" suffix for drinks                   |
+| `66b74fe` | W4-03: TodayLog mealSlot badges + portion/calorie info                             |
+| `8daafda` | Constants cleanup: tokenize teal, deduplicate capitalize, consolidate macro colors |
 
-| Commit  | What                                                                  |
-| ------- | --------------------------------------------------------------------- |
-| 714d586 | Architecture: remove view switching, collapsed card permanent         |
-| d22a634 | Parallel batch: increments 50g/50ml, water modal, filter tabs, macros |
-| c909f29 | "Logging to: Meal" auto-detect + search zero-state                    |
-| ca9dafb | Heart-to-favourite toggle on food rows and search results             |
-| 3c37f33 | Zone badges + explicit + button on search results                     |
-| 1b2fedc | Match status indicators (green/orange) + unknown food toast           |
-| 710672f | Visual polish: 2-drop water icon, button alignment                    |
-| 809771c | E2E test: 15-step full nutrition flow                                 |
+### Wave 5 — Polish
 
-### Key Architecture Changes (from this session)
+| Commit    | What                                                                   |
+| --------- | ---------------------------------------------------------------------- |
+| `9b93f3f` | W5-03: Edge cases — goal=0 guard, truncation, 14 new tests             |
+| `78c56fe` | W5-01: Dark mode CSS variable audit (color-mix fix for rings)          |
+| `9cfee9d` | W5-02: Accessibility verified complete (Base UI + W5-01/03 covered it) |
+| `122ea23` | W5-04: Lint fixes (a11y), full regression green                        |
+| `01b32e6` | Docs: mark all waves complete in WIP + WORK-QUEUE                      |
 
-- **Collapsed card is PERMANENT** — calorie ring, search bar, log food button, water progress bar are ALWAYS visible. No view switching.
-- **NutritionView type** is now `"none" | "favourites" | "foodFilter" | "calorieDetail"` — content appears below the water bar
-- **All increments** are flat 50g (solids) or 50ml (liquids)
-- **Liquids** always display "ml" suffix, never "g" or "cups"
-- **Amount field** in staging modal is editable (click to type custom value)
-- **Search is inline** — results appear below water bar, zero-state shows recent foods on focus
-- **Filter tabs** are now Recent / Frequent / All (Favourites tab removed — redundant with heart icon)
-- **Old FoodSection + FluidSection** removed from Track page rendering
+### Key changes from this session
 
-### Remaining Work
-
-#### W4-01: Migrate non-water drinks to food suggestions
-
-Add "Common Drinks" section in search zero-state from food registry (hot_drink, juice, fizzy_drink subcategories).
-
-#### W4-03: Update TodayLog for nutrition card data
-
-Ensure logged foods/fluids display correctly with mealSlot badge, portion + calorie info.
-
-#### Wave 5: Polish
-
-- Dark mode audit
-- Accessibility hardening (aria, focus management)
-- Edge cases and error states
-- Full regression (all E2E tests pass)
-
-#### Open review findings worth addressing
-
-| #   | Issue                                | Priority  |
-| --- | ------------------------------------ | --------- |
-| 32  | Hardcoded teal #42BCB8 not tokenized | IMPORTANT |
-| 42  | capitalize utility duplicated        | MINOR     |
-| 47  | MACRO_PILL_CONFIG colors copy-pasted | MINOR     |
-
-## On next session start
-
-1. Read this file + the fix plan
-2. Run `bun run test` to confirm 1414 passing
-3. Browser-test the app via Claude-in-Chrome to verify visual fidelity against annotated screenshots
-4. Start W4-01 (drink suggestions) and W4-03 (TodayLog)
-5. Dispatch Agent T for shared constants (#32, #42, #47)
+- **Common Drinks** in search zero-state: tea, diluted juice, coffee, carbonated drink
+- **isLiquid flag** on StagedItem: drinks show "ml", solids show "g"
+- **MealSlotBadge** in TodayLog: color-coded badges (breakfast=amber, lunch=sky, dinner=violet, snack=emerald)
+- **ItemPortionCalorie** in TodayLog: portion size + calorie info from registry
+- **CSS variables** replace all hardcoded hex (except semantic MACRO_COLORS and zone badges)
+- **MACRO_COLORS** extracted to `nutritionConstants.ts`, shared by CalorieDetailView + LogFoodModal
+- **`capitalize`** consolidated to single export in `nutritionUtils.ts`
+- **`color-mix()`** in CircularProgressRing: works with CSS variable inputs (hex suffix broke with `var()`)
+- **Edge case guards**: goal=0 division, rapid +/- bounds, long name truncation, special chars in search
+- **a11y**: role=combobox on search, listbox/option on results, aria-modal on dialogs, focus traps via Base UI
 
 ## Key architecture facts (do not re-derive)
 
@@ -96,6 +72,24 @@ Ensure logged foods/fluids display correctly with mealSlot badge, portion + calo
 - **CircularProgressRing** now supports 3-segment display (consumed/toAdd/remaining)
 - **StagedItem** has `isLiquid: boolean` flag for unit display logic
 - **Reduce-to-0** via minus button removes item from staging (reducer handles it)
+- **LIQUID_CANONICALS** set in useNutritionStore: O(1) lookup for drink/beverage category
+- **COMMON_DRINKS** computed at module load from FOOD_REGISTRY (static, no useMemo needed)
+- **MACRO_COLORS** in `nutritionConstants.ts` — single source of truth for nutrient colors
+- **`color-mix(in srgb, ...)`** used instead of hex suffix for CSS variable-compatible opacity
+
+## In-progress work (not yet committed)
+
+Browser testing and E2E test updates are in progress. Modified files:
+
+- `e2e/fluid-tracking.spec.ts`
+- `e2e/food-pipeline.spec.ts`
+- `e2e/food-tracking.spec.ts`
+- `e2e/nutrition-logfood-modal.spec.ts`
+- Several nutrition component files (fixes from browser testing)
+
+## Remaining work / Next steps
+
+<!-- Fill in what you want the next session to focus on -->
 
 ## Verification commands
 

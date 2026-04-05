@@ -92,10 +92,7 @@ function MealBreakdownBar({
 }: {
   caloriesByMealSlot: Record<MealSlot, number>;
 }) {
-  const total = MEAL_SLOT_CONFIG.reduce(
-    (sum, s) => sum + caloriesByMealSlot[s.slot],
-    0,
-  );
+  const total = MEAL_SLOT_CONFIG.reduce((sum, s) => sum + caloriesByMealSlot[s.slot], 0);
 
   return (
     <div data-slot="meal-breakdown" className="space-y-2">
@@ -159,21 +156,14 @@ function MacroRow({
   };
 }) {
   return (
-    <div
-      data-slot="macro-summary"
-      className="flex items-start justify-between gap-1 px-1"
-      role="group"
-      aria-label="Macronutrient summary"
-    >
+    <div data-slot="macro-summary" className="flex items-start justify-between gap-1 px-1">
       {MACRO_CONFIG.map((m) => (
         <div key={m.key} className="flex flex-col items-center gap-0.5">
           <span className="text-lg font-bold" style={{ color: m.color }}>
             {macros[m.key]}
             <span className="text-sm font-normal">g</span>
           </span>
-          <span className="text-[10px] text-[var(--text-faint)]">
-            {m.label}
-          </span>
+          <span className="text-[10px] text-[var(--text-faint)]">{m.label}</span>
         </div>
       ))}
     </div>
@@ -227,14 +217,10 @@ const MealSlotAccordion = React.memo(function MealSlotAccordion({
         disabled={!hasEntries}
       >
         {/* Time */}
-        <span className="w-12 shrink-0 text-xs text-[var(--text-faint)]">
-          {config.time}
-        </span>
+        <span className="w-12 shrink-0 text-xs text-[var(--text-faint)]">{config.time}</span>
 
         {/* Meal name */}
-        <span className="font-semibold text-sm text-[var(--text)]">
-          {config.label}
-        </span>
+        <span className="font-semibold text-sm text-[var(--text)]">{config.label}</span>
 
         {/* Count badge */}
         {hasEntries && (
@@ -253,23 +239,15 @@ const MealSlotAccordion = React.memo(function MealSlotAccordion({
 
         {/* Calories or "No entries" */}
         {hasEntries ? (
-          <span className="text-sm text-[var(--text-muted)]">
-            {totalCalories} kcal
-          </span>
+          <span className="text-sm text-[var(--text-muted)]">{totalCalories} kcal</span>
         ) : (
-          <span className="text-xs italic text-[var(--text-faint)]">
-            No entries
-          </span>
+          <span className="text-xs italic text-[var(--text-faint)]">No entries</span>
         )}
 
         {/* Chevron */}
         {hasEntries && (
           <span className="ml-1 text-[var(--text-faint)]" aria-hidden="true">
-            {isOpen ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
+            {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </span>
         )}
       </button>
@@ -306,9 +284,8 @@ const MealSlotAccordion = React.memo(function MealSlotAccordion({
                         {displayName}
                       </span>
                       <span className="text-[11px] text-[var(--text-faint)]">
-                        {macros.portionG}g · {macros.protein}g P ·{" "}
-                        {macros.carbs}g C · {macros.fat}g F · {macros.sugars}g S
-                        · {`${macros.fiber}g Fi`}
+                        {macros.portionG}g · {macros.protein}g P · {macros.carbs}g C · {macros.fat}g
+                        F · {macros.sugars}g S · {`${macros.fiber}g Fi`}
                       </span>
                     </div>
                     <div className="flex items-center gap-3">
@@ -354,54 +331,52 @@ export function CalorieDetailView({
     () =>
       MEAL_SLOT_CONFIG.reduce(
         (sum, config) =>
-          sum +
-          logsByMealSlot[config.slot].reduce(
-            (acc, log) => acc + getFoodItems(log).length,
-            0,
-          ),
+          sum + logsByMealSlot[config.slot].reduce((acc, log) => acc + getFoodItems(log).length, 0),
         0,
       ),
     [logsByMealSlot],
   );
 
   return (
-    <div data-slot="calorie-detail" className="space-y-4">
-      {/* Meal breakdown bar */}
-      <MealBreakdownBar caloriesByMealSlot={caloriesByMealSlot} />
+    <div data-slot="calorie-detail-view">
+      <div data-slot="calorie-detail" className="space-y-4">
+        {/* Meal breakdown bar */}
+        <MealBreakdownBar caloriesByMealSlot={caloriesByMealSlot} />
 
-      {/* Macro row */}
-      <MacroRow macros={macros} />
+        {/* Macro row */}
+        <MacroRow macros={macros} />
 
-      {/* Meal slot accordions (one open at a time) */}
-      <div className="overflow-hidden rounded-xl border border-[var(--surface-3)] bg-[var(--surface-1)]">
-        {/* #54: top-level empty state when no food has been logged today */}
-        {totalEntryCount === 0 && (
-          <div
-            className="flex flex-col items-center gap-1 px-4 py-6 text-center"
-            role="status"
-            aria-label="No food logged today"
-          >
-            <span className="text-sm font-medium text-[var(--text-muted)]">
-              No food logged today
-            </span>
-            <span className="text-xs text-[var(--text-faint)]">
-              Log a meal to see your breakdown here.
-            </span>
-          </div>
-        )}
+        {/* Meal slot accordions (one open at a time) */}
+        <div className="overflow-hidden rounded-xl border border-[var(--surface-3)] bg-[var(--surface-1)]">
+          {/* #54: top-level empty state when no food has been logged today */}
+          {totalEntryCount === 0 && (
+            <div
+              className="flex flex-col items-center gap-1 px-4 py-6 text-center"
+              role="status"
+              aria-label="No food logged today"
+            >
+              <span className="text-sm font-medium text-[var(--text-muted)]">
+                No food logged today
+              </span>
+              <span className="text-xs text-[var(--text-faint)]">
+                Log a meal to see your breakdown here.
+              </span>
+            </div>
+          )}
 
-        {MEAL_SLOT_CONFIG.map((config) => (
-          <MealSlotAccordion
-            key={config.slot}
-            config={config}
-            logs={logsByMealSlot[config.slot]}
-            totalCalories={caloriesByMealSlot[config.slot]}
-            isOpen={openSlot === config.slot}
-            slot={config.slot}
-            setOpenSlot={setOpenSlot}
-            onDeleteLog={onDeleteLog}
-          />
-        ))}
+          {MEAL_SLOT_CONFIG.map((config) => (
+            <MealSlotAccordion
+              key={config.slot}
+              config={config}
+              logs={logsByMealSlot[config.slot]}
+              totalCalories={caloriesByMealSlot[config.slot]}
+              isOpen={openSlot === config.slot}
+              slot={config.slot}
+              setOpenSlot={setOpenSlot}
+              onDeleteLog={onDeleteLog}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

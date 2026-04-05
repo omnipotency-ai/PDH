@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePanelTime } from "@/hooks/usePanelTime";
+import { useAiPreferences } from "@/hooks/useProfile";
 import { getErrorMessage } from "@/lib/errors";
 import { cn } from "@/lib/utils";
 import {
@@ -153,6 +154,7 @@ function TripStepper({ value, onChange }: { value: number; onChange: (v: number)
 /* ── Main Component ── */
 
 export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
+  const { aiPreferences, setAiPreferences } = useAiPreferences();
   const bristolGroupName = useId();
   const [bristolCode, setBristolCode] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7 | null>(null);
   const [urgencyTag, setUrgencyTag] = useState<"low" | "medium" | "high" | "immediate">("medium");
@@ -167,6 +169,7 @@ export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
     usePanelTime(captureTimestamp);
 
   const prefersReducedMotion = useReducedMotion();
+  const reportTriggerMode = aiPreferences.reportTriggerMode ?? "auto";
 
   const selectedBristol =
     bristolCode !== null ? BRISTOL_SCALE.find((b) => b.value === bristolCode) : null;
@@ -226,6 +229,51 @@ export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
         color="var(--section-bowel)"
         mutedColor="var(--section-bowel-muted)"
       />
+
+      <div className="space-y-1.5">
+        <p
+          className="text-[11px] font-mono uppercase tracking-wider"
+          style={{ color: "var(--color-text-tertiary)" }}
+        >
+          Report Trigger
+        </p>
+        <div
+          role="toolbar"
+          aria-label="Report trigger mode"
+          className="grid grid-cols-2 gap-1 rounded-xl p-1"
+          style={{ border: "1px solid var(--section-bowel-border)" }}
+        >
+          {(["auto", "manual"] as const).map((mode) => {
+            const isSelected = reportTriggerMode === mode;
+            return (
+              <button
+                key={mode}
+                type="button"
+                aria-pressed={isSelected}
+                onClick={() => setAiPreferences({ reportTriggerMode: mode })}
+                className={cn(
+                  "min-h-[44px] rounded-xl px-3 text-sm font-semibold capitalize transition-all duration-200",
+                  !isSelected && "bg-(--surface-3) hover:bg-(--surface-0)",
+                )}
+                style={
+                  isSelected
+                    ? {
+                        backgroundColor: "var(--section-bowel-muted)",
+                        boxShadow: "inset 0 0 0 1.5px var(--section-bowel)",
+                        color: "var(--section-bowel)",
+                      }
+                    : {
+                        border: "1px solid var(--section-bowel-border)",
+                        color: "var(--text-muted)",
+                      }
+                }
+              >
+                {mode}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {/* ── Bristol Type Picker ── */}
       <div className="space-y-2">
@@ -498,7 +546,7 @@ export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
                       boxShadow: "0 0 12px var(--section-bowel-glow)",
                     }}
                   >
-                    {saving ? "..." : "Log BM"}
+                    {saving ? "..." : "Log Bowel Movement"}
                   </Button>
                 </div>
               </div>

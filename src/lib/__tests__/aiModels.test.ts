@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  DEFAULT_INSIGHT_MODEL,
-  getModelLabel,
-  getValidInsightModel,
-  INSIGHT_MODEL_OPTIONS,
-} from "../aiModels";
+import { DEFAULT_INSIGHT_MODEL, getValidInsightModel, INSIGHT_MODEL_OPTIONS } from "../aiModels";
 
 describe("aiModels", () => {
   it("defaults insight model selection to gpt-5.4", () => {

@@ -1,18 +1,20 @@
 import { expect, test } from "./fixtures";
 
 test.describe("Track page", () => {
-  test("Track page loads and shows food input", async ({ page }) => {
+  test("Track page loads and shows the nutrition card search input", async ({ page }) => {
     // Track is the default page at /
     await page.goto("/");
 
-    // Should see the FoodSection with its placeholder
-    await expect(page.getByPlaceholder("eg. Ham sandwich")).toBeVisible();
+    const nutritionCard = page.locator('[data-slot="nutrition-card"]');
+    await expect(nutritionCard).toBeVisible();
+    await expect(nutritionCard.getByLabel("Search foods").first()).toBeVisible();
   });
 
-  test("fluid tracking section is visible", async ({ page }) => {
+  test("track page exposes water logging affordances", async ({ page }) => {
     await page.goto("/");
 
-    // FluidSection should be present with its title
-    await expect(page.getByText("Fluids").first()).toBeVisible();
+    const nutritionCard = page.locator('[data-slot="nutrition-card"]');
+    await expect(nutritionCard.locator('button[aria-label="Log water"]')).toBeVisible();
+    await expect(nutritionCard.locator('[data-slot="water-progress"]')).toBeVisible();
   });
 });

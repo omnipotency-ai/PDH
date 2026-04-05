@@ -64,8 +64,7 @@ test.describe("FavouritesView", () => {
 
     // FavouritesView should now be visible
     await expect(page.locator(SEL.favouritesView)).toBeVisible();
-    // Collapsed view should no longer be visible
-    await expect(page.locator(SEL.collapsedView)).not.toBeVisible();
+    await expect(page.locator(SEL.collapsedView)).not.toBeAttached();
   });
 
   test("FavouritesView shows favourites list or empty state", async ({ page }) => {
@@ -201,8 +200,7 @@ test.describe("FoodFilterView", () => {
 
     // FoodFilterView should now be visible
     await expect(page.locator(SEL.foodFilterView)).toBeVisible();
-    // Collapsed view should no longer be visible
-    await expect(page.locator(SEL.collapsedView)).not.toBeVisible();
+    await expect(page.locator(SEL.collapsedView)).not.toBeAttached();
   });
 
   test("FoodFilterView shows three tabs: Recent, Frequent, All", async ({ page }) => {
@@ -342,14 +340,14 @@ test.describe("FoodFilterView", () => {
 
     const tablist = page.locator(SEL.filterTabs);
 
-    // Click Favourites tab
-    const favouritesTab = tablist.locator('button[role="tab"]').filter({ hasText: "Favourites" });
-    await favouritesTab.click();
-    await expect(favouritesTab).toHaveAttribute("aria-selected", "true");
+    // Click Frequent tab
+    const frequentTab = tablist.locator('button[role="tab"]').filter({ hasText: "Frequent" });
+    await frequentTab.click();
+    await expect(frequentTab).toHaveAttribute("aria-selected", "true");
 
-    // The tab panel should have the correct id for the favourites tab
-    const favouritesPanel = page.locator('#filter-panel-favourites[role="tabpanel"]');
-    await expect(favouritesPanel).toBeVisible();
+    // The tab panel should have the correct id for the frequent tab
+    const frequentPanel = page.locator('#filter-panel-frequent[role="tabpanel"]');
+    await expect(frequentPanel).toBeVisible();
 
     // Now switch to All tab
     const allTab = tablist.locator('button[role="tab"]').filter({ hasText: "All" });
