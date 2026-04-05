@@ -22,7 +22,8 @@
 > **Branch:** `feat/nutrition`
 > **Plan:** [`nutrition-card-implementation-plan.json`](plans/nutrition-card-implementation-plan.json)
 > **Next session:** [`next-session-prompt.md`](plans/next-session-prompt.md)
-> **Tests:** 1414 passing, 0 failures (2026-04-05)
+> **Tests:** 1430 passing, 0 failures (2026-04-05)
+> **Status:** ALL WAVES COMPLETE — ready for merge/PR
 
 ### W5-02 — Accessibility hardening — verified complete (2026-04-05 16:40)
 
