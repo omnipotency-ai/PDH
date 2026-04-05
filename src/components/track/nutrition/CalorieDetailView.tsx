@@ -67,9 +67,9 @@ const MEAL_SLOT_CONFIG: ReadonlyArray<{
     time: "07:00",
     color: "var(--orange)",
   },
-  { slot: "lunch", label: "Lunch", time: "13:00", color: "#34d399" },
-  { slot: "dinner", label: "Dinner", time: "20:00", color: "#a78bfa" },
-  { slot: "snack", label: "Snack", time: "15:00", color: "#fbbf24" },
+  { slot: "lunch", label: "Lunch", time: "13:00", color: "var(--emerald)" },
+  { slot: "dinner", label: "Dinner", time: "20:00", color: "var(--violet)" },
+  { slot: "snack", label: "Snack", time: "15:00", color: "var(--amber)" },
 ];
 
 /** Macro display config. */
@@ -100,7 +100,11 @@ function MealBreakdownBar({
   return (
     <div data-slot="meal-breakdown" className="space-y-2">
       {/* Stacked horizontal bar */}
-      <div className="flex h-3 w-full overflow-hidden rounded-full bg-[var(--surface-3)]">
+      <div
+        className="flex h-3 w-full overflow-hidden rounded-full bg-[var(--surface-3)]"
+        role="img"
+        aria-label={`Meal calorie breakdown: ${MEAL_SLOT_CONFIG.map((c) => `${c.label} ${caloriesByMealSlot[c.slot]} kcal`).join(", ")}`}
+      >
         {MEAL_SLOT_CONFIG.map((config) => {
           const cals = caloriesByMealSlot[config.slot];
           const widthPercent = total > 0 ? (cals / total) * 100 : 0;
@@ -158,6 +162,8 @@ function MacroRow({
     <div
       data-slot="macro-summary"
       className="flex items-start justify-between gap-1 px-1"
+      role="group"
+      aria-label="Macronutrient summary"
     >
       {MACRO_CONFIG.map((m) => (
         <div key={m.key} className="flex flex-col items-center gap-0.5">
@@ -295,8 +301,8 @@ const MealSlotAccordion = React.memo(function MealSlotAccordion({
                     key={itemKey}
                     className="flex items-start justify-between gap-2 rounded-lg px-2 py-2 hover:bg-[var(--surface-2)]"
                   >
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-sm font-semibold text-[var(--text)]">
+                    <div className="min-w-0 flex flex-1 flex-col gap-0.5">
+                      <span className="truncate text-sm font-semibold text-[var(--text)]">
                         {displayName}
                       </span>
                       <span className="text-[11px] text-[var(--text-faint)]">

@@ -225,6 +225,7 @@ function WaterProgressRow({
         aria-valuenow={percentage}
         aria-valuemin={0}
         aria-valuemax={100}
+        aria-label={`Water progress: ${percentage}%`}
       >
         <div
           className="h-full rounded-full transition-[width] duration-500 ease-out"
@@ -248,6 +249,7 @@ function NutritionSearchInput({
   onBlur,
   onSubmit,
   inputRef,
+  hasResults,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -256,6 +258,7 @@ function NutritionSearchInput({
   onBlur: () => void;
   onSubmit: () => void;
   inputRef: React.RefObject<HTMLInputElement | null>;
+  hasResults: boolean;
 }) {
   return (
     <div data-slot="nutrition-search" className="relative flex-1">
@@ -281,7 +284,11 @@ function NutritionSearchInput({
         }}
         placeholder="Search or type a food..."
         className="w-full rounded-xl border border-[var(--color-border-default)] bg-[var(--surface-2)] py-3 pl-[4.5rem] pr-10 text-base text-[var(--text)] placeholder:text-[var(--text-faint)] transition-colors focus:border-[var(--orange)] focus:outline-none focus:ring-1 focus:ring-[var(--orange)]"
+        role="combobox"
         aria-label="Search foods"
+        aria-autocomplete="list"
+        aria-expanded={hasResults}
+        aria-controls={hasResults ? "nutrition-search-results" : undefined}
         autoComplete="off"
       />
       {value.length > 0 && (
@@ -334,6 +341,9 @@ function SearchResultRow({
   return (
     <div
       data-slot="search-result"
+      role="option"
+      aria-selected={false}
+      aria-label={`${entry.canonical}, Zone ${entry.zone}, ${calories} kcal`}
       className="flex w-full items-center gap-2 rounded-lg px-3 py-2 transition-colors hover:bg-[var(--surface-2)]"
     >
       {/* Heart toggle */}
@@ -360,17 +370,19 @@ function SearchResultRow({
         type="button"
         className="flex flex-1 items-center justify-between text-left"
         onClick={() => onSelect(entry.canonical)}
+        aria-label={`Select ${entry.canonical}`}
       >
-        <div className="flex flex-col gap-0.5">
+        <div className="min-w-0 flex flex-col gap-0.5">
           <div className="flex items-center gap-1.5">
-            <span className="text-sm font-medium text-[var(--text)]">
+            <span className="min-w-0 max-w-[160px] truncate text-sm font-medium text-[var(--text)]">
               {entry.canonical}
             </span>
             {/* Zone badge */}
             <span
-              className="rounded-full px-1.5 py-0.5 text-[9px] font-bold leading-none"
-              style={{ backgroundColor: zoneColor, color: "white" }}
+              className="rounded-full px-1.5 py-0.5 text-[9px] font-bold leading-none text-white"
+              style={{ backgroundColor: zoneColor }}
               title={`Zone ${entry.zone}`}
+              aria-label={`Zone ${entry.zone}`}
             >
               Z{entry.zone}
             </span>
@@ -786,6 +798,7 @@ export function NutritionCard({
           onBlur={handleSearchBlur}
           onSubmit={handleSearchSubmit}
           inputRef={searchInputRef}
+          hasResults={hasSearchResults}
         />
         <button
           type="button"
@@ -875,6 +888,7 @@ export function NutritionCard({
 
       {hasSearchResults && (
         <div
+          id="nutrition-search-results"
           data-slot="search-results"
           className="max-h-64 space-y-0.5 overflow-y-auto"
           role="listbox"
