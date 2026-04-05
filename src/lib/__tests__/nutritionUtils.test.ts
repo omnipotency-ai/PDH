@@ -202,23 +202,17 @@ describe("calculateTotalCalories", () => {
 
   it("calculates calories for white rice with quantity 200g", () => {
     // white rice: caloriesPer100g = 130, quantity = 200g → 260
-    const logs = [
-      makeFoodLog([{ canonicalName: "white rice", quantity: 200, unit: "g" }]),
-    ];
+    const logs = [makeFoodLog([{ canonicalName: "white rice", quantity: 200, unit: "g" }])];
     expect(calculateTotalCalories(logs)).toBe(260);
   });
 
   it("returns 0 for item with unknown canonical name", () => {
-    const logs = [
-      makeFoodLog([{ canonicalName: "alien food", quantity: 100, unit: "g" }]),
-    ];
+    const logs = [makeFoodLog([{ canonicalName: "alien food", quantity: 100, unit: "g" }])];
     expect(calculateTotalCalories(logs)).toBe(0);
   });
 
   it("returns 0 for item with null canonical name", () => {
-    const logs = [
-      makeFoodLog([{ canonicalName: null, quantity: 100, unit: "g" }]),
-    ];
+    const logs = [makeFoodLog([{ canonicalName: null, quantity: 100, unit: "g" }])];
     expect(calculateTotalCalories(logs)).toBe(0);
   });
 
@@ -229,11 +223,7 @@ describe("calculateTotalCalories", () => {
 
   it("uses defaultPortionG when quantity is null", () => {
     // white rice: caloriesPer100g = 130, defaultPortionG = 180 → 234
-    const logs = [
-      makeFoodLog([
-        { canonicalName: "white rice", quantity: null, unit: null },
-      ]),
-    ];
+    const logs = [makeFoodLog([{ canonicalName: "white rice", quantity: null, unit: null }])];
     expect(calculateTotalCalories(logs)).toBe(234);
   });
 
@@ -266,9 +256,7 @@ describe("calculateTotalMacros", () => {
   it("calculates proportional macros for white rice 200g", () => {
     // white rice per 100g: protein=2.7, carbs=28.2, fat=0.3, sugars=0, fiber=0.4
     // For 200g: protein=5.4, carbs=56.4, fat=0.6, sugars=0, fiber=0.8
-    const logs = [
-      makeFoodLog([{ canonicalName: "white rice", quantity: 200, unit: "g" }]),
-    ];
+    const logs = [makeFoodLog([{ canonicalName: "white rice", quantity: 200, unit: "g" }])];
     const macros = calculateTotalMacros(logs);
     expect(macros.protein).toBeCloseTo(5.4, 1);
     expect(macros.carbs).toBeCloseTo(56.4, 1);
@@ -296,9 +284,7 @@ describe("calculateTotalMacros", () => {
   });
 
   it("ignores items without portion data", () => {
-    const logs = [
-      makeFoodLog([{ canonicalName: "alien food", quantity: 100, unit: "g" }]),
-    ];
+    const logs = [makeFoodLog([{ canonicalName: "alien food", quantity: 100, unit: "g" }])];
     expect(calculateTotalMacros(logs)).toEqual({
       protein: 0,
       carbs: 0,
@@ -406,31 +392,23 @@ describe("calculateWaterIntake", () => {
 
   // Fix #35: water name matching variants
   it("matches 'Water (still)'", () => {
-    const logs = [
-      makeFluidLog([{ name: "Water (still)", quantity: 250, unit: "ml" }]),
-    ];
+    const logs = [makeFluidLog([{ name: "Water (still)", quantity: 250, unit: "ml" }])];
     expect(calculateWaterIntake(logs)).toBe(250);
   });
 
   it("matches 'Sparkling Water'", () => {
-    const logs = [
-      makeFluidLog([{ name: "Sparkling Water", quantity: 500, unit: "ml" }]),
-    ];
+    const logs = [makeFluidLog([{ name: "Sparkling Water", quantity: 500, unit: "ml" }])];
     expect(calculateWaterIntake(logs)).toBe(500);
   });
 
   it("matches 'still water' (lowercase)", () => {
-    const logs = [
-      makeFluidLog([{ name: "still water", quantity: 300, unit: "ml" }]),
-    ];
+    const logs = [makeFluidLog([{ name: "still water", quantity: 300, unit: "ml" }])];
     expect(calculateWaterIntake(logs)).toBe(300);
   });
 
   it("does not match 'Watermelon Juice'", () => {
     // "watermelon juice" starts with "water" but the next char is not a space
-    const logs = [
-      makeFluidLog([{ name: "Watermelon Juice", quantity: 200, unit: "ml" }]),
-    ];
+    const logs = [makeFluidLog([{ name: "Watermelon Juice", quantity: 200, unit: "ml" }])];
     expect(calculateWaterIntake(logs)).toBe(0);
   });
 });
@@ -546,11 +524,7 @@ describe("filterToKnownFoods", () => {
   });
 
   it("filters out unknown foods", () => {
-    const result = filterToKnownFoods([
-      "white rice",
-      "alien food",
-      "ripe banana",
-    ]);
+    const result = filterToKnownFoods(["white rice", "alien food", "ripe banana"]);
     expect(result).toContain("white rice");
     expect(result).toContain("ripe banana");
     expect(result).not.toContain("alien food");

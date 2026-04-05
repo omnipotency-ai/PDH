@@ -1,7 +1,7 @@
 /**
  * FoodFilterView — tab-based food browser for the Nutrition Card.
  *
- * Tabs: Recent | Frequent | Favourites | All
+ * Tabs: Recent | Frequent | All
  * Zero state shows recently logged foods for the current meal slot.
  * Each tab shows a list of food items with name, portion, calories,
  * and a (+) button to add to staging.
@@ -13,7 +13,7 @@
 import { FOOD_PORTION_DATA } from "@shared/foodPortionData";
 import { FOOD_REGISTRY } from "@shared/foodRegistryData";
 import { isFoodPipelineType } from "@shared/logTypeUtils";
-import { ArrowLeft, Clock, Heart, List, Star } from "lucide-react";
+import { ArrowLeft, Clock, List, Star } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useSyncedLogsContext } from "@/contexts/SyncedLogsContext";
 import {
@@ -33,7 +33,7 @@ interface FoodFilterViewProps {
   onBack: () => void;
 }
 
-type FilterTab = "recent" | "frequent" | "favourites" | "all";
+type FilterTab = "recent" | "frequent" | "all";
 
 interface TabConfig {
   id: FilterTab;
@@ -54,7 +54,6 @@ interface ResolvedFoodItem {
 const TABS: ReadonlyArray<TabConfig> = [
   { id: "recent", label: "Recent", icon: Clock },
   { id: "frequent", label: "Frequent", icon: Star },
-  { id: "favourites", label: "Favourites", icon: Heart },
   { id: "all", label: "All", icon: List },
 ];
 
@@ -89,11 +88,6 @@ export function FoodFilterView({
   const validRecentFoods = useMemo(
     () => filterToKnownFoods(recentFoods).slice(0, MAX_ITEMS_PER_TAB),
     [recentFoods],
-  );
-
-  const validFavourites = useMemo(
-    () => filterToKnownFoods(favourites).slice(0, MAX_ITEMS_PER_TAB),
-    [favourites],
   );
 
   // Fix #26: Compute frequency map from 14-day logs.
@@ -151,9 +145,6 @@ export function FoodFilterView({
       case "frequent":
         names = frequentFoods;
         break;
-      case "favourites":
-        names = validFavourites;
-        break;
       case "all":
         names = allFoods;
         break;
@@ -175,7 +166,7 @@ export function FoodFilterView({
         calories,
       };
     });
-  }, [activeTab, validRecentFoods, frequentFoods, validFavourites, allFoods, frequencyCountMap]);
+  }, [activeTab, validRecentFoods, frequentFoods, allFoods, frequencyCountMap]);
 
   const favouriteSet = useMemo(() => new Set(favourites), [favourites]);
 
@@ -183,7 +174,6 @@ export function FoodFilterView({
   const tabCounts: Record<FilterTab, number> = {
     recent: validRecentFoods.length,
     frequent: frequentFoods.length,
-    favourites: validFavourites.length,
     all: allFoods.length,
   };
 
@@ -278,10 +268,6 @@ function EmptyTabState({ tab }: { tab: FilterTab }) {
     frequent: {
       title: "No frequent foods yet",
       subtitle: "Foods you log often will appear here.",
-    },
-    favourites: {
-      title: "No favourites yet",
-      subtitle: "Tap the heart icon on any food to save it here.",
     },
     all: {
       title: "No foods available",

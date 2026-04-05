@@ -13,12 +13,7 @@ const FoodMatchingModal = lazy(() =>
 
 import { NutritionCard } from "@/components/track/nutrition/NutritionCard";
 import { NutritionCardErrorBoundary } from "@/components/track/nutrition/NutritionCardErrorBoundary";
-import {
-  type BowelFormState,
-  BowelSection,
-  FluidSection,
-  FoodSection,
-} from "@/components/track/panels";
+import { type BowelFormState, BowelSection } from "@/components/track/panels";
 import { QuickCapture } from "@/components/track/quick-capture";
 import { HabitDetailSheet } from "@/components/track/quick-capture/HabitDetailSheet";
 import { TodayStatusRow } from "@/components/track/TodayStatusRow";
@@ -31,7 +26,6 @@ import { useBaselineAverages } from "@/hooks/useBaselineAverages";
 import { useCelebration } from "@/hooks/useCelebration";
 import { useDayStats } from "@/hooks/useDayStats";
 import { useFoodLlmMatching } from "@/hooks/useFoodLlmMatching";
-import { useFoodParsing } from "@/hooks/useFoodParsing";
 import { useHabitStreaks } from "@/hooks/useHabitStreaks";
 import { useLiveClock } from "@/hooks/useLiveClock";
 import { useHabits, useUnitSystem } from "@/hooks/useProfile";
@@ -216,16 +210,6 @@ export default function TrackPage() {
     celebrateLog();
   }, [celebrateLog]);
 
-  // --- Food parsing orchestration (extracted hook) ---
-  const { handleLogFood: parseAndLogFood } = useFoodParsing({ afterSave });
-
-  // FoodSection passes (notes, rawText, timestampMs?) — server handles all parsing.
-  const handleLogFood = useCallback(
-    (notes: string, rawText: string, timestampMs?: number) =>
-      parseAndLogFood(notes, rawText, timestampMs),
-    [parseAndLogFood],
-  );
-
   // --- Auto-edit state: set by toast "Edit" button, consumed by TodayLog ---
   const [autoEditLogId, setAutoEditLogId] = useState<string | null>(null);
 
@@ -244,7 +228,6 @@ export default function TrackPage() {
     handleQuickCaptureTap,
     handleLogSleepQuickCapture,
     handleLogActivityQuickCapture,
-    handleLogFluid,
     handleLogWeightKg,
     handleQuickCaptureLongPress,
     handleCloseDetailSheet,
@@ -516,8 +499,6 @@ export default function TrackPage() {
           <NutritionCardErrorBoundary>
             <NutritionCard />
           </NutritionCardErrorBoundary>
-          <FoodSection onLogFood={handleLogFood} />
-          <FluidSection onLogFluid={handleLogFluid} />
           <BowelSection onSave={handleLogBowel} />
           {quickCapture}
           {!isDesktop && aiInsightsSection}

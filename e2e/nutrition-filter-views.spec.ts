@@ -205,9 +205,7 @@ test.describe("FoodFilterView", () => {
     await expect(page.locator(SEL.collapsedView)).not.toBeVisible();
   });
 
-  test("FoodFilterView shows all four tabs: Recent, Frequent, Favourites, All", async ({
-    page,
-  }) => {
+  test("FoodFilterView shows three tabs: Recent, Frequent, All", async ({ page }) => {
     await navigateAndWait(page);
 
     // Navigate to food filter
@@ -218,13 +216,12 @@ test.describe("FoodFilterView", () => {
     const tablist = page.locator(SEL.filterTabs);
     await expect(tablist).toBeVisible();
 
-    // Check all four tab labels are present
+    // Check all three tab labels are present (Favourites tab removed — redundant with dedicated FavouritesView)
     const tabs = tablist.locator('button[role="tab"]');
-    await expect(tabs).toHaveCount(4);
+    await expect(tabs).toHaveCount(3);
 
     await expect(tablist.getByText("Recent")).toBeVisible();
     await expect(tablist.getByText("Frequent")).toBeVisible();
-    await expect(tablist.getByText("Favourites")).toBeVisible();
     await expect(tablist.getByText("All")).toBeVisible();
   });
 

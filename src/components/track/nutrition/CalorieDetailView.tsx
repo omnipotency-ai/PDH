@@ -279,8 +279,8 @@ const MealSlotAccordion = React.memo(function MealSlotAccordion({
                         {displayName}
                       </span>
                       <span className="text-[11px] text-[var(--text-faint)]">
-                        {macros.portionG}g &middot; {macros.protein}g P &middot; {macros.carbs}g C
-                        &middot; {macros.fat}g F
+                        {macros.portionG}g · {macros.protein}g P · {macros.carbs}g C · {macros.fat}g
+                        F · {macros.sugars}g S · {`${macros.fiber}g Fi`}
                       </span>
                     </div>
                     <div className="flex items-center gap-3">
