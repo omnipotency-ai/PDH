@@ -88,6 +88,14 @@ After completing sprint tasks or work items, always update WIP tracking docs and
 
 When gathering file contents for reference or concatenation, prefer a single shell command (e.g., `cat` or `find | xargs cat`) over reading files individually into context then re-reading them via agents.
 
+## Cross-Tool Collaboration
+
+When Claude Code and Codex are both used on the same task, follow `docs/ai/cross-tool-collaboration.md`.
+
+- Claude should bias toward orchestration, memory-aware planning, dashboard work, and visual verification.
+- Codex should bias toward precise implementation, verification, and code review in the current workspace.
+- Durable decisions belong in repo docs. User-level Claude memory is secondary and must not become the only source of truth.
+
 <!-- convex-ai-start -->
 This project uses [Convex](https://convex.dev) as its backend.
 

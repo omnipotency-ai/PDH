@@ -2,15 +2,17 @@
 
 > Ties together the 4 build waves for food logging, filter bar, user data, and nutrition enrichment.
 > Defines the shared data layer, wave dependencies, and handoff points.
+>
+> **Last updated:** 2026-04-05
 
 ## Wave Overview
 
-| Wave                        | Scope                                                                                          | PRD                   | Dependencies                                                                                                                                                    |
-| --------------------------- | ---------------------------------------------------------------------------------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **1: Meal Logging**         | Recipes, quick-log by slot, favourites, staging area, nutrition label capture                  | `meal-logging.md`     | None — builds on existing `foodLibrary` + `foodParsing` pipeline                                                                                                |
-| **2: Filter Bar**           | Composable filter bar on Patterns page using static classification + digestion risk data       | `filter-prompt.md`    | None — static data exists in `shared/foodRegistry.ts` + `shared/foodRegistryData.ts` (types). User-specific fields like status and nutrition come in Waves 3-4. |
-| **3: Live User Data**       | Wire `ingredientExposures` + `ingredientOverrides` to filter; expand status enum               | (section in this doc) | Waves 1 + 2                                                                                                                                                     |
-| **4: Nutrition Enrichment** | Batch-populate `ingredientProfiles.nutritionPer100g` via OpenFoodFacts; wire nutrition filters | (section in this doc) | Wave 3                                                                                                                                                          |
+| Wave                        | Scope                                                                                          | PRD                   | Status                                                                            | Dependencies                                                                                                                                                    |
+| --------------------------- | ---------------------------------------------------------------------------------------------- | --------------------- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1: Meal Logging**         | Recipes, quick-log by slot, favourites, staging area, nutrition label capture                  | `meal-logging.md`     | **~90% done** — NutritionCard built, spec deviations fixed, W4-01/W4-03 remaining | None — builds on existing `foodLibrary` + `foodParsing` pipeline                                                                                                |
+| **2: Filter Bar**           | Composable filter bar on Patterns page using static classification + digestion risk data       | `filter-prompt.md`    | **Not started**                                                                   | None — static data exists in `shared/foodRegistry.ts` + `shared/foodRegistryData.ts` (types). User-specific fields like status and nutrition come in Waves 3-4. |
+| **3: Live User Data**       | Wire `ingredientExposures` + `ingredientOverrides` to filter; expand status enum               | (section in this doc) | **Not started**                                                                   | Waves 1 + 2                                                                                                                                                     |
+| **4: Nutrition Enrichment** | Batch-populate `ingredientProfiles.nutritionPer100g` via OpenFoodFacts; wire nutrition filters | (section in this doc) | **Not started**                                                                   | Wave 3                                                                                                                                                          |
 
 **Waves 1 and 2 can run in parallel.** Different pages, different concerns.
 **Waves 3 and 4 are sequential** — each builds on the prior wave's data.

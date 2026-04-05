@@ -1,5 +1,7 @@
 # Meal Logging PRD
 
+> **Status:** ACTIVE — Waves 0-3 complete, spec deviation fix complete (2026-04-05). W4-01, W4-03, W5 remaining.
+>
 > Redesign of the food logging experience for PDH. Replaces the current single text field
 > with a chip-based, slot-aware meal builder that minimises friction for daily use.
 

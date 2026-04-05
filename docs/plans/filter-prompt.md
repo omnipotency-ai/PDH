@@ -1,5 +1,7 @@
 # Food Registry Multi-Filter System
 
+> **Status:** NOT STARTED — this is Data Integration Plan Wave 2. Depends on nothing; can begin when Meal Logging (Wave 1) is stable.
+>
 > Design prompt for implementing a composable, multi-dimensional filter bar
 > for the PDH food registry database. Based on the Linear-style filter pattern
 > (chip-based: `[Type] [operator] [value(s)] [x]`).

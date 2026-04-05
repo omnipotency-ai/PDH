@@ -3,7 +3,7 @@
 > **Single source of truth** for all remediation, bugs, and tech debt.
 >
 > **Created:** 2026-03-17
-> **Last updated:** 2026-04-04
+> **Last updated:** 2026-04-05
 
 ---
 
@@ -33,7 +33,7 @@
 
 ## Priority: Logging UX Redesign
 
-> PRD: `docs/design/meal-logging.md` (merged). All 22 decisions locked (2026-04-03). Implementation plan: `docs/plans/nutrition-card-implementation-plan.json` (26 tasks, 6 waves). Waves 1-2 complete. Wave 3 mostly complete. Waves 4-5 in progress (2026-04-04).
+> PRD: `docs/design/meal-logging.md` (merged). All 22 decisions locked (2026-04-03). Implementation plan: `docs/plans/nutrition-card-implementation-plan.json` (32 tasks, 6 waves). Waves 0-3 complete. 31-deviation spec fix complete (12 tasks, 2026-04-05). W4-02 done. W4-01, W4-03, W5 remaining.
 
 | ID     | Title                             | Sev  | Description                                                                                                                            | Status |
 | ------ | --------------------------------- | ---- | -------------------------------------------------------------------------------------------------------------------------------------- | ------ |
@@ -86,12 +86,12 @@
 | ID     | Title                           | Sev | File(s)                       | Description                                                  | Status |
 | ------ | ------------------------------- | --- | ----------------------------- | ------------------------------------------------------------ | ------ |
 | WQ-111 | BM time label position          | Med | Track/BM section              | Time needs to move before notes.                             | open   |
-| WQ-112 | Fluid section design            | Med | Track/Fluid section           | User wants old design back (ml + drink + add).               | open   |
+| WQ-112 | Fluid section design            | Med | Track/Fluid section           | Replaced by NutritionCard — FluidSection removed from Track. | done   |
 | WQ-113 | BM count data wrong             | Med | Track/Hero                    | Needs runtime verification.                                  | open   |
 | WQ-114 | Next food logic                 | Med | Food pipeline                 | Depends on food safety grid pipeline.                        | open   |
 | WQ-115 | Toast notifications weak        | Med | Toast system                  | No coloured backgrounds, stacking, or prominent undo.        | open   |
-| WQ-116 | Units not applied to fluids     | Med | FluidSection + other surfaces | Some surfaces may hardcode ml.                               | open   |
-| WQ-117 | Food section redesign           | Med | Track/Food section            | Remove "Food Badges" title, simplify layout.                 | open   |
+| WQ-116 | Units not applied to fluids     | Med | FluidSection + other surfaces | Fixed in NutritionCard — all liquids now show ml.            | done   |
+| WQ-117 | Food section redesign           | Med | Track/Food section            | Replaced by NutritionCard — FoodSection removed from Track.  | done   |
 | WQ-118 | Weight target save bug          | Med | Weight section                | Typing "180" doesn't save — needs "180.0" or Enter/Tab.      | open   |
 | WQ-120 | Insights bar removal            | Med | Track page                    | Remove heuristics insight below quick capture.               | open   |
 | WQ-121 | Desktop long-press menu         | Med | Today log                     | Add 3-dot menu for desktop discoverability.                  | open   |

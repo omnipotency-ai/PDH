@@ -31,10 +31,13 @@ AI that surfaces patterns the user might not notice themselves.
 ### Logging
 
 Daily logging of food, fluid intake, weight, habits, activities, and
-bowel movements. Food can be entered via natural language and parsed
-by AI into structured items with portion estimates. Fluid intake is
-tracked with configurable units. Habits and activities are tracked via
-a template-based system with customisable categories.
+bowel movements. Food is entered via a NutritionCard component with
+search, staging area, portion controls (50g/50ml increments with
+editable amounts), 5-macro tracking (protein, carbs, fat, sugars,
+fibre), and meal slot auto-detection. Water has its own modal with a
+3-segment progress ring. Non-water liquids are logged through the food
+search with ml units. Habits and activities are tracked via a
+template-based system with customisable categories.
 
 ### Bristol Stool Scale
 
@@ -94,8 +97,8 @@ destructive operations (11 spec files, 75+ tests as of 2026-03-15).
   has known issues with data reliability. Shipping in limited form.
 - **Dr. Poo report deduplication**: reports can generate duplicates under
   certain timing conditions. Known issue, not a launch blocker.
-- **Transit map**: IN scope for v1. Server pipeline complete (11/11 tasks),
-  Phase 5 UI work in progress.
+- **Transit map**: Removed from codebase (Total Eclipse, 2026-03-31).
+  Feature deleted along with group/line/lineOrder registry fields.
 
 ### Planned for v1.1+
 

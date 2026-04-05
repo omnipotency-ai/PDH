@@ -45,8 +45,9 @@ All 4 ingredient subsystems confirmed as pre-built infrastructure for filter pro
 **Branch:** `feat/nutrition`
 **PRD:** `docs/design/meal-logging.md`
 **Decisions:** `memory/project_nutrition_card_decisions.md` + `memory/project_wave0_decisions.md`
-**Plan:** `docs/plans/nutrition-card-implementation-plan.json`
-**Test count:** 1393 passing, 0 failures (as of 2026-04-04)
+**Plan (original):** `docs/plans/nutrition-card-implementation-plan.json`
+**Plan (fix):** `docs/plans/2026-04-05-nutrition-card-fix.md`
+**Test count:** 1414 passing, 0 failures (as of 2026-04-05)
 
 ---
 
@@ -81,24 +82,50 @@ User decisions: `type: "liquid"` log type, coffee composite, 1,850 kcal/day goal
 
 ---
 
-#### Wave 3: Integration — MOSTLY COMPLETE (2026-04-04)
+#### Wave 3: Integration — COMPLETE (2026-04-04)
 
-- Agent K (FoodFilterView Frequent tab): **DONE** (`034636f`)
-- Agent I (NutritionCard viewRef + headerIcons): **DONE** (`8abdc96`)
-- Agent J (LogFoodModal Base UI Dialog): **DONE** (`965c376`) — latest commit
-- W3-04 (Error boundary): **IN PROGRESS**
-- W3-07 (E2E test): **PENDING**
-
----
-
-#### Wave 4: Migration — IN PROGRESS (Agents M, O, P dispatched 2026-04-04)
+- W3-01: Wire Log Food button to food pipeline — **DONE** (`034636f`)
+- W3-02: Wire WaterModal to fluid logging — **DONE** (`034636f`)
+- W3-03: Wire staging match status — **DONE** (`034636f`)
+- W3-04: Error boundary — **DONE** (`5f2b6e2`)
+- W3-05: Mount NutritionCard in Track page — **DONE** (`034636f`)
+- W3-06: Wire inline feedback badge + live search — **DONE** (`034636f`)
+- W3-07: Full E2E integration test — **DONE** (`2c91729`)
 
 ---
 
-#### Wave 5: Polish — IN PROGRESS (Agent S dispatched 2026-04-04)
+#### Spec Deviation Fix — COMPLETE (2026-04-05)
 
-Remaining items in Waves 5-6:
+Browser audit revealed 31 deviations from the 22 locked decisions. 12-task fix plan created and executed.
 
-- NutritionCard polish (Agent Q): pending
-- LogFoodModal polish (Agent R): pending
-- Shared constants (Agent T): pending
+| Task | What                                                                   | Commit    |
+| ---- | ---------------------------------------------------------------------- | --------- |
+| T1   | Architecture: remove view switching, collapsed card permanent          | `714d586` |
+| T2   | Staging increments 50g/50ml, editable amounts, liquid units=ml         | `d22a634` |
+| T3   | Water modal: 3-segment ring, 50ml step, remove Cancel, goal text color | `d22a634` |
+| T4   | "Logging to: Meal" auto-detect label + search zero-state               | `c909f29` |
+| T5   | Heart-to-favourite toggle on food rows and search results              | `ca9dafb` |
+| T6   | Remove Favourites tab from filter → Recent/Frequent/All                | `d22a634` |
+| T7   | Zone badges + explicit + button on search results                      | `3c37f33` |
+| T8   | CalorieDetailView per-item macros: all 5 values                        | `d22a634` |
+| T9   | Match status indicators (green/orange) + unknown food toast            | `1b2fedc` |
+| T10  | Remove old FoodSection + FluidSection from Track page                  | `d22a634` |
+| T11  | Visual polish: 2-drop water icon, button alignment                     | `710672f` |
+| T12  | E2E test: 15-step full nutrition flow                                  | `809771c` |
+
+---
+
+#### Wave 4: Migration — PARTIALLY DONE
+
+- W4-01: Migrate non-water drinks to food suggestions — **PENDING**
+- W4-02: Remove old FoodSection and FluidSection from Track — **DONE** (T10 in spec fix, `d22a634`)
+- W4-03: Update TodayLog for nutrition card data — **PENDING**
+
+---
+
+#### Wave 5: Polish — PENDING
+
+- W5-01: Dark mode and CSS variable audit
+- W5-02: Accessibility hardening
+- W5-03: Edge cases and error states
+- W5-04: Full regression: all tests pass, all E2E pass

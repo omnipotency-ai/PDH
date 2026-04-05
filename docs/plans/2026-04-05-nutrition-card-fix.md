@@ -1,5 +1,7 @@
 # Nutrition Card — Fix All Deviations from Spec
 
+> **Status:** COMPLETE (2026-04-05). All 12 tasks executed and committed on `feat/nutrition`.
+>
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Fix 31 behavioral, visual, and architectural deviations from the locked 22-decision spec in the NutritionCard feature.
