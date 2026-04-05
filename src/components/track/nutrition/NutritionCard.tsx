@@ -13,16 +13,23 @@
 import { FOOD_PORTION_DATA } from "@shared/foodPortionData";
 import type { FoodRegistryEntry } from "@shared/foodRegistryData";
 import { Camera, Droplet, Heart, Mic, SlidersHorizontal, UtensilsCrossed, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { useNutritionData } from "@/hooks/useNutritionData";
 import { useFoodFavourites } from "@/hooks/useProfile";
 import { getErrorMessage } from "@/lib/errors";
+import {
+  filterToKnownFoods,
+  formatPortion,
+  getDefaultCalories,
+  titleCase,
+} from "@/lib/nutritionUtils";
 import { useAddSyncedLog, useRemoveSyncedLog } from "@/lib/sync";
 import { CalorieDetailView } from "./CalorieDetailView";
 import { FavouritesView } from "./FavouritesView";
 import { FoodFilterView } from "./FoodFilterView";
+import { FoodRow } from "./FoodRow";
 import { LogFoodModal } from "./LogFoodModal";
 import { useNutritionStore } from "./useNutritionStore";
 import { WaterModal } from "./WaterModal";
@@ -190,11 +197,15 @@ function NutritionSearchInput({
   value,
   onChange,
   onClear,
+  onFocus,
+  onBlur,
   inputRef,
 }: {
   value: string;
   onChange: (value: string) => void;
   onClear: () => void;
+  onFocus: () => void;
+  onBlur: () => void;
   inputRef: React.RefObject<HTMLInputElement | null>;
 }) {
   return (
@@ -212,6 +223,8 @@ function NutritionSearchInput({
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onFocus={onFocus}
+        onBlur={onBlur}
         placeholder="Search or type a food..."
         className="w-full rounded-xl border border-[var(--color-border-default)] bg-[var(--surface-2)] py-3 pl-[4.5rem] pr-10 text-base text-[var(--text)] placeholder:text-[var(--text-faint)] transition-colors focus:border-[var(--orange)] focus:outline-none focus:ring-1 focus:ring-[var(--orange)]"
         aria-label="Search foods"
@@ -295,6 +308,43 @@ export function NutritionCard() {
   // Snapshot ref for searchQuery — allows the Escape handler to read current query.
   const searchQueryRef = useRef(state.searchQuery);
   searchQueryRef.current = state.searchQuery;
+
+  // ── Search focus state (local, not in reducer) ──────────────────────────
+  const [searchFocused, setSearchFocused] = useState(false);
+  const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleSearchFocus = useCallback(() => {
+    // Cancel any pending blur timeout (user re-focused quickly)
+    if (blurTimeoutRef.current !== null) {
+      clearTimeout(blurTimeoutRef.current);
+      blurTimeoutRef.current = null;
+    }
+    setSearchFocused(true);
+  }, []);
+
+  const handleSearchBlur = useCallback(() => {
+    // Delay blur so click events on result rows fire before focus is lost
+    blurTimeoutRef.current = setTimeout(() => {
+      setSearchFocused(false);
+      blurTimeoutRef.current = null;
+    }, 200);
+  }, []);
+
+  // Cleanup blur timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (blurTimeoutRef.current !== null) {
+        clearTimeout(blurTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Filter recentFoods to only those with known portion data
+  const knownRecentFoods = useMemo(() => filterToKnownFoods(recentFoods), [recentFoods]);
+
+  // Whether to show the recent foods zero-state
+  const showRecentZeroState =
+    searchFocused && state.searchQuery.trim().length === 0 && knownRecentFoods.length > 0;
 
   // ── Global escape handler (decision #15) ─────────────────────────────────
   useEffect(() => {
@@ -523,6 +573,8 @@ export function NutritionCard() {
           value={state.searchQuery}
           onChange={handleSearchChange}
           onClear={handleSearchClear}
+          onFocus={handleSearchFocus}
+          onBlur={handleSearchBlur}
           inputRef={searchInputRef}
         />
         <button
@@ -541,12 +593,38 @@ export function NutritionCard() {
         </button>
       </div>
 
+      {/* ── Logging to: Meal label ─── */}
+      <span data-slot="meal-slot-label" className="text-xs text-[var(--text-muted)]">
+        Logging to: {titleCase(state.activeMealSlot)}
+      </span>
+
       {/* ── ALWAYS VISIBLE: Water progress row ─── */}
       <WaterProgressRow
         intakeMl={waterIntakeToday}
         goalMl={waterGoal}
         onOpenModal={handleOpenWater}
       />
+
+      {/* ── SEARCH ZERO-STATE — recent foods when focused with empty query ─── */}
+      {showRecentZeroState && (
+        <div data-slot="recent-foods" className="space-y-1">
+          <h3 className="px-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+            Recent
+          </h3>
+          <ul className="max-h-64 space-y-0.5 overflow-y-auto" aria-label="Recent foods">
+            {knownRecentFoods.slice(0, 10).map((canonical) => (
+              <FoodRow
+                key={canonical}
+                canonicalName={canonical}
+                displayName={titleCase(canonical)}
+                portion={formatPortion(canonical)}
+                calories={getDefaultCalories(canonical)}
+                onAdd={handleAddToStaging}
+              />
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* ── SEARCH RESULTS — inline, shown when query has results ─── */}
       {isTypingShortQuery && (
