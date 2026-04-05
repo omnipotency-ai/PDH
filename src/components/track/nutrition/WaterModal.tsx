@@ -23,7 +23,7 @@ import { CircularProgressRing } from "./CircularProgressRing";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-const WATER_COLOR = "#42BCB8";
+const WATER_COLOR = "var(--water)";
 
 const STEP_ML = 200;
 const MIN_ML = 0;
@@ -83,7 +83,10 @@ export function WaterModal({
   const projectedTotal = currentIntakeMl + amount;
   const safeGoal = goalMl > 0 ? goalMl : 1;
   // Cap at 100 so the status text never shows ">100% of daily goal"
-  const percentOfGoal = Math.min(Math.round((projectedTotal / safeGoal) * 100), 100);
+  const percentOfGoal = Math.min(
+    Math.round((projectedTotal / safeGoal) * 100),
+    100,
+  );
   const goalReached = projectedTotal >= goalMl;
   // #59: remaining never goes negative
   const remainingMl = Math.max(0, goalMl - currentIntakeMl);
@@ -139,14 +142,20 @@ export function WaterModal({
           </div>
 
           {/* Status text */}
-          <p className="mb-6 text-sm font-medium" style={{ color: "var(--text-muted)" }}>
+          <p
+            className="mb-6 text-sm font-medium"
+            style={{ color: "var(--text-muted)" }}
+          >
             {goalReached
               ? "Goal Reached!"
               : `${remainingMl} ml remaining (${percentOfGoal}% of daily goal)`}
           </p>
 
           {/* Amount selector */}
-          <div data-slot="water-modal-amount" className="mb-6 flex items-center gap-4">
+          <div
+            data-slot="water-modal-amount"
+            className="mb-6 flex items-center gap-4"
+          >
             <button
               type="button"
               onClick={handleDecrement}
@@ -167,7 +176,10 @@ export function WaterModal({
               style={{ color: "var(--text)" }}
             >
               {amount}{" "}
-              <span className="text-sm font-normal" style={{ color: "var(--text-muted)" }}>
+              <span
+                className="text-sm font-normal"
+                style={{ color: "var(--text-muted)" }}
+              >
                 ml
               </span>
             </span>
@@ -189,7 +201,10 @@ export function WaterModal({
           </div>
 
           {/* Bottom row: Log Water (centered) */}
-          <div data-slot="water-modal-actions" className="flex w-full items-center justify-center">
+          <div
+            data-slot="water-modal-actions"
+            className="flex w-full items-center justify-center"
+          >
             <button
               type="button"
               onClick={handleLogWater}
@@ -197,7 +212,7 @@ export function WaterModal({
               className="inline-flex items-center gap-2 rounded-lg px-6 py-2.5 text-sm font-semibold text-white transition-colors disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2"
               style={{
                 background: WATER_COLOR,
-                boxShadow: "0 0 12px rgba(66, 188, 184, 0.3)",
+                boxShadow: "0 0 12px var(--water-glow)",
               }}
             >
               <Droplets className="h-4 w-4" />

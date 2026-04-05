@@ -210,7 +210,7 @@ function WaterProgressRow({
     >
       <Droplets
         className="h-5 w-5 shrink-0"
-        style={{ color: "#42BCB8" }}
+        style={{ color: "var(--water)" }}
         aria-hidden="true"
       />
       <span className="shrink-0 text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
@@ -230,7 +230,7 @@ function WaterProgressRow({
           className="h-full rounded-full transition-[width] duration-500 ease-out"
           style={{
             width: `${percentage}%`,
-            backgroundColor: "#42BCB8",
+            backgroundColor: "var(--water)",
           }}
         />
       </div>
@@ -745,7 +745,7 @@ export function NutritionCard({
           aria-label="Log water"
           onClick={handleOpenWater}
         >
-          <Droplets className="h-5 w-5" style={{ color: "#42BCB8" }} />
+          <Droplets className="h-5 w-5" style={{ color: "var(--water)" }} />
         </button>
       </div>
     ),

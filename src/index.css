@@ -155,6 +155,8 @@
   --violet: #a78bfa;
   --sky: #38bdf8;
   --indigo: #818cf8;
+  --water: #42bcb8;
+  --water-glow: rgba(66, 188, 184, 0.3);
 
   /* ── Section accents (Aurora Glass palette) ── */
   /* Food & Drink - coral */
@@ -333,6 +335,8 @@
   --violet: #7c3aed;
   --sky: #0284c7;
   --indigo: #4f46e5;
+  --water: #2ba8a4;
+  --water-glow: rgba(43, 168, 164, 0.25);
 
   /* ── Section accents (Aurora Glass palette - light mode) ── */
   /* Food & Drink - coral */

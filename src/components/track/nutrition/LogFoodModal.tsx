@@ -19,6 +19,8 @@ import { Dialog } from "@base-ui/react/dialog";
 import { FOOD_PORTION_DATA } from "@shared/foodPortionData";
 import { AlertCircle, CheckCircle, Minus, Plus, X } from "lucide-react";
 import { memo, useCallback } from "react";
+import { capitalize } from "@/lib/nutritionUtils";
+import { MACRO_COLORS } from "./nutritionConstants";
 import type { StagedItem, StagingTotals } from "./useNutritionStore";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -43,21 +45,15 @@ const MACRO_PILL_CONFIG: ReadonlyArray<{
   label: string;
   color: string;
 }> = [
-  { key: "protein", label: "Protein", color: "#f97316" },
-  { key: "carbs", label: "Carbs", color: "#34d399" },
-  { key: "fat", label: "Fat", color: "#f87171" },
-  { key: "sugars", label: "Sugars", color: "#fbbf24" },
-  { key: "fiber", label: "Fibre", color: "#818cf8" },
+  { key: "protein", label: "Protein", color: MACRO_COLORS.protein },
+  { key: "carbs", label: "Carbs", color: MACRO_COLORS.carbs },
+  { key: "fat", label: "Fat", color: MACRO_COLORS.fat },
+  { key: "sugars", label: "Sugars", color: MACRO_COLORS.sugars },
+  { key: "fiber", label: "Fibre", color: MACRO_COLORS.fiber },
 ];
 
 /** Fallback increment when a food has no unitWeightG. */
 const DEFAULT_INCREMENT_G = 10;
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-function capitalize(str: string): string {
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}
 
 /**
  * Format a portion weight for display.
@@ -65,7 +61,11 @@ function capitalize(str: string): string {
  * e.g. "150g" or "2 slices (72g)"
  */
 function formatPortion(item: StagedItem): string {
-  if (item.naturalUnit != null && item.unitWeightG != null && item.unitWeightG > 0) {
+  if (
+    item.naturalUnit != null &&
+    item.unitWeightG != null &&
+    item.unitWeightG > 0
+  ) {
     const unitCount = Math.round((item.portionG / item.unitWeightG) * 10) / 10;
     // Show as "Ng" if unit count is not a clean number
     if (unitCount === Math.round(unitCount) && unitCount > 0) {
@@ -120,7 +120,9 @@ const FoodItemRow = memo(function FoodItemRow({
             />
           )}
         </span>
-        <span className="text-xs text-[var(--text-faint)]">{item.calories} kcal</span>
+        <span className="text-xs text-[var(--text-faint)]">
+          {item.calories} kcal
+        </span>
       </div>
 
       {/* Center: quantity controls */}
@@ -164,7 +166,15 @@ const FoodItemRow = memo(function FoodItemRow({
 
 // ── Macro Pill ──────────────────────────────────────────────────────────────
 
-function MacroPill({ value, label, color }: { value: number; label: string; color: string }) {
+function MacroPill({
+  value,
+  label,
+  color,
+}: {
+  value: number;
+  label: string;
+  color: string;
+}) {
   return (
     <div
       data-slot="macro-pill"
@@ -226,7 +236,9 @@ export function LogFoodModal({
               >
                 Log Food
               </Dialog.Title>
-              <span className="text-xs text-[var(--text-muted)]">{itemLabel}</span>
+              <span className="text-xs text-[var(--text-muted)]">
+                {itemLabel}
+              </span>
             </div>
 
             <div className="flex items-center gap-2">
@@ -250,7 +262,10 @@ export function LogFoodModal({
           </div>
 
           {/* ── Food items list ─────────────────────────────────────── */}
-          <div data-slot="log-food-items" className="max-h-64 overflow-y-auto px-4 py-2">
+          <div
+            data-slot="log-food-items"
+            className="max-h-64 overflow-y-auto px-4 py-2"
+          >
             {stagedItems.length === 0 ? (
               <p className="py-6 text-center text-sm italic text-[var(--text-faint)]">
                 No items staged. Tap "add more..." to search.
@@ -277,7 +292,9 @@ export function LogFoodModal({
             >
               {/* Total row */}
               <div className="mb-3 flex items-center justify-between">
-                <span className="text-sm font-semibold text-[var(--text)]">Total</span>
+                <span className="text-sm font-semibold text-[var(--text)]">
+                  Total
+                </span>
                 <span className="text-sm font-bold text-[var(--text)]">
                   {stagingTotals.calories} kcal
                 </span>
