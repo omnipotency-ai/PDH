@@ -24,6 +24,13 @@
 > **Next session:** [`next-session-prompt.md`](plans/next-session-prompt.md)
 > **Tests:** 1414 passing, 0 failures (2026-04-05)
 
+### W5-02 — Accessibility hardening — verified complete (2026-04-05 16:40)
+
+- **Commit:** already in `78c56fe` (W5-01) + `9b93f3f` (W5-03)
+- **Files:** `NutritionCard.tsx`, `WaterModal.tsx`, `LogFoodModal.tsx`, `CalorieDetailView.tsx`, `CircularProgressRing.tsx`
+- **What:** Audited all nutrition card components for a11y compliance. All acceptance criteria already met by parallel W5-01 and W5-03 agents: Base UI Dialog provides aria-modal, role=dialog, focus trap, escape-close, and focus return. Search input has role=combobox, aria-expanded, aria-controls, aria-autocomplete. Results have role=listbox/option. Rings have role=img with aria-label. All icon-only buttons have aria-label. Icons inside labeled buttons have aria-hidden. WaterModal uses Dialog.Description for aria-describedby. Amount selector has aria-live=polite. Meal breakdown bar has role=img with descriptive label. Macro row has role=group.
+- **Decisions:** No new commit needed — all changes were already applied by W5-01 (dark mode audit added aria-hidden to icons, Dialog.Description, removed redundant aria-label from Dialog.Popup) and W5-03 (edge cases added combobox/listbox/option roles, aria-expanded, aria-label on meal breakdown bar and macro summary). Verified 1430 tests pass, typecheck clean.
+
 ### W5-01 — Dark mode and CSS variable audit (2026-04-05 16:30)
 
 - **Commit:** `78c56fe`
