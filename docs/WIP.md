@@ -22,6 +22,27 @@
 
 ## Active: Tech-Debt Audit Cleanup
 
+### W3-07 — Split aiAnalysis.ts into focused modules (2026-04-06)
+
+- **Commit:** `(see below)`
+- **Files:** `src/lib/aiAnalysis.ts`, `src/lib/aiPrompts.ts` (new), `src/lib/aiParsing.ts`, `src/lib/aiFetchInsights.ts` (new)
+- **What:** Split 2178-line aiAnalysis.ts into three focused modules. aiPrompts.ts handles system prompt construction, context builders, and sanitization helpers. aiParsing.ts handles response parsing, JSON extraction, and validation. aiFetchInsights.ts handles fetch orchestration, error handling, and retry logic. aiAnalysis.ts is now a 67-line thin re-export barrel preserving the public API for all existing import sites. buildUserMessage already used an options object (BuildUserMessageParams) — no positional params to fix. Security fixes from W0-03/04/05 are preserved in the split modules.
+- **Decisions:** All existing import sites continue importing from `@/lib/aiAnalysis` via the barrel — no call-site changes were needed since the barrel re-exports everything. This is the correct pattern for a large module split where many files import from the same source.
+
+### W3-01 spec fix — Replace local asString with asTrimmedString in backup.ts (2026-04-06 19:40)
+
+- **Commit:** `2bfec32`
+- **Files:** `convex/backup.ts`
+- **What:** Removed local `asString` helper and replaced all ~28 call sites with `asTrimmedString` imported from `convex/lib/coerce.ts`. The behaviors are identical (trim, return undefined if empty). Added `asTrimmedString` to the existing coerce import line.
+- **Decisions:** None — direct 1-for-1 replacement. Convex re-export pattern (Fix 2) confirmed working: `api.d.ts` maps `logs: typeof logs`, and `logs.ts` re-exports from `backup.ts`/`profileMutations.ts` so all `api.logs.*` call sites resolve correctly via TypeScript structural typing. No call-site changes needed.
+
+### W3-06 — Remove stale onDelete prop from EventHabitRow call site (2026-04-06 19:37)
+
+- **Commit:** `bddddae`
+- **Files:** `src/components/track/today-log/TodayLog.tsx`
+- **What:** Removed the stale `onDelete={onDelete}` prop from the `EventHabitRow` call site in TodayLog.tsx. EventHabitRow already uses `useTodayLogActions()` internally and had removed `onDelete` from its props interface; TodayLog.tsx was still passing it, causing a TS2322 error. Fixes 1, 3, and 4 were already complete from prior agent work.
+- **Decisions:** Only TodayLog.tsx needed changing. The `onDelete` in `actionsValue` context (line 198-201) is still correct — other components (DigestiveSubRow etc.) consume it via context.
+
 ### W3-05 — Unify type guards: helpers.ts delegates to logTypeGuards.ts (2026-04-06 19:35)
 
 - **Commit:** `3afda47`

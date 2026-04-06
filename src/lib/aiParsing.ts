@@ -2,7 +2,7 @@ import type {
   AiNutritionistInsight,
   StructuredFoodAssessment,
 } from "@/types/domain";
-import type { PreviousReport } from "./aiAnalysis";
+import type { PreviousReport } from "./aiPrompts";
 
 // ─── Type guards ──────────────────────────────────────────────────────────────
 
