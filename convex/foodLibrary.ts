@@ -10,7 +10,8 @@ import {
 } from "../shared/foodEvidence";
 import { resolveCanonicalFoodName } from "../shared/foodCanonicalName";
 import { getCanonicalFoodProjection } from "../shared/foodProjection";
-import { mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
+import { action, internalMutation, mutation, query } from "./_generated/server";
 import { requireAuth } from "./lib/auth";
 import {
   normalizeIngredientProfileTag,
@@ -290,124 +291,231 @@ export const addBatch = mutation({
   },
 });
 
-export const mergeDuplicates = mutation({
-  args: {
-    merges: v.array(
-      v.object({
-        source: v.string(),
-        target: v.string(),
-      }),
-    ),
-    updateFoodLogs: v.optional(v.boolean()),
-    now: v.number(),
-  },
-  handler: async (ctx, args) => {
-    const { userId } = await requireAuth(ctx);
-    const normalizedMerges = new Map<string, string>();
-    for (const merge of args.merges) {
-      const source = resolveCanonicalFoodName(merge.source);
-      const target = resolveCanonicalFoodName(merge.target);
-      if (!source || !target || source === target) continue;
+// ─── Merge-phase shared types and validators ──────────────────────────────────
 
-      const existingTarget = normalizedMerges.get(source);
-      if (existingTarget && existingTarget !== target) {
-        throw new Error(
-          `Conflicting targets for "${source}": "${existingTarget}" vs "${target}".`,
-        );
-      }
-      normalizedMerges.set(source, target);
-    }
+/** Maximum rows collected per table phase to stay within Convex transaction limits. */
+const PHASE_ROW_CAP = 2000;
 
-    const finalMerges = new Map<string, string>();
-    for (const [source, firstTarget] of normalizedMerges) {
-      const resolvedTarget = resolveMappedCanonicalName(
-        firstTarget,
-        normalizedMerges,
+/** Maximum patches applied per internal mutation to stay within Convex write limits. */
+const PHASE_BATCH_SIZE = 100;
+
+const mergeEntryValidator = v.object({
+  source: v.string(),
+  target: v.string(),
+});
+
+const phaseResultValidator = v.object({
+  foodAssessmentsUpdated: v.number(),
+  ingredientExposuresUpdated: v.number(),
+  ingredientOverridesUpdated: v.number(),
+  ingredientOverridesMerged: v.number(),
+  ingredientProfilesUpdated: v.number(),
+  ingredientProfilesMerged: v.number(),
+  foodLibraryEntriesRenamed: v.number(),
+  foodLibraryEntriesMerged: v.number(),
+  foodLibraryIngredientRefsUpdated: v.number(),
+  foodLogsUpdated: v.number(),
+  foodLogItemsUpdated: v.number(),
+  foodTrialSummariesDeleted: v.number(),
+  foodTrialSummariesRebuilt: v.number(),
+});
+
+type PhaseResult = {
+  foodAssessmentsUpdated: number;
+  ingredientExposuresUpdated: number;
+  ingredientOverridesUpdated: number;
+  ingredientOverridesMerged: number;
+  ingredientProfilesUpdated: number;
+  ingredientProfilesMerged: number;
+  foodLibraryEntriesRenamed: number;
+  foodLibraryEntriesMerged: number;
+  foodLibraryIngredientRefsUpdated: number;
+  foodLogsUpdated: number;
+  foodLogItemsUpdated: number;
+  foodTrialSummariesDeleted: number;
+  foodTrialSummariesRebuilt: number;
+};
+
+function emptyPhaseResult(): PhaseResult {
+  return {
+    foodAssessmentsUpdated: 0,
+    ingredientExposuresUpdated: 0,
+    ingredientOverridesUpdated: 0,
+    ingredientOverridesMerged: 0,
+    ingredientProfilesUpdated: 0,
+    ingredientProfilesMerged: 0,
+    foodLibraryEntriesRenamed: 0,
+    foodLibraryEntriesMerged: 0,
+    foodLibraryIngredientRefsUpdated: 0,
+    foodLogsUpdated: 0,
+    foodLogItemsUpdated: 0,
+    foodTrialSummariesDeleted: 0,
+    foodTrialSummariesRebuilt: 0,
+  };
+}
+
+function mergePhaseResults(a: PhaseResult, b: PhaseResult): PhaseResult {
+  return {
+    foodAssessmentsUpdated: a.foodAssessmentsUpdated + b.foodAssessmentsUpdated,
+    ingredientExposuresUpdated:
+      a.ingredientExposuresUpdated + b.ingredientExposuresUpdated,
+    ingredientOverridesUpdated:
+      a.ingredientOverridesUpdated + b.ingredientOverridesUpdated,
+    ingredientOverridesMerged:
+      a.ingredientOverridesMerged + b.ingredientOverridesMerged,
+    ingredientProfilesUpdated:
+      a.ingredientProfilesUpdated + b.ingredientProfilesUpdated,
+    ingredientProfilesMerged:
+      a.ingredientProfilesMerged + b.ingredientProfilesMerged,
+    foodLibraryEntriesRenamed:
+      a.foodLibraryEntriesRenamed + b.foodLibraryEntriesRenamed,
+    foodLibraryEntriesMerged:
+      a.foodLibraryEntriesMerged + b.foodLibraryEntriesMerged,
+    foodLibraryIngredientRefsUpdated:
+      a.foodLibraryIngredientRefsUpdated + b.foodLibraryIngredientRefsUpdated,
+    foodLogsUpdated: a.foodLogsUpdated + b.foodLogsUpdated,
+    foodLogItemsUpdated: a.foodLogItemsUpdated + b.foodLogItemsUpdated,
+    foodTrialSummariesDeleted:
+      a.foodTrialSummariesDeleted + b.foodTrialSummariesDeleted,
+    foodTrialSummariesRebuilt:
+      a.foodTrialSummariesRebuilt + b.foodTrialSummariesRebuilt,
+  };
+}
+
+/**
+ * Build the normalized merge map from raw merge entries.
+ * Pure computation — no DB access needed.
+ * Throws on conflicting targets or cycles.
+ */
+function buildMergeMap(
+  rawMerges: Array<{ source: string; target: string }>,
+): Map<string, string> {
+  const normalizedMerges = new Map<string, string>();
+  for (const merge of rawMerges) {
+    const source = resolveCanonicalFoodName(merge.source);
+    const target = resolveCanonicalFoodName(merge.target);
+    if (!source || !target || source === target) continue;
+
+    const existingTarget = normalizedMerges.get(source);
+    if (existingTarget && existingTarget !== target) {
+      throw new Error(
+        `Conflicting targets for "${source}": "${existingTarget}" vs "${target}".`,
       );
-      if (resolvedTarget === source) {
-        throw new Error(`Invalid merge cycle for "${source}".`);
-      }
-      finalMerges.set(source, resolvedTarget);
     }
+    normalizedMerges.set(source, target);
+  }
 
-    const result = {
-      mergesRequested: args.merges.length,
-      mergesApplied: finalMerges.size,
-      mappings: Array.from(finalMerges.entries()).map(([source, target]) => ({
-        source,
-        target,
-      })),
-      foodLibraryEntriesRenamed: 0,
-      foodLibraryEntriesMerged: 0,
-      foodLibraryIngredientRefsUpdated: 0,
-      foodAssessmentsUpdated: 0,
-      ingredientExposuresUpdated: 0,
-      ingredientOverridesUpdated: 0,
-      ingredientOverridesMerged: 0,
-      ingredientProfilesUpdated: 0,
-      ingredientProfilesMerged: 0,
-      foodLogsUpdated: 0,
-      foodLogItemsUpdated: 0,
-      foodTrialSummariesDeleted: 0,
-      foodTrialSummariesRebuilt: 0,
-    };
+  const finalMerges = new Map<string, string>();
+  for (const [source, firstTarget] of normalizedMerges) {
+    const resolvedTarget = resolveMappedCanonicalName(
+      firstTarget,
+      normalizedMerges,
+    );
+    if (resolvedTarget === source) {
+      throw new Error(`Invalid merge cycle for "${source}".`);
+    }
+    finalMerges.set(source, resolvedTarget);
+  }
+  return finalMerges;
+}
 
-    for (const [source, target] of finalMerges) {
-      const assessments = await ctx.db
+// ─── Phase 1: Rename foodAssessments ──────────────────────────────────────────
+
+export const _phaseFoodAssessments = internalMutation({
+  args: {
+    userId: v.string(),
+    mappings: v.array(mergeEntryValidator),
+  },
+  returns: phaseResultValidator,
+  handler: async (ctx, args) => {
+    const result = emptyPhaseResult();
+    for (const { source, target } of args.mappings) {
+      const rows = await ctx.db
         .query("foodAssessments")
         .withIndex("by_userId_canonicalName", (q) =>
-          q.eq("userId", userId).eq("canonicalName", source),
+          q.eq("userId", args.userId).eq("canonicalName", source),
         )
-        .collect();
+        .take(PHASE_ROW_CAP);
 
-      for (const row of assessments) {
+      for (const row of rows) {
         await ctx.db.patch(row._id, { canonicalName: target });
         result.foodAssessmentsUpdated += 1;
       }
     }
+    return result;
+  },
+});
 
-    for (const [source, target] of finalMerges) {
-      const exposures = await ctx.db
+// ─── Phase 2: Rename ingredientExposures ──────────────────────────────────────
+
+export const _phaseIngredientExposures = internalMutation({
+  args: {
+    userId: v.string(),
+    mappings: v.array(mergeEntryValidator),
+  },
+  returns: phaseResultValidator,
+  handler: async (ctx, args) => {
+    const result = emptyPhaseResult();
+    for (const { source, target } of args.mappings) {
+      const rows = await ctx.db
         .query("ingredientExposures")
         .withIndex("by_userId_canonicalName", (q) =>
-          q.eq("userId", userId).eq("canonicalName", source),
+          q.eq("userId", args.userId).eq("canonicalName", source),
         )
-        .collect();
+        .take(PHASE_ROW_CAP);
 
-      for (const row of exposures) {
+      for (const row of rows) {
         await ctx.db.patch(row._id, { canonicalName: target });
         result.ingredientExposuresUpdated += 1;
       }
     }
+    return result;
+  },
+});
 
-    for (const [source, target] of finalMerges) {
-      const overrides = await ctx.db
+// ─── Phase 3: Rename + dedupe ingredientOverrides ─────────────────────────────
+
+export const _phaseIngredientOverrides = internalMutation({
+  args: {
+    userId: v.string(),
+    mappings: v.array(mergeEntryValidator),
+  },
+  returns: phaseResultValidator,
+  handler: async (ctx, args) => {
+    const result = emptyPhaseResult();
+
+    // Step 1: Rename sources to targets
+    for (const { source, target } of args.mappings) {
+      const rows = await ctx.db
         .query("ingredientOverrides")
         .withIndex("by_userId_canonicalName", (q) =>
-          q.eq("userId", userId).eq("canonicalName", source),
+          q.eq("userId", args.userId).eq("canonicalName", source),
         )
-        .collect();
+        .take(PHASE_ROW_CAP);
 
-      for (const row of overrides) {
+      for (const row of rows) {
         await ctx.db.patch(row._id, { canonicalName: target });
         result.ingredientOverridesUpdated += 1;
       }
     }
 
-    const overrideRows = await ctx.db
+    // Step 2: Dedupe rows that now share the same canonicalName
+    const allRows = await ctx.db
       .query("ingredientOverrides")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .collect();
-    const groupedOverrides = new Map<string, (typeof overrideRows)[number][]>();
-    for (const row of overrideRows) {
-      const group = groupedOverrides.get(row.canonicalName);
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .take(PHASE_ROW_CAP);
+
+    const grouped = new Map<string, (typeof allRows)[number][]>();
+    for (const row of allRows) {
+      const group = grouped.get(row.canonicalName);
       if (group) {
         group.push(row);
       } else {
-        groupedOverrides.set(row.canonicalName, [row]);
+        grouped.set(row.canonicalName, [row]);
       }
     }
-    for (const group of groupedOverrides.values()) {
+
+    for (const group of grouped.values()) {
       if (group.length <= 1) continue;
       const sorted = group
         .slice()
@@ -434,34 +542,54 @@ export const mergeDuplicates = mutation({
       }
     }
 
-    for (const [source, target] of finalMerges) {
-      const profiles = await ctx.db
+    return result;
+  },
+});
+
+// ─── Phase 4: Rename + dedupe ingredientProfiles ──────────────────────────────
+
+export const _phaseIngredientProfiles = internalMutation({
+  args: {
+    userId: v.string(),
+    mappings: v.array(mergeEntryValidator),
+    now: v.number(),
+  },
+  returns: phaseResultValidator,
+  handler: async (ctx, args) => {
+    const result = emptyPhaseResult();
+
+    // Step 1: Rename sources to targets
+    for (const { source, target } of args.mappings) {
+      const rows = await ctx.db
         .query("ingredientProfiles")
         .withIndex("by_userId_canonicalName", (q) =>
-          q.eq("userId", userId).eq("canonicalName", source),
+          q.eq("userId", args.userId).eq("canonicalName", source),
         )
-        .collect();
+        .take(PHASE_ROW_CAP);
 
-      for (const row of profiles) {
+      for (const row of rows) {
         await ctx.db.patch(row._id, { canonicalName: target });
         result.ingredientProfilesUpdated += 1;
       }
     }
 
-    const profileRows = await ctx.db
+    // Step 2: Dedupe rows that now share the same canonicalName
+    const allRows = await ctx.db
       .query("ingredientProfiles")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .collect();
-    const groupedProfiles = new Map<string, (typeof profileRows)[number][]>();
-    for (const row of profileRows) {
-      const group = groupedProfiles.get(row.canonicalName);
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .take(PHASE_ROW_CAP);
+
+    const grouped = new Map<string, (typeof allRows)[number][]>();
+    for (const row of allRows) {
+      const group = grouped.get(row.canonicalName);
       if (group) {
         group.push(row);
       } else {
-        groupedProfiles.set(row.canonicalName, [row]);
+        grouped.set(row.canonicalName, [row]);
       }
     }
-    for (const [canonicalName, group] of groupedProfiles) {
+
+    for (const [canonicalName, group] of grouped) {
       if (group.length <= 1) continue;
       const sorted = group
         .slice()
@@ -520,13 +648,32 @@ export const mergeDuplicates = mutation({
       }
     }
 
-    for (const [source, target] of finalMerges) {
+    return result;
+  },
+});
+
+// ─── Phase 5: Rename + normalize + dedupe foodLibrary ─────────────────────────
+
+export const _phaseFoodLibrary = internalMutation({
+  args: {
+    userId: v.string(),
+    mappings: v.array(mergeEntryValidator),
+  },
+  returns: phaseResultValidator,
+  handler: async (ctx, args) => {
+    const result = emptyPhaseResult();
+    const finalMerges = new Map(
+      args.mappings.map(({ source, target }) => [source, target]),
+    );
+
+    // Step 1: Rename source entries to target
+    for (const { source, target } of args.mappings) {
       const sourceRows = await ctx.db
         .query("foodLibrary")
         .withIndex("by_userId_name", (q) =>
-          q.eq("userId", userId).eq("canonicalName", source),
+          q.eq("userId", args.userId).eq("canonicalName", source),
         )
-        .collect();
+        .take(PHASE_ROW_CAP);
 
       for (const row of sourceRows) {
         await ctx.db.patch(row._id, { canonicalName: target });
@@ -534,10 +681,11 @@ export const mergeDuplicates = mutation({
       }
     }
 
+    // Step 2: Normalize canonical names and ingredient refs
     let libraryRows = await ctx.db
       .query("foodLibrary")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .collect();
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .take(PHASE_ROW_CAP);
 
     for (const row of libraryRows) {
       const normalizedCanonicalName = resolveCanonicalFoodName(
@@ -571,26 +719,24 @@ export const mergeDuplicates = mutation({
       }
     }
 
+    // Step 3: Dedupe rows that now share the same canonicalName
     libraryRows = await ctx.db
       .query("foodLibrary")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .collect();
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .take(PHASE_ROW_CAP);
 
-    const groupedByCanonicalName = new Map<
-      string,
-      (typeof libraryRows)[number][]
-    >();
+    const grouped = new Map<string, (typeof libraryRows)[number][]>();
     for (const row of libraryRows) {
       const key = row.canonicalName;
-      const group = groupedByCanonicalName.get(key);
+      const group = grouped.get(key);
       if (group) {
         group.push(row);
       } else {
-        groupedByCanonicalName.set(key, [row]);
+        grouped.set(key, [row]);
       }
     }
 
-    for (const [canonicalName, group] of groupedByCanonicalName) {
+    for (const [canonicalName, group] of grouped) {
       if (group.length <= 1) continue;
       const sorted = group
         .slice()
@@ -630,60 +776,96 @@ export const mergeDuplicates = mutation({
       }
     }
 
-    if (args.updateFoodLogs !== false) {
-      // Safety cap: 5000 logs to prevent unbounded scan in merge operations.
-      const logs = await ctx.db
-        .query("logs")
-        .withIndex("by_userId_timestamp", (q) => q.eq("userId", userId))
-        .take(5000);
+    return result;
+  },
+});
 
-      for (const log of logs) {
-        if (!isFoodPipelineType(log.type)) continue;
-        const data = log.data as Record<string, unknown>;
-        const items = Array.isArray(data.items)
-          ? (data.items as Array<Record<string, unknown>>)
-          : [];
+// ─── Phase 6: Update food log items ───────────────────────────────────────────
 
-        let itemChanged = false;
-        const nextItems = items.map((item) => {
-          const rawCanonicalName =
-            typeof item.canonicalName === "string" ? item.canonicalName : null;
-          if (!rawCanonicalName) return item;
+export const _phaseFoodLogs = internalMutation({
+  args: {
+    userId: v.string(),
+    mappings: v.array(mergeEntryValidator),
+  },
+  returns: phaseResultValidator,
+  handler: async (ctx, args) => {
+    const result = emptyPhaseResult();
+    const finalMerges = new Map(
+      args.mappings.map(({ source, target }) => [source, target]),
+    );
 
-          const nextCanonicalName = resolveMappedCanonicalName(
-            resolveCanonicalFoodName(rawCanonicalName),
-            finalMerges,
-          );
+    // Safety cap: 5000 logs to prevent unbounded scan.
+    const logs = await ctx.db
+      .query("logs")
+      .withIndex("by_userId_timestamp", (q) => q.eq("userId", args.userId))
+      .take(5000);
 
-          if (nextCanonicalName === rawCanonicalName) return item;
+    for (const log of logs) {
+      if (!isFoodPipelineType(log.type)) continue;
+      const data = log.data as Record<string, unknown>;
+      const items = Array.isArray(data.items)
+        ? (data.items as Array<Record<string, unknown>>)
+        : [];
 
-          itemChanged = true;
-          result.foodLogItemsUpdated += 1;
-          return {
-            ...item,
-            canonicalName: nextCanonicalName,
-          };
-        });
+      let itemChanged = false;
+      const nextItems = items.map((item) => {
+        const rawCanonicalName =
+          typeof item.canonicalName === "string" ? item.canonicalName : null;
+        if (!rawCanonicalName) return item;
 
-        if (!itemChanged) continue;
+        const nextCanonicalName = resolveMappedCanonicalName(
+          resolveCanonicalFoodName(rawCanonicalName),
+          finalMerges,
+        );
 
-        await ctx.db.patch(log._id, {
-          data: {
-            ...data,
-            items: nextItems,
-          } as typeof log.data,
-        });
-        result.foodLogsUpdated += 1;
-      }
+        if (nextCanonicalName === rawCanonicalName) return item;
+
+        itemChanged = true;
+        result.foodLogItemsUpdated += 1;
+        return {
+          ...item,
+          canonicalName: nextCanonicalName,
+        };
+      });
+
+      if (!itemChanged) continue;
+
+      await ctx.db.patch(log._id, {
+        data: {
+          ...data,
+          items: nextItems,
+        } as typeof log.data,
+      });
+      result.foodLogsUpdated += 1;
     }
 
+    return result;
+  },
+});
+
+// ─── Phase 7: Delete stale + rebuild trial summaries ──────────────────────────
+
+export const _phaseTrialSummaries = internalMutation({
+  args: {
+    userId: v.string(),
+    mappings: v.array(mergeEntryValidator),
+    now: v.number(),
+  },
+  returns: phaseResultValidator,
+  handler: async (ctx, args) => {
+    const result = emptyPhaseResult();
+    const finalMerges = new Map(
+      args.mappings.map(({ source, target }) => [source, target]),
+    );
+
+    // Delete stale summaries for source names
     for (const source of finalMerges.keys()) {
       const staleSummaries = await ctx.db
         .query("foodTrialSummary")
         .withIndex("by_userId_canonicalName", (q) =>
-          q.eq("userId", userId).eq("canonicalName", source),
+          q.eq("userId", args.userId).eq("canonicalName", source),
         )
-        .collect();
+        .take(PHASE_ROW_CAP);
 
       for (const stale of staleSummaries) {
         await ctx.db.delete(stale._id);
@@ -691,19 +873,23 @@ export const mergeDuplicates = mutation({
       }
     }
 
+    // Rebuild summaries for target names
     const targetNames = dedupeStrings(Array.from(finalMerges.values()));
     const profile = await ctx.db
       .query("profiles")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .first();
+
     const allAssessments = await ctx.db
       .query("foodAssessments")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .collect();
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .take(PHASE_ROW_CAP);
+
     const logs = await ctx.db
       .query("logs")
-      .withIndex("by_userId_timestamp", (q) => q.eq("userId", userId))
-      .collect();
+      .withIndex("by_userId_timestamp", (q) => q.eq("userId", args.userId))
+      .take(PHASE_ROW_CAP);
+
     const recomputeAt = Math.max(
       profile?.updatedAt ?? 0,
       ...logs.map((log) => log.timestamp),
@@ -756,17 +942,17 @@ export const mergeDuplicates = mutation({
       const allForFood = await ctx.db
         .query("foodAssessments")
         .withIndex("by_userId_canonicalName", (q) =>
-          q.eq("userId", userId).eq("canonicalName", canonicalName),
+          q.eq("userId", args.userId).eq("canonicalName", canonicalName),
         )
         .order("desc")
-        .collect();
+        .take(PHASE_ROW_CAP);
 
       const existingSummaries = await ctx.db
         .query("foodTrialSummary")
         .withIndex("by_userId_canonicalName", (q) =>
-          q.eq("userId", userId).eq("canonicalName", canonicalName),
+          q.eq("userId", args.userId).eq("canonicalName", canonicalName),
         )
-        .collect();
+        .take(PHASE_ROW_CAP);
 
       if (allForFood.length === 0) {
         for (const row of existingSummaries) {
@@ -798,7 +984,7 @@ export const mergeDuplicates = mutation({
             : summary.latestAiVerdict;
 
       const summaryData = {
-        userId,
+        userId: args.userId,
         canonicalName,
         displayName: summary.displayName,
         currentStatus: toLegacyFoodStatus(
@@ -842,5 +1028,107 @@ export const mergeDuplicates = mutation({
     }
 
     return result;
+  },
+});
+
+// ─── mergeDuplicates action (orchestrator) ────────────────────────────────────
+
+export const mergeDuplicates = action({
+  args: {
+    merges: v.array(
+      v.object({
+        source: v.string(),
+        target: v.string(),
+      }),
+    ),
+    updateFoodLogs: v.optional(v.boolean()),
+    now: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const { userId } = await requireAuth(ctx);
+
+    // Pure computation: validate and resolve merge chains
+    const finalMerges = buildMergeMap(args.merges);
+
+    if (finalMerges.size === 0) {
+      // Even with no merges, still run foodLibrary phase to dedupe exact duplicates
+      const libraryResult: PhaseResult = await ctx.runMutation(
+        internal.foodLibrary._phaseFoodLibrary,
+        {
+          userId,
+          mappings: [],
+        },
+      );
+      return {
+        mergesRequested: args.merges.length,
+        mergesApplied: 0,
+        mappings: [] as Array<{ source: string; target: string }>,
+        ...libraryResult,
+      };
+    }
+
+    const mappings = Array.from(finalMerges.entries()).map(
+      ([source, target]) => ({
+        source,
+        target,
+      }),
+    );
+
+    // Phase 1: Rename foodAssessments
+    const p1: PhaseResult = await ctx.runMutation(
+      internal.foodLibrary._phaseFoodAssessments,
+      { userId, mappings },
+    );
+
+    // Phase 2: Rename ingredientExposures
+    const p2: PhaseResult = await ctx.runMutation(
+      internal.foodLibrary._phaseIngredientExposures,
+      { userId, mappings },
+    );
+
+    // Phase 3: Rename + dedupe ingredientOverrides
+    const p3: PhaseResult = await ctx.runMutation(
+      internal.foodLibrary._phaseIngredientOverrides,
+      { userId, mappings },
+    );
+
+    // Phase 4: Rename + dedupe ingredientProfiles
+    const p4: PhaseResult = await ctx.runMutation(
+      internal.foodLibrary._phaseIngredientProfiles,
+      { userId, mappings, now: args.now },
+    );
+
+    // Phase 5: Rename + normalize + dedupe foodLibrary
+    const p5: PhaseResult = await ctx.runMutation(
+      internal.foodLibrary._phaseFoodLibrary,
+      { userId, mappings },
+    );
+
+    // Phase 6: Update food log items (optional)
+    let p6 = emptyPhaseResult();
+    if (args.updateFoodLogs !== false) {
+      p6 = await ctx.runMutation(internal.foodLibrary._phaseFoodLogs, {
+        userId,
+        mappings,
+      });
+    }
+
+    // Phase 7: Delete stale + rebuild trial summaries
+    const p7: PhaseResult = await ctx.runMutation(
+      internal.foodLibrary._phaseTrialSummaries,
+      { userId, mappings, now: args.now },
+    );
+
+    const combined = [p1, p2, p3, p4, p5, p6, p7].reduce(
+      mergePhaseResults,
+      emptyPhaseResult(),
+    );
+
+    return {
+      mergesRequested: args.merges.length,
+      mergesApplied: finalMerges.size,
+      mappings,
+      ...combined,
+    };
   },
 });

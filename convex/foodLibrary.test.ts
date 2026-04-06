@@ -80,12 +80,12 @@ describe("foodLibrary", () => {
 
     const library = await user.query(api.foodLibrary.list, {});
 
-    expect(library.map((row: { canonicalName: string; ingredients?: string[] }) => row.canonicalName)).toEqual([
-      "miso soup",
-      "noodles",
-      "smooth nut butter",
-      "tofu",
-    ]);
+    expect(
+      library.map(
+        (row: { canonicalName: string; ingredients?: string[] }) =>
+          row.canonicalName,
+      ),
+    ).toEqual(["miso soup", "noodles", "smooth nut butter", "tofu"]);
   });
 
   it("merges duplicate foods across library, logs, and assessment summaries", async () => {
@@ -303,7 +303,7 @@ describe("foodLibrary", () => {
 
     const mergeResult = await t
       .withIdentity({ subject: userId })
-      .mutation(api.foodLibrary.mergeDuplicates, {
+      .action(api.foodLibrary.mergeDuplicates, {
         merges: [{ source: "Fresh baked xylofruit", target: "xylofruit" }],
         now,
       });
@@ -321,14 +321,23 @@ describe("foodLibrary", () => {
     const library = await t
       .withIdentity({ subject: userId })
       .query(api.foodLibrary.list, {});
-    expect(library.some((row: { canonicalName: string; ingredients?: string[] }) => row.canonicalName === "baked xylofruit")).toBe(
-      false,
-    );
     expect(
-      library.filter((row: { canonicalName: string; ingredients?: string[] }) => row.canonicalName === "xylofruit"),
+      library.some(
+        (row: { canonicalName: string; ingredients?: string[] }) =>
+          row.canonicalName === "baked xylofruit",
+      ),
+    ).toBe(false);
+    expect(
+      library.filter(
+        (row: { canonicalName: string; ingredients?: string[] }) =>
+          row.canonicalName === "xylofruit",
+      ),
     ).toHaveLength(1);
     expect(
-      library.find((row: { canonicalName: string; ingredients?: string[] }) => row.canonicalName === "ham sandwich")?.ingredients,
+      library.find(
+        (row: { canonicalName: string; ingredients?: string[] }) =>
+          row.canonicalName === "ham sandwich",
+      )?.ingredients,
     ).toEqual(["xylofruit", "ham"]); // "ham" canonical remains unchanged after merge
 
     await t.run(async (ctx) => {
@@ -416,7 +425,7 @@ describe("foodLibrary", () => {
   it("throws when mergeDuplicates is called without auth", async () => {
     const t = convexTest(schema);
     await expect(
-      t.mutation(api.foodLibrary.mergeDuplicates, {
+      t.action(api.foodLibrary.mergeDuplicates, {
         merges: [{ source: "a", target: "b" }],
         now: Date.now(),
       }),
@@ -447,7 +456,7 @@ describe("foodLibrary", () => {
 
     const result = await t
       .withIdentity({ subject: userId })
-      .mutation(api.foodLibrary.mergeDuplicates, {
+      .action(api.foodLibrary.mergeDuplicates, {
         merges: [],
         now,
       });
@@ -459,7 +468,8 @@ describe("foodLibrary", () => {
       .withIdentity({ subject: userId })
       .query(api.foodLibrary.list, {});
     const xylofruits = library.filter(
-      (row: { canonicalName: string; ingredients?: string[] }) => row.canonicalName === "baked xylofruit",
+      (row: { canonicalName: string; ingredients?: string[] }) =>
+        row.canonicalName === "baked xylofruit",
     );
     expect(xylofruits).toHaveLength(1);
   });

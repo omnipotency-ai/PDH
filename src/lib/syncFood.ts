@@ -77,7 +77,7 @@ export function useUpdateFoodLibraryEntry() {
 }
 
 export function useMergeFoodLibraryDuplicates() {
-  const merge = useMutation(api.foodLibrary.mergeDuplicates);
+  const merge = useAction(api.foodLibrary.mergeDuplicates);
   return (merges: Array<{ source: string; target: string }>, updateFoodLogs?: boolean) =>
     merge({
       now: Date.now(),
