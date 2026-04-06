@@ -65,7 +65,10 @@ function sanitizeNameForPrompt(name: string): string {
     /[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g,
     "",
   );
-  const stripped = withoutBidi.replace(/<[^>]*>/g, "").trim();
+  const stripped = withoutBidi
+    .replace(/<[^>]*>/g, "")
+    .replace(/[<>]/g, "")
+    .trim();
   if (stripped.length <= MAX_PREFERRED_NAME_LENGTH) return stripped;
   return stripped.slice(0, MAX_PREFERRED_NAME_LENGTH);
 }
