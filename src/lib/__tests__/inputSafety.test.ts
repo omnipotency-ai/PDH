@@ -55,15 +55,20 @@ describe("sanitizeUnknownStringsDeep", () => {
     expect(result[1].name).toBe("Bob");
   });
 
-  it("throws with path info when string exceeds maxStringLength", () => {
+  it("truncates and warns when string exceeds maxStringLength", () => {
     const input = { name: "a".repeat(6000) };
-    expect(() => sanitizeUnknownStringsDeep(input)).toThrow("value.name is 6000 chars, max 5000.");
+    const result = sanitizeUnknownStringsDeep(input);
+    expect(result.name).toBe(`${"a".repeat(5000)}...[truncated]`);
   });
 
-  it("respects custom maxStringLength", () => {
+  it("does not throw when string exceeds maxStringLength", () => {
+    const input = { name: "a".repeat(6000) };
+    expect(() => sanitizeUnknownStringsDeep(input)).not.toThrow();
+  });
+
+  it("respects custom maxStringLength by truncating", () => {
     const input = { name: "hello" };
-    expect(() => sanitizeUnknownStringsDeep(input, { maxStringLength: 3 })).toThrow(
-      "value.name is 5 chars, max 3.",
-    );
+    const result = sanitizeUnknownStringsDeep(input, { maxStringLength: 3 });
+    expect(result.name).toBe("hel...[truncated]");
   });
 });
