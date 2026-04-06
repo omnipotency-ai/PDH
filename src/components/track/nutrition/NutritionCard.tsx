@@ -11,7 +11,10 @@
  */
 
 import { FOOD_PORTION_DATA } from "@shared/foodPortionData";
-import { FOOD_REGISTRY, type FoodRegistryEntry } from "@shared/foodRegistryData";
+import {
+  FOOD_REGISTRY,
+  type FoodRegistryEntry,
+} from "@shared/foodRegistryData";
 import { format, isSameDay } from "date-fns";
 import {
   Camera,
@@ -41,7 +44,10 @@ import { FavouritesView } from "./FavouritesView";
 import { FoodFilterView } from "./FoodFilterView";
 import { FoodRow } from "./FoodRow";
 import { LogFoodModal } from "./LogFoodModal";
-import { buildRawNutritionLogData, buildStagedNutritionLogData } from "./nutritionLogging";
+import {
+  buildRawNutritionLogData,
+  buildStagedNutritionLogData,
+} from "./nutritionLogging";
 import { useNutritionStore } from "./useNutritionStore";
 import { WaterModal } from "./WaterModal";
 
@@ -56,7 +62,9 @@ const DRINK_SUBCATEGORIES = new Set(["hot_drink", "juice", "fizzy_drink"]);
  * module load — the registry is static.
  */
 const COMMON_DRINKS: ReadonlyArray<FoodRegistryEntry> = FOOD_REGISTRY.filter(
-  (entry) => DRINK_SUBCATEGORIES.has(entry.subcategory) && FOOD_PORTION_DATA.has(entry.canonical),
+  (entry) =>
+    DRINK_SUBCATEGORIES.has(entry.subcategory) &&
+    FOOD_PORTION_DATA.has(entry.canonical),
 );
 
 /** SVG calorie ring dimensions. */
@@ -122,7 +130,9 @@ function CalorieRing({
         </svg>
         {/* Center text inside ring */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-sm font-bold text-[var(--text)]">{remaining}</span>
+          <span className="text-sm font-bold text-[var(--text)]">
+            {remaining}
+          </span>
           <span className="text-[10px] text-[var(--text-faint)]">left</span>
         </div>
       </div>
@@ -130,8 +140,12 @@ function CalorieRing({
       {/* Stats beside ring + progress bar below text */}
       <div className="flex flex-1 flex-col items-start gap-1.5 text-left">
         <div className="flex items-baseline gap-1.5">
-          <span className="text-3xl font-bold text-[var(--text)]">{consumed}</span>
-          <span className="text-base text-[var(--text-muted)]">/ {goal} kcal</span>
+          <span className="text-xl font-bold text-[var(--text)]">
+            {consumed}
+          </span>
+          <span className="text-xs text-[var(--text-muted)]">
+            / {goal} kcal
+          </span>
         </div>
         <CalorieProgressBar consumed={consumed} goal={goal} />
       </div>
@@ -141,7 +155,13 @@ function CalorieRing({
 
 // ── Calorie Progress Bar ────────────────────────────────────────────────────
 
-function CalorieProgressBar({ consumed, goal }: { consumed: number; goal: number }) {
+function CalorieProgressBar({
+  consumed,
+  goal,
+}: {
+  consumed: number;
+  goal: number;
+}) {
   const progress = goal > 0 ? Math.min(consumed / goal, 1) : 0;
   const percentage = Math.round(progress * 100);
 
@@ -170,14 +190,19 @@ function CalorieProgressBar({ consumed, goal }: { consumed: number; goal: number
 
 function WaterProgressRow({
   intakeMl,
+  waterMl,
   goalMl,
   onOpenModal,
 }: {
+  /** Total fluid intake (water + coffee + tea + all fluids). */
   intakeMl: number;
+  /** Water-only subset of intakeMl. */
+  waterMl: number;
   goalMl: number;
   onOpenModal: () => void;
 }) {
   const progress = goalMl > 0 ? Math.min(intakeMl / goalMl, 1) : 0;
+  const waterProgress = goalMl > 0 ? Math.min(waterMl / goalMl, 1) : 0;
   const percentage = Math.round(progress * 100);
 
   return (
@@ -186,27 +211,40 @@ function WaterProgressRow({
       data-slot="water-progress"
       className="group flex w-full items-center gap-2 rounded-lg transition-colors hover:bg-[var(--surface-2)]"
       onClick={onOpenModal}
-      aria-label={`Water: ${intakeMl} of ${goalMl} ml. Tap to log water.`}
+      aria-label={`Fluids: ${intakeMl} ml of ${goalMl} ml (water: ${waterMl} ml). Tap to log water.`}
     >
-      <Droplets className="h-5 w-5 shrink-0" style={{ color: "var(--water)" }} aria-hidden="true" />
-      <span className="shrink-0 text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-        Water
+      <Droplets
+        className="h-5 w-5 shrink-0"
+        style={{ color: "var(--water)" }}
+        aria-hidden="true"
+      />
+      <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+        Fluids
       </span>
-      <span className="shrink-0 text-sm text-[var(--text-muted)]">
+      <span className="shrink-0 text-xs text-[var(--text-muted)]">
         {intakeMl}/{goalMl}ml
       </span>
       <div
-        className="h-2 flex-1 overflow-hidden rounded-full bg-[var(--surface-3)]"
+        className="relative h-2 flex-1 overflow-hidden rounded-full bg-[var(--surface-3)]"
         role="progressbar"
         aria-valuenow={percentage}
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-label={`Water progress: ${percentage}%`}
+        aria-label={`Fluid progress: ${percentage}%`}
       >
+        {/* Total fluids bar (teal) */}
         <div
-          className="h-full rounded-full transition-[width] duration-500 ease-out"
+          className="absolute inset-y-0 left-0 rounded-full transition-[width] duration-500 ease-out"
           style={{
-            width: `${percentage}%`,
+            width: `${Math.round(progress * 100)}%`,
+            backgroundColor: "var(--fluid)",
+          }}
+        />
+        {/* Water subset bar (sky blue, drawn over) */}
+        <div
+          className="absolute inset-y-0 left-0 rounded-full transition-[width] duration-500 ease-out"
+          style={{
+            width: `${Math.round(waterProgress * 100)}%`,
             backgroundColor: "var(--water)",
           }}
         />
@@ -239,11 +277,11 @@ function NutritionSearchInput({
   return (
     <div data-slot="nutrition-search" className="relative flex-1">
       <Camera
-        className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--text-faint)]"
+        className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-faint)]"
         aria-hidden="true"
       />
       <Mic
-        className="pointer-events-none absolute left-10 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--text-faint)]"
+        className="pointer-events-none absolute left-9 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-faint)]"
         aria-hidden="true"
       />
       <input
@@ -259,7 +297,7 @@ function NutritionSearchInput({
           onSubmit();
         }}
         placeholder="Search or type a food..."
-        className="w-full rounded-xl border border-[var(--color-border-default)] bg-[var(--surface-2)] py-3 pl-[4.5rem] pr-10 text-base text-[var(--text)] placeholder:text-[var(--text-faint)] transition-colors focus:border-[var(--orange)] focus:outline-none focus:ring-1 focus:ring-[var(--orange)]"
+        className="w-full rounded-xl border border-[var(--color-border-default)] bg-[var(--surface-2)] py-2 pl-[3.75rem] pr-10 text-sm text-[var(--text)] placeholder:text-[var(--text-faint)] transition-colors focus:border-[var(--orange)] focus:outline-none focus:ring-1 focus:ring-[var(--orange)]"
         role="combobox"
         aria-label="Search foods"
         aria-autocomplete="list"
@@ -304,9 +342,13 @@ function SearchResultRow({
 }) {
   const portionData = FOOD_PORTION_DATA.get(entry.canonical);
   const calories = portionData
-    ? Math.round(((portionData.caloriesPer100g ?? 0) * portionData.defaultPortionG) / 100)
+    ? Math.round(
+        ((portionData.caloriesPer100g ?? 0) * portionData.defaultPortionG) /
+          100,
+      )
     : 0;
-  const portionLabel = portionData?.naturalUnit ?? `${portionData?.defaultPortionG ?? 0}g`;
+  const portionLabel =
+    portionData?.naturalUnit ?? `${portionData?.defaultPortionG ?? 0}g`;
 
   const zoneColor = ZONE_COLORS[entry.zone];
 
@@ -359,9 +401,13 @@ function SearchResultRow({
               Z{entry.zone}
             </span>
           </div>
-          <span className="text-[10px] text-[var(--text-faint)]">{portionLabel}</span>
+          <span className="text-[10px] text-[var(--text-faint)]">
+            {portionLabel}
+          </span>
         </div>
-        <span className="text-xs font-medium text-[var(--text-muted)]">{calories} kcal</span>
+        <span className="text-xs font-medium text-[var(--text-muted)]">
+          {calories} kcal
+        </span>
       </button>
 
       {/* Explicit + button */}
@@ -384,14 +430,19 @@ interface NutritionCardProps {
   captureTimestamp?: number;
 }
 
-export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardProps) {
-  const { state, dispatch, searchResults, stagingCount, stagingTotals } = useNutritionStore();
+export function NutritionCard({
+  selectedDate,
+  captureTimestamp,
+}: NutritionCardProps) {
+  const { state, dispatch, searchResults, stagingCount, stagingTotals } =
+    useNutritionStore();
   const {
     totalCaloriesToday,
     totalMacrosToday,
-    waterIntakeToday,
+    totalFluidsMl,
+    waterOnlyMl,
     calorieGoal,
-    waterGoal,
+    fluidGoal,
     caloriesByMealSlot,
     logsByMealSlot,
     recentFoods,
@@ -455,13 +506,18 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
   }, []);
 
   // Filter recentFoods to only those with known portion data
-  const knownRecentFoods = useMemo(() => filterToKnownFoods(recentFoods), [recentFoods]);
+  const knownRecentFoods = useMemo(
+    () => filterToKnownFoods(recentFoods),
+    [recentFoods],
+  );
 
   // Whether the search zero-state is active (focused, empty query)
-  const showSearchZeroState = searchFocused && state.searchQuery.trim().length === 0;
+  const showSearchZeroState =
+    searchFocused && state.searchQuery.trim().length === 0;
 
   // Whether to show the recent foods section within the zero-state
-  const showRecentZeroState = showSearchZeroState && knownRecentFoods.length > 0;
+  const showRecentZeroState =
+    showSearchZeroState && knownRecentFoods.length > 0;
   const surfaceSlot =
     state.view !== "none"
       ? undefined
@@ -578,7 +634,10 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
 
   const handleLogStagedFood = useCallback(async () => {
     try {
-      const data = buildStagedNutritionLogData(state.stagingItems, state.activeMealSlot);
+      const data = buildStagedNutritionLogData(
+        state.stagingItems,
+        state.activeMealSlot,
+      );
       await addSyncedLog({
         timestamp: captureTimestamp ?? Date.now(),
         type: "food",
@@ -596,10 +655,19 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
     } catch (err) {
       toast.error(getErrorMessage(err, "Failed to log food"));
     }
-  }, [addSyncedLog, captureTimestamp, dispatch, state.activeMealSlot, state.stagingItems]);
+  }, [
+    addSyncedLog,
+    captureTimestamp,
+    dispatch,
+    state.activeMealSlot,
+    state.stagingItems,
+  ]);
 
   const handleLogRawInput = useCallback(async () => {
-    const data = buildRawNutritionLogData(state.searchQuery, state.activeMealSlot);
+    const data = buildRawNutritionLogData(
+      state.searchQuery,
+      state.activeMealSlot,
+    );
     if (!data) {
       searchInputRef.current?.focus();
       return;
@@ -619,7 +687,13 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
     } catch (err) {
       toast.error(getErrorMessage(err, "Failed to log food"));
     }
-  }, [addSyncedLog, captureTimestamp, dispatch, state.activeMealSlot, state.searchQuery]);
+  }, [
+    addSyncedLog,
+    captureTimestamp,
+    dispatch,
+    state.activeMealSlot,
+    state.searchQuery,
+  ]);
 
   const handleAddMore = useCallback(() => {
     dispatch({ type: "CLOSE_STAGING_MODAL" });
@@ -671,7 +745,8 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
 
   // ── Derived state ───────────────────────────────────────────────────────
 
-  const hasSearchResults = state.searchQuery.trim().length >= 3 && searchResults.length > 0;
+  const hasSearchResults =
+    state.searchQuery.trim().length >= 3 && searchResults.length > 0;
 
   const hasSearchQueryButNoResults =
     state.searchQuery.trim().length >= 3 && searchResults.length === 0;
@@ -703,7 +778,10 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
           aria-label="Filter foods"
           onClick={() => dispatch({ type: "SET_VIEW", view: "foodFilter" })}
         >
-          <SlidersHorizontal className="h-5 w-5" style={{ color: "var(--orange)" }} />
+          <SlidersHorizontal
+            className="h-5 w-5"
+            style={{ color: "var(--orange)" }}
+          />
         </button>
         <button
           type="button"
@@ -743,7 +821,10 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
       />
 
       {/* ── Search + Log Food button state container ─── */}
-      <div {...(surfaceSlot !== undefined && { "data-slot": surfaceSlot })} className="space-y-3">
+      <div
+        {...(surfaceSlot !== undefined && { "data-slot": surfaceSlot })}
+        className="space-y-3"
+      >
         <div className="flex items-center gap-2">
           <NutritionSearchInput
             value={state.searchQuery}
@@ -758,9 +839,11 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
           <button
             type="button"
             data-slot="log-food-button"
-            className="shrink-0 rounded-full bg-[var(--orange)] px-6 py-3 text-base font-semibold text-white transition-colors hover:brightness-110 active:brightness-95"
+            className="shrink-0 rounded-full bg-[var(--orange)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:brightness-110 active:brightness-95"
             onClick={handleLogFoodButton}
-            aria-label={stagingCount > 0 ? "Review staged food items" : "Log food"}
+            aria-label={
+              stagingCount > 0 ? "Review staged food items" : "Log food"
+            }
           >
             Log Food
             {stagingCount > 0 && (
@@ -771,17 +854,23 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
           </button>
         </div>
 
-        {/* ── Logging to: Meal label ─── */}
-        <span data-slot="meal-slot-label" className="text-xs text-[var(--text-muted)]">
-          Logging to: {titleCase(state.activeMealSlot)}
-          {selectedDateLabel ? ` · ${selectedDateLabel}` : ""}
-        </span>
+        {/* ── Logging to: Meal label — only visible when search/filter/favorites active ─── */}
+        {surfaceSlot !== "collapsed-view" && (
+          <span
+            data-slot="meal-slot-label"
+            className="text-xs text-[var(--text-muted)]"
+          >
+            Logging to: {titleCase(state.activeMealSlot)}
+            {selectedDateLabel ? ` · ${selectedDateLabel}` : ""}
+          </span>
+        )}
       </div>
 
       {/* ── ALWAYS VISIBLE: Water progress row ─── */}
       <WaterProgressRow
-        intakeMl={waterIntakeToday}
-        goalMl={waterGoal}
+        intakeMl={totalFluidsMl}
+        waterMl={waterOnlyMl}
+        goalMl={fluidGoal}
         onOpenModal={handleOpenWater}
       />
 
@@ -791,7 +880,10 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
           <h3 className="px-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
             Recent
           </h3>
-          <ul className="max-h-64 space-y-0.5 overflow-y-auto" aria-label="Recent foods">
+          <ul
+            className="max-h-64 space-y-0.5 overflow-y-auto"
+            aria-label="Recent foods"
+          >
             {knownRecentFoods.slice(0, 10).map((canonical) => (
               <FoodRow
                 key={canonical}
@@ -829,7 +921,8 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
       {/* ── SEARCH RESULTS — inline, shown when query has results ─── */}
       {isTypingShortQuery && (
         <p className="px-3 py-2 text-xs text-[var(--text-faint)]">
-          Type at least 3 characters to search, or press Enter to send the text to the meal parser.
+          Type at least 3 characters to search, or press Enter to send the text
+          to the meal parser.
         </p>
       )}
 
@@ -904,8 +997,9 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
         open={state.waterModalOpen}
         onClose={handleCloseWater}
         onLogWater={handleLogWater}
-        currentIntakeMl={waterIntakeToday}
-        goalMl={waterGoal}
+        totalFluidsMl={totalFluidsMl}
+        waterOnlyMl={waterOnlyMl}
+        goalMl={fluidGoal}
       />
     </section>
   );

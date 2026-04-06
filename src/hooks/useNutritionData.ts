@@ -56,16 +56,18 @@ export interface NutritionData {
   totalCaloriesToday: number;
   /** Macronutrient totals from the active day's food + liquid logs. */
   totalMacrosToday: MacroTotals;
-  /** Total water intake for the active day in ml. */
-  waterIntakeToday: number;
+  /** Total fluid intake for the active day in ml (water + coffee + tea + all type="fluid"). */
+  totalFluidsMl: number;
+  /** Water-only intake for the active day in ml (subset of totalFluidsMl). */
+  waterOnlyMl: number;
   /** Calorie subtotal per meal slot from the active day's food + liquid logs. */
   caloriesByMealSlot: Record<MealSlot, number>;
   /** Active-day food + liquid logs grouped by meal slot. */
   logsByMealSlot: Record<MealSlot, FoodPipelineLog[]>;
   /** Daily calorie goal from profile. */
   calorieGoal: number;
-  /** Daily water goal in ml from profile. */
-  waterGoal: number;
+  /** Daily fluid goal in ml from profile (total fluids, not just water). */
+  fluidGoal: number;
   /** The current meal slot based on time of day. */
   currentMealSlot: MealSlot;
   /**
@@ -175,7 +177,9 @@ export function useNutritionData(targetDate?: Date): NutritionData {
     [targetDate],
   );
   const activeDayStart = targetDate ? selectedDayStart : Number(todayKey);
-  const activeDayEnd = targetDate ? selectedDayEnd : activeDayStart + MS_PER_DAY;
+  const activeDayEnd = targetDate
+    ? selectedDayEnd
+    : activeDayStart + MS_PER_DAY;
 
   // Split logs into active-day food+liquid and fluid logs.
   const { todayFoodLogs, todayFluidLogs } = useMemo(
@@ -184,24 +188,42 @@ export function useNutritionData(targetDate?: Date): NutritionData {
   );
 
   // Derive calorie total.
-  const totalCaloriesToday = useMemo(() => calculateTotalCalories(todayFoodLogs), [todayFoodLogs]);
+  const totalCaloriesToday = useMemo(
+    () => calculateTotalCalories(todayFoodLogs),
+    [todayFoodLogs],
+  );
 
   // Derive macro totals.
-  const totalMacrosToday = useMemo(() => calculateTotalMacros(todayFoodLogs), [todayFoodLogs]);
+  const totalMacrosToday = useMemo(
+    () => calculateTotalMacros(todayFoodLogs),
+    [todayFoodLogs],
+  );
 
-  // Derive water intake.
-  const waterIntakeToday = useMemo(() => {
-    let total = 0;
+  // Derive fluid totals: all fluids + water-only subset.
+  const { totalFluidsMl, waterOnlyMl } = useMemo(() => {
+    let fluids = 0;
+    let water = 0;
     for (const log of todayFluidLogs) {
       for (const item of log.data.items) {
-        total += Number(item.quantity ?? 0);
+        const ml = Number(item.quantity ?? 0);
+        fluids += ml;
+        if (
+          String(item.name ?? "")
+            .toLowerCase()
+            .trim() === "water"
+        ) {
+          water += ml;
+        }
       }
     }
-    return total;
+    return { totalFluidsMl: fluids, waterOnlyMl: water };
   }, [todayFluidLogs]);
 
   // Group today's food logs by meal slot.
-  const logsByMealSlot = useMemo(() => groupByMealSlot(todayFoodLogs), [todayFoodLogs]);
+  const logsByMealSlot = useMemo(
+    () => groupByMealSlot(todayFoodLogs),
+    [todayFoodLogs],
+  );
 
   // Calculate calories per meal slot.
   // Intentionally simple: 4 calls over small arrays. Single-pass accumulation not worth the complexity.
@@ -270,18 +292,20 @@ export function useNutritionData(targetDate?: Date): NutritionData {
 
   // Fall back to global recents if no slot-specific foods exist.
   // Both branches are stable memo references — no new array allocated
-  const recentFoods = slotRecentFoods.length > 0 ? slotRecentFoods : allRecentFoods;
+  const recentFoods =
+    slotRecentFoods.length > 0 ? slotRecentFoods : allRecentFoods;
 
   return {
     todayFoodLogs,
     todayFluidLogs,
     totalCaloriesToday,
     totalMacrosToday,
-    waterIntakeToday,
+    totalFluidsMl,
+    waterOnlyMl,
     caloriesByMealSlot,
     logsByMealSlot,
     calorieGoal: dailyCalorieGoal,
-    waterGoal: dailyWaterGoalMl,
+    fluidGoal: dailyWaterGoalMl,
     currentMealSlot,
     recentFoods,
     allRecentFoods,

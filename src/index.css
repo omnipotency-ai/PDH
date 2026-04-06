@@ -155,8 +155,10 @@
   --violet: #a78bfa;
   --sky: #38bdf8;
   --indigo: #818cf8;
-  --water: #42bcb8;
-  --water-glow: rgba(66, 188, 184, 0.3);
+  --water: #38bdf8;
+  --water-glow: rgba(56, 189, 248, 0.3);
+  --fluid: #2d72c6;
+  --fluid-glow: rgba(45, 114, 198, 0.3);
 
   /* ── Section accents (Aurora Glass palette) ── */
   /* Food & Drink - coral */
@@ -335,8 +337,10 @@
   --violet: #7c3aed;
   --sky: #0284c7;
   --indigo: #4f46e5;
-  --water: #2ba8a4;
-  --water-glow: rgba(43, 168, 164, 0.25);
+  --water: #0284c7;
+  --water-glow: rgba(144, 209, 241, 0.896);
+  --fluid: #215f7e;
+  --fluid-glow: rgba(21, 95, 126, 0.824);
 
   /* ── Section accents (Aurora Glass palette - light mode) ── */
   /* Food & Drink - coral */

@@ -143,19 +143,21 @@ Structured meal planning based on safe food data.
 
 ### Track Page
 
-| ID     | Title                          | Sev  | Description                                                                   |
-| ------ | ------------------------------ | ---- | ----------------------------------------------------------------------------- |
-| WQ-090 | TrackPage eagerly imported     | High | Only page not using `lazy()` in routeTree.tsx. Conscious choice or oversight. |
-| WQ-107 | Split LogEntry.tsx (741 LOC)   | High | Delegate log-type editing to existing SubRow components.                      |
-| WQ-111 | BM time label position         | Med  | Time needs to move before notes.                                              |
-| WQ-113 | BM count data wrong            | Med  | Needs runtime verification in hero.                                           |
-| WQ-118 | Weight target save bug         | Med  | Typing "180" doesn't save — needs "180.0" or Enter/Tab.                       |
-| WQ-121 | Desktop long-press menu        | Med  | Add 3-dot menu for desktop discoverability.                                   |
-| WQ-122 | BM layout rework               | Med  | Time before notes, 8-col grid.                                                |
-| WQ-186 | Duplicate timestamp on expand  | Low  | Timestamp shown twice in today log.                                           |
-| WQ-187 | Cigarettes duplicate subrows   | Low  | Duplicate entries.                                                            |
-| WQ-188 | Sleep expand repeats label     | Low  | Label shown twice.                                                            |
-| WQ-189 | Activity rows split label/time | Low  | Label and time separated.                                                     |
+| ID     | Title                                                   | Sev  | Description                                                                                                                                                                                                                               |
+| ------ | ------------------------------------------------------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| WQ-090 | TrackPage eagerly imported                              | High | Only page not using `lazy()` in routeTree.tsx. Conscious choice or oversight.                                                                                                                                                             |
+| WQ-107 | Split LogEntry.tsx (741 LOC)                            | High | Delegate log-type editing to existing SubRow components.                                                                                                                                                                                  |
+| WQ-111 | BM time label position                                  | Med  | Time needs to move before notes.                                                                                                                                                                                                          |
+| WQ-113 | BM count data wrong                                     | Med  | Needs runtime verification in hero.                                                                                                                                                                                                       |
+| WQ-118 | Weight target save bug                                  | Med  | Typing "180" doesn't save — needs "180.0" or Enter/Tab.                                                                                                                                                                                   |
+| WQ-121 | Desktop long-press menu                                 | Med  | Add 3-dot menu for desktop discoverability.                                                                                                                                                                                               |
+| WQ-122 | BM layout rework                                        | Med  | Time before notes, 8-col grid.                                                                                                                                                                                                            |
+| WQ-186 | Duplicate timestamp on expand                           | Low  | Timestamp shown twice in today log.                                                                                                                                                                                                       |
+| WQ-187 | Cigarettes duplicate subrows                            | Low  | Duplicate entries.                                                                                                                                                                                                                        |
+| WQ-188 | Sleep expand repeats label                              | Low  | Label shown twice.                                                                                                                                                                                                                        |
+| WQ-189 | Activity rows split label/time                          | Low  | Label and time separated.                                                                                                                                                                                                                 |
+| WQ-433 | Count food pipeline liquids toward total fluids         | Med  | Drinks logged via food search (Aquarius, electrolyte drinks) should count toward total fluid intake. Needs a way to identify liquid food items (registry flag, subcategory check, or unit=ml). Currently only `type: "fluid"` logs count. |
+| WQ-434 | Aquarius/electrolyte drink portion & calorie data wrong | Med  | Aquarius matched as "electrolyte drink" with 240g/60kcal default. Actual 100ml serving has different values. Food registry entry needs correcting, and liquid foods should log in ml not grams.                                           |
 
 ### Patterns Page
 
@@ -234,6 +236,25 @@ Structured meal planning based on safe food data.
 | WQ-184 | Dr Poo archive link dup                  | Low | Duplicate link.                            |
 | WQ-185 | "Last tested" ambiguity                  | Low | Last eaten or last transit? Clarify.       |
 | WQ-190 | Tea quick capture missing unit           | Low | No unit shown.                             |
+
+### Deployment, PWA & Release Hygiene
+
+| ID     | Title                              | Sev  | Description                                                                                   |
+| ------ | ---------------------------------- | ---- | --------------------------------------------------------------------------------------------- |
+| WQ-419 | Replace placeholder CSP domain     | High | `vercel.json` still trusts `https://*.PDH.com`; replace with the real domain or remove it.    |
+| WQ-420 | Restore missing PWA screenshots    | High | `vite.config.ts` manifest still references deleted install-prompt screenshots.                |
+| WQ-421 | Restore installable 512px icon     | High | Manifest still references missing `icons/icon-384x384.png` and `icons/icon-512x512.png`.      |
+| WQ-422 | Document or remove `unsafe-inline` | Med  | `vercel.json` CSP still uses `unsafe-inline` without an explicit accepted-risk note.          |
+| WQ-423 | Unblock microphone for voice plans | Med  | `Permissions-Policy` sets `microphone=()` and will block future voice logging.                |
+| WQ-424 | Precache image assets              | Med  | Workbox `globPatterns` excludes `png/webp/jpg`, so app images are never precached.            |
+| WQ-425 | Move `dotenv` to devDependencies   | Med  | `package.json` still ships `dotenv` as a production dependency used only in Playwright setup. |
+| WQ-426 | Remove dead `next-themes` dep      | Med  | `package.json` still includes unused `next-themes`.                                           |
+| WQ-427 | Clean stale transit-map gitignore  | Med  | `.gitignore` still contains exclusions for deleted transit-map assets.                        |
+| WQ-428 | Add unauthenticated app-load E2E   | Med  | No E2E currently verifies the post-landing-page unauthenticated `/` flow.                     |
+| WQ-429 | Make document title descriptive    | Low  | `index.html` title is just `PDH`, which is weak for tabs, bookmarks, and screen readers.      |
+| WQ-430 | Lowercase package name             | Low  | `package.json` name is uppercase `PDH`, which is non-standard for npm tooling.                |
+| WQ-431 | Rename stale theme storage key     | Low  | `src/main.tsx` still uses the old `kaka-tracker-theme` localStorage key.                      |
+| WQ-432 | Simplify `.playwright-cli` ignores | Low  | `.gitignore` keeps redundant timestamp-specific `.playwright-cli` ignore entries.             |
 
 ---
 

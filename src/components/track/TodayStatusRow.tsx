@@ -5,6 +5,7 @@ import { formatFluidDisplay } from "@/lib/units";
 interface TodayStatusRowProps {
   bmCount: number;
   fluidTotalMl: number;
+  waterOnlyMl: number;
   lastBmTimestamp: number | null;
   nowMs: number;
 }
@@ -15,24 +16,33 @@ const BM_TIMER_THRESHOLDS = {
   LONG_HOURS: 24,
 } as const;
 
-function getLastBmTextColor(lastBmTimestamp: number | null, nowMs: number): string {
+function getLastBmTextColor(
+  lastBmTimestamp: number | null,
+  nowMs: number,
+): string {
   if (lastBmTimestamp === null) return "var(--text-muted)";
   const elapsedMs = Math.max(0, nowMs - lastBmTimestamp);
   const totalMinutes = Math.floor(elapsedMs / 60_000);
   if (totalMinutes < BM_TIMER_THRESHOLDS.RECENT_MINUTES) return "var(--sky)";
-  if (totalMinutes < BM_TIMER_THRESHOLDS.MODERATE_HOURS * 60) return "var(--emerald)";
-  if (totalMinutes < BM_TIMER_THRESHOLDS.LONG_HOURS * 60) return "var(--orange)";
+  if (totalMinutes < BM_TIMER_THRESHOLDS.MODERATE_HOURS * 60)
+    return "var(--emerald)";
+  if (totalMinutes < BM_TIMER_THRESHOLDS.LONG_HOURS * 60)
+    return "var(--orange)";
   return "var(--red)";
 }
 
-function formatTimeSince(lastBmTimestamp: number | null, nowMs: number): string {
+function formatTimeSince(
+  lastBmTimestamp: number | null,
+  nowMs: number,
+): string {
   if (lastBmTimestamp === null) return "No BM logged yet";
   const elapsedMs = Math.max(0, nowMs - lastBmTimestamp);
   const totalMinutes = Math.floor(elapsedMs / 60_000);
   if (totalMinutes < 60) return `${totalMinutes}m ago`;
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
-  if (hours < 24) return minutes === 0 ? `${hours}h ago` : `${hours}h ${minutes}m ago`;
+  if (hours < 24)
+    return minutes === 0 ? `${hours}h ago` : `${hours}h ${minutes}m ago`;
   const days = Math.floor(hours / 24);
   const remHours = hours % 24;
   return remHours === 0 ? `${days}d ago` : `${days}d ${remHours}h ago`;
@@ -41,6 +51,7 @@ function formatTimeSince(lastBmTimestamp: number | null, nowMs: number): string 
 export function TodayStatusRow({
   bmCount,
   fluidTotalMl,
+  waterOnlyMl,
   lastBmTimestamp,
   nowMs,
 }: TodayStatusRowProps) {
@@ -70,7 +81,10 @@ export function TodayStatusRow({
           border: "none",
         }}
       >
-        Fluids: {formatFluidDisplay(fluidTotalMl, unitSystem)}
+        Fluids: {formatFluidDisplay(fluidTotalMl, unitSystem)}{" "}
+        <span style={{ color: "var(--water)" }}>
+          (water: {formatFluidDisplay(waterOnlyMl, unitSystem)})
+        </span>
       </span>
       <span
         className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-center text-xs font-medium"

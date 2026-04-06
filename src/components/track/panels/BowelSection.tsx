@@ -2,13 +2,20 @@ import { AlertTriangle, HeartPulse, Minus, Plus } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useCallback, useId, useState } from "react";
 import { toast } from "sonner";
-import { BRISTOL_SCALE, BristolIllustration } from "@/components/track/panels/BristolScale";
+import {
+  BRISTOL_SCALE,
+  BristolIllustration,
+} from "@/components/track/panels/BristolScale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { usePanelTime } from "@/hooks/usePanelTime";
-import { useAiPreferences } from "@/hooks/useProfile";
+
 import { getErrorMessage } from "@/lib/errors";
 import { cn } from "@/lib/utils";
 import {
@@ -112,7 +119,13 @@ function SeverityScale<T extends string>({
   );
 }
 
-function TripStepper({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+function TripStepper({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+}) {
   return (
     <div className="flex items-center justify-center gap-3 rounded-xl bg-(--surface-3) min-h-[44px] px-3">
       <button
@@ -154,25 +167,40 @@ function TripStepper({ value, onChange }: { value: number; onChange: (v: number)
 /* ── Main Component ── */
 
 export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
-  const { aiPreferences, setAiPreferences } = useAiPreferences();
   const bristolGroupName = useId();
-  const [bristolCode, setBristolCode] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7 | null>(null);
-  const [urgencyTag, setUrgencyTag] = useState<"low" | "medium" | "high" | "immediate">("medium");
-  const [effortTag, setEffortTag] = useState<"none" | "some" | "hard" | "urgent-release">("some");
+  const [bristolCode, setBristolCode] = useState<
+    1 | 2 | 3 | 4 | 5 | 6 | 7 | null
+  >(null);
+  const [urgencyTag, setUrgencyTag] = useState<
+    "low" | "medium" | "high" | "immediate"
+  >("medium");
+  const [effortTag, setEffortTag] = useState<
+    "none" | "some" | "hard" | "urgent-release"
+  >("some");
   const [accident, setAccident] = useState(false);
   const [notes, setNotes] = useState("");
   const [trips, setTrips] = useState(1);
-  const [volumeTag, setVolumeTag] = useState<"small" | "medium" | "large" | "juices">("medium");
+  const [volumeTag, setVolumeTag] = useState<
+    "small" | "medium" | "large" | "juices"
+  >("medium");
   const [saving, setSaving] = useState(false);
 
-  const { timeValue, setTimeValue, dateValue, setDateValue, isEdited, getTimestampMs, reset } =
-    usePanelTime(captureTimestamp);
+  const {
+    timeValue,
+    setTimeValue,
+    dateValue,
+    setDateValue,
+    isEdited,
+    getTimestampMs,
+    reset,
+  } = usePanelTime(captureTimestamp);
 
   const prefersReducedMotion = useReducedMotion();
-  const reportTriggerMode = aiPreferences.reportTriggerMode ?? "auto";
 
   const selectedBristol =
-    bristolCode !== null ? BRISTOL_SCALE.find((b) => b.value === bristolCode) : null;
+    bristolCode !== null
+      ? BRISTOL_SCALE.find((b) => b.value === bristolCode)
+      : null;
   const accent = bristolCode !== null ? BRISTOL_ACCENT[bristolCode] : null;
 
   const handleSave = async () => {
@@ -213,7 +241,8 @@ export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
         setBristolCode(bristolValues[nextIndex]);
       } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
         event.preventDefault();
-        const prevIndex = (currentIndex - 1 + bristolValues.length) % bristolValues.length;
+        const prevIndex =
+          (currentIndex - 1 + bristolValues.length) % bristolValues.length;
         setBristolCode(bristolValues[prevIndex]);
       }
     },
@@ -229,51 +258,6 @@ export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
         color="var(--section-bowel)"
         mutedColor="var(--section-bowel-muted)"
       />
-
-      <div className="space-y-1.5">
-        <p
-          className="text-[11px] font-mono uppercase tracking-wider"
-          style={{ color: "var(--color-text-tertiary)" }}
-        >
-          Report Trigger
-        </p>
-        <div
-          role="toolbar"
-          aria-label="Report trigger mode"
-          className="grid grid-cols-2 gap-1 rounded-xl p-1"
-          style={{ border: "1px solid var(--section-bowel-border)" }}
-        >
-          {(["auto", "manual"] as const).map((mode) => {
-            const isSelected = reportTriggerMode === mode;
-            return (
-              <button
-                key={mode}
-                type="button"
-                aria-pressed={isSelected}
-                onClick={() => setAiPreferences({ reportTriggerMode: mode })}
-                className={cn(
-                  "min-h-[44px] rounded-xl px-3 text-sm font-semibold capitalize transition-all duration-200",
-                  !isSelected && "bg-(--surface-3) hover:bg-(--surface-0)",
-                )}
-                style={
-                  isSelected
-                    ? {
-                        backgroundColor: "var(--section-bowel-muted)",
-                        boxShadow: "inset 0 0 0 1.5px var(--section-bowel)",
-                        color: "var(--section-bowel)",
-                      }
-                    : {
-                        border: "1px solid var(--section-bowel-border)",
-                        color: "var(--text-muted)",
-                      }
-                }
-              >
-                {mode}
-              </button>
-            );
-          })}
-        </div>
-      </div>
 
       {/* ── Bristol Type Picker ── */}
       <div className="space-y-2">
@@ -315,7 +299,10 @@ export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
                       className="sr-only"
                     />
                     <span aria-hidden="true">
-                      <BristolIllustration type={option.value} size={isSelected ? 36 : 26} />
+                      <BristolIllustration
+                        type={option.value}
+                        size={isSelected ? 36 : 26}
+                      />
                     </span>
                     <span
                       className={cn(
@@ -361,7 +348,8 @@ export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
               className="text-center text-sm font-semibold transition-colors duration-300"
               style={{ color: accent.hex }}
             >
-              Type {selectedBristol.value} &middot; {selectedBristol.description}
+              Type {selectedBristol.value} &middot;{" "}
+              {selectedBristol.description}
             </p>
           </>
         )}
@@ -423,23 +411,28 @@ export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
                           aria-pressed={isSelected}
                           className={cn(
                             "flex-1 flex flex-col items-center gap-0.5 rounded-xl min-h-[44px] justify-center transition-all duration-200",
-                            !isSelected && "bg-(--surface-3) hover:bg-(--surface-0)",
+                            !isSelected &&
+                              "bg-(--surface-3) hover:bg-(--surface-0)",
                           )}
                           style={
                             isSelected
                               ? {
                                   backgroundColor: "var(--section-bowel-muted)",
-                                  boxShadow: "inset 0 0 0 1.5px var(--section-bowel)",
+                                  boxShadow:
+                                    "inset 0 0 0 1.5px var(--section-bowel)",
                                 }
                               : {
-                                  border: "1px solid var(--section-bowel-border)",
+                                  border:
+                                    "1px solid var(--section-bowel-border)",
                                 }
                           }
                         >
                           <span
                             className="text-sm font-black leading-none tracking-[0.2em]"
                             style={{
-                              color: isSelected ? "var(--section-bowel)" : "var(--text-faint)",
+                              color: isSelected
+                                ? "var(--section-bowel)"
+                                : "var(--text-faint)",
                             }}
                           >
                             {opt.visual}
@@ -447,7 +440,9 @@ export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
                           <span
                             className="text-[10px] font-bold leading-none"
                             style={{
-                              color: isSelected ? "var(--section-bowel)" : "var(--text-faint)",
+                              color: isSelected
+                                ? "var(--section-bowel)"
+                                : "var(--text-faint)",
                             }}
                           >
                             {opt.label}
@@ -499,7 +494,10 @@ export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
                       }
                     >
                       <AlertTriangle
-                        className={cn("h-4 w-4", accident ? "text-red-500" : "text-(--text-faint)")}
+                        className={cn(
+                          "h-4 w-4",
+                          accident ? "text-red-500" : "text-(--text-faint)",
+                        )}
                         aria-hidden="true"
                       />
                     </button>

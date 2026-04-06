@@ -4,18 +4,9 @@ import { expect, test } from "./fixtures";
  * E2E tests for the WaterModal component inside NutritionCard.
  *
  * The WaterModal opens when the user taps the water progress bar or
- * the water icon in the NutritionCard header. It shows a cyan (#42BCB8)
- * ring, +/- 200ml buttons, and Cancel/Log Water actions.
- *
- * Tests:
- * 1. Water icon opens the WaterModal
- * 2. Modal displays default water amount (200 ml)
- * 3. Plus button increases amount by 200ml
- * 4. Minus button decreases amount by 200ml (floor at 0)
- * 5. Cancel button closes the modal without logging
- * 6. Log button closes the modal (integration test)
- * 7. Modal has proper accessibility: role=dialog, aria-modal, escape to close
- * 8. Modal displays cyan (#42BCB8) accent color on ring/progress
+ * the water icon in the NutritionCard header. It shows a sky-blue ring
+ * (var(--water)), +/- 50ml buttons, an editable ml input, and a Log
+ * Water button. Close via X button or Escape.
  */
 test.describe("Water Modal", () => {
   // Helper to get the NutritionCard section
@@ -83,66 +74,70 @@ test.describe("Water Modal", () => {
     await expect(modal).toBeVisible();
   });
 
-  test("modal displays default water amount of 200 ml", async ({ page }) => {
+  test("modal displays default water amount of 0 ml", async ({ page }) => {
     const modal = await openWaterModal(page);
 
-    // The amount selector should show "200 ml"
-    const amountSelector = modal.locator('[data-slot="water-modal-amount"]');
-    await expect(amountSelector).toBeVisible();
-    await expect(amountSelector).toContainText("200");
-    await expect(amountSelector).toContainText("ml");
+    // The amount input should show "0"
+    const amountInput = modal.locator('input[aria-label="Amount to add in millilitres"]');
+    await expect(amountInput).toBeVisible();
+    await expect(amountInput).toHaveValue("0");
   });
 
-  test("plus button increases amount by 200ml", async ({ page }) => {
+  test("plus button increases amount by 50ml", async ({ page }) => {
     const modal = await openWaterModal(page);
 
-    // Starting at 200ml, click increase
     const increaseButton = modal.locator('button[aria-label="Increase amount"]');
     await expect(increaseButton).toBeVisible();
     await increaseButton.click();
     await page.waitForTimeout(100);
 
-    // Should now show 400ml
-    const amountSelector = modal.locator('[data-slot="water-modal-amount"]');
-    await expect(amountSelector).toContainText("400");
+    // Should now show 50ml
+    const amountInput = modal.locator('input[aria-label="Amount to add in millilitres"]');
+    await expect(amountInput).toHaveValue("50");
 
     // Click increase again
     await increaseButton.click();
     await page.waitForTimeout(100);
 
-    // Should now show 600ml
-    await expect(amountSelector).toContainText("600");
+    // Should now show 100ml
+    await expect(amountInput).toHaveValue("100");
   });
 
-  test("minus button decreases amount by 200ml with floor at 0", async ({ page }) => {
+  test("minus button decreases amount by 50ml with floor at 0", async ({ page }) => {
     const modal = await openWaterModal(page);
 
-    // Starting at 200ml, click decrease
+    // Start at 0, increase to 50 first
+    const increaseButton = modal.locator('button[aria-label="Increase amount"]');
+    await increaseButton.click();
+    await page.waitForTimeout(100);
+
+    const amountInput = modal.locator('input[aria-label="Amount to add in millilitres"]');
+    await expect(amountInput).toHaveValue("50");
+
+    // Now decrease back to 0
     const decreaseButton = modal.locator('button[aria-label="Decrease amount"]');
-    await expect(decreaseButton).toBeVisible();
     await decreaseButton.click();
     await page.waitForTimeout(100);
 
-    // Should now show 0ml
-    const amountSelector = modal.locator('[data-slot="water-modal-amount"]');
-    await expect(amountSelector).toContainText("0");
+    await expect(amountInput).toHaveValue("0");
 
     // Decrease button should be disabled at 0
     await expect(decreaseButton).toBeDisabled();
   });
 
-  test("cancel button closes the modal without logging", async ({ page }) => {
+  test("close button closes the modal without logging", async ({ page }) => {
     const modal = await openWaterModal(page);
 
-    // Increase amount to 400ml first (so we can verify nothing was logged)
+    // Increase amount to 100ml first (so we can verify nothing was logged)
     const increaseButton = modal.locator('button[aria-label="Increase amount"]');
+    await increaseButton.click();
     await increaseButton.click();
     await page.waitForTimeout(100);
 
-    // Click Cancel
-    const cancelButton = modal.getByText("Cancel");
-    await expect(cancelButton).toBeVisible();
-    await cancelButton.click();
+    // Click the X close button
+    const closeButton = modal.locator('button[aria-label="Close"]');
+    await expect(closeButton).toBeVisible();
+    await closeButton.click();
     await page.waitForTimeout(200);
 
     // Modal should be closed
@@ -151,6 +146,11 @@ test.describe("Water Modal", () => {
 
   test("log button logs water and closes the modal", async ({ page }) => {
     const modal = await openWaterModal(page);
+
+    // Need to add some amount first (starts at 0, button is disabled)
+    const increaseButton = modal.locator('button[aria-label="Increase amount"]');
+    await increaseButton.click();
+    await page.waitForTimeout(100);
 
     // Click "Log Water" button
     const logButton = modal.getByRole("button", { name: /Log Water/i });
@@ -203,64 +203,68 @@ test.describe("Water Modal", () => {
     await expect(modal).not.toBeVisible();
   });
 
-  test("modal displays cyan accent color on progress ring", async ({ page }) => {
+  test("modal displays sky-blue accent color on progress ring", async ({ page }) => {
     const modal = await openWaterModal(page);
 
-    // The progress ring SVG should have a circle with cyan stroke
+    // The progress ring SVG should have a circle with var(--water) stroke
     const ringContainer = modal.locator('[data-slot="water-modal-ring"]');
     await expect(ringContainer).toBeVisible();
 
-    // Check the progress arc circle has the correct stroke color
+    // Check the primary progress arc uses the CSS variable
     const progressArc = ringContainer.locator("svg circle").nth(1);
-    await expect(progressArc).toHaveAttribute("stroke", "#42BCB8");
+    await expect(progressArc).toHaveAttribute("stroke", "var(--water)");
+  });
+
+  test("user can type a custom amount in the input", async ({ page }) => {
+    const modal = await openWaterModal(page);
+
+    const amountInput = modal.locator('input[aria-label="Amount to add in millilitres"]');
+    await amountInput.click();
+    await amountInput.fill("175");
+    await page.waitForTimeout(100);
+
+    // Log Water should be enabled now
+    const logButton = modal.getByRole("button", { name: /Log Water/i });
+    await expect(logButton).toBeEnabled();
   });
 
   test("plus button is disabled at maximum amount (2000ml)", async ({ page }) => {
     const modal = await openWaterModal(page);
 
-    const increaseButton = modal.locator('button[aria-label="Increase amount"]');
-
-    // Click increase 9 times: 200 -> 400 -> 600 -> 800 -> 1000 -> 1200 -> 1400 -> 1600 -> 1800 -> 2000
-    for (let i = 0; i < 9; i++) {
-      await increaseButton.click();
-      await page.waitForTimeout(50);
-    }
-
-    // Should be at 2000ml now
-    const amountSelector = modal.locator('[data-slot="water-modal-amount"]');
-    await expect(amountSelector).toContainText("2000");
+    // Type 2000 directly instead of clicking 40 times
+    const amountInput = modal.locator('input[aria-label="Amount to add in millilitres"]');
+    await amountInput.click();
+    await amountInput.fill("2000");
+    await page.waitForTimeout(100);
 
     // Increase button should be disabled at max
+    const increaseButton = modal.locator('button[aria-label="Increase amount"]');
     await expect(increaseButton).toBeDisabled();
   });
 
   test("log button is disabled when amount is 0", async ({ page }) => {
     const modal = await openWaterModal(page);
 
-    // Decrease from 200 to 0
-    const decreaseButton = modal.locator('button[aria-label="Decrease amount"]');
-    await decreaseButton.click();
-    await page.waitForTimeout(100);
-
-    // Log Water button should be disabled
+    // Amount starts at 0, so Log Water should be disabled
     const logButton = modal.getByRole("button", { name: /Log Water/i });
     await expect(logButton).toBeDisabled();
   });
 
-  test("modal resets amount to default when reopened", async ({ page }) => {
-    // Open modal and change amount
+  test("modal resets amount to 0 when reopened", async ({ page }) => {
+    // Open modal and add some amount
     const modal = await openWaterModal(page);
     const increaseButton = modal.locator('button[aria-label="Increase amount"]');
     await increaseButton.click();
+    await increaseButton.click();
     await page.waitForTimeout(100);
 
-    // Verify it changed to 400
-    const amountSelector = modal.locator('[data-slot="water-modal-amount"]');
-    await expect(amountSelector).toContainText("400");
+    // Verify it changed to 100
+    const amountInput = modal.locator('input[aria-label="Amount to add in millilitres"]');
+    await expect(amountInput).toHaveValue("100");
 
-    // Close via Cancel
-    const cancelButton = modal.getByText("Cancel");
-    await cancelButton.click();
+    // Close via X button
+    const closeButton = modal.locator('button[aria-label="Close"]');
+    await closeButton.click();
     await page.waitForTimeout(200);
     await expect(modal).not.toBeVisible();
 
@@ -270,8 +274,8 @@ test.describe("Water Modal", () => {
     await waterIconButton.click();
     await page.waitForTimeout(200);
 
-    // Should be back to default 200ml
+    // Should be back to 0
     await expect(modal).toBeVisible();
-    await expect(amountSelector).toContainText("200");
+    await expect(amountInput).toHaveValue("0");
   });
 });
