@@ -22,6 +22,20 @@
 
 ## Active: Tech-Debt Audit Cleanup
 
+### W3-07 security — Remaining fixes: comorbidities sanitization, shared aiUtils, 401/429 error classification (2026-04-06 19:52)
+
+- **Commit:** `1dcbfa5`
+- **Files:** `src/lib/aiUtils.ts` (new), `src/lib/aiPrompts.ts`, `src/lib/aiFetchInsights.ts`
+- **What:** Applied three remaining W3-07 security/quality fixes. Fix 3: comorbidities array items are now mapped through `sanitizeProfileField(item, 100)` before joining, matching the pattern used for recreationalCategories. Fix 4: extracted duplicate `formatTime` and `getDaysPostOp` into shared `src/lib/aiUtils.ts` and imported in both modules. Fix 5: both "AI nutritionist" catch blocks in aiFetchInsights.ts now classify 401/Unauthorized errors with "Check your API key" and 429/rate-limit errors with a wait message, matching the weekly summary catch block. Fixes 1 (intolerances) and 2 (lifestyle fields) were already done by the prior agent.
+- **Decisions:** None — straightforward application of existing patterns already present elsewhere in the file.
+
+### W3-01-quality — Document replaceProfile exclusions, deleteAllUserData trust contract, cap importBackup AI analyses (2026-04-06 19:41)
+
+- **Commit:** `d105960`
+- **Files:** `convex/profileMutations.ts`, `convex/backup.ts`
+- **What:** Added inline comment to `replaceProfile` explaining why `nutritionGoals`/`foodFavourites` are excluded from `buildNormalizedProfileFields`. Added JSDoc to `deleteAllUserData` warning it does not verify auth and callers must pass a trusted userId. Added pre-check in `importBackup` that throws if `aiAnalyses` count exceeds 500, preventing silent partial-delete state from a mid-import transaction overflow.
+- **Decisions:** 500 limit chosen because each AI analysis triggers 2 Convex inserts; stays well within per-transaction write limits with headroom.
+
 ### W3-07 — Split aiAnalysis.ts into focused modules (2026-04-06)
 
 - **Commit:** `4caf2d7`

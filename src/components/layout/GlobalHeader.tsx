@@ -1,3 +1,4 @@
+import { UserButton } from "@clerk/clerk-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { LayoutDashboard, NotebookPen, Settings } from "lucide-react";
 import ModeToggle from "@/components/mode-toggle";
@@ -7,13 +8,8 @@ import {
   NavigationMenuLink,
   NavigationMenuList,
 } from "@/components/ui/navigation-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { UserButton } from "@clerk/clerk-react";
 
 const NAV_ITEMS = [
   {
@@ -70,10 +66,7 @@ export function GlobalHeader() {
                 </div>
               </Link>
             </TooltipTrigger>
-            <TooltipContent
-              side="bottom"
-              className={pathname === "/" ? "" : "hidden"}
-            >
+            <TooltipContent side="bottom" className={pathname === "/" ? "" : "hidden"}>
               Home
             </TooltipContent>
           </Tooltip>
@@ -85,9 +78,7 @@ export function GlobalHeader() {
                 {NAV_ITEMS.map((item) => {
                   const Icon = item.icon;
                   const isActive =
-                    item.to === "/"
-                      ? pathname === "/"
-                      : pathname.startsWith(item.to);
+                    item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
 
                   return (
                     <NavigationMenuItem key={item.to}>
@@ -107,16 +98,11 @@ export function GlobalHeader() {
                               <Icon
                                 className={cn(
                                   "h-4 w-4 transition-colors",
-                                  isActive
-                                    ? item.activeTone
-                                    : "group-hover:text-(--text)",
+                                  isActive ? item.activeTone : "group-hover:text-(--text)",
                                 )}
                                 aria-hidden="true"
                               />
-                              <span
-                                className="hidden md:inline"
-                                aria-hidden="true"
-                              >
+                              <span className="hidden md:inline" aria-hidden="true">
                                 {item.label}
                               </span>
                               {/* Active gradient glow underneath */}

@@ -1,11 +1,15 @@
 import { format } from "date-fns";
 import { AlertTriangle, ChevronDown, Trash2 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { BristolBadge } from "@/components/track/panels/BristolScale";
 import { BOWEL_LOG_LABELS } from "@/components/track/panels/bowelConstants";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { getErrorMessage } from "@/lib/errors";
 import type { DigestiveLog, DigestiveLogData } from "@/types/domain";
 import {
@@ -26,9 +30,11 @@ import { useTodayLogActions } from "../TodayLogContext";
 import { useAutoEditEntry } from "../useAutoEditEntry";
 
 const SELECTED_CHIP_STYLE = {
-  backgroundColor: "color-mix(in srgb, var(--section-bowel) 20%, var(--color-bg-elevated) 80%)",
+  backgroundColor:
+    "color-mix(in srgb, var(--section-bowel) 20%, var(--color-bg-elevated) 80%)",
   border: "1px solid color-mix(in srgb, var(--section-bowel) 40%, transparent)",
-  color: "color-mix(in srgb, var(--section-bowel) 88%, var(--color-text-primary) 12%)",
+  color:
+    "color-mix(in srgb, var(--section-bowel) 88%, var(--color-text-primary) 12%)",
   boxShadow: "inset 0 1px 0 color-mix(in srgb, white 18%, transparent)",
 } as const;
 
@@ -53,15 +59,19 @@ export function DigestiveSubRow({ entry }: { entry: DigestiveLog }) {
   const [draftVolume, setDraftVolume] = useState("");
   const [draftAccident, setDraftAccident] = useState(false);
   const [draftNotes, setDraftNotes] = useState("");
-  const [draftDate, setDraftDate] = useState(() => format(entry.timestamp, "yyyy-MM-dd"));
-  const [draftTime, setDraftTime] = useState(() => format(entry.timestamp, "HH:mm"));
+  const [draftDate, setDraftDate] = useState(() =>
+    format(entry.timestamp, "yyyy-MM-dd"),
+  );
+  const [draftTime, setDraftTime] = useState(() =>
+    format(entry.timestamp, "HH:mm"),
+  );
 
   const Icon = getLogIcon(entry);
   const color = getLogColor(entry);
   const title = getLogTitle(entry, []);
   const notesText = getLogNotes(entry);
 
-  const seedDrafts = () => {
+  const seedDrafts = useCallback(() => {
     setDraftBristol(Number(entry.data?.bristolCode) || 0);
     setDraftEpisodes(Number(entry.data?.episodesCount) || 1);
     setDraftUrgency(String(entry.data?.urgencyTag ?? ""));
@@ -71,7 +81,7 @@ export function DigestiveSubRow({ entry }: { entry: DigestiveLog }) {
     setDraftNotes(String(entry.data?.notes ?? ""));
     setDraftDate(format(entry.timestamp, "yyyy-MM-dd"));
     setDraftTime(format(entry.timestamp, "HH:mm"));
-  };
+  }, [entry]);
 
   const handleToggleExpand = () => {
     if (!expanded) {
@@ -81,15 +91,23 @@ export function DigestiveSubRow({ entry }: { entry: DigestiveLog }) {
   };
 
   // Auto-open edit mode when this entry's ID matches the toast "Edit" target
-  useAutoEditEntry(entry.id, () => {
+  const handleAutoEdit = useCallback(() => {
     if (!expanded) {
       seedDrafts();
       setExpanded(true);
     }
-  });
+  }, [expanded, seedDrafts]);
+  useAutoEditEntry(entry.id, handleAutoEdit);
 
   const handleSave = async () => {
-    const bristolCode = (draftBristol || entry.data?.bristolCode) as 1 | 2 | 3 | 4 | 5 | 6 | 7;
+    const bristolCode = (draftBristol || entry.data?.bristolCode) as
+      | 1
+      | 2
+      | 3
+      | 4
+      | 5
+      | 6
+      | 7;
     let consistencyTag: string | undefined;
     if (draftBristol === 7) consistencyTag = "watery";
     else if (draftBristol === 6) consistencyTag = "loose";
@@ -112,7 +130,11 @@ export function DigestiveSubRow({ entry }: { entry: DigestiveLog }) {
       }),
     };
 
-    const newTimestamp = applyDateTimeToTimestamp(entry.timestamp, draftDate, draftTime);
+    const newTimestamp = applyDateTimeToTimestamp(
+      entry.timestamp,
+      draftDate,
+      draftTime,
+    );
 
     try {
       setSaving(true);
@@ -180,8 +202,12 @@ export function DigestiveSubRow({ entry }: { entry: DigestiveLog }) {
         <div className="min-w-0 flex-1">
           {/* Line 1: Title + Bristol badge */}
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-[var(--color-text-primary)]">{title}</span>
-            {!expanded && bristolCode > 0 && <BristolBadge code={bristolCode} />}
+            <span className="text-sm font-semibold text-[var(--color-text-primary)]">
+              {title}
+            </span>
+            {!expanded && bristolCode > 0 && (
+              <BristolBadge code={bristolCode} />
+            )}
           </div>
           {!expanded && (
             <>
@@ -205,7 +231,10 @@ export function DigestiveSubRow({ entry }: { entry: DigestiveLog }) {
                   >
                     {truncatePreviewText(notesText, 26)}
                   </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-[56ch] text-sm leading-snug">
+                  <TooltipContent
+                    side="top"
+                    className="max-w-[56ch] text-sm leading-snug"
+                  >
                     {notesText}
                   </TooltipContent>
                 </Tooltip>
@@ -215,7 +244,11 @@ export function DigestiveSubRow({ entry }: { entry: DigestiveLog }) {
         </div>
         <div className="flex flex-shrink-0 items-center gap-2">
           {entry.data?.accident && (
-            <span className="rounded-full bg-red-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-red-400">
+            <span
+              aria-label="Accident reported"
+              title="Accident"
+              className="rounded-full bg-red-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-red-400"
+            >
               !
             </span>
           )}
@@ -275,7 +308,11 @@ export function DigestiveSubRow({ entry }: { entry: DigestiveLog }) {
                     aria-label={`Type ${code}`}
                     aria-pressed={draftBristol === code}
                     className="flex h-7 w-7 items-center justify-center rounded-md text-xs font-bold transition-colors"
-                    style={draftBristol === code ? SELECTED_CHIP_STYLE : IDLE_CHIP_STYLE}
+                    style={
+                      draftBristol === code
+                        ? SELECTED_CHIP_STYLE
+                        : IDLE_CHIP_STYLE
+                    }
                   >
                     {code}
                   </button>
@@ -291,7 +328,9 @@ export function DigestiveSubRow({ entry }: { entry: DigestiveLog }) {
                   type="number"
                   min={1}
                   value={draftEpisodes}
-                  onChange={(e) => setDraftEpisodes(Math.max(1, Number(e.target.value) || 1))}
+                  onChange={(e) =>
+                    setDraftEpisodes(Math.max(1, Number(e.target.value) || 1))
+                  }
                   className="w-14 rounded-md border border-[var(--color-border-default)] bg-[var(--color-bg-overlay)] px-1.5 py-1 text-center text-xs text-[var(--color-text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--section-log)]"
                 />
                 <button
@@ -324,7 +363,9 @@ export function DigestiveSubRow({ entry }: { entry: DigestiveLog }) {
                     type="button"
                     onClick={() => setDraftUrgency(draftUrgency === v ? "" : v)}
                     className="rounded-md px-2 py-1 text-xs transition-colors"
-                    style={draftUrgency === v ? SELECTED_CHIP_STYLE : IDLE_CHIP_STYLE}
+                    style={
+                      draftUrgency === v ? SELECTED_CHIP_STYLE : IDLE_CHIP_STYLE
+                    }
                   >
                     {BOWEL_LOG_LABELS.urgency[v]}
                   </button>
@@ -336,17 +377,23 @@ export function DigestiveSubRow({ entry }: { entry: DigestiveLog }) {
                 <span className="w-14 text-xs font-medium text-[var(--color-text-tertiary)]">
                   Effort
                 </span>
-                {(["none", "some", "hard", "urgent-release"] as const).map((v) => (
-                  <button
-                    key={v}
-                    type="button"
-                    onClick={() => setDraftEffort(draftEffort === v ? "" : v)}
-                    className="rounded-md px-2 py-1 text-xs transition-colors"
-                    style={draftEffort === v ? SELECTED_CHIP_STYLE : IDLE_CHIP_STYLE}
-                  >
-                    {BOWEL_LOG_LABELS.effort[v]}
-                  </button>
-                ))}
+                {(["none", "some", "hard", "urgent-release"] as const).map(
+                  (v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setDraftEffort(draftEffort === v ? "" : v)}
+                      className="rounded-md px-2 py-1 text-xs transition-colors"
+                      style={
+                        draftEffort === v
+                          ? SELECTED_CHIP_STYLE
+                          : IDLE_CHIP_STYLE
+                      }
+                    >
+                      {BOWEL_LOG_LABELS.effort[v]}
+                    </button>
+                  ),
+                )}
               </div>
 
               {/* Volume */}
@@ -360,7 +407,9 @@ export function DigestiveSubRow({ entry }: { entry: DigestiveLog }) {
                     type="button"
                     onClick={() => setDraftVolume(draftVolume === v ? "" : v)}
                     className="rounded-md px-2 py-1 text-xs transition-colors"
-                    style={draftVolume === v ? SELECTED_CHIP_STYLE : IDLE_CHIP_STYLE}
+                    style={
+                      draftVolume === v ? SELECTED_CHIP_STYLE : IDLE_CHIP_STYLE
+                    }
                   >
                     {BOWEL_LOG_LABELS.volume[v]}
                   </button>
@@ -383,7 +432,9 @@ export function DigestiveSubRow({ entry }: { entry: DigestiveLog }) {
                 <button
                   type="button"
                   onClick={() => void handleSave()}
-                  disabled={saving}
+                  disabled={
+                    saving || (!draftBristol && !entry.data?.bristolCode)
+                  }
                   className="rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
                   style={SELECTED_CHIP_STYLE}
                 >
@@ -391,7 +442,9 @@ export function DigestiveSubRow({ entry }: { entry: DigestiveLog }) {
                 </button>
                 {confirmDelete ? (
                   <>
-                    <span className="text-xs text-[var(--color-text-secondary)]">Delete?</span>
+                    <span className="text-xs text-[var(--color-text-secondary)]">
+                      Delete?
+                    </span>
                     <button
                       type="button"
                       onClick={() => void handleDelete()}

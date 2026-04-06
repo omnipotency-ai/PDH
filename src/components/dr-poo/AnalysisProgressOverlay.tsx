@@ -39,9 +39,7 @@ export function AnalysisProgressOverlay({
     const safeError = sanitizeAiErrorForDisplay(error);
     const isTruncated = safeError.length > ERROR_TRUNCATE_LENGTH;
     const displayedError =
-      isTruncated && !showFullError
-        ? `${safeError.slice(0, ERROR_TRUNCATE_LENGTH)}...`
-        : safeError;
+      isTruncated && !showFullError ? `${safeError.slice(0, ERROR_TRUNCATE_LENGTH)}...` : safeError;
 
     return (
       <div

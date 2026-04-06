@@ -56,7 +56,7 @@
         "Typecheck passes",
         "All existing tests pass (update test fixtures to pass required `now` arg)"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -86,7 +86,7 @@
         "Typecheck passes",
         "All existing conversation tests pass"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -112,7 +112,7 @@
         "Typecheck passes",
         "Build succeeds"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -138,7 +138,7 @@
         "Typecheck passes",
         "Build succeeds"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -162,7 +162,7 @@
         "A name containing '<script>' or '</tag>' has those characters removed",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -196,7 +196,7 @@
         "Typecheck passes",
         "Build succeeds"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -230,7 +230,7 @@
         "Typecheck passes",
         "Build succeeds"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -255,7 +255,7 @@
         "Typecheck passes",
         "Existing nutrition store tests pass"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -287,7 +287,7 @@
         "Double-rapid-click cannot create duplicate log entries",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -314,7 +314,7 @@
         "Error message is descriptive",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -339,7 +339,7 @@
         "Valid timestamps within range pass through unchanged",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -365,7 +365,7 @@
         "Typecheck passes",
         "Existing foodEvidence tests pass (update test data if needed)"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -390,7 +390,7 @@
         "A console.warn is logged when truncation occurs",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -415,7 +415,7 @@
         "Clerk-specific domains are listed instead of wildcard",
         "Build succeeds"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run build"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -441,7 +441,7 @@
         "Typecheck passes",
         "All tests pass"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -472,7 +472,7 @@
         "Rate limit survives page reload",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -496,7 +496,7 @@
         "Failed deletes show toast.error with descriptive message",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -520,7 +520,7 @@
         "Surgery type is parameterized from health profile or uses sensible default",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -552,7 +552,7 @@
         "Streak celebration fires at 7, 14, 21 etc. (canonical behavior)",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -586,7 +586,7 @@
         "TileColorTint type exported from constants.ts",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -633,7 +633,7 @@
         "Doc comment and inline comments use same numbering",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -669,7 +669,7 @@
         "Typecheck passes",
         "No import-site breakage"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -700,7 +700,7 @@
         "Typecheck passes",
         "Build succeeds"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -724,7 +724,7 @@
         "Call sites use assessment.verdict directly",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -751,7 +751,7 @@
         "All import sites updated to use the canonical function",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -786,7 +786,7 @@
         "UI model name derived from constant, not hardcoded",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -810,7 +810,7 @@
         "Manual type enumeration deleted",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -835,7 +835,7 @@
         "foodParsing.ts ParsedFoodItem unchanged",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -860,7 +860,7 @@
         "Transit-map findings for deleted code are removed or archived",
         "JSON files are valid JSON after changes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": [],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -885,7 +885,7 @@
         "All import sites updated",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -909,7 +909,7 @@
         "Code logic is unchanged (only comments removed/cleaned)",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -932,7 +932,7 @@
         "No 'New entry.' placeholder strings remain in food registry data",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -955,7 +955,7 @@
         "Comment at or near foodEvidence.ts:L180 references correct import path or is removed",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -985,7 +985,7 @@
         "No import-site breakage (grep verified zero imports)",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -1015,7 +1015,7 @@
         "All consumers import from the owning module",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",

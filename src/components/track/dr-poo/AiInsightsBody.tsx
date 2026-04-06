@@ -1,14 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useRef, useState } from "react";
-import {
-  CopyReportButton,
-  DrPooReportDetails,
-} from "@/components/dr-poo/DrPooReport";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { CopyReportButton, DrPooReportDetails } from "@/components/dr-poo/DrPooReport";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import type { AiNutritionistInsight } from "@/types/domain";
 
 interface AiInsightsBodyProps {
@@ -25,10 +18,7 @@ export function AiInsightsBody({ insights }: AiInsightsBodyProps) {
       <Collapsible open={reportOpen} onOpenChange={setReportOpen}>
         <div className="flex items-center justify-end gap-2 pr-3">
           <CollapsibleTrigger asChild>
-            <button
-              type="button"
-              className="text-[11px] text-[var(--section-log)] hover:underline"
-            >
+            <button type="button" className="text-[11px] text-[var(--section-log)] hover:underline">
               {reportOpen ? "collapse report" : "expand report"}
             </button>
           </CollapsibleTrigger>
@@ -39,10 +29,7 @@ export function AiInsightsBody({ insights }: AiInsightsBodyProps) {
             </>
           )}
           <span className="text-[11px] text-[var(--text-faint)]">|</span>
-          <Link
-            to="/archive"
-            className="text-[11px] text-[var(--section-log)] hover:underline"
-          >
+          <Link to="/archive" className="text-[11px] text-[var(--section-log)] hover:underline">
             see full report archive
           </Link>
         </div>
