@@ -70,12 +70,23 @@ function safeString(value: unknown): string | undefined {
 /**
  * Parse digestive/bowel event log data.
  * Returns null if data is not a valid object.
+ * Bristol Stool Scale codes are integers 1-7 only; out-of-range or non-integer
+ * values are coerced to undefined rather than passed downstream.
  */
 export function parseDigestiveData(data: unknown): ParsedDigestiveData | null {
   if (!isRecord(data)) return null;
 
+  const rawBristol = safeNumber(data.bristolCode);
+  const bristolCode =
+    rawBristol !== undefined &&
+    Number.isInteger(rawBristol) &&
+    rawBristol >= 1 &&
+    rawBristol <= 7
+      ? rawBristol
+      : undefined;
+
   return {
-    bristolCode: safeNumber(data.bristolCode),
+    bristolCode,
     urgency: safeString(data.urgency),
     effort: safeString(data.effort),
     episodesCount: safeNumber(data.episodesCount),

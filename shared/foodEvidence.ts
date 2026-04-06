@@ -414,7 +414,7 @@ function normalizeDigestiveCategory(parsed: {
     if (bristol === 2) return "hard";
     if (bristol >= 3 && bristol <= 5) return "firm";
     if (bristol === 6) return "loose";
-    if (bristol >= 7) return "diarrhea";
+    if (bristol === 7) return "diarrhea";
   }
 
   const urgency = (parsed.urgency ?? "").trim().toLowerCase();
@@ -440,6 +440,15 @@ function buildDigestiveEvents(logs: FoodEvidenceLog[]): DigestiveEvent[] {
     if (!category) continue;
     const episodes = Math.max(1, parsed.episodesCount ?? 1);
     const bristolCode = parsed.bristolCode;
+    if (
+      bristolCode !== undefined &&
+      (!Number.isInteger(bristolCode) || bristolCode < 1 || bristolCode > 7)
+    ) {
+      console.warn(
+        `[foodEvidence] Skipping digestion log ${log.id}: bristol code ${bristolCode} is out of range 1-7`,
+      );
+      continue;
+    }
     for (let index = 0; index < episodes; index += 1) {
       events.push({
         id: `${log.id}-${index}`,
