@@ -22,6 +22,27 @@
 
 ## Active: Tech-Debt Audit Cleanup
 
+### W4-07 — Add .take() caps to unbounded aggregate/exposure/assessment queries (2026-04-06 20:28)
+
+- **Commit:** `4aa2254`
+- **Files:** `convex/aggregateQueries.ts`, `convex/foodAssessments.ts`, `convex/ingredientExposures.ts`, `convex/aggregateQueries.test.ts`, `convex/foodAssessments.test.ts`, `src/hooks/useAnalyzedFoodStats.ts`, `src/hooks/useAiInsights.ts`
+- **What:** Replaced all unbounded .collect() with .take() caps: allFoodTrials(500), foodTrialsByStatus(200), allFoods(2000+isTruncated), culprits(500/verdict), byReport(200). Added console.warn when caps are reached. Updated callers and tests for new { trials/foods, isTruncated } return shapes.
+- **Decisions:** allFoodTrials and allFoods return { data, isTruncated } matching the existing ingredientExposures pattern. foodTrialsByStatus returns the array directly (no isTruncated) since it is a narrower filtered query. Remaining .collect() calls in other files are acceptable (narrow index lookups, internal mutations, or intentional full-export like backup).
+
+### W4-08 — Break mergeDuplicates into phased mutations (2026-04-06 20:28)
+
+- **Commit:** `1797524`
+- **Files:** `convex/foodLibrary.ts`, `convex/foodLibrary.test.ts`, `src/lib/syncFood.ts`
+- **What:** Converted `mergeDuplicates` from a monolithic public mutation to an action orchestrating 7 phased internal mutations (one per table: foodAssessments, ingredientExposures, ingredientOverrides, ingredientProfiles, foodLibrary, foodLogs, trialSummaries). Each phase uses row-count caps (PHASE_ROW_CAP=2000) to prevent exceeding Convex per-mutation transaction limits. Updated client hook from `useMutation` to `useAction`.
+- **Decisions:** Kept all phases in the same file (no `"use node"` needed since the action only orchestrates `ctx.runMutation` calls). PHASE_BATCH_SIZE=100 defined but food logs phase retains its existing 5000-row safety cap for reads (patches are bounded by actual matches). The `buildMergeMap` validation runs as pure computation in the action before any DB work.
+
+### W4-04 — Add limit argument to conversations.listByDateRange (2026-04-06 20:25)
+
+- **Commit:** `5e3b5e5`
+- **Files:** `convex/conversations.ts`, `src/lib/syncWeekly.ts`, `src/components/track/dr-poo/ConversationPanel.tsx`
+- **What:** Added `limit: v.optional(v.number())` arg to `listByDateRange` query (default 500, clamped 1-500). Replaced `.collect()` with `.take(limit)` to prevent unbounded result sets. Updated `useConversationsByDateRange` hook to accept and forward optional limit. ConversationPanel now passes explicit cap of 300.
+- **Decisions:** Chose 300 for ConversationPanel (reasonable for a half-week chat window). Other callers (useAiInsights, useWeeklySummaryAutoTrigger) inherit the server default of 500 — sufficient for their bounded date ranges.
+
 ### W3-07 security — Remaining fixes: comorbidities sanitization, shared aiUtils, 401/429 error classification (2026-04-06 19:52)
 
 - **Commit:** `1dcbfa5`
