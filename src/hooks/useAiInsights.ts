@@ -70,7 +70,7 @@ export function useAiInsights() {
   const markInsightRun = useStore((state) => state.markInsightRun);
 
   // Use shared logs from context instead of creating a duplicate subscription
-  const logs = useSyncedLogsContext();
+  const { logs, isLoading } = useSyncedLogsContext();
 
   // Fetch last N successful analyses for conversation context
   const analysisHistory = useAiAnalysisHistory(REPORT_HISTORY_COUNT);
@@ -158,6 +158,7 @@ export function useAiInsights() {
   const runAnalysis = useCallback(
     async (runOptions?: FetchAiInsightsOptions) => {
       if (!apiKey) return;
+      if (isLoading) return;
       // Guard: skip if a request is already in flight
       if (loadingRef.current) return;
 
@@ -339,7 +340,15 @@ export function useAiInsights() {
         loadingRef.current = false;
       }
     },
-    [apiKey, callAi, setAiAnalysisStatus, addAiAnalysis, claimPendingReplies, markInsightRun],
+    [
+      apiKey,
+      callAi,
+      setAiAnalysisStatus,
+      addAiAnalysis,
+      claimPendingReplies,
+      markInsightRun,
+      isLoading,
+    ],
   );
 
   // Background trigger (after logging bowel movement) — cooldown-gated, Bristol-aware.

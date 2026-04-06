@@ -36,7 +36,7 @@ interface WeightEntryDrawerProps {
 }
 
 export function WeightEntryDrawer({ onLogWeightKg, habit, onHide }: WeightEntryDrawerProps) {
-  const logs = useSyncedLogsContext();
+  const { logs } = useSyncedLogsContext();
   const { healthProfile, setHealthProfile } = useHealthProfile();
   const { unitSystem } = useUnitSystem();
 

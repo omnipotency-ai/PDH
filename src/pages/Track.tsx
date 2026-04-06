@@ -115,7 +115,7 @@ function getActivityHabitLogValue(habit: HabitConfig, durationMinutes: number): 
 }
 
 export default function TrackPage() {
-  const logs = useSyncedLogsContext();
+  const { logs } = useSyncedLogsContext();
   const addSyncedLog = useAddSyncedLog();
   const removeSyncedLog = useRemoveSyncedLog();
   const updateSyncedLog = useUpdateSyncedLog();

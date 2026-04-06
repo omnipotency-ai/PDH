@@ -76,7 +76,7 @@ function findLogsNeedingLlmMatching(logs: SyncedLog[], nowMs: number): (FoodLog 
  * Each log is only sent once per component mount.
  */
 export function useFoodLlmMatching(): void {
-  const logs = useSyncedLogsContext();
+  const { logs } = useSyncedLogsContext();
   const { hasApiKey } = useApiKeyContext();
   const matchItems = useAction(api.foodLlmMatching.matchUnresolvedItems);
 

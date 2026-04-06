@@ -165,7 +165,7 @@ function useTodayKey(): string {
 // ---------------------------------------------------------------------------
 
 export function useNutritionData(targetDate?: Date): NutritionData {
-  const logs = useSyncedLogsContext();
+  const { logs } = useSyncedLogsContext();
   const { dailyCalorieGoal, dailyWaterGoalMl } = useNutritionGoals();
 
   // Stable "today" key that updates on day boundaries (midnight timer +

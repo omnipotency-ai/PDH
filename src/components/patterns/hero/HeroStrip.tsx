@@ -9,7 +9,7 @@ type DigestionLog = Extract<SyncedLog, { type: "digestion" }>;
 // ── Component ────────────────────────────────────────────────────────────────
 
 export function HeroStrip() {
-  const logs = useSyncedLogsContext();
+  const { logs } = useSyncedLogsContext();
   const digestionLogs = useMemo(
     () => logs.filter((log): log is DigestionLog => log.type === "digestion"),
     [logs],

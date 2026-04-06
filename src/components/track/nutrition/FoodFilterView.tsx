@@ -69,7 +69,7 @@ export function FoodFilterView({
   onBack,
 }: FoodFilterViewProps) {
   const [activeTab, setActiveTab] = useState<FilterTab>("recent");
-  const logs = useSyncedLogsContext();
+  const { logs } = useSyncedLogsContext();
 
   // Build the "All" list: every canonical food in FOOD_PORTION_DATA, sorted alphabetically.
   // Fix #27: slice applied inside memo rather than in displayedItems.

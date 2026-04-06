@@ -1,10 +1,17 @@
+import { useQuery } from "convex/react";
 import { createContext, type ReactNode, useContext, useEffect, useMemo } from "react";
 import { useHabits } from "@/hooks/useProfile";
 import { rebuildHabitLogsFromSyncedLogs } from "@/lib/derivedHabitLogs";
-import { type SyncedLog, useSyncedLogsByRange } from "@/lib/sync";
+import { type SyncedLog, toSyncedLogs } from "@/lib/sync";
 import { useStore } from "@/store";
+import { api } from "../../convex/_generated/api";
 
-const SyncedLogsContext = createContext<SyncedLog[] | null>(null);
+export interface SyncedLogsContextValue {
+  logs: SyncedLog[];
+  isLoading: boolean;
+}
+
+const SyncedLogsContext = createContext<SyncedLogsContextValue | null>(null);
 
 /** Day-granularity key so the date boundaries stay stable within a single calendar day. */
 function todayDayKey(): string {
@@ -29,7 +36,13 @@ export function SyncedLogsProvider({ children }: { children: ReactNode }) {
   // End of today = start of tomorrow (exclusive upper bound)
   const endOfTodayMs = endOfToday.getTime();
 
-  const logs = useSyncedLogsByRange(fourteenDaysAgoMs, endOfTodayMs);
+  const rawLogs = useQuery(api.logs.listByRange, {
+    startMs: fourteenDaysAgoMs,
+    endMs: endOfTodayMs,
+    limit: 5000,
+  });
+  const isLoading = rawLogs === undefined;
+  const logs = useMemo(() => toSyncedLogs(rawLogs), [rawLogs]);
   const { habits } = useHabits();
   const habitLogs = useStore((state) => state.habitLogs);
   const setHabitLogs = useStore((state) => state.setHabitLogs);
@@ -38,6 +51,7 @@ export function SyncedLogsProvider({ children }: { children: ReactNode }) {
     () => rebuildHabitLogsFromSyncedLogs(logs, habits),
     [logs, habits],
   );
+  const value = useMemo(() => ({ logs, isLoading }), [logs, isLoading]);
 
   useEffect(() => {
     const isSame =
@@ -56,10 +70,10 @@ export function SyncedLogsProvider({ children }: { children: ReactNode }) {
     }
   }, [derivedHabitLogs, habitLogs, setHabitLogs]);
 
-  return <SyncedLogsContext.Provider value={logs}>{children}</SyncedLogsContext.Provider>;
+  return <SyncedLogsContext.Provider value={value}>{children}</SyncedLogsContext.Provider>;
 }
 
-export function useSyncedLogsContext(): SyncedLog[] {
+export function useSyncedLogsContext(): SyncedLogsContextValue {
   const ctx = useContext(SyncedLogsContext);
   if (ctx === null) {
     throw new Error("useSyncedLogsContext must be used within SyncedLogsProvider");

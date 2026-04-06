@@ -29,49 +29,7 @@ function getAudioContext(): AudioContext | null {
   }
 }
 
-function playNote(
-  ctx: AudioContext,
-  frequency: number,
-  startTime: number,
-  duration: number,
-  gain: number,
-  type: OscillatorType = "sine",
-): void {
-  const osc = ctx.createOscillator();
-  const gainNode = ctx.createGain();
-  osc.type = type;
-  osc.frequency.setValueAtTime(frequency, startTime);
-  gainNode.gain.setValueAtTime(gain, startTime);
-  gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-  osc.connect(gainNode);
-  gainNode.connect(ctx.destination);
-  osc.start(startTime);
-  osc.stop(startTime + duration);
-}
-
-type SoundVariant = "ding" | "chime" | "sparkle" | "milestone" | "goalComplete";
-
-export function playSound(variant: SoundVariant): void {
-  // Respect prefers-reduced-motion: skip sound entirely if user prefers reduced motion.
-  if (
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches
-  )
-    return;
-
-  const ctx = getAudioContext();
-  if (!ctx) return;
-
-  // Resume context if suspended (autoplay policy).
-  // Await resume before scheduling oscillators so they don't fire on a suspended context.
-  if (ctx.state === "suspended") {
-    ctx.resume().catch((err) => {
-      console.warn("AudioContext resume failed:", err);
-    });
-    // If still suspended after resume attempt, bail out.
-    if (ctx.state === "suspended") return;
-  }
-
+function scheduleNotes(ctx: AudioContext, variant: SoundVariant): void {
   const now = ctx.currentTime;
 
   switch (variant) {
@@ -113,4 +71,52 @@ export function playSound(variant: SoundVariant): void {
       break;
     }
   }
+}
+
+function playNote(
+  ctx: AudioContext,
+  frequency: number,
+  startTime: number,
+  duration: number,
+  gain: number,
+  type: OscillatorType = "sine",
+): void {
+  const osc = ctx.createOscillator();
+  const gainNode = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(frequency, startTime);
+  gainNode.gain.setValueAtTime(gain, startTime);
+  gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+  osc.connect(gainNode);
+  gainNode.connect(ctx.destination);
+  osc.start(startTime);
+  osc.stop(startTime + duration);
+}
+
+type SoundVariant = "ding" | "chime" | "sparkle" | "milestone" | "goalComplete";
+
+export function playSound(variant: SoundVariant): void {
+  // Respect prefers-reduced-motion: skip sound entirely if user prefers reduced motion.
+  if (
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  )
+    return;
+
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  if (ctx.state === "suspended") {
+    void ctx
+      .resume()
+      .then(() => {
+        scheduleNotes(ctx, variant);
+      })
+      .catch((err) => {
+        console.warn("AudioContext resume failed:", err);
+      });
+    return;
+  }
+
+  scheduleNotes(ctx, variant);
 }
