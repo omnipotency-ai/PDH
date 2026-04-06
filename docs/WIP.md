@@ -20,6 +20,13 @@
 
 <!-- Implementer agents: prepend new entries HERE, above the completed summaries -->
 
+### W1-12 — Standardize review-findings severity taxonomy (2026-04-06 00:00)
+
+- **Commit:** TBD
+- **Files:** All 30 `scripts/ship/review-findings*.json` files
+- **What:** Standardized severity to CRITICAL/HIGH/MODERATE/NICE-TO-HAVE across all 30 review-findings files. Mapped 29 LOW -> NICE-TO-HAVE and 3 NICE_TO_HAVE (underscore) -> NICE-TO-HAVE. Archived 59 findings that reference deleted files (transit-map components, reproductive health code, waitlist, and other removed files), adding `archived: true` and `archiveReason` fields. Recomputed all summary counts to reflect active-only findings plus an `archived` count where relevant.
+- **Decisions:** Archived rather than deleted findings for deleted-file references, to preserve audit history. `low` key removed from summaries in files that had it (pr5-convex-backend, pr5-ui-components, total-eclipse-\*). Non-count summary fields (e.g., `notes` array in pr5-ui-components) are preserved.
+
 ---
 
 ## Completed Initiatives

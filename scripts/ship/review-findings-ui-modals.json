@@ -1,7 +1,7 @@
 {
   "branch": "codex/chore/food-registry",
   "reviewed_at": "2026-03-16T10:30:00Z",
-  "review_scope": "Commit dc18279 — FoodMatchingModal, RawInputEditModal, FoodSubRow, Track.tsx",
+  "review_scope": "Commit dc18279 \u2014 FoodMatchingModal, RawInputEditModal, FoodSubRow, Track.tsx",
   "files_reviewed": [
     "src/components/track/FoodMatchingModal.tsx",
     "src/components/track/RawInputEditModal.tsx",
@@ -15,7 +15,7 @@
       "category": "performance",
       "file": "src/components/track/FoodMatchingModal.tsx",
       "line": 95,
-      "title": "Convex subscription churn — every distinct search keystroke creates a new live subscription",
+      "title": "Convex subscription churn \u2014 every distinct search keystroke creates a new live subscription",
       "description": "useQuery creates a live Convex subscription for each distinct set of arguments. With deferredSearchQuery updating on each trim-distinct keystroke, the modal accumulates subscriptions during a search session. useDeferredValue helps batch React renders but does NOT prevent Convex from opening a subscription per distinct query string. Additionally, the default limit of 160 when no search query and no bucket are active is large for a scrollable list in a modal.",
       "fix": "Add a debounce hook (300ms) between the raw search query and the value passed to useQuery. This collapses rapid keystrokes into a single subscription. Also consider reducing the default limit from 160 to 50-80.",
       "implemented": false
@@ -70,14 +70,14 @@
       "category": "quality",
       "file": "src/components/track/RawInputEditModal.tsx",
       "line": 85,
-      "title": "processLog mutation removed — docstring still claims server reprocessing is triggered",
+      "title": "processLog mutation removed \u2014 docstring still claims server reprocessing is triggered",
       "description": "The explicit processLog mutation call was removed. The docstring (lines 5-9) still says the pipeline is re-triggered from Stage 1. If processLog was the only reprocessing mechanism, items: [] alone may not trigger it, making the Reprocessing toast misleading.",
       "fix": "Verify that updating the log with items: [] triggers server-side reprocessing. Update the docstring to reflect the actual mechanism.",
       "implemented": false
     },
     {
       "id": "FM-007",
-      "severity": "LOW",
+      "severity": "NICE-TO-HAVE",
       "category": "quality",
       "file": "src/components/track/today-log/editors/FoodSubRow.tsx",
       "line": 560,
@@ -88,18 +88,18 @@
     },
     {
       "id": "FM-008",
-      "severity": "LOW",
+      "severity": "NICE-TO-HAVE",
       "category": "quality",
       "file": "src/pages/Track.tsx",
       "line": 292,
-      "title": "useFoodLlmMatching hook removed — dead code left behind",
+      "title": "useFoodLlmMatching hook removed \u2014 dead code left behind",
       "description": "The hook was removed from Track.tsx but the file src/hooks/useFoodLlmMatching.ts still exists. If LLM matching is now server-side, the hook file is dead code.",
       "fix": "Delete src/hooks/useFoodLlmMatching.ts if LLM matching is fully server-side. If still needed, document why it was removed from Track.",
       "implemented": false
     },
     {
       "id": "FM-009",
-      "severity": "LOW",
+      "severity": "NICE-TO-HAVE",
       "category": "quality",
       "file": "src/pages/Track.tsx",
       "line": 161,
@@ -113,8 +113,7 @@
     "critical": 0,
     "high": 2,
     "moderate": 4,
-    "low": 3,
-    "nice_to_have": 0
+    "nice_to_have": 3
   },
   "positive_observations": [
     "Good use of useDeferredValue for search query batching at the React render level",

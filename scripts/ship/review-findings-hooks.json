@@ -26,7 +26,7 @@
       "category": "convex",
       "file": "src/hooks/usePendingReplies.ts",
       "line": 19,
-      "title": "Date.now() passed as a mutation arg from the client — timestamp can be spoofed",
+      "title": "Date.now() passed as a mutation arg from the client \u2014 timestamp can be spoofed",
       "description": "addReply() sends { content, timestamp: Date.now() } to the addUserMessage mutation. The mutation accepts this client-supplied timestamp verbatim. A user (or a broken clock) can write any timestamp into the conversations table, poisoning any time-range query that relies on it. The mutation's args already accept timestamp: v.number() with no server-side sanity check.",
       "fix": "Let the mutation set its own timestamp via Date.now() on the server side (inside the mutation handler), or validate that the client-supplied value is within an acceptable range of the server's current time. Do not trust the client for any timestamp used as a data boundary.",
       "implemented": false
@@ -37,7 +37,7 @@
       "category": "convex",
       "file": "src/hooks/usePendingReplies.ts",
       "line": 15,
-      "title": "Raw ctx.auth.getUserIdentity() used in addUserMessage mutation — legacy auth pattern",
+      "title": "Raw ctx.auth.getUserIdentity() used in addUserMessage mutation \u2014 legacy auth pattern",
       "description": "The addUserMessage mutation (convex/conversations.ts line 15) calls ctx.auth.getUserIdentity() directly rather than using requireAuth(ctx) from convex/lib/auth.ts. CLAUDE.md flags this as a HIGH legacy pattern that needs migrating. The hook calls this mutation, so any caller inherits the weaker auth path.",
       "fix": "Replace the raw getUserIdentity() call in convex/conversations.ts addUserMessage with requireAuth(ctx), consistent with the rest of the codebase.",
       "implemented": false
@@ -51,7 +51,9 @@
       "title": "Module-level cache (_staticCache, _browserCache) is never invalidated",
       "description": "Both _staticCache and _browserCache are module-level singletons that are set once and never cleared. This is intentional for production, but it means that in test environments, hot-module replacement (HMR), or storybook, stale geometry from a previous registry version is silently returned for the remainder of the process lifetime. If STATION_SPECS or LINE_PATHS is updated at runtime (e.g. during development), callers will never see the new values without a full page reload.",
       "fix": "This is acceptable in production. Add a comment making the limitation explicit, and expose a resetGeometryCache() function for test environments. Alternatively, wrap the caches in a WeakRef-keyed structure so tests can clear them.",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "FH004",
@@ -62,7 +64,9 @@
       "title": "interpolateStationsBrowser appends a hidden SVG to document.body but does not clean up on error",
       "description": "The browser interpolation function appends a temporary SVG element to document.body for path length calculations. It removes the element at line 695 on the happy path. If any exception is thrown between appendChild (line 665) and removeChild (line 695), the SVG is leaked into the DOM permanently. getTotalLength() can throw on malformed paths.",
       "fix": "Wrap the DOM mutation section in a try/finally block and call removeChild in the finally clause.",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "FH005",
@@ -82,7 +86,7 @@
       "file": "src/hooks/useWeeklySummaryAutoTrigger.ts",
       "line": 130,
       "title": "generate() closes over startMs/endMs from render scope, not from refs",
-      "description": "generate is defined with useCallback and lists startMs, endMs, and periodLabel in its dep array, meaning it is recreated whenever those values change. However, the function also reads conversationsRef/logsRef which are updated on every render. If a re-render changes startMs (see FH005), a new generate() is created and the useEffect fires again. The generatedForPeriodRef guard prevents double-fire only for the same startMs value — a new startMs will pass the guard and fire a second generation.",
+      "description": "generate is defined with useCallback and lists startMs, endMs, and periodLabel in its dep array, meaning it is recreated whenever those values change. However, the function also reads conversationsRef/logsRef which are updated on every render. If a re-render changes startMs (see FH005), a new generate() is created and the useEffect fires again. The generatedForPeriodRef guard prevents double-fire only for the same startMs value \u2014 a new startMs will pass the guard and fire a second generation.",
       "fix": "If startMs is memoized (FH005 fix), this is largely resolved. Additionally, store startMs and endMs in refs inside generate so they cannot drift between render and async completion.",
       "implemented": false
     },
@@ -92,7 +96,7 @@
       "category": "correctness",
       "file": "src/hooks/useHabitLog.ts",
       "line": 248,
-      "title": "useStore.getState() called inside an async callback to guard duplicate habitLog writes — race condition",
+      "title": "useStore.getState() called inside an async callback to guard duplicate habitLog writes \u2014 race condition",
       "description": "handleLogSleepQuickCapture reads useStore.getState().habitLogs to check for duplicate entries (lines 249-264, 266-280) after awaiting addSyncedLog. Between the await and the read, another render could have already added the habit log. The guard pattern works in the synchronous case but is not reliable across an async gap because Zustand state can change between the await resumption and the .getState() call.",
       "fix": "Generate the habitLog id before the async call and use that pre-generated id to do a definitive idempotency check (or remove the duplicate guard and let the store deduplicate by id). Alternatively, move the addHabitLog call to before the await, accepting that the optimistic local state is written first.",
       "implemented": false
@@ -125,10 +129,12 @@
       "category": "correctness",
       "file": "src/hooks/useTransitMapZoom.ts",
       "line": 101,
-      "title": "useTransitMapZoom initialises state from geometry.zoomLevels.overview — stale if geometry reference changes",
+      "title": "useTransitMapZoom initialises state from geometry.zoomLevels.overview \u2014 stale if geometry reference changes",
       "description": "useState is initialised once with geometry.zoomLevels.overview on mount. If the geometry prop reference changes (e.g. in tests or if the cache is ever cleared), the currentZoom state still holds the old ZoomLevel object and transformStyle will be computed from stale coordinates. The subsequent zoom callbacks do update correctly because they read geometry from the closure, but the initial state does not follow.",
       "fix": "This is low-risk in production because geometry is cached. However, add a useEffect that resets currentZoom to geometry.zoomLevels.overview if geometry changes identity, guarded by a ref to avoid the reset on every render.",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "FH011",
@@ -136,10 +142,12 @@
       "category": "simplicity",
       "file": "src/hooks/useTransitMapData.ts",
       "line": 69,
-      "title": "firstSeenAt is hardcoded to lastTrialAt with a TODO — type definition and data model are misaligned",
+      "title": "firstSeenAt is hardcoded to lastTrialAt with a TODO \u2014 type definition and data model are misaligned",
       "description": "Two identical TODO comments (lines 69-73 and 94-98) acknowledge that firstSeenAt is always set to lastTrialAt because FoodStat lacks a firstSeenAt field. This means the field is structurally required by TransitStation but carries no real data. Every consumer that displays 'first seen' will show the same date as 'last trial'. The correct fix is known but not tracked as a work queue item.",
       "fix": "Either (a) add firstSeenAt to FoodStat/analyzeLogs output and derive it from the earliest log, or (b) make firstSeenAt optional in TransitStation and remove the dummy value. Add a WQ item to track this.",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "FH012",
@@ -150,7 +158,9 @@
       "title": "lineGroup() duplicated verbatim in useTransitMapZoom.ts as lineToGroup()",
       "description": "The mapping from FoodLine to FoodGroup is implemented twice: lineGroup() in useTransitMapGeometry.ts and lineToGroup() in useTransitMapZoom.ts. They are identical except for the return value when the line is in the seasoning corridor (lineToGroup handles it exhaustively; lineGroup just falls through to return 'seasoning'). This duplication will diverge if a new FoodLine is added.",
       "fix": "Export a single lineToGroup() (the exhaustive version) from a shared utility (e.g. shared/foodRegistry.ts) and import it in both hook files. Remove the duplicate.",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "FH013",
@@ -158,7 +168,7 @@
       "category": "correctness",
       "file": "src/hooks/useUnresolvedFoodQueue.ts",
       "line": 27,
-      "title": "foodData cast to FoodLogData without type guard — can panic on malformed data",
+      "title": "foodData cast to FoodLogData without type guard \u2014 can panic on malformed data",
       "description": "Line 27 does `const foodData = log.data as FoodLogData`. SyncedLog.data is typed loosely, and the cast bypasses any runtime check. If log.data.items is undefined (e.g. a log saved by an older schema version before items was required), the `for` loop on line 32 will throw a TypeError at runtime.",
       "fix": "Add a guard: `if (!Array.isArray(foodData?.items)) continue;` before the inner loop.",
       "implemented": false
@@ -169,7 +179,7 @@
       "category": "simplicity",
       "file": "src/hooks/useHabitStreaks.ts",
       "line": 28,
-      "title": "last7DaysRange computes via noon-anchored Date construction — unnecessarily indirect",
+      "title": "last7DaysRange computes via noon-anchored Date construction \u2014 unnecessarily indirect",
       "description": "The range is computed by constructing a Date at T12:00:00, then calling formatLocalDateKey to extract the YYYY-MM-DD string again. Noon anchoring is used to avoid DST boundary issues, which is sound, but the indirection obscures intent. A direct string-manipulation approach (subtract 6 days from a date key) would be equally safe and more readable.",
       "fix": "Minor readability improvement only. Consider extracting an addDaysToDateKey(key, n) utility in dateUtils.ts that works on date key strings directly.",
       "implemented": false
@@ -188,8 +198,9 @@
   ],
   "summary": {
     "critical": 0,
-    "high": 4,
-    "moderate": 9,
-    "nice_to_have": 2
+    "high": 2,
+    "moderate": 6,
+    "nice_to_have": 2,
+    "archived": 5
   }
 }

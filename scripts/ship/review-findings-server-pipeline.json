@@ -1,7 +1,7 @@
 {
   "branch": "codex/chore/food-registry",
   "reviewed_at": "2026-03-16T10:15:00Z",
-  "review_scope": "Commit dc18279 — convex/schema.ts, convex/validators.ts, convex/foodLlmMatching.ts, convex/foodParsing.ts, src/types/domain.ts",
+  "review_scope": "Commit dc18279 \u2014 convex/schema.ts, convex/validators.ts, convex/foodLlmMatching.ts, convex/foodParsing.ts, src/types/domain.ts",
   "files_reviewed": [
     "convex/schema.ts",
     "convex/validators.ts",
@@ -39,7 +39,7 @@
       "file": "convex/foodParsing.ts",
       "line": 948,
       "title": "processEvidence patches the log document twice; second patch overwrites the first",
-      "description": "processEvidence patches the log at line 949 (setting evidenceProcessedAt), then returns early if items are empty (line 952), or patches again at line 973 (setting items + evidenceProcessedAt). The first patch is immediately overwritten by the second when items exist. This is wasteful (two DB writes in one mutation) and the control flow is fragile — the early return on line 952 depends on the first patch already having persisted evidenceProcessedAt.",
+      "description": "processEvidence patches the log at line 949 (setting evidenceProcessedAt), then returns early if items are empty (line 952), or patches again at line 973 (setting items + evidenceProcessedAt). The first patch is immediately overwritten by the second when items exist. This is wasteful (two DB writes in one mutation) and the control flow is fragile \u2014 the early return on line 952 depends on the first patch already having persisted evidenceProcessedAt.",
       "fix": "Remove the first patch (lines 949-951). Check for empty items before any patches. Do a single patch at the end that atomically sets both evidenceProcessedAt and the updated items.",
       "implemented": false
     },
@@ -49,7 +49,7 @@
       "category": "security",
       "file": "convex/foodParsing.ts",
       "line": 898,
-      "title": "applyLlmResults is a no-op stub but matchUnresolvedItems still calls it — silent data loss",
+      "title": "applyLlmResults is a no-op stub but matchUnresolvedItems still calls it \u2014 silent data loss",
       "description": "The applyLlmResults mutation (line 898-933) has an empty handler body. However, foodLlmMatching.ts line 527 still calls internal.foodParsing.applyLlmResults with real resolved/unresolved items. The matchUnresolvedItems action is still a public action callable from the client. This means: (1) a user triggers LLM matching, (2) OpenAI processes the request and returns results, (3) the results are silently discarded by the no-op handler. The user sees no error but their food items are never resolved. This is silent data loss.",
       "fix": "Either (a) remove the matchUnresolvedItems action export from foodLlmMatching.ts to prevent the client from calling the dead path, or (b) have the no-op handler throw an explicit error so the client knows the path is deprecated, or (c) restore the handler if the legacy path is still needed during migration.",
       "implemented": false
@@ -115,7 +115,7 @@
       "category": "security",
       "file": "convex/foodParsing.ts",
       "line": 395,
-      "title": "searchFoods public query accepts limit up to 200 — excessive for UI autocomplete",
+      "title": "searchFoods public query accepts limit up to 200 \u2014 excessive for UI autocomplete",
       "description": "The searchFoods query (lines 395-418) clamps the limit to 200. This is a public query callable from the client. For a food search autocomplete dropdown, 200 results is far more than needed and increases payload size and client processing time unnecessarily.",
       "fix": "Lower the max limit to 20-30, which is sufficient for autocomplete/dropdown UI. If a specific use case needs more, create a separate paginated query.",
       "implemented": false
@@ -133,18 +133,18 @@
     },
     {
       "id": "F012",
-      "severity": "LOW",
+      "severity": "NICE-TO-HAVE",
       "category": "quality",
       "file": "convex/foodLlmMatching.ts",
       "line": 505,
-      "title": "recoveryStage type narrowed from number to 1|2|3 — correct improvement",
+      "title": "recoveryStage type narrowed from number to 1|2|3 \u2014 correct improvement",
       "description": "The single-line change narrows recoveryStage from `number | null` to `1 | 2 | 3 | null`, matching the actual domain constraint. Runtime behavior is unchanged since getFoodZone already returns 1|2|3|null.",
       "fix": "No action needed. Positive change.",
       "implemented": true
     },
     {
       "id": "F013",
-      "severity": "LOW",
+      "severity": "NICE-TO-HAVE",
       "category": "quality",
       "file": "convex/foodParsing.ts",
       "line": 569,
@@ -155,7 +155,7 @@
     },
     {
       "id": "F014",
-      "severity": "LOW",
+      "severity": "NICE-TO-HAVE",
       "category": "quality",
       "file": "convex/foodParsing.ts",
       "line": 131,
@@ -180,6 +180,6 @@
     "resolveItem validates canonicalName against isCanonicalFood before accepting user resolution, preventing arbitrary strings from entering the evidence pipeline.",
     "The evidence window pattern (6-hour delay via scheduler) is a sound design for batch evidence creation.",
     "Convex validators are used throughout for runtime arg validation on all internal and public functions.",
-    "The embedding staleness check via embeddingSourceHash is a good design — it allows incremental refresh when registry metadata changes without rebuilding all embeddings."
+    "The embedding staleness check via embeddingSourceHash is a good design \u2014 it allows incremental refresh when registry metadata changes without rebuilding all embeddings."
   ]
 }

@@ -17,7 +17,7 @@
       "file": "convex/validators.ts",
       "line": 450,
       "title": "reproductiveHealthValidator and reproductiveHealth field survive the PR",
-      "description": "The PR strips the reproductive health UI (ReproForm, CycleHormonalSection, ReproductiveGroupRow, etc.) but leaves the full reproductiveHealthValidator (lines 450–490) and its embedding inside healthProfileValidator (line 570) completely intact in validators.ts. The validator is large (~41 fields), remains exported, and is part of the stored schema shape via healthProfileValidator → profiles table. This is not a forward-compatibility concern — the UI is gone so no new data will be written to these fields — but the validator is dead weight that misleads future developers into thinking the feature is still live. It also bloats every replaceProfile and patchProfile call with a large object the UI no longer sends. The validator should be stripped down to just the fields still needed by the AI prompt (e.g. gender, surgeryType, surgeryDate) or the reproductiveHealth key should be made optional/removed via a migration plan.",
+      "description": "The PR strips the reproductive health UI (ReproForm, CycleHormonalSection, ReproductiveGroupRow, etc.) but leaves the full reproductiveHealthValidator (lines 450\u2013490) and its embedding inside healthProfileValidator (line 570) completely intact in validators.ts. The validator is large (~41 fields), remains exported, and is part of the stored schema shape via healthProfileValidator \u2192 profiles table. This is not a forward-compatibility concern \u2014 the UI is gone so no new data will be written to these fields \u2014 but the validator is dead weight that misleads future developers into thinking the feature is still live. It also bloats every replaceProfile and patchProfile call with a large object the UI no longer sends. The validator should be stripped down to just the fields still needed by the AI prompt (e.g. gender, surgeryType, surgeryDate) or the reproductiveHealth key should be made optional/removed via a migration plan.",
       "fix": "Remove reproductiveHealthValidator entirely from validators.ts. Remove the reproductiveHealth field from healthProfileValidator. If existing stored profile documents contain reproductiveHealth data, add a migration that drops it on next profile write (or tolerate the orphaned data silently by making the field v.optional(v.any()) until the data is aged out). Also remove the export of reproductiveHealthValidator.",
       "implemented": false
     },
@@ -27,7 +27,7 @@
       "category": "correctness",
       "file": "convex/logs.ts",
       "line": 333,
-      "title": "Date.now() inside mutation handler — non-deterministic",
+      "title": "Date.now() inside mutation handler \u2014 non-deterministic",
       "description": "rebuildIngredientExposuresForFoodLog (called from the add, update, batchUpdateFoodItems, backfillIngredientExposures, and recanonicalizeAllFoodLogs mutations) calls Date.now() at line 333 to set createdAt on every inserted ingredientExposures row. Convex replays mutations for determinism, so Date.now() inside a mutation handler will produce a different value on replay than on the original execution. This means replayed transactions will insert rows with different createdAt timestamps, violating Convex's determinism requirement. The callers that already accept a now parameter (replaceProfile, patchProfile) show awareness of this pattern, but rebuildIngredientExposuresForFoodLog does not follow it.",
       "fix": "Pass the timestamp into rebuildIngredientExposuresForFoodLog from the caller site. For the add and update mutations the log's own timestamp is available in args.timestamp / record.timestamp. For backfill mutations, pass the log's timestamp (already available as log.timestamp in the loop). This makes all writes deterministic:\n\n  await ctx.db.insert(\"ingredientExposures\", {\n    ...\n    createdAt: args.timestamp,  // passed from caller\n  });\n\nAlternatively, accept that createdAt is an approximation and document it clearly, but the Convex docs explicitly state Date.now() must not be called inside query/mutation handlers.",
       "implemented": false
@@ -38,7 +38,7 @@
       "category": "correctness",
       "file": "convex/logs.ts",
       "line": 1059,
-      "title": "Date.now() fallback in replaceProfile and patchProfile mutations — non-deterministic",
+      "title": "Date.now() fallback in replaceProfile and patchProfile mutations \u2014 non-deterministic",
       "description": "Both replaceProfile (line 1059) and patchProfile (line 1163) contain:\n\n  const updatedAt = args.now ?? Date.now();\n\nThe comment calls this a transitional fallback, but the fallback is still active and will be used by any caller that does not pass now. This is the same mutation-determinism violation as F002. If Convex replays the mutation and the caller did not pass now, the replayed transaction will compute a different updatedAt than the original.",
       "fix": "Either (a) make now a required argument so no fallback is needed, or (b) remove the Date.now() fallback and substitute a deterministic default such as 0 or payload.exportedAt. If backward compatibility with old callers is required, add a validator-level migration note and track it in the work queue.",
       "implemented": false
@@ -51,7 +51,7 @@
       "line": 815,
       "title": "listFoodLogs performs a client-side filter on a 5000-row full scan",
       "description": "listFoodLogs fetches up to 5000 rows ordered by timestamp for the user, then applies a JavaScript .filter() to keep only food-type rows. The logs table has no index on (userId, type), so this is a full user-partition scan on every subscription tick. For a user with many fluid, habit, digestion, and weight logs, the vast majority of rows fetched will be discarded. Additionally, this function has zero callers in the frontend (grep finds none), which suggests it may be dead code.",
-      "fix": "If listFoodLogs is needed, add a compound index on (userId, type, timestamp) in schema.ts and query with .withIndex() to filter by type server-side. If it has no callers, delete it — the export will show as unused in the generated API.",
+      "fix": "If listFoodLogs is needed, add a compound index on (userId, type, timestamp) in schema.ts and query with .withIndex() to filter by type server-side. If it has no callers, delete it \u2014 the export will show as unused in the generated API.",
       "implemented": false
     },
     {
@@ -61,7 +61,7 @@
       "file": "convex/logs.ts",
       "line": 752,
       "title": "listAll performs an unbounded 5000-row scan on every subscription tick",
-      "description": "listAll is a reactive query (useQuery) called from syncLogs.ts. It returns up to 5000 documents per user per tick. The comment acknowledges WQ-087 (proper pagination), but the current implementation re-reads and re-transmits the entire user log history on every mutation anywhere in the logs table. For a user with thousands of entries this is expensive — both in Convex compute and in client bandwidth. The count query has the same problem (reads 10,000 rows just to return a length).",
+      "description": "listAll is a reactive query (useQuery) called from syncLogs.ts. It returns up to 5000 documents per user per tick. The comment acknowledges WQ-087 (proper pagination), but the current implementation re-reads and re-transmits the entire user log history on every mutation anywhere in the logs table. For a user with thousands of entries this is expensive \u2014 both in Convex compute and in client bandwidth. The count query has the same problem (reads 10,000 rows just to return a length).",
       "fix": "Replace listAll with a paginated query using Convex's usePaginatedQuery hook on the client side, or scope the subscription to a time window (e.g. last 90 days). For count, use a Convex aggregate (the aggregate add-on or a counter maintained in a separate table) rather than scanning up to 10,000 rows.",
       "implemented": false
     },
@@ -72,7 +72,7 @@
       "file": "convex/validators.ts",
       "line": 96,
       "title": "allowedModelsValidator is exported but never used",
-      "description": "allowedModelsValidator (lines 96–101) is defined and exported but no file in the convex directory imports or references it (confirmed by grep). The comment in ai.ts only says to keep it in sync — it doesn't import it. This is a dead export. Additionally, the model literals in allowedModelsValidator (lines 97–100) and in aiPreferencesValidator.aiModel (lines 249–251) are duplicated rather than being shared, meaning they can drift.",
+      "description": "allowedModelsValidator (lines 96\u2013101) is defined and exported but no file in the convex directory imports or references it (confirmed by grep). The comment in ai.ts only says to keep it in sync \u2014 it doesn't import it. This is a dead export. Additionally, the model literals in allowedModelsValidator (lines 97\u2013100) and in aiPreferencesValidator.aiModel (lines 249\u2013251) are duplicated rather than being shared, meaning they can drift.",
       "fix": "Either delete allowedModelsValidator if it has no callers, or use it inside aiPreferencesValidator.aiModel instead of re-listing the literals:\n\n  aiModel: allowedModelsValidator,\n\nThis removes the duplication risk.",
       "implemented": false
     },
@@ -83,7 +83,7 @@
       "file": "convex/validators.ts",
       "line": 66,
       "title": "transitCalibrationValidator remains after transit map feature removal",
-      "description": "The transit map UI was fully stripped in this PR (TransitMap components, useTransitMapData hook, transit-map assets, transit-map pages). However, transitCalibrationValidator (lines 66–72) remains in validators.ts, is still imported by schema.ts (line 20) and logs.ts (line 29), and the profiles table still stores a transitCalibration field. The field is also still written by replaceProfile and patchProfile. In the frontend, transitCalibration is still read via useProfile.ts and consumed by useAnalyzedFoodStats.ts for transit window calculations — so this is a partial strip. If the transit time model is being retained but the map visualisation removed, this is intentional and needs a comment clarifying that distinction. If transit calibration is also dead, it should be removed.",
+      "description": "The transit map UI was fully stripped in this PR (TransitMap components, useTransitMapData hook, transit-map assets, transit-map pages). However, transitCalibrationValidator (lines 66\u201372) remains in validators.ts, is still imported by schema.ts (line 20) and logs.ts (line 29), and the profiles table still stores a transitCalibration field. The field is also still written by replaceProfile and patchProfile. In the frontend, transitCalibration is still read via useProfile.ts and consumed by useAnalyzedFoodStats.ts for transit window calculations \u2014 so this is a partial strip. If the transit time model is being retained but the map visualisation removed, this is intentional and needs a comment clarifying that distinction. If transit calibration is also dead, it should be removed.",
       "fix": "Add a comment to transitCalibrationValidator and the profiles.transitCalibration schema field explicitly stating that the transit map UI has been removed but the transit-timing model is retained for food correlation calculations. If transit calibration is truly dead, remove it from schema, validators, and logs.ts, and write a migration that drops the field from stored profile documents.",
       "implemented": false
     },
@@ -94,7 +94,7 @@
       "file": "convex/logs.ts",
       "line": 2232,
       "title": "Re-exports of habitConfigValidator and habitTypeValidator have no callers",
-      "description": "Line 2232 re-exports habitConfigValidator and habitTypeValidator from logs.ts. These are imported into logs.ts only to be re-exported — they are not used within logs.ts body itself (habitConfigValidator is only in the import list and the re-export; habitTypeValidator similarly). Grepping the convex directory finds no other file importing these from logs.ts. This re-export exists to support an older pattern where logs.ts was the canonical source for these validators; that role has been consolidated into validators.ts.",
+      "description": "Line 2232 re-exports habitConfigValidator and habitTypeValidator from logs.ts. These are imported into logs.ts only to be re-exported \u2014 they are not used within logs.ts body itself (habitConfigValidator is only in the import list and the re-export; habitTypeValidator similarly). Grepping the convex directory finds no other file importing these from logs.ts. This re-export exists to support an older pattern where logs.ts was the canonical source for these validators; that role has been consolidated into validators.ts.",
       "fix": "Remove line 2232 and remove the corresponding imports of habitConfigValidator and habitTypeValidator from the import block at lines 23 and 25. Any consumers should import directly from ./validators.",
       "implemented": false
     },
@@ -105,7 +105,7 @@
       "file": "convex/logs.ts",
       "line": 1689,
       "title": "importBackup mutation deletes all user data before verifying import payload integrity",
-      "description": "importBackup (line 1689) calls deleteAllUserData at line 1702 before it has fully validated the payload structure or confirmed that the backup can be written successfully. Convex mutations are transactional, so a write failure after the delete will roll back the entire transaction — but only for the current function. If the mutation exceeds the Convex time limit mid-import (possible for large backup files), the mutation will abort with the data already deleted and no rows written. The user would lose all their data.",
+      "description": "importBackup (line 1689) calls deleteAllUserData at line 1702 before it has fully validated the payload structure or confirmed that the backup can be written successfully. Convex mutations are transactional, so a write failure after the delete will roll back the entire transaction \u2014 but only for the current function. If the mutation exceeds the Convex time limit mid-import (possible for large backup files), the mutation will abort with the data already deleted and no rows written. The user would lose all their data.",
       "fix": "Validate normalizeBackupPayload at the top of the handler (before calling deleteAllUserData) and ensure that all data can at least be coerced to valid shapes before wiping. More robustly, document the Convex transaction guarantee explicitly in a comment so future developers understand the rollback boundary. Consider splitting very large imports into batched actions.",
       "implemented": false
     },
@@ -127,24 +127,24 @@
       "file": "convex/logs.ts",
       "line": 985,
       "title": "batchUpdateFoodItems silently skips unauthorised rows without throwing",
-      "description": "In batchUpdateFoodItems (line 983), when record.userId !== userId the function increments skipped and continues, rather than throwing. This is inconsistent with the rest of the codebase — add, update, and remove all throw \"Not authorized\" on ownership mismatch. The silent-skip pattern means a client bug or a forged request that mixes owned and unowned IDs will partially succeed with no error signal. The caller receives only a { updated, skipped } count, with no indication of which IDs were rejected.",
+      "description": "In batchUpdateFoodItems (line 983), when record.userId !== userId the function increments skipped and continues, rather than throwing. This is inconsistent with the rest of the codebase \u2014 add, update, and remove all throw \"Not authorized\" on ownership mismatch. The silent-skip pattern means a client bug or a forged request that mixes owned and unowned IDs will partially succeed with no error signal. The caller receives only a { updated, skipped } count, with no indication of which IDs were rejected.",
       "fix": "Throw on ownership mismatch instead of silently skipping:\n\n  if (record.userId !== userId) {\n    throw new Error(\"Not authorized to update log entry \" + String(entry.id));\n  }\n\nIf the batch semantics intentionally allow partial success (e.g. skipping missing rows), document that clearly and distinguish between \"not found\" skips and \"not authorized\" skips in the return value.",
       "implemented": false
     },
     {
       "id": "F012",
-      "severity": "LOW",
+      "severity": "NICE-TO-HAVE",
       "category": "code-quality",
       "file": "convex/logs.ts",
       "line": 815,
-      "title": "listFoodLogs appears to have no frontend callers — potential dead export",
+      "title": "listFoodLogs appears to have no frontend callers \u2014 potential dead export",
       "description": "A grep of src/ finds no calls to api.logs.listFoodLogs. Within the convex directory, no other file references it either. This export appears to be a dead function. Dead exported Convex functions remain in the generated API surface and create maintenance overhead without providing value.",
       "fix": "Delete listFoodLogs if it has no callers. If it is intended for future use, add a TODO comment and a work-queue item.",
       "implemented": false
     },
     {
       "id": "F013",
-      "severity": "LOW",
+      "severity": "NICE-TO-HAVE",
       "category": "correctness",
       "file": "convex/logs.ts",
       "line": 786,
@@ -155,7 +155,7 @@
     },
     {
       "id": "F014",
-      "severity": "LOW",
+      "severity": "NICE-TO-HAVE",
       "category": "code-quality",
       "file": "convex/validators.ts",
       "line": 160,
@@ -166,45 +166,45 @@
     },
     {
       "id": "F015",
-      "severity": "LOW",
+      "severity": "NICE-TO-HAVE",
       "category": "code-quality",
       "file": "convex/__tests__/foodLogsMutations.test.ts",
       "line": 87,
-      "title": "Test relies on specific canonical resolution of 'toast' — fragile registry coupling",
-      "description": "The test at line 99 asserts expect(data.items[0].canonicalName).toBe(\"toast\") after running processLogInternal on the input \"toast, honey\". This test will fail silently if the food registry renames or removes the canonical \"toast\" entry, or if the parsing pipeline changes how it segments the input. The test is not testing just the mutation logic — it is implicitly testing the food registry and parsing pipeline together.",
+      "title": "Test relies on specific canonical resolution of 'toast' \u2014 fragile registry coupling",
+      "description": "The test at line 99 asserts expect(data.items[0].canonicalName).toBe(\"toast\") after running processLogInternal on the input \"toast, honey\". This test will fail silently if the food registry renames or removes the canonical \"toast\" entry, or if the parsing pipeline changes how it segments the input. The test is not testing just the mutation logic \u2014 it is implicitly testing the food registry and parsing pipeline together.",
       "fix": "Either (a) mock processLogInternal (internal action) in the test so the mutation test is isolated from the food pipeline, or (b) add a comment explaining that this is an intentional integration test and that it must be updated when the food registry changes.",
       "implemented": false
     },
     {
       "id": "F016",
-      "severity": "LOW",
+      "severity": "NICE-TO-HAVE",
       "category": "code-quality",
       "file": "convex/__tests__/foodLogsMutations.test.ts",
       "line": 44,
       "title": "vi.useFakeTimers() in beforeEach without corresponding global afterEach at describe level",
-      "description": "The 'food log with rawInput + empty items' describe block sets vi.useFakeTimers() in beforeEach and vi.useRealTimers() in afterEach (lines 44–47). The same pattern is repeated at lines 381–384 for the update describe block. However, if any of the tests within those describe blocks throws before the fake timer is restored, subsequent tests outside the describe block will run with fake timers still active (vitest restores only if afterEach completes). The correct pattern in vitest is to use vi.useFakeTimers() at the describe-block's afterAll or to rely on vitest's --fakeTimers config.",
+      "description": "The 'food log with rawInput + empty items' describe block sets vi.useFakeTimers() in beforeEach and vi.useRealTimers() in afterEach (lines 44\u201347). The same pattern is repeated at lines 381\u2013384 for the update describe block. However, if any of the tests within those describe blocks throws before the fake timer is restored, subsequent tests outside the describe block will run with fake timers still active (vitest restores only if afterEach completes). The correct pattern in vitest is to use vi.useFakeTimers() at the describe-block's afterAll or to rely on vitest's --fakeTimers config.",
       "fix": "Move timer setup to a top-level beforeEach/afterEach in those describe blocks and add try/finally guards, or configure vitest.config.ts with fakeTimers: { toFake: [...] } to scope fake timers automatically per test.",
       "implemented": false
     },
     {
       "id": "F017",
-      "severity": "LOW",
+      "severity": "NICE-TO-HAVE",
       "category": "correctness",
       "file": "convex/ingredientNutritionApi.ts",
       "line": 69,
-      "title": "OpenFoodFacts request has no timeout — can hang indefinitely",
+      "title": "OpenFoodFacts request has no timeout \u2014 can hang indefinitely",
       "description": "The fetch call to OpenFoodFacts (line 69) has no AbortController or timeout signal. If the external API is slow or unresponsive, the Convex action will block until Convex's own action timeout fires (typically 10 minutes for actions). This can exhaust action concurrency slots and degrade the entire deployment for all users during an OpenFoodFacts outage.",
       "fix": "Add a timeout signal:\n\n  const controller = new AbortController();\n  const timeout = setTimeout(() => controller.abort(), 8_000);\n  try {\n    const response = await fetch(url.toString(), {\n      signal: controller.signal,\n      headers: { \"User-Agent\": \"PDH/1.0 (ingredient nutrition lookup)\" },\n    });\n    ...\n  } finally {\n    clearTimeout(timeout);\n  }\n\nAlso consider wrapping in a try/catch for AbortError and returning an empty array (not throwing) so the UI degrades gracefully.",
       "implemented": false
     },
     {
       "id": "F018",
-      "severity": "LOW",
+      "severity": "NICE-TO-HAVE",
       "category": "code-quality",
       "file": "convex/schema.ts",
       "line": 383,
       "title": "waitlistEntries table remains in schema after landing page removal",
-      "description": "This PR removes the landing page, WaitlistForm component, and related landing page components. However, waitlistEntries (lines 383–391) remains in schema.ts with its by_email index. If the waitlist feature is no longer being used or exposed, this table is dead schema weight. It cannot be removed without a schema migration, so this may be intentional preservation of existing data — but it should be documented.",
+      "description": "This PR removes the landing page, WaitlistForm component, and related landing page components. However, waitlistEntries (lines 383\u2013391) remains in schema.ts with its by_email index. If the waitlist feature is no longer being used or exposed, this table is dead schema weight. It cannot be removed without a schema migration, so this may be intentional preservation of existing data \u2014 but it should be documented.",
       "fix": "Add a comment to the waitlistEntries table explaining that the landing page has been removed but the table is retained for existing signups. If the table will never be used again, add a TODO to migrate the data elsewhere and drop the table in a future PR.",
       "implemented": false
     }
@@ -213,6 +213,6 @@
     "critical": 0,
     "high": 3,
     "moderate": 8,
-    "low": 7
+    "nice_to_have": 7
   }
 }

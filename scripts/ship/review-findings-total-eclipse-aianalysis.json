@@ -15,7 +15,7 @@
       "line": 1688,
       "title": "profile parameter declared in BuildUserMessageParams but never used inside buildUserMessage",
       "description": "BuildUserMessageParams declares a `profile: HealthProfile` field (line 1688), and the function signature accepts it via the params object, but buildUserMessage never destructures or references `profile` anywhere in its body. This is dead interface surface that misleads callers into thinking the profile shapes the user message payload, but it does not. It also creates a TypeScript type contract the implementation doesn't honour.",
-      "fix": "Either remove `profile` from BuildUserMessageParams entirely (callers pass it but the value is discarded), or identify the intended use (possibly to gate reproductive health inclusion) and wire it up. If the intent was to pass profile to buildPartialDayContext, that function does not accept profile either — evaluate whether profile is needed downstream.",
+      "fix": "Either remove `profile` from BuildUserMessageParams entirely (callers pass it but the value is discarded), or identify the intended use (possibly to gate reproductive health inclusion) and wire it up. If the intent was to pass profile to buildPartialDayContext, that function does not accept profile either \u2014 evaluate whether profile is needed downstream.",
       "implemented": false
     },
     {
@@ -47,7 +47,7 @@
       "file": "src/lib/aiAnalysis.ts",
       "line": 1232,
       "title": "Stale reference to deleted reproductive health feature remains in system prompt",
-      "description": "The system prompt (line 1232) still contains the instruction: 'If reproductive/cycle data is provided (menstrual cycle phase, bleeding, pregnancy, perimenopause/menopause, hormonal contraception/HRT), treat it as OPTIONAL context that can modify motility...' This is a survivor from the deleted reproductive health feature. The backend no longer includes reproductive log data in the AI payload — `reproductiveLogs` was removed from `RecentEventsResult` and no reproductive data is passed to the AI. This instruction is therefore dead prose in the prompt, wasting tokens and potentially confusing the model.",
+      "description": "The system prompt (line 1232) still contains the instruction: 'If reproductive/cycle data is provided (menstrual cycle phase, bleeding, pregnancy, perimenopause/menopause, hormonal contraception/HRT), treat it as OPTIONAL context that can modify motility...' This is a survivor from the deleted reproductive health feature. The backend no longer includes reproductive log data in the AI payload \u2014 `reproductiveLogs` was removed from `RecentEventsResult` and no reproductive data is passed to the AI. This instruction is therefore dead prose in the prompt, wasting tokens and potentially confusing the model.",
       "fix": "Remove the reproductive/cycle modifier paragraph from the system prompt in `buildSystemPrompt`. The model will never receive this data, so the instruction serves no purpose and inflates token cost on every request.",
       "implemented": false
     },
@@ -68,8 +68,8 @@
       "category": "correctness",
       "file": "src/lib/aiAnalysis.ts",
       "line": 1664,
-      "title": "timeSinceLastBowelMovement always outputs '\\{n\\} hours' including '1 hours' — grammatically broken",
-      "description": "`buildPartialDayContext` always formats the string as `${hoursSinceLastBm} hours` (line 1666). When the rounded value is 1, the output is '1 hours'. This string is injected into the AI prompt and may also surface in the UI via partialDayContext. The test suite only asserts '5 hours', '2 hours', and '3 hours' — the 1-hour case is never tested.",
+      "title": "timeSinceLastBowelMovement always outputs '\\{n\\} hours' including '1 hours' \u2014 grammatically broken",
+      "description": "`buildPartialDayContext` always formats the string as `${hoursSinceLastBm} hours` (line 1666). When the rounded value is 1, the output is '1 hours'. This string is injected into the AI prompt and may also surface in the UI via partialDayContext. The test suite only asserts '5 hours', '2 hours', and '3 hours' \u2014 the 1-hour case is never tested.",
       "fix": "Add a singular/plural branch: `` hoursSinceLastBm === 1 ? '1 hour' : `${hoursSinceLastBm} hours` ``. Add a corresponding test case for the 1-hour edge case in the test file.",
       "implemented": false
     },
@@ -80,7 +80,7 @@
       "file": "src/lib/aiAnalysis.ts",
       "line": 697,
       "title": "Habit streak algorithm has an off-by-one in the consecutive-day index calculation",
-      "description": "In `computeHabitStreaks`, the expected day for index `i` is calculated as: `new Date(new Date(lastDay).getTime() - (sortedDays.length - 1 - i) * MS_PER_DAY)` (lines 698-700). This computes the expected date relative to `lastDay` as if all N days were a consecutive block of exactly `sortedDays.length - 1 - i` days before `lastDay`. However, this is a fixed-offset formula — it does not actually verify consecutive calendar-day adjacency during the backward walk. It works correctly only when there are no gaps at all before the current position. For example, if `sortedDays` = ['2026-03-25', '2026-03-28', '2026-03-29'] and `lastDay` = '2026-03-29', the expected day for index 0 is `2026-03-29 - 2 days = 2026-03-27`, but `sortedDays[0]` is `2026-03-25`. The break fires correctly in this case. However, if gaps exist mid-sequence but the first element happens to match the computed offset, the algorithm could overcount. The logic should instead compare each adjacent pair of days directly during the backward walk.",
+      "description": "In `computeHabitStreaks`, the expected day for index `i` is calculated as: `new Date(new Date(lastDay).getTime() - (sortedDays.length - 1 - i) * MS_PER_DAY)` (lines 698-700). This computes the expected date relative to `lastDay` as if all N days were a consecutive block of exactly `sortedDays.length - 1 - i` days before `lastDay`. However, this is a fixed-offset formula \u2014 it does not actually verify consecutive calendar-day adjacency during the backward walk. It works correctly only when there are no gaps at all before the current position. For example, if `sortedDays` = ['2026-03-25', '2026-03-28', '2026-03-29'] and `lastDay` = '2026-03-29', the expected day for index 0 is `2026-03-29 - 2 days = 2026-03-27`, but `sortedDays[0]` is `2026-03-25`. The break fires correctly in this case. However, if gaps exist mid-sequence but the first element happens to match the computed offset, the algorithm could overcount. The logic should instead compare each adjacent pair of days directly during the backward walk.",
       "fix": "Replace the index-offset formula with a direct adjacent-day check: compare `sortedDays[i]` to `sortedDays[i+1]` to verify they are exactly 1 day apart. Walk backwards from the last element, incrementing the streak count for each consecutive adjacent pair.",
       "implemented": false
     },
@@ -90,9 +90,9 @@
       "category": "correctness",
       "file": "src/lib/__tests__/aiAnalysis.test.ts",
       "line": 654,
-      "title": "'caps at 96h' test retains pregnancyStatus: 'pregnant' from the deleted reproductive modifier — the test is now misleading",
+      "title": "'caps at 96h' test retains pregnancyStatus: 'pregnant' from the deleted reproductive modifier \u2014 the test is now misleading",
       "description": "The 'caps at 96h' test at line 654 sets `pregnancyStatus: 'pregnant'` in the profile to imply it was contributing to the modifier. But the pregnancy modifier was deleted from `getFoodWindowHours` in this PR. The test still passes (72 + 24 = 96 from the opioid+iron combo), but the pregnancy field now does nothing. A developer reading this test will reasonably assume pregnancy is what caps at 96h, which is incorrect after the refactor.",
-      "fix": "Remove the `reproductiveHealth` spread from this test. The capping at 96h is fully explained by `medications: 'opioid pain medication, iron supplements'` — both are subsumed by the single `hasSlowTransitModifier` boolean. The test description should also be updated to reflect the actual scenario: 'caps at 96h when opioid + iron present (single boolean modifier + 72h base)'.",
+      "fix": "Remove the `reproductiveHealth` spread from this test. The capping at 96h is fully explained by `medications: 'opioid pain medication, iron supplements'` \u2014 both are subsumed by the single `hasSlowTransitModifier` boolean. The test description should also be updated to reflect the actual scenario: 'caps at 96h when opioid + iron present (single boolean modifier + 72h base)'.",
       "implemented": false
     },
     {
@@ -112,25 +112,25 @@
       "category": "correctness",
       "file": "src/lib/__tests__/aiAnalysis.test.ts",
       "line": 1526,
-      "title": "stillInTransit test uses learnedTransitCenterMinutes of 90 * 60 minutes (= 5400 minutes = 90 hours) — value is in wrong unit",
-      "description": "The test at line 1526 sets `learnedTransitCenterMinutes: 90 * 60`. The `*` here is 90 hours multiplied by 60, giving 5400 minutes — but the field name ends in `Minutes`, meaning 5400 minutes = 90 hours. This is technically correct for a 90-hour transit time but the expression `90 * 60` is the wrong mental model: it looks like someone converted hours to minutes, but the field already expects minutes. For an actual 90-hour transit, the correct value is `90 * 60` minutes, so the result is right. However, the comment says '90 hours center', and the production code interprets the field in minutes, so for a realistic transit time this is fine. But the unit confusion is real: if a developer reads `90 * 60` they may think the center is 90 minutes (not 90 hours). The expression should be written explicitly to avoid misreading.",
-      "fix": "Clarify the expression. If the intent is 90-hour transit (which is very long and clinically implausible for a human), write `90 * 60 /* = 90 hours in minutes */`. More importantly, consider whether 90-hour transit is a realistic test fixture — a 4-hour transit scenario would be `240` (4 * 60 minutes), which is a more clinically reasonable test value.",
+      "title": "stillInTransit test uses learnedTransitCenterMinutes of 90 * 60 minutes (= 5400 minutes = 90 hours) \u2014 value is in wrong unit",
+      "description": "The test at line 1526 sets `learnedTransitCenterMinutes: 90 * 60`. The `*` here is 90 hours multiplied by 60, giving 5400 minutes \u2014 but the field name ends in `Minutes`, meaning 5400 minutes = 90 hours. This is technically correct for a 90-hour transit time but the expression `90 * 60` is the wrong mental model: it looks like someone converted hours to minutes, but the field already expects minutes. For an actual 90-hour transit, the correct value is `90 * 60` minutes, so the result is right. However, the comment says '90 hours center', and the production code interprets the field in minutes, so for a realistic transit time this is fine. But the unit confusion is real: if a developer reads `90 * 60` they may think the center is 90 minutes (not 90 hours). The expression should be written explicitly to avoid misreading.",
+      "fix": "Clarify the expression. If the intent is 90-hour transit (which is very long and clinically implausible for a human), write `90 * 60 /* = 90 hours in minutes */`. More importantly, consider whether 90-hour transit is a realistic test fixture \u2014 a 4-hour transit scenario would be `240` (4 * 60 minutes), which is a more clinically reasonable test value.",
       "implemented": false
     },
     {
       "id": "F011",
-      "severity": "LOW",
+      "severity": "NICE-TO-HAVE",
       "category": "code-quality",
       "file": "src/lib/__tests__/aiAnalysis.test.ts",
       "line": 1427,
       "title": "Test 'newFoodsThisWeek returns empty array (placeholder)' tests a known-broken placeholder, not behaviour",
       "description": "The test at line 1427 asserts that `buildDeltaSignals` returns `newFoodsThisWeek: []`. This is testing the placeholder stub (line 729 in the implementation), not any real behaviour. The test will continue to pass even if the feature is accidentally removed entirely. This is a low-value test that pins a broken default rather than the intended behaviour.",
-      "fix": "Either remove the test (it adds no safety value) or replace it with a skip/todo marker (`it.todo('newFoodsThisWeek: requires server-side context — wire when moved to Convex action')`) so future developers understand why it is not implemented.",
+      "fix": "Either remove the test (it adds no safety value) or replace it with a skip/todo marker (`it.todo('newFoodsThisWeek: requires server-side context \u2014 wire when moved to Convex action')`) so future developers understand why it is not implemented.",
       "implemented": false
     },
     {
       "id": "F012",
-      "severity": "LOW",
+      "severity": "NICE-TO-HAVE",
       "category": "code-quality",
       "file": "src/lib/__tests__/aiAnalysis.test.ts",
       "line": 1,
@@ -141,12 +141,12 @@
     },
     {
       "id": "F013",
-      "severity": "LOW",
+      "severity": "NICE-TO-HAVE",
       "category": "security",
       "file": "src/lib/aiAnalysis.ts",
       "line": 55,
       "title": "sanitizeNameForPrompt strips tags but does not guard against Unicode bidirectional override characters or prompt control sequences",
-      "description": "`sanitizeNameForPrompt` removes `<tag>` patterns and truncates to 50 characters (lines 56-58). This guards against basic XML injection. However, it does not strip Unicode bidirectional control characters (U+202E RIGHT-TO-LEFT OVERRIDE, U+2066-U+2069 DIRECTIONAL ISOLATES, etc.) which could confuse some LLM tokenizers or display renderers. It also does not strip null bytes or other control characters. Given the name is wrapped in `<patient_name>` XML delimiters in the prompt (line 1183), the risk is limited — but the guard is not complete.",
+      "description": "`sanitizeNameForPrompt` removes `<tag>` patterns and truncates to 50 characters (lines 56-58). This guards against basic XML injection. However, it does not strip Unicode bidirectional control characters (U+202E RIGHT-TO-LEFT OVERRIDE, U+2066-U+2069 DIRECTIONAL ISOLATES, etc.) which could confuse some LLM tokenizers or display renderers. It also does not strip null bytes or other control characters. Given the name is wrapped in `<patient_name>` XML delimiters in the prompt (line 1183), the risk is limited \u2014 but the guard is not complete.",
       "fix": "Add a step to strip non-printable Unicode categories after the XML-tag stripping: `stripped.replace(/[\\p{C}\\p{Cf}]/gu, '').trim()`. This removes control characters and format characters (including BiDi overrides) while preserving normal Unicode names.",
       "implemented": false
     }
@@ -154,7 +154,7 @@
   "summary": {
     "critical": 0,
     "high": 3,
-    "moderate": 6,
-    "low": 4
+    "moderate": 7,
+    "nice_to_have": 3
   }
 }
