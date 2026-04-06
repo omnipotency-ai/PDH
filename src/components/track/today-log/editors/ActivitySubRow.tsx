@@ -62,9 +62,14 @@ export function ActivitySubRow({
   const renderDisplay = useCallback(
     () => (
       <span className="font-mono text-xs text-[var(--color-text-tertiary)]">
-        {format(entry.timestamp, "HH:mm")}
-        {showLabel ? `  ${getActivityLabel(activityType)}` : ""}
-        {Number.isFinite(dur) && dur > 0 ? `  ${formatDuration(dur, activityType)}` : ""}
+        <span className="whitespace-nowrap">{format(entry.timestamp, "HH:mm")}</span>
+        {(showLabel || (Number.isFinite(dur) && dur > 0)) && (
+          <span className="ml-2 inline-flex items-center gap-1 whitespace-nowrap">
+            {showLabel && <span>{getActivityLabel(activityType)}</span>}
+            {showLabel && Number.isFinite(dur) && dur > 0 && <span aria-hidden="true">·</span>}
+            {Number.isFinite(dur) && dur > 0 && <span>{formatDuration(dur, activityType)}</span>}
+          </span>
+        )}
       </span>
     ),
     [entry.timestamp, showLabel, activityType, dur],

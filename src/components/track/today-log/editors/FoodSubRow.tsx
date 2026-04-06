@@ -4,7 +4,7 @@ import { lazy, Suspense, useCallback, useState } from "react";
 import { RawInputEditModal } from "@/components/track/RawInputEditModal";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { getItemMacros } from "@/lib/nutritionUtils";
-import type { FoodItem, FoodLog, FoodLogData } from "@/types/domain";
+import type { FoodItem, FoodLogData } from "@/types/domain";
 import {
   getDefaultPortionHint,
   getFoodItemDisplayName,
@@ -14,7 +14,7 @@ import {
   truncatePreviewText,
 } from "../helpers";
 import { useTodayLogActions } from "../TodayLogContext";
-import type { DraftItem, LogUpdateData } from "../types";
+import type { DraftItem, FoodPipelineLog, LogUpdateData } from "../types";
 import { EditableEntryRow } from "./EditableEntryRow";
 
 // Lazy-loaded so that foodRegistry.ts (2858 lines of static data) is code-split
@@ -233,7 +233,7 @@ function FoodItemLine({ item, onTapToMatch }: { item: FoodItem; onTapToMatch?: (
 
 // ── Processing state (rawInput present but items not yet populated) ──────
 
-function FoodProcessingView({ entry }: { entry: FoodLog }) {
+function FoodProcessingView({ entry }: { entry: FoodPipelineLog }) {
   const { onDelete } = useTodayLogActions();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [rawInputModalOpen, setRawInputModalOpen] = useState(false);
@@ -311,7 +311,7 @@ function FoodProcessingView({ entry }: { entry: FoodLog }) {
 
 // ── Main component ───────────────────────────────────────────────────────
 
-export function FoodSubRow({ entry }: { key?: string | number; entry: FoodLog }) {
+export function FoodSubRow({ entry }: { key?: string | number; entry: FoodPipelineLog }) {
   const [rawInputModalOpen, setRawInputModalOpen] = useState(false);
   const [matchingItemIndex, setMatchingItemIndex] = useState<number | null>(null);
   const [draftItems, setDraftItems] = useState<DraftItem[]>([]);

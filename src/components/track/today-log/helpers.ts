@@ -17,7 +17,7 @@ import {
   isFluidLog,
   isLiquidLog,
 } from "@/lib/logTypeGuards";
-import type { FoodItem, FoodLog } from "@/types/domain";
+import type { FoodItem, FoodLog, LiquidLog } from "@/types/domain";
 import type { HabitLogData } from "./types";
 
 // ── Food item resolution status ─────────────────────────────────────────────
@@ -56,14 +56,14 @@ export function getFoodItemResolutionStatus(
 /**
  * Check whether a food log is still processing (has rawInput but empty items array).
  */
-export function isFoodLogProcessing(log: FoodLog): boolean {
+export function isFoodLogProcessing(log: FoodLog | LiquidLog): boolean {
   return log.data.items.length === 0 && Boolean(log.data.rawInput);
 }
 
 /**
  * Count unresolved (pending or expired) items in a food log.
  */
-export function countUnresolvedItems(log: FoodLog): number {
+export function countUnresolvedItems(log: FoodLog | LiquidLog): number {
   return log.data.items.filter((item) => {
     const status = getFoodItemResolutionStatus(item);
     return status === "pending" || status === "expired";

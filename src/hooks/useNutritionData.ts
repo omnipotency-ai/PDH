@@ -8,6 +8,7 @@
 import { isFoodPipelineType } from "@shared/logTypeUtils";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSyncedLogsContext } from "@/contexts/SyncedLogsContext";
+import { summarizeTodayFluidTotals } from "@/hooks/useDayStats";
 import { useNutritionGoals } from "@/hooks/useProfile";
 import { getDateScopedTimestamp } from "@/lib/dateUtils";
 import {
@@ -56,7 +57,7 @@ export interface NutritionData {
   totalCaloriesToday: number;
   /** Macronutrient totals from the active day's food + liquid logs. */
   totalMacrosToday: MacroTotals;
-  /** Total fluid intake for the active day in ml (water + coffee + tea + all type="fluid"). */
+  /** Total fluid intake for the active day in ml (all type="fluid" plus food-pipeline liquids). */
   totalFluidsMl: number;
   /** Water-only intake for the active day in ml (subset of totalFluidsMl). */
   waterOnlyMl: number;
@@ -191,25 +192,12 @@ export function useNutritionData(targetDate?: Date): NutritionData {
   // Derive macro totals.
   const totalMacrosToday = useMemo(() => calculateTotalMacros(todayFoodLogs), [todayFoodLogs]);
 
-  // Derive fluid totals: all fluids + water-only subset.
-  const { totalFluidsMl, waterOnlyMl } = useMemo(() => {
-    let fluids = 0;
-    let water = 0;
-    for (const log of todayFluidLogs) {
-      for (const item of log.data.items) {
-        const ml = Number(item.quantity ?? 0);
-        fluids += ml;
-        if (
-          String(item.name ?? "")
-            .toLowerCase()
-            .trim() === "water"
-        ) {
-          water += ml;
-        }
-      }
-    }
-    return { totalFluidsMl: fluids, waterOnlyMl: water };
-  }, [todayFluidLogs]);
+  // Derive fluid totals from both direct fluid logs and food-pipeline liquid logs.
+  const fluidTotals = useMemo(
+    () => summarizeTodayFluidTotals([...todayFoodLogs, ...todayFluidLogs]),
+    [todayFoodLogs, todayFluidLogs],
+  );
+  const { totalFluidMl: totalFluidsMl, waterOnlyMl } = fluidTotals;
 
   // Group today's food logs by meal slot.
   const logsByMealSlot = useMemo(() => groupByMealSlot(todayFoodLogs), [todayFoodLogs]);

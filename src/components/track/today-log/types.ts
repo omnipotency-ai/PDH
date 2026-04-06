@@ -4,6 +4,7 @@ import type { DisplayWeightUnit } from "@/lib/units";
 import type {
   FluidLog,
   FoodLog,
+  LiquidLog,
   HabitLogData,
   LogDataMap,
   LogType,
@@ -16,6 +17,9 @@ export type { HabitLogData };
 // ── Shared callback types ─────────────────────────────────────────────
 /** Union of all typed log data shapes. Editors produce one of these variants. */
 export type LogUpdateData = LogDataMap[LogType];
+
+/** Food-pipeline logs share the same item shape for food and liquid entries. */
+export type FoodPipelineLog = FoodLog | LiquidLog;
 
 // ── Display-item types ────────────────────────────────────────────────
 export type IndividualItem = {
@@ -43,7 +47,7 @@ export type FluidGroup = {
 };
 export type FoodLogGroup = {
   kind: "food";
-  entries: FoodLog[];
+  entries: FoodPipelineLog[];
   sortKey: number;
 };
 export type ActivityGroup = {

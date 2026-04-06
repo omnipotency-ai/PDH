@@ -35,11 +35,82 @@ export interface DayStats {
   hadGapYesterday: boolean;
 }
 
+interface FluidLikeItem {
+  name?: string | null;
+  quantity?: number | null;
+  unit?: string | null;
+}
+
+interface FluidTotals {
+  todayFluidTotalsByName: Record<string, number>;
+  totalFluidMl: number;
+  waterOnlyMl: number;
+}
+
 function getHabitsForActivityType(habits: HabitConfig[], activityType: string): HabitConfig[] {
   if (activityType === "sleep") {
     return habits.filter((habit) => isSleepHabit(habit));
   }
   return habits.filter((habit) => normalizeActivityTypeKey(habit.name) === activityType);
+}
+
+function getFluidItemMl(item: FluidLikeItem): number {
+  const quantity = Number(item.quantity ?? 0);
+  if (!Number.isFinite(quantity) || quantity <= 0) return 0;
+  const unit = String(item.unit ?? "")
+    .trim()
+    .toLowerCase();
+  return unit === "l" ? quantity * 1000 : quantity;
+}
+
+function isWaterLikeItemName(name: string): boolean {
+  const lower = normalizeFluidItemName(name);
+  return lower === "water" || lower.startsWith("water ") || lower.endsWith(" water");
+}
+
+function addFluidLogItems(
+  totals: Record<string, number>,
+  items: ReadonlyArray<FluidLikeItem>,
+): number {
+  let subtotal = 0;
+  for (const item of items) {
+    const name = normalizeFluidItemName(item.name);
+    const ml = getFluidItemMl(item);
+    if (!name || ml <= 0) continue;
+    totals[name] = (totals[name] ?? 0) + ml;
+    subtotal += ml;
+  }
+  return subtotal;
+}
+
+/**
+ * Summarize today's fluid intake from both `fluid` logs and food-pipeline
+ * `liquid` logs. Liquid foods are counted toward the total because the user
+ * logged a beverage, even when it entered through food search.
+ */
+export function summarizeTodayFluidTotals(logs: ReadonlyArray<SyncedLog>): FluidTotals {
+  const totals: Record<string, number> = {};
+  let totalFluidMl = 0;
+  let waterOnlyMl = 0;
+
+  for (const log of logs) {
+    if (log.type !== "fluid" && log.type !== "liquid") continue;
+    const items = log.data?.items;
+    if (!Array.isArray(items)) continue;
+
+    const addedMl = addFluidLogItems(totals, items);
+    totalFluidMl += addedMl;
+    for (const item of items) {
+      if (!isWaterLikeItemName(String(item.name ?? ""))) continue;
+      waterOnlyMl += getFluidItemMl(item);
+    }
+  }
+
+  return {
+    todayFluidTotalsByName: totals,
+    totalFluidMl,
+    waterOnlyMl,
+  };
 }
 
 export function useDayStats({ logs, todayStart, todayEnd }: UseDayStatsOptions): DayStats {
@@ -97,30 +168,10 @@ export function useDayStats({ logs, todayStart, todayEnd }: UseDayStatsOptions):
     return counts;
   }, [todayLogs, habits]);
 
-  const todayFluidTotalsByName = useMemo(() => {
-    const totals: Record<string, number> = {};
-    for (const log of todayLogs) {
-      if (log.type !== "fluid") continue;
-      const items = log.data?.items;
-      if (!Array.isArray(items)) continue;
-      for (const item of items) {
-        const name = normalizeFluidItemName(item?.name);
-        const qty = Number(item.quantity ?? 0);
-        if (name && qty > 0) totals[name] = (totals[name] ?? 0) + qty;
-      }
-    }
-    return totals;
-  }, [todayLogs]);
-
-  const totalFluidMl = useMemo(() => {
-    let sum = 0;
-    for (const ml of Object.values(todayFluidTotalsByName)) {
-      sum += ml;
-    }
-    return sum;
-  }, [todayFluidTotalsByName]);
-
-  const waterOnlyMl = todayFluidTotalsByName.water ?? 0;
+  const fluidTotals = useMemo(() => summarizeTodayFluidTotals(todayLogs), [todayLogs]);
+  const todayFluidTotalsByName = fluidTotals.todayFluidTotalsByName;
+  const totalFluidMl = fluidTotals.totalFluidMl;
+  const waterOnlyMl = fluidTotals.waterOnlyMl;
 
   const todayBmCount = useMemo(() => {
     let total = 0;
