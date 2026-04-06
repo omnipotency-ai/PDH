@@ -22,9 +22,11 @@ export {
   normalizeSorting,
   rowMatchesFilters,
   type SmartViewPreset,
+  sortingEqual,
+} from "@/components/patterns/database/smartViewUtils";
+export {
   SmartViews,
   type SmartViewsProps,
-  sortingEqual,
 } from "@/components/patterns/database/SmartViews";
 export { StatusBadge } from "@/components/patterns/database/StatusBadge";
 export { TrendIndicator } from "@/components/patterns/database/TrendIndicator";

@@ -1,15 +1,5 @@
 import type { SmartViewPreset } from "./smartViewUtils";
 
-export type { SmartViewPreset };
-export {
-  columnFiltersEqual,
-  countRowsForView,
-  normalizeColumnFilters,
-  normalizeSorting,
-  rowMatchesFilters,
-  sortingEqual,
-} from "./smartViewUtils";
-
 export interface SmartViewsProps {
   views: SmartViewPreset[];
   activeViewId: string | null;

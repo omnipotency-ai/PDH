@@ -91,15 +91,27 @@ export function columnFiltersEqual(
   a: ColumnFiltersState,
   b: ColumnFiltersState,
 ): boolean {
-  const left = normalizeColumnFilters(a);
-  const right = normalizeColumnFilters(b);
-  return JSON.stringify(left) === JSON.stringify(right);
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const fa = a[i];
+    const fb = b[i];
+    if (fa.id !== fb.id) return false;
+    const va = safeStringArray(fa.value);
+    const vb = safeStringArray(fb.value);
+    if (va.length !== vb.length) return false;
+    for (let j = 0; j < va.length; j++) {
+      if (va[j] !== vb[j]) return false;
+    }
+  }
+  return true;
 }
 
 export function sortingEqual(a: SortingState, b: SortingState): boolean {
-  const left = normalizeSorting(a);
-  const right = normalizeSorting(b);
-  return JSON.stringify(left) === JSON.stringify(right);
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i].id !== b[i].id || a[i].desc !== b[i].desc) return false;
+  }
+  return true;
 }
 
 // ── Row-matching helpers ──────────────────────────────────────────────────────
@@ -123,7 +135,7 @@ function rowMatchesCategoryFilter(
   values: string[],
 ): boolean {
   if (row.foodGroup === undefined) return false;
-  return values.some((value): value is FoodGroup => value === row.foodGroup);
+  return values.some((value) => value === row.foodGroup);
 }
 
 function rowMatchesZoneFilter(row: FoodDatabaseRow, values: string[]): boolean {
