@@ -1,12 +1,26 @@
 import { v } from "convex/values";
 import { resolveCanonicalFoodName } from "../shared/foodCanonicalName";
+import { getCanonicalFoodProjection } from "../shared/foodProjection";
 import { mutation, query } from "./_generated/server";
 import { requireAuth } from "./lib/auth";
-import {
-  getIngredientProfileProjection,
-  normalizeIngredientProfileLabel,
-  normalizeIngredientProfileTags,
-} from "./ingredientProfileProjection";
+
+export function normalizeIngredientProfileTag(value: string): string {
+  return value.toLowerCase().trim().replace(/\s+/g, " ");
+}
+
+export function normalizeIngredientProfileTags(values: string[]): string[] {
+  const unique = new Set<string>();
+  for (const value of values) {
+    const tag = normalizeIngredientProfileTag(value);
+    if (!tag) continue;
+    unique.add(tag);
+  }
+  return Array.from(unique.values()).sort((a, b) => a.localeCompare(b));
+}
+
+export function normalizeIngredientProfileLabel(value: string): string {
+  return value.trim().replace(/\s+/g, " ");
+}
 
 const nutritionPatchValidator = v.object({
   kcal: v.optional(v.union(v.number(), v.null())),
@@ -91,7 +105,7 @@ export const upsert = mutation({
     if (!canonicalName) {
       throw new Error("canonicalName is required.");
     }
-    const projection = getIngredientProfileProjection(canonicalName);
+    const projection = getCanonicalFoodProjection(canonicalName);
 
     const now = Date.now();
 
