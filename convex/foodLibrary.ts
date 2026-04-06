@@ -17,7 +17,7 @@ import { requireAuth } from "./lib/auth";
 import {
   normalizeIngredientProfileTag,
   normalizeIngredientProfileTags,
-} from "./ingredientProfileProjection";
+} from "./ingredientProfiles";
 
 const foodTypeValidator = v.union(
   v.literal("ingredient"),
