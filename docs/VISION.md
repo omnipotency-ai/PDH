@@ -1,23 +1,29 @@
+> **Ref:** `docs/VISION.md`
+> **Updated:** 2026-04-05
+> **Version:** 1.0
+> **History:** v1.0 (2026-04-05) — standardized doc header, transit map removed, nutrition card progress noted
+
 # PDH — Vision & v1.0 Scope
 
 ## Purpose
 
-PDH is a digestive recovery tracker for patients who have undergone
-reconnective surgery (ostomy reversal). During recovery, patients must
-systematically identify which foods their body can tolerate by logging
+PDH is a digestive recovery tracker for Peter James Blizzard who has undergone
+reconnective surgery (ostomy reversal). See [text](<research/In 2019 I had my first colostomy where they cut ou.md>) for more information. 
+
+During recovery, he needs to systematically identify which foods his body can tolerate by logging
 meals, fluids, habits, and bowel movements, then correlating inputs with
 digestive outcomes over time. This process is tedious and easy to abandon.
 PDH makes it manageable by providing structured logging, automated
 food-digestion correlation, and AI-generated coaching insights — all
-designed to be usable by someone who is recovering, fatigued, and likely
+designed to be usable by him while recovering, fatigued, and
 dealing with ADHD-adjacent executive function challenges.
 
 ## Target User
 
-The primary user is a single person recovering from reconnective surgery.
-They need to track what they eat and how their body responds, ideally
-multiple times per day, over weeks or months. They are not a clinician
-or data analyst. They want answers to simple questions: "Is this food
+The primary user is Peter recovering from reconnective surgery.
+He needs to track what he eats and how his body responds, ideally
+multiple times per day, over months or years. He is not a clinician
+or data analyst. He wants answers to simple questions: "Is this food
 safe for me?" and "Am I getting better?"
 
 The interface is designed for personal use, not multi-user or clinical
@@ -31,10 +37,12 @@ AI that surfaces patterns the user might not notice themselves.
 ### Logging
 
 Daily logging of food, fluid intake, weight, habits, activities, and
-bowel movements. Food can be entered via natural language and parsed
-by AI into structured items with portion estimates. Fluid intake is
-tracked with configurable units. Habits and activities are tracked via
-a template-based system with customisable categories.
+bowel movements. Food is entered via a NutritionCard component with
+search, staging area, portion controls (50g/50ml increments with
+editable amounts), 5-macro tracking (protein, carbs, fat, sugars,
+fibre), and meal slot auto-detection. Water has its own modal with a
+3-segment progress ring. Non-water liquids are logged through the food
+search with ml units. Habits and activities are tracked via the Quick Capture modal.
 
 ### Bristol Stool Scale
 
@@ -50,8 +58,7 @@ the app tracks how many times a food was eaten and what the digestive
 outcome was each time, building confidence over repeated exposures.
 Foods progress through statuses from untested to safe or problematic.
 This trial data feeds the Patterns page, which visualises the results
-via a transit map, food safety grid, hero metrics, and a searchable
-database of all food trials.
+via a searchable database of all food trials.
 
 ### AI Insights
 
@@ -60,20 +67,20 @@ routine analysis, while a higher-capability model generates daily
 coaching reports. The AI coaching personality ("Dr. Poo") provides
 daily summaries, identifies trends, and offers practical dietary
 suggestions. Reports are generated on-demand and cached locally.
-Scheduled insight generation also runs at set times (morning and
-evening) to proactively surface patterns without user prompting.
 
 ### Authentication and Data Privacy
 
-Clerk handles authentication. All user data is scoped to authenticated
-accounts. GDPR-compliant deletion is supported. Input sanitisation is
+Clerk handles authentication. His data is scoped to an authenticated
+account. GDPR-compliant deletion is supported. Input sanitisation is
 applied to all user-entered text.
 
 ### Settings and Health Profile
 
-Users configure their health profile (surgery date, dietary restrictions,
-tracking preferences), manage AI API keys, and control data sync.
-The settings surface also provides data export and account deletion.
+He currently has a health profile (surgery date, dietary restrictions,
+tracking preferences), manages his AI API keys, and controls data sync.
+The settings surface also provides data export and account deletion. 
+
+*Note: The plan is to write much of this in a more structured way in the coming weeks to form part of the reimagined dr poo prompt.*
 
 ### Testing
 
@@ -82,42 +89,25 @@ integrity (food pipeline mutations and LLM matching), shared utility
 unit tests (food canonicalization, normalization, registry, evidence
 scoring, pipeline display), and Playwright E2E specs covering daily
 tracking, food pipeline branches, patterns food trials, settings, and
-destructive operations (11 spec files, 75+ tests as of 2026-03-15).
+destructive operations (18 spec files, 1414 tests as of 2026-04-05).
 
 ## Feature-Gated / Deferred
 
-### In the codebase but not ready for v1.0
+### In the codebase but not finished yet
 
-- **Reproductive health tracking**: descoped for v1 per ADR-0008.
-  Feature flag gating required but not yet implemented. Currently still discoverable via Settings.
-- **Food safety database on Patterns page**: partially functional but
-  has known issues with data reliability. Shipping in limited form.
-- **Dr. Poo report deduplication**: reports can generate duplicates under
-  certain timing conditions. Known issue, not a launch blocker.
-- **Transit map**: IN scope for v1. Server pipeline complete (11/11 tasks),
-  Phase 5 UI work in progress.
-
-### Planned for v1.1+
+### Planned
 
 - **Photo food parsing**: camera-based meal logging via vision AI models.
-- **Onboarding wizard**: guided setup flow for new users.
 - **Gamification expansion**: basic streaks and confetti celebrations
   ship in v1.0; the broader system (badges, challenges, the
   miniChallenge engine) exists but is being migrated and stabilised.
 - **Meal plan table**: structured meal planning based on safe food data.
-- **Server-side API routing**: move AI API calls behind a server to
-  eliminate client-side key exposure.
-- **Patterns page reimagining**: richer visualisation of food-outcome
-  correlations.
 
-### Parking lot (no timeline)
 
 - Periodic backup/export to file
-- Multi-user or family support
 - Wearable device integration
 - Medication tracking
 - PDF report export
-- End-to-end encryption
 
 ## Key Technical Decisions
 
@@ -149,11 +139,11 @@ No SSR — the app is a client-side SPA deployed to Vercel.
 
 ## What Success Looks Like
 
-A recovering patient installs PDH, logs their meals and bowel
+Peter installs PDH, logs his meals and bowel
 movements daily with minimal friction, and within two to four weeks
 has a clear picture of which foods are safe, which are risky, and
-which to avoid. The AI coaching reinforces patterns they might miss
-and keeps them motivated to continue tracking during a difficult
+which to avoid. The AI coaching reinforces patterns he might miss
+and keeps him motivated to continue tracking during a difficult
 recovery period.
 
 The app does not replace medical advice. It gives the patient data

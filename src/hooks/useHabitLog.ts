@@ -4,7 +4,11 @@ import { toast } from "sonner";
 import { useProfileContext } from "@/contexts/ProfileContext";
 import { useHabits, useHealthProfile, useUnitSystem } from "@/hooks/useProfile";
 import type { HabitConfig } from "@/lib/habitTemplates";
-import { isCapHabit, isCheckboxHabit, isTargetHabit } from "@/lib/habitTemplates";
+import {
+  isCapHabit,
+  isCheckboxHabit,
+  isTargetHabit,
+} from "@/lib/habitTemplates";
 import { normalizeFluidItemName } from "@/lib/normalizeFluidName";
 import { type SyncedLog, useAddSyncedLog } from "@/lib/sync";
 import { formatFluidDisplay } from "@/lib/units";
@@ -26,15 +30,25 @@ interface UseHabitLogOptions {
   captureStart?: number;
   captureEnd?: number;
   captureOffset?: number;
-  checkAndCelebrateGoal: (habit: HabitConfig, previousValue: number, nextValue: number) => void;
+  checkAndCelebrateGoal: (
+    habit: HabitConfig,
+    previousValue: number,
+    nextValue: number,
+  ) => void;
   /** Direct celebration callback for custom messages (e.g. weekly frequency goals). */
   celebrateGoalComplete: (message: string) => void;
 }
 
 interface HabitLogResult {
   handleQuickCaptureTap: (habit: HabitConfig) => Promise<void>;
-  handleLogSleepQuickCapture: (habit: HabitConfig, hours: number) => Promise<void>;
-  handleLogActivityQuickCapture: (habit: HabitConfig, minutes: number) => Promise<void>;
+  handleLogSleepQuickCapture: (
+    habit: HabitConfig,
+    hours: number,
+  ) => Promise<void>;
+  handleLogActivityQuickCapture: (
+    habit: HabitConfig,
+    minutes: number,
+  ) => Promise<void>;
   handleLogFluid: (
     name: string,
     milliliters: number,
@@ -102,7 +116,10 @@ export function useHabitLog({
   const captureTimestampRef = useRef<number | undefined>(captureTimestampProp);
   captureTimestampRef.current = captureTimestampProp;
 
-  const captureNow = useCallback(() => captureTimestampRef.current ?? Date.now(), []);
+  const captureNow = useCallback(
+    () => captureTimestampRef.current ?? Date.now(),
+    [],
+  );
   const captureStart = captureStartProp ?? todayStart;
   const captureEnd = captureEndProp ?? todayEnd;
 
@@ -128,7 +145,9 @@ export function useHabitLog({
       if (!skipHabitLog) {
         const normalizedName = normalizeFluidItemName(name);
         const matchingFluidHabit = habits.find(
-          (h) => h.logAs === "fluid" && normalizeFluidItemName(h.name) === normalizedName,
+          (h) =>
+            h.logAs === "fluid" &&
+            normalizeFluidItemName(h.name) === normalizedName,
         );
         if (matchingFluidHabit) {
           matchedHabitId = matchingFluidHabit.id;
@@ -419,13 +438,19 @@ export function useHabitLog({
       const nextValue = previousValue + habitLogValue;
       checkAndCelebrateGoal(habit, previousValue, nextValue);
 
-      if (habit.weeklyFrequencyTarget !== undefined && habit.weeklyFrequencyTarget > 0) {
+      if (
+        habit.weeklyFrequencyTarget !== undefined &&
+        habit.weeklyFrequencyTarget > 0
+      ) {
         const weekStart = startOfWeek(new Date(timestamp), {
           weekStartsOn: 1,
         }).getTime();
         const weekEnd = weekStart + 7 * 24 * 60 * 60 * 1000;
         const sessionsThisWeek = habitLogs.filter(
-          (entry) => entry.habitId === habit.id && entry.at >= weekStart && entry.at < weekEnd,
+          (entry) =>
+            entry.habitId === habit.id &&
+            entry.at >= weekStart &&
+            entry.at < weekEnd,
         ).length;
         const nextSessions = sessionsThisWeek + 1;
         if (
@@ -615,7 +640,8 @@ export function useHabitLog({
       const timestamp = captureNow();
 
       // Cap habits use 1 for fluid logAs; everything else uses quickIncrement
-      const habitLogValue = habit.logAs === "fluid" && isCapHabit(habit) ? 1 : habit.quickIncrement;
+      const habitLogValue =
+        habit.logAs === "fluid" && isCapHabit(habit) ? 1 : habit.quickIncrement;
 
       // 1. Persist HabitLog event to the Zustand habit log store
       addHabitLog({
@@ -629,7 +655,12 @@ export function useHabitLog({
       let syncedLogId: string | undefined;
       try {
         if (habit.logAs === "fluid") {
-          syncedLogId = await handleLogFluid(habit.name, habit.quickIncrement, timestamp, true);
+          syncedLogId = await handleLogFluid(
+            habit.name,
+            habit.quickIncrement,
+            timestamp,
+            true,
+          );
         } else {
           syncedLogId = await handleIncrementHabit(
             habit,
@@ -647,8 +678,12 @@ export function useHabitLog({
           habit.logAs === "fluid"
             ? (todayFluidTotalsByName[fluidKey] ?? 0) + habit.quickIncrement
             : 0;
-        const newCount = (todayHabitCounts[habit.id] ?? 0) + (habit.logAs === "fluid" ? 0 : 1);
-        const checkValue = habit.logAs === "fluid" ? newFluidMl : newCount * habit.quickIncrement;
+        const newCount =
+          (todayHabitCounts[habit.id] ?? 0) + (habit.logAs === "fluid" ? 0 : 1);
+        const checkValue =
+          habit.logAs === "fluid"
+            ? newFluidMl
+            : newCount * habit.quickIncrement;
         const prevValue =
           habit.logAs === "fluid"
             ? (todayFluidTotalsByName[fluidKey] ?? 0)

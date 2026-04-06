@@ -5,19 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { usePanelTime } from "@/hooks/usePanelTime";
-import {
-  type CustomFoodPreset,
-  loadCustomFoodPresets,
-} from "@/lib/customFoodPresets";
+import { type CustomFoodPreset, loadCustomFoodPresets } from "@/lib/customFoodPresets";
 import { getErrorMessage } from "@/lib/errors";
 import { PanelTimePicker } from "./PanelTimePicker";
 
 interface FoodSectionProps {
-  onLogFood: (
-    notes: string,
-    rawText: string,
-    timestampMs?: number,
-  ) => Promise<void>;
+  onLogFood: (notes: string, rawText: string, timestampMs?: number) => Promise<void>;
   captureTimestamp?: number;
 }
 
@@ -25,23 +18,12 @@ export function FoodSection({ onLogFood, captureTimestamp }: FoodSectionProps) {
   const [foodName, setFoodName] = useState("");
   const [foodError, setFoodError] = useState("");
   const [saving, setSaving] = useState(false);
-  const [customFoodPresets, setCustomFoodPresets] = useState<
-    CustomFoodPreset[]
-  >([]);
+  const [customFoodPresets, setCustomFoodPresets] = useState<CustomFoodPreset[]>([]);
   // Track the active preset so we can bypass AI parsing when submitting a badge
-  const [activePreset, setActivePreset] = useState<CustomFoodPreset | null>(
-    null,
-  );
+  const [activePreset, setActivePreset] = useState<CustomFoodPreset | null>(null);
 
-  const {
-    timeValue,
-    setTimeValue,
-    dateValue,
-    setDateValue,
-    isEdited,
-    getTimestampMs,
-    reset,
-  } = usePanelTime(captureTimestamp);
+  const { timeValue, setTimeValue, dateValue, setDateValue, isEdited, getTimestampMs, reset } =
+    usePanelTime(captureTimestamp);
 
   useEffect(() => {
     setCustomFoodPresets(loadCustomFoodPresets());
@@ -117,9 +99,7 @@ export function FoodSection({ onLogFood, captureTimestamp }: FoodSectionProps) {
                   onClick={() => {
                     const nextName = preset.name.trim();
                     if (!nextName) return;
-                    if (
-                      foodName.trim().toLowerCase() === nextName.toLowerCase()
-                    ) {
+                    if (foodName.trim().toLowerCase() === nextName.toLowerCase()) {
                       void submitFood();
                       return;
                     }
@@ -164,9 +144,7 @@ export function FoodSection({ onLogFood, captureTimestamp }: FoodSectionProps) {
             aria-describedby={foodError ? foodErrorId : undefined}
             className="h-8 flex-1 rounded-[6px] text-(--text-muted) placeholder:text-(--text-faint) focus:ring-(--section-food)/30 focus:border-(--section-food)/50"
             style={{
-              border: foodError
-                ? "1px solid var(--red)"
-                : "1px solid var(--section-food-border)",
+              border: foodError ? "1px solid var(--red)" : "1px solid var(--section-food-border)",
               background: "var(--section-food-muted)",
             }}
           />
@@ -186,11 +164,7 @@ export function FoodSection({ onLogFood, captureTimestamp }: FoodSectionProps) {
           </Button>
         </div>
         {foodError && (
-          <p
-            id={foodErrorId}
-            role="alert"
-            className="text-[11px] text-[var(--red)]"
-          >
+          <p id={foodErrorId} role="alert" className="text-[11px] text-[var(--red)]">
             {foodError}
           </p>
         )}

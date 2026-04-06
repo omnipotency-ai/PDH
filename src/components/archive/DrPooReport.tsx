@@ -1,11 +1,4 @@
-import {
-  BookOpen,
-  BrainCircuit,
-  Check,
-  Copy,
-  TriangleAlert,
-  UtensilsCrossed,
-} from "lucide-react";
+import { BookOpen, BrainCircuit, Check, Copy, TriangleAlert, UtensilsCrossed } from "lucide-react";
 import { type RefObject, useCallback, useRef, useState } from "react";
 import Markdown from "react-markdown";
 import { toast } from "sonner";
@@ -16,11 +9,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { getAiDisclaimer } from "@/lib/aiAnalysis";
 import { AI_MARKDOWN_COMPONENTS } from "@/lib/aiMarkdownComponents";
 import type { AiNutritionistInsight } from "@/types/domain";
@@ -82,11 +71,7 @@ function confidenceBadgeTone(confidence: "high" | "medium" | "low"): string {
  *   4. Suggestions
  *   5. Disclaimer
  */
-export function DrPooReportDetails({
-  insights,
-}: {
-  insights: AiNutritionistInsight;
-}) {
+export function DrPooReportDetails({ insights }: { insights: AiNutritionistInsight }) {
   const hasMealPlan = insights.mealPlan.length > 0;
 
   return (
@@ -105,9 +90,7 @@ export function DrPooReportDetails({
           </CollapsibleTrigger>
           <CollapsibleContent>
             <div className="prose-sm mt-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2.5 text-xs text-[var(--text-muted)] [&_em]:text-[var(--text-faint)] [&_strong]:text-[var(--text)]">
-              <Markdown components={AI_MARKDOWN_COMPONENTS}>
-                {insights.clinicalReasoning}
-              </Markdown>
+              <Markdown components={AI_MARKDOWN_COMPONENTS}>{insights.clinicalReasoning}</Markdown>
             </div>
           </CollapsibleContent>
         </Collapsible>
@@ -143,9 +126,7 @@ export function DrPooReportDetails({
                 </AccordionTrigger>
                 <AccordionContent className="px-3 pb-3">
                   <div className="prose-sm text-xs text-[var(--text-muted)] [&_strong]:text-[var(--text)] [&_em]:text-[var(--text-faint)]">
-                    <Markdown components={AI_MARKDOWN_COMPONENTS}>
-                      {item.reasoning}
-                    </Markdown>
+                    <Markdown components={AI_MARKDOWN_COMPONENTS}>{item.reasoning}</Markdown>
                   </div>
                 </AccordionContent>
               </AccordionItem>
@@ -202,9 +183,7 @@ export function DrPooReportDetails({
           <div className="prose-sm space-y-1 text-xs text-[var(--text-muted)] [&_strong]:text-[var(--text)] [&_em]:text-[var(--text-faint)]">
             {insights.suggestions.map((suggestion) => (
               <div key={suggestion}>
-                <Markdown components={AI_MARKDOWN_COMPONENTS}>
-                  {suggestion}
-                </Markdown>
+                <Markdown components={AI_MARKDOWN_COMPONENTS}>{suggestion}</Markdown>
               </div>
             ))}
           </div>
@@ -223,11 +202,7 @@ export function DrPooReportDetails({
  * Full Dr. Poo report with summary + details.
  * Used by the Archive page where everything is always visible.
  */
-export function DrPooFullReport({
-  insights,
-}: {
-  insights: AiNutritionistInsight;
-}) {
+export function DrPooFullReport({ insights }: { insights: AiNutritionistInsight }) {
   const reportRef = useRef<HTMLDivElement>(null);
 
   return (
@@ -252,9 +227,7 @@ export function DrPooFullReport({
 
         {/* Summary */}
         <div className="prose-sm text-sm text-[var(--text)] [&_em]:text-[var(--text-muted)] [&_strong]:font-semibold">
-          <Markdown components={AI_MARKDOWN_COMPONENTS}>
-            {insights.summary}
-          </Markdown>
+          <Markdown components={AI_MARKDOWN_COMPONENTS}>{insights.summary}</Markdown>
         </div>
 
         <DrPooReportDetails insights={insights} />

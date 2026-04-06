@@ -25,6 +25,8 @@ export interface DayStats {
   todayFluidTotalsByName: Record<string, number>;
   /** Sum of all fluid intake in ml for today. */
   totalFluidMl: number;
+  /** Water-only intake in ml for today (subset of totalFluidMl). */
+  waterOnlyMl: number;
   /** Total bowel movement episode count for today. */
   todayBmCount: number;
   /** Timestamp (ms) of the most recent digestion log ever, or null. */
@@ -43,18 +45,30 @@ function toActivityTypeKey(value: string): string {
   return key;
 }
 
-function getHabitsForActivityType(habits: HabitConfig[], activityType: string): HabitConfig[] {
+function getHabitsForActivityType(
+  habits: HabitConfig[],
+  activityType: string,
+): HabitConfig[] {
   if (activityType === "sleep") {
     return habits.filter((habit) => isSleepHabit(habit));
   }
-  return habits.filter((habit) => toActivityTypeKey(habit.name) === activityType);
+  return habits.filter(
+    (habit) => toActivityTypeKey(habit.name) === activityType,
+  );
 }
 
-export function useDayStats({ logs, todayStart, todayEnd }: UseDayStatsOptions): DayStats {
+export function useDayStats({
+  logs,
+  todayStart,
+  todayEnd,
+}: UseDayStatsOptions): DayStats {
   const { habits } = useHabits();
 
   const todayLogs = useMemo(
-    () => logs.filter((log) => log.timestamp >= todayStart && log.timestamp < todayEnd),
+    () =>
+      logs.filter(
+        (log) => log.timestamp >= todayStart && log.timestamp < todayEnd,
+      ),
     [logs, todayStart, todayEnd],
   );
 
@@ -63,7 +77,8 @@ export function useDayStats({ logs, todayStart, todayEnd }: UseDayStatsOptions):
 
     for (const log of todayLogs) {
       if (log.type === "habit") {
-        const habitId = typeof log.data?.habitId === "string" ? log.data.habitId : "";
+        const habitId =
+          typeof log.data?.habitId === "string" ? log.data.habitId : "";
         const quantity = Number(log.data?.quantity ?? 1);
         if (!habitId || !Number.isFinite(quantity) || quantity <= 0) continue;
         counts[habitId] = (counts[habitId] ?? 0) + quantity;
@@ -71,9 +86,16 @@ export function useDayStats({ logs, todayStart, todayEnd }: UseDayStatsOptions):
       }
 
       if (log.type === "activity") {
-        const activityType = toActivityTypeKey(String(log.data?.activityType ?? ""));
+        const activityType = toActivityTypeKey(
+          String(log.data?.activityType ?? ""),
+        );
         const durationMinutes = Number(log.data?.durationMinutes ?? 0);
-        if (!activityType || !Number.isFinite(durationMinutes) || durationMinutes <= 0) continue;
+        if (
+          !activityType ||
+          !Number.isFinite(durationMinutes) ||
+          durationMinutes <= 0
+        )
+          continue;
 
         for (const habit of getHabitsForActivityType(habits, activityType)) {
           const value =
@@ -92,10 +114,14 @@ export function useDayStats({ logs, todayStart, todayEnd }: UseDayStatsOptions):
       for (const item of items) {
         const normalizedName = normalizeFluidItemName(item?.name);
         const quantity = Number(item.quantity ?? 0);
-        if (!normalizedName || !Number.isFinite(quantity) || quantity <= 0) continue;
+        if (!normalizedName || !Number.isFinite(quantity) || quantity <= 0)
+          continue;
 
         for (const habit of habits) {
-          if (habit.logAs === "fluid" && normalizeFluidItemName(habit.name) === normalizedName) {
+          if (
+            habit.logAs === "fluid" &&
+            normalizeFluidItemName(habit.name) === normalizedName
+          ) {
             counts[habit.id] = (counts[habit.id] ?? 0) + quantity;
           }
         }
@@ -127,6 +153,8 @@ export function useDayStats({ logs, todayStart, todayEnd }: UseDayStatsOptions):
     }
     return sum;
   }, [todayFluidTotalsByName]);
+
+  const waterOnlyMl = todayFluidTotalsByName.water ?? 0;
 
   const todayBmCount = useMemo(() => {
     let total = 0;
@@ -160,6 +188,7 @@ export function useDayStats({ logs, todayStart, todayEnd }: UseDayStatsOptions):
     todayHabitCounts,
     todayFluidTotalsByName,
     totalFluidMl,
+    waterOnlyMl,
     todayBmCount,
     lastBmTimestamp,
     hadGapYesterday,

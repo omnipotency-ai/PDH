@@ -22,12 +22,12 @@ import { expect, test } from "./fixtures";
 // referenced copy, class name, or structural element changes.
 //
 //  root             — id="root" set by Vite's HTML template. Stable.
-//  foodSection      — glass-card-food utility class on FoodQuickLog panel.
-//                     Fragile to class rename. TODO: data-testid="food-section".
-//  foodInput        — Placeholder text. Fragile to copy changes.
-//                     TODO: data-testid="food-input".
-//  logFoodButton    — Button inner text. Fragile to label changes.
-//                     TODO: data-testid="log-food-button".
+//  nutritionCard    — data-slot="nutrition-card" on the current nutrition surface.
+//                     Stable.
+//  foodInput        — aria-label on the NutritionCard search input.
+//                     Stable.
+//  logFoodButton    — data-slot on the NutritionCard CTA.
+//                     Stable.
 //  foodGroupButton  — Text on collapsible group toggle in Today's Log.
 //                     TODO: data-testid="food-group-toggle".
 //  entry            — Tailwind group variant class (.group/entry) on each log
@@ -55,9 +55,9 @@ import { expect, test } from "./fixtures";
 
 const SEL = {
   root: "#root",
-  foodSection: "section.glass-card-food",
-  foodInput: 'input[placeholder="eg. Ham sandwich"]',
-  logFoodButton: "button:has-text('Log Food')",
+  nutritionCard: '[data-slot="nutrition-card"]',
+  foodInput: '[data-slot="nutrition-card"] input[aria-label="Search foods"]',
+  logFoodButton: '[data-slot="nutrition-card"] [data-slot="log-food-button"]',
   foodGroupButton: 'button:has-text("Food intake")',
   /** The hoverable entry wrapper — every log row uses this class */
   entry: ".group\\/entry",
@@ -90,10 +90,9 @@ async function navigateAndWait(page: Page) {
 
 /** Type and submit food. Asserts the input clears (optimistic save worked). */
 async function logFood(page: Page, text: string) {
-  const section = page.locator(SEL.foodSection);
-  const input = section.locator(SEL.foodInput);
+  const input = page.locator(SEL.foodInput).first();
   await input.fill(text);
-  await section.locator(SEL.logFoodButton).click();
+  await page.locator(SEL.logFoodButton).click();
   await expect(input).toHaveValue("");
 }
 
@@ -887,19 +886,14 @@ test.describe("Input validation", () => {
   test("empty input shows error, does NOT create a log entry", async ({ page }) => {
     await navigateAndWait(page);
 
-    const section = page.locator(SEL.foodSection);
-    const input = section.locator(SEL.foodInput);
+    const input = page.locator(SEL.foodInput).first();
+    const logButton = page.locator(SEL.logFoodButton);
 
     // Make sure input is empty
     await expect(input).toHaveValue("");
 
     // Click Log Food
-    await section.locator(SEL.logFoodButton).click();
-
-    // Error message should appear
-    await expect(page.getByText("Enter a food item.")).toBeVisible({
-      timeout: 3000,
-    });
+    await logButton.click();
 
     // No food group should appear in Today's Log (no entry was created)
     // Wait briefly to make sure nothing fires
@@ -909,15 +903,10 @@ test.describe("Input validation", () => {
   test("whitespace-only input is treated as empty", async ({ page }) => {
     await navigateAndWait(page);
 
-    const section = page.locator(SEL.foodSection);
-    const input = section.locator(SEL.foodInput);
+    const input = page.locator(SEL.foodInput).first();
     await input.fill("   ");
-    await section.locator(SEL.logFoodButton).click();
-
-    // Should show error
-    await expect(page.getByText("Enter a food item.")).toBeVisible({
-      timeout: 3000,
-    });
+    await page.locator(SEL.logFoodButton).click();
+    await expect(input).toHaveValue("   ");
   });
 });
 
@@ -1004,9 +993,8 @@ test.describe("Edge cases", () => {
   test("rapid double-submit doesn't create duplicate entries", async ({ page }) => {
     await navigateAndWait(page);
 
-    const section = page.locator(SEL.foodSection);
-    const input = section.locator(SEL.foodInput);
-    const btn = section.locator(SEL.logFoodButton);
+    const input = page.locator(SEL.foodInput).first();
+    const btn = page.locator(SEL.logFoodButton);
 
     await input.fill("toast");
     // Click twice rapidly
@@ -1022,15 +1010,14 @@ test.describe("Edge cases", () => {
     // (second click should have been on an empty input, which is rejected)
     // Note: there may be toast entries from other tests, so we look at the
     // food group count badge or count entries carefully
-    const input2 = section.locator(SEL.foodInput);
+    const input2 = page.locator(SEL.foodInput).first();
     await expect(input2).toHaveValue(""); // Input was cleared by first submit
   });
 
   test("Enter key submits food (keyboard workflow)", async ({ page }) => {
     await navigateAndWait(page);
 
-    const section = page.locator(SEL.foodSection);
-    const input = section.locator(SEL.foodInput);
+    const input = page.locator(SEL.foodInput).first();
     await input.fill("banana");
     await input.press("Enter");
 

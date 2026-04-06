@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MS_PER_DAY, MS_PER_HOUR } from "@/lib/timeConstants";
-import type {
-  AiNutritionistInsight,
-  HealthProfile,
-  LogEntry,
-} from "@/types/domain";
+import type { AiNutritionistInsight, HealthProfile, LogEntry } from "@/types/domain";
 import type {
   BowelEvent,
   FoodLog,
@@ -59,10 +55,7 @@ describe("parseAiInsight", () => {
     expect(result?.directResponseToUser).toBe("Great progress today!");
     expect(result?.suspectedCulprits).toHaveLength(1);
     expect(result?.mealPlan).toHaveLength(1);
-    expect(result?.suggestions).toEqual([
-      "Drink more water",
-      "Try smaller meals",
-    ]);
+    expect(result?.suggestions).toEqual(["Drink more water", "Try smaller meals"]);
     expect(result?.educationalInsight?.topic).toBe("Gastrocolic reflex");
   });
 
@@ -181,10 +174,7 @@ describe("parseAiInsight", () => {
 
 // ─── Helpers for partial-day context tests ─────────────────────────────────
 
-function makeFoodLog(
-  timestamp: number,
-  items: Array<{ name: string }>,
-): FoodLog {
+function makeFoodLog(timestamp: number, items: Array<{ name: string }>): FoodLog {
   return {
     timestamp,
     time: new Date(timestamp).toISOString(),
@@ -254,18 +244,10 @@ describe("buildPartialDayContext", () => {
     const now = new Date("2026-03-17T20:00:00");
     const nowMs = now.getTime();
     const bmAt6am = makeBowelEvent(nowMs - 14 * MS_PER_HOUR); // 06:00
-    const foodAt8am = makeFoodLog(nowMs - 12 * MS_PER_HOUR, [
-      { name: "Toast" },
-    ]); // 08:00
-    const foodAt10am = makeFoodLog(nowMs - 10 * MS_PER_HOUR, [
-      { name: "Banana" },
-    ]); // 10:00
+    const foodAt8am = makeFoodLog(nowMs - 12 * MS_PER_HOUR, [{ name: "Toast" }]); // 08:00
+    const foodAt10am = makeFoodLog(nowMs - 10 * MS_PER_HOUR, [{ name: "Banana" }]); // 10:00
 
-    const result = buildPartialDayContext(
-      [foodAt8am, foodAt10am],
-      [bmAt6am],
-      now,
-    );
+    const result = buildPartialDayContext([foodAt8am, foodAt10am], [bmAt6am], now);
     const inTransit = result.foodsCurrentlyInTransit;
     expect(Array.isArray(inTransit)).toBe(true);
     const transitArr = inTransit as string[];
@@ -287,9 +269,7 @@ describe("buildPartialDayContext", () => {
   it("excludes foods eaten before last BM", () => {
     const now = new Date("2026-03-17T20:00:00");
     const nowMs = now.getTime();
-    const foodBefore = makeFoodLog(nowMs - 12 * MS_PER_HOUR, [
-      { name: "Rice" },
-    ]);
+    const foodBefore = makeFoodLog(nowMs - 12 * MS_PER_HOUR, [{ name: "Rice" }]);
     const bmAfter = makeBowelEvent(nowMs - 10 * MS_PER_HOUR);
 
     const result = buildPartialDayContext([foodBefore], [bmAfter], now);
@@ -301,9 +281,7 @@ describe("buildPartialDayContext", () => {
     const nowMs = now.getTime();
     const foods: FoodLog[] = [];
     for (let i = 0; i < 15; i++) {
-      foods.push(
-        makeFoodLog(nowMs - (7 + i) * MS_PER_HOUR, [{ name: `Food ${i}` }]),
-      );
+      foods.push(makeFoodLog(nowMs - (7 + i) * MS_PER_HOUR, [{ name: `Food ${i}` }]));
     }
     // Sort ascending by timestamp (as buildUserMessage provides)
     foods.sort((a, b) => a.timestamp - b.timestamp);
@@ -358,9 +336,7 @@ describe("buildUserMessage", () => {
     expect(parsed.partialDayContext).toBeDefined();
     const ctx = parsed.partialDayContext as Record<string, unknown>;
     expect(ctx.reportGeneratedAt).toBeDefined();
-    expect(ctx.timeSinceLastBowelMovement).toBe(
-      "No bowel movements recorded in the data window.",
-    );
+    expect(ctx.timeSinceLastBowelMovement).toBe("No bowel movements recorded in the data window.");
   });
 
   it("includes time since last BM in partialDayContext", () => {
@@ -751,10 +727,7 @@ function makeLogEntryFluid(
 }
 
 /** Create a minimal activity LogEntry for testing. */
-function makeLogEntryActivity(
-  timestamp: number,
-  activityType: string = "walking",
-): LogEntry {
+function makeLogEntryActivity(timestamp: number, activityType: string = "walking"): LogEntry {
   return {
     id: `activity-${timestamp}`,
     timestamp,
@@ -862,23 +835,13 @@ describe("getFoodWindowHours (edge cases)", () => {
 
 describe("buildPatientSnapshot", () => {
   it("includes daysSinceReversal when surgeryDate is set", () => {
-    const pastDate = new Date(Date.now() - 30 * MS_PER_DAY)
-      .toISOString()
-      .slice(0, 10);
-    const result = buildPatientSnapshot(
-      { ...BASE_PROFILE, surgeryDate: pastDate },
-      [],
-      [],
-    );
+    const pastDate = new Date(Date.now() - 30 * MS_PER_DAY).toISOString().slice(0, 10);
+    const result = buildPatientSnapshot({ ...BASE_PROFILE, surgeryDate: pastDate }, [], []);
     expect(result.daysSinceReversal).toBe(30);
   });
 
   it("omits daysSinceReversal when surgeryDate is empty", () => {
-    const result = buildPatientSnapshot(
-      { ...BASE_PROFILE, surgeryDate: "" },
-      [],
-      [],
-    );
+    const result = buildPatientSnapshot({ ...BASE_PROFILE, surgeryDate: "" }, [], []);
     expect(result.daysSinceReversal).toBeUndefined();
   });
 
@@ -888,19 +851,11 @@ describe("buildPatientSnapshot", () => {
       [],
       [],
     );
-    expect(result.medications).toEqual([
-      "paracetamol",
-      "ibuprofen",
-      "omeprazole",
-    ]);
+    expect(result.medications).toEqual(["paracetamol", "ibuprofen", "omeprazole"]);
   });
 
   it("omits medications when empty string", () => {
-    const result = buildPatientSnapshot(
-      { ...BASE_PROFILE, medications: "" },
-      [],
-      [],
-    );
+    const result = buildPatientSnapshot({ ...BASE_PROFILE, medications: "" }, [], []);
     expect(result.medications).toBeUndefined();
   });
 
@@ -1216,9 +1171,7 @@ describe("buildDeltaSignals", () => {
       const today = new Date(now).toISOString().slice(0, 10);
       const todayMs = new Date(today).getTime() + 8 * MS_PER_HOUR;
 
-      const logs: LogEntry[] = [
-        makeLogEntryHabit(todayMs, "habit_water", "Water"),
-      ];
+      const logs: LogEntry[] = [makeLogEntryHabit(todayMs, "habit_water", "Water")];
 
       const result = buildDeltaSignals(logs, []);
       const streaks = result.habitStreaks as Record<string, number>;
@@ -1473,11 +1426,7 @@ describe("buildRecentEvents", () => {
 
   it("includes habit logs within 24h window", () => {
     const now = Date.now();
-    const recentHabit = makeLogEntryHabit(
-      now - 12 * MS_PER_HOUR,
-      "habit_water",
-      "Water",
-    );
+    const recentHabit = makeLogEntryHabit(now - 12 * MS_PER_HOUR, "habit_water", "Water");
 
     const result = buildRecentEvents([recentHabit], BASE_PROFILE);
     expect(result.habitLogs).toHaveLength(1);
@@ -1485,11 +1434,7 @@ describe("buildRecentEvents", () => {
 
   it("excludes habit logs outside 24h window", () => {
     const now = Date.now();
-    const oldHabit = makeLogEntryHabit(
-      now - 25 * MS_PER_HOUR,
-      "habit_water",
-      "Water",
-    );
+    const oldHabit = makeLogEntryHabit(now - 25 * MS_PER_HOUR, "habit_water", "Water");
 
     const result = buildRecentEvents([oldHabit], BASE_PROFILE);
     expect(result.habitLogs).toHaveLength(0);
@@ -1545,9 +1490,7 @@ describe("buildRecentEvents", () => {
     const now = Date.now();
     const logs: LogEntry[] = [
       // 30h ago — within food window (72h) but outside habit/fluid window (24h)
-      makeLogEntryFood(now - 30 * MS_PER_HOUR, [
-        { name: "Toast", canonicalName: "toast" },
-      ]),
+      makeLogEntryFood(now - 30 * MS_PER_HOUR, [{ name: "Toast", canonicalName: "toast" }]),
       makeLogEntryHabit(now - 30 * MS_PER_HOUR, "habit_water", "Water"),
       makeLogEntryFluid(now - 30 * MS_PER_HOUR),
       // 10h ago — within all windows

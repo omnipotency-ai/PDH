@@ -111,6 +111,7 @@ export function RawInputEditModal({
     currentRawInput,
     currentNotes,
     logId,
+    logType,
     logTimestamp,
     updateSyncedLog,
     onOpenChange,
@@ -161,12 +162,7 @@ export function RawInputEditModal({
         </div>
 
         <div className="flex items-center justify-end gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onOpenChange(false)}
-            disabled={isSaving}
-          >
+          <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} disabled={isSaving}>
             Cancel
           </Button>
           <Button

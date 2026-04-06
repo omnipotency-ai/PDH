@@ -4,7 +4,6 @@ import { expect, test } from "./fixtures";
  * E2E tests for Dr. Poo trigger behavior (WQ-315).
  *
  * Covers:
- * - Auto/Manual toggle switches and persists
  * - Auto mode: Bristol 4 does NOT trigger a report (only 6-7 do)
  * - Manual mode: user can request a report via "Send now"
  * - Cooldown UI state after report generation
@@ -21,111 +20,8 @@ test.describe("Dr. Poo trigger behavior", () => {
   const getBowelSection = (page: import("@playwright/test").Page) =>
     page.locator("section.glass-card-bowel");
 
-  const getAutoButton = (page: import("@playwright/test").Page) =>
-    getBowelSection(page)
-      .locator('[role="toolbar"][aria-label="Report trigger mode"]')
-      .getByRole("button", { name: "Auto" });
-
-  const getManualButton = (page: import("@playwright/test").Page) =>
-    getBowelSection(page)
-      .locator('[role="toolbar"][aria-label="Report trigger mode"]')
-      .getByRole("button", { name: "Manual" });
-
-  // ── Toggle tests ──
-
-  test.describe("Auto/Manual toggle", () => {
-    test("toggle is visible in the Bowel Movement section", async ({
-      page,
-    }) => {
-      await page.goto("/");
-      await expect(page.locator("#root")).toBeVisible();
-
-      const bowelSection = getBowelSection(page);
-      await expect(bowelSection).toBeVisible();
-
-      const toolbar = bowelSection.locator(
-        '[role="toolbar"][aria-label="Report trigger mode"]',
-      );
-      await expect(toolbar).toBeVisible();
-
-      await expect(getAutoButton(page)).toBeVisible();
-      await expect(getManualButton(page)).toBeVisible();
-    });
-
-    test("Auto button is pressed by default", async ({ page }) => {
-      await page.goto("/");
-      await expect(page.locator("#root")).toBeVisible();
-
-      // Default reportTriggerMode is "auto" (undefined defaults to "auto")
-      await expect(getAutoButton(page)).toHaveAttribute("aria-pressed", "true");
-      await expect(getManualButton(page)).toHaveAttribute(
-        "aria-pressed",
-        "false",
-      );
-    });
-
-    test("clicking Manual switches the toggle and persists on reload", async ({
-      page,
-    }) => {
-      await page.goto("/");
-      await expect(page.locator("#root")).toBeVisible();
-
-      // Click Manual
-      await getManualButton(page).click();
-      await page.waitForTimeout(500);
-
-      // Manual should now be pressed
-      await expect(getManualButton(page)).toHaveAttribute(
-        "aria-pressed",
-        "true",
-      );
-      await expect(getAutoButton(page)).toHaveAttribute(
-        "aria-pressed",
-        "false",
-      );
-
-      // Reload the page and verify persistence (stored in Convex profile)
-      await page.reload();
-      await expect(page.locator("#root")).toBeVisible();
-      await expect(getBowelSection(page)).toBeVisible();
-
-      await expect(getManualButton(page)).toHaveAttribute(
-        "aria-pressed",
-        "true",
-      );
-      await expect(getAutoButton(page)).toHaveAttribute(
-        "aria-pressed",
-        "false",
-      );
-
-      // Restore to Auto for other tests
-      await getAutoButton(page).click();
-      await page.waitForTimeout(500);
-      await expect(getAutoButton(page)).toHaveAttribute("aria-pressed", "true");
-    });
-
-    test("clicking Auto after Manual switches back", async ({ page }) => {
-      await page.goto("/");
-      await expect(page.locator("#root")).toBeVisible();
-
-      // Switch to Manual first
-      await getManualButton(page).click();
-      await page.waitForTimeout(300);
-      await expect(getManualButton(page)).toHaveAttribute(
-        "aria-pressed",
-        "true",
-      );
-
-      // Switch back to Auto
-      await getAutoButton(page).click();
-      await page.waitForTimeout(300);
-      await expect(getAutoButton(page)).toHaveAttribute("aria-pressed", "true");
-      await expect(getManualButton(page)).toHaveAttribute(
-        "aria-pressed",
-        "false",
-      );
-    });
-  });
+  const getConversationPanel = (page: import("@playwright/test").Page) =>
+    page.locator('[data-slot="conversation-panel"]');
 
   // ── No API key state ──
 
@@ -164,7 +60,7 @@ test.describe("Dr. Poo trigger behavior", () => {
   // ── Auto mode: Bristol score filtering ──
 
   test.describe("Auto mode - Bristol score filtering", () => {
-    test("logging a Bristol 4 BM in Auto mode does NOT show analysis progress", async ({
+    test("logging a Bristol 4 BM does NOT show analysis progress", async ({
       page,
     }) => {
       await page.goto("/");
@@ -172,9 +68,6 @@ test.describe("Dr. Poo trigger behavior", () => {
 
       const bowelSection = getBowelSection(page);
       await expect(bowelSection).toBeVisible();
-
-      // Ensure Auto mode is active
-      await expect(getAutoButton(page)).toHaveAttribute("aria-pressed", "true");
 
       // Select Bristol Type 4 (normal stool — should NOT trigger auto-report)
       const bristolType4 = bowelSection.locator(
@@ -191,9 +84,8 @@ test.describe("Dr. Poo trigger behavior", () => {
       await logButton.click();
       await page.waitForTimeout(1500);
 
-      // In Auto mode with Bristol 4, no analysis should be triggered.
-      // The analysis progress overlay should NOT appear (no "sending" / "receiving" state).
-      // The Dr. Poo section should remain in its idle state.
+      // With Bristol 4, no analysis should be triggered.
+      // The analysis progress overlay should NOT appear.
       const progressIndicator = page.locator(
         '[data-slot="analysis-progress-inline"]',
       );
@@ -205,56 +97,6 @@ test.describe("Dr. Poo trigger behavior", () => {
           progressIndicator.getByText(/Sending logs|Analysing your data/i),
         ).not.toBeVisible();
       }
-    });
-  });
-
-  // ── Manual mode: explicit report request ──
-
-  test.describe("Manual mode - explicit report request", () => {
-    // This test requires a real OpenAI API key to actually generate a report.
-    // Without one, the "Send now" button won't appear (no API key = no conversation panel).
-    const hasApiKey = Boolean(process.env.TEST_OPENAI_API_KEY);
-
-    // Skip the entire describe block if no API key is available
-    test.skip(
-      !hasApiKey,
-      "Requires TEST_OPENAI_API_KEY to test manual report flow",
-    );
-
-    test("user can type a question and see Send now button after submitting", async ({
-      page,
-    }) => {
-      await page.goto("/");
-      await expect(page.locator("#root")).toBeVisible();
-
-      // Switch to Manual mode
-      await getManualButton(page).click();
-      await page.waitForTimeout(300);
-
-      // The conversation panel should be visible (user has API key)
-      const replyInput = page.getByPlaceholder("Reply to Dr. Poo...");
-      await expect(replyInput).toBeVisible();
-
-      // Type a question
-      await replyInput.fill("What foods should I avoid this week?");
-
-      // Submit the question (click the send button next to the input)
-      const sendButton = page
-        .locator('[data-slot="conversation-panel"]')
-        .locator("button")
-        .last();
-      await sendButton.click();
-      await page.waitForTimeout(500);
-
-      // The pending reply should appear, along with the "Send now" button
-      await expect(
-        page.getByText("What foods should I avoid this week?"),
-      ).toBeVisible();
-      await expect(page.getByText("Send now")).toBeVisible();
-
-      // Restore Auto mode
-      await getAutoButton(page).click();
-      await page.waitForTimeout(300);
     });
   });
 
@@ -346,22 +188,14 @@ test.describe("Dr. Poo trigger behavior", () => {
     test("after generating a report, Send now triggers lightweight mode during cooldown", async ({
       page,
     }) => {
-      // This test would need to:
-      // 1. Log a Bristol 6-7 BM to trigger an auto-report (or send a question manually)
-      // 2. Wait for the report to complete
-      // 3. Verify that subsequent "Send now" clicks use lightweight (conversation-only) mode
-      //
-      // The lightweight mode is detected by the absence of a full report update —
-      // only conversation messages are added, not a new report body.
-      //
-      // This is an inherently slow test (requires full AI round-trip) so it's
-      // only run when TEST_OPENAI_API_KEY is available.
-
       await page.goto("/");
       await expect(page.locator("#root")).toBeVisible();
 
-      // Ensure Auto mode
-      await expect(getAutoButton(page)).toHaveAttribute("aria-pressed", "true");
+      const conversationPanel = getConversationPanel(page);
+      const hasKey = await conversationPanel.isVisible().catch(() => false);
+      if (!hasKey) {
+        test.skip(true, "Test user does not have an API key configured");
+      }
 
       // Type a question to Dr. Poo and use "Send now" to trigger a report
       const replyInput = page.getByPlaceholder("Reply to Dr. Poo...");

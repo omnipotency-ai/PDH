@@ -1,3 +1,8 @@
+> **Ref:** `src/components/Claude.md`
+> **Updated:** 2026-04-05
+> **Version:** 1.0
+> **History:** v1.0 (2026-04-05) — standardized doc header
+
 # UI Component Conventions
 
 ## Base UI Migration Patterns

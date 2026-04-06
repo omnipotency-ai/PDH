@@ -1,9 +1,9 @@
+import { isFoodPipelineType } from "@shared/logTypeUtils";
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import type { SyncedLog } from "@/lib/sync";
 import { MS_PER_HOUR } from "@/lib/timeConstants";
 import type { FoodItem, FoodLog, LiquidLog } from "@/types/domain";
-import { isFoodPipelineType } from "@shared/logTypeUtils";
 
 /** 6-hour processing window in milliseconds. */
 const PROCESSING_WINDOW_MS = 6 * MS_PER_HOUR;
@@ -19,9 +19,7 @@ function isItemUnresolved(item: FoodItem): boolean {
     item.canonicalName != null &&
     item.canonicalName.length > 0 &&
     item.canonicalName !== "unknown_food" &&
-    (item.resolvedBy === "registry" ||
-      item.resolvedBy === "llm" ||
-      item.resolvedBy === "user")
+    (item.resolvedBy === "registry" || item.resolvedBy === "llm" || item.resolvedBy === "user")
   ) {
     return false;
   }
@@ -35,10 +33,7 @@ function isItemUnresolved(item: FoodItem): boolean {
 /**
  * Find food logs with unresolved items within the 6-hour processing window.
  */
-function findUnresolvedFoodLogs(
-  logs: SyncedLog[],
-  nowMs: number,
-): (FoodLog | LiquidLog)[] {
+function findUnresolvedFoodLogs(logs: SyncedLog[], nowMs: number): (FoodLog | LiquidLog)[] {
   const result: (FoodLog | LiquidLog)[] = [];
   for (const log of logs) {
     if (!isFoodPipelineType(log.type)) continue;

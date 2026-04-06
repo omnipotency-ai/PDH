@@ -5,3 +5,5 @@ When working on Convex code, **always read `convex/_generated/ai/guidelines.md` 
 
 Convex agent skills for common tasks can be installed by running `npx convex ai-files install`.
 <!-- convex-ai-end -->
+
+For Claude Code and Codex collaboration, use `docs/ai/cross-tool-collaboration.md` as the shared handoff and role contract. Keep durable task state in repo docs, not only in user-level tool memory.

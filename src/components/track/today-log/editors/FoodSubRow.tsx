@@ -3,6 +3,7 @@ import { AlertCircle, Check, CircleDashed, FileText, Loader2, Trash2, X } from "
 import { lazy, Suspense, useCallback, useState } from "react";
 import { RawInputEditModal } from "@/components/track/RawInputEditModal";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { getItemMacros } from "@/lib/nutritionUtils";
 import type { FoodItem, FoodLog, FoodLogData } from "@/types/domain";
 import {
   getDefaultPortionHint,
@@ -97,11 +98,109 @@ function ResolutionDot({ item, onTapToMatch }: { item: FoodItem; onTapToMatch?: 
   );
 }
 
+// ── Meal slot badge ─────────────────────────────────────────────────────
+
+const MEAL_SLOT_STYLES: Record<string, { bg: string; text: string; label: string }> = {
+  breakfast: {
+    bg: "bg-amber-500/15",
+    text: "text-amber-600 dark:text-amber-400",
+    label: "Breakfast",
+  },
+  lunch: {
+    bg: "bg-sky-500/15",
+    text: "text-sky-600 dark:text-sky-400",
+    label: "Lunch",
+  },
+  dinner: {
+    bg: "bg-violet-500/15",
+    text: "text-violet-600 dark:text-violet-400",
+    label: "Dinner",
+  },
+  snack: {
+    bg: "bg-emerald-500/15",
+    text: "text-emerald-600 dark:text-emerald-400",
+    label: "Snack",
+  },
+};
+
+function MealSlotBadge({ slot }: { slot: string }) {
+  const style = MEAL_SLOT_STYLES[slot];
+  if (!style) return null;
+
+  return (
+    <span
+      data-slot="meal-slot-badge"
+      className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none ${style.bg} ${style.text}`}
+    >
+      {style.label}
+    </span>
+  );
+}
+
+// ── Portion + calorie display for a single item ────────────────────────
+
+function ItemPortionCalorie({ item }: { item: FoodItem }) {
+  const macros = getItemMacros(item);
+
+  // Build portion text: "200g" or "250ml" or default portion hint
+  const portionText = buildPortionText(item, macros.portionG);
+  const calorieText = macros.calories > 0 ? `${macros.calories} kcal` : null;
+
+  if (!portionText && !calorieText) return null;
+
+  return (
+    <span
+      data-slot="item-portion-calorie"
+      className="ml-auto flex flex-shrink-0 items-center gap-1 text-[10px] text-[var(--color-text-tertiary)] opacity-60"
+    >
+      {portionText && <span>{portionText}</span>}
+      {portionText && calorieText && <span className="opacity-40">&middot;</span>}
+      {calorieText && <span>{calorieText}</span>}
+    </span>
+  );
+}
+
+/** Build a human-readable portion string from item data. */
+function buildPortionText(item: FoodItem, effectivePortionG: number): string | null {
+  const unit = String(item.unit ?? "")
+    .trim()
+    .toLowerCase();
+  const qty = item.quantity;
+
+  // Explicit quantity + unit from the item
+  if (qty != null && Number.isFinite(qty) && qty > 0) {
+    if (unit === "ml" || unit === "l") {
+      const mlValue = unit === "l" ? qty * 1000 : qty;
+      return `${Math.round(mlValue)}ml`;
+    }
+    if (unit === "g" || unit === "kg") {
+      const gValue = unit === "kg" ? qty * 1000 : qty;
+      return `${Math.round(gValue)}g`;
+    }
+    // Has quantity but non-standard unit (e.g., "slices", "cups") — show as-is
+    if (unit) {
+      return `${qty}${unit}`;
+    }
+    // Quantity without unit — show as grams (the default assumption)
+    return `${Math.round(qty)}g`;
+  }
+
+  // Fall back to default portion hint
+  const hint = getDefaultPortionHint(item);
+  if (hint) return hint;
+
+  // Fall back to effective portion from registry lookup
+  if (effectivePortionG > 0) {
+    return `~${Math.round(effectivePortionG)}g`;
+  }
+
+  return null;
+}
+
 // ── Single food item line ────────────────────────────────────────────────
 
 function FoodItemLine({ item, onTapToMatch }: { item: FoodItem; onTapToMatch?: () => void }) {
   const displayName = getFoodItemDisplayName(item);
-  const portionHint = getDefaultPortionHint(item);
   const status = getFoodItemResolutionStatus(item);
 
   const canonicalName = item.canonicalName ?? null;
@@ -121,17 +220,13 @@ function FoodItemLine({ item, onTapToMatch }: { item: FoodItem; onTapToMatch?: (
   return (
     <div className="flex items-center gap-1.5">
       <ResolutionDot item={item} {...(onTapToMatch !== undefined && { onTapToMatch })} />
-      <span className={`truncate text-xs ${textColorClass}`}>
+      <span className={`min-w-0 truncate text-xs ${textColorClass}`}>
         {displayName}
         {showCanonicalInline && (
           <span className="ml-1 text-[10px] text-emerald-500/70">({canonicalName})</span>
         )}
       </span>
-      {portionHint && (
-        <span className="text-[10px] text-[var(--color-text-tertiary)] opacity-50">
-          {portionHint}
-        </span>
-      )}
+      <ItemPortionCalorie item={item} />
     </div>
   );
 }
@@ -360,9 +455,12 @@ export function FoodSubRow({ entry }: { key?: string | number; entry: FoodLog })
     () => (
       <>
         <div className="min-w-0 flex-1">
-          <p className="font-mono text-xs text-[var(--color-text-tertiary)]">
-            {format(entry.timestamp, "HH:mm")}
-          </p>
+          <div className="flex items-center gap-1.5">
+            <p className="font-mono text-xs text-[var(--color-text-tertiary)]">
+              {format(entry.timestamp, "HH:mm")}
+            </p>
+            {entry.data.mealSlot != null && <MealSlotBadge slot={entry.data.mealSlot} />}
+          </div>
 
           {/* Per-item resolution indicators */}
           {entry.data.items.length > 0 && (
