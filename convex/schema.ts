@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import {
   aiInsightValidator,
   aiPreferencesValidator,
+  aiRateLimitsValidator,
   aiRequestValidator,
   aiResponseValidator,
   foodAssessmentCausalRoleValidator,
@@ -355,6 +356,9 @@ export default defineSchema({
     encryptedApiKey: v.optional(v.string()),
     nutritionGoals: v.optional(nutritionGoalsValidator),
     foodFavourites: v.optional(v.array(v.string())),
+    // Server-side AI rate limit state, keyed by feature type.
+    // Survives page reload. Updated by the chatCompletion action.
+    aiRateLimits: v.optional(aiRateLimitsValidator),
     updatedAt: v.number(),
   }).index("by_userId", ["userId"]),
 

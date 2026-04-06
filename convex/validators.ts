@@ -231,6 +231,15 @@ export const nutritionGoalsValidator = v.object({
   dailyWaterGoalMl: v.number(),
 });
 
+/**
+ * Per-user, per-feature AI rate limit state.
+ * Stored on the profile document so it survives page reloads.
+ */
+export const aiRateLimitsValidator = v.object({
+  lastDrPooCallAt: v.optional(v.number()),
+  lastCoachingCallAt: v.optional(v.number()),
+});
+
 export const sleepGoalValidator = v.object({
   targetHours: v.number(),
   nudgeTime: v.string(),
