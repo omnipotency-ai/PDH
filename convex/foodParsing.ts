@@ -412,11 +412,9 @@ export const listFoodAliasesForUser = internalQuery({
 export const listFoodEmbeddings = internalQuery({
   args: {},
   handler: async (ctx): Promise<Doc<"foodEmbeddings">[]> => {
-    // Known performance concern: Convex does not support field projection on
-    // queries, so this pulls full documents including 1536-dim embedding vectors
-    // even though ensureFoodEmbeddings() only needs canonicalName and
-    // embeddingSourceHash for the staleness check. A .take(1000) safety bound
-    // prevents unbounded growth if the registry expands unexpectedly.
+    // Returns full documents including 1536-dim embedding vectors.
+    // Only use this when callers need the full vector data.
+    // For staleness checks, use listFoodEmbeddingVersions instead.
     const results = await ctx.db.query("foodEmbeddings").take(1000);
     if (results.length === 1000) {
       console.warn(
@@ -425,6 +423,35 @@ export const listFoodEmbeddings = internalQuery({
       );
     }
     return results;
+  },
+});
+
+/**
+ * Lightweight staleness-check query — returns only the two metadata fields
+ * needed to determine whether an embedding is current.
+ *
+ * Convex does not support field projection: queries always read full documents
+ * server-side. However, by mapping to FoodEmbeddingVersionRow before returning,
+ * the serialized response payload is ~50KB for 1000 entries instead of ~12MB
+ * (1536 float64 vectors are stripped from the data transferred back to the
+ * calling action). Use this instead of listFoodEmbeddings for staleness checks.
+ */
+export const listFoodEmbeddingVersions = internalQuery({
+  args: {},
+  handler: async (ctx): Promise<FoodEmbeddingVersionRow[]> => {
+    const results = await ctx.db.query("foodEmbeddings").take(1000);
+    if (results.length === 1000) {
+      console.warn(
+        "listFoodEmbeddingVersions: result count equals 1000 — results may be truncated. " +
+          "Consider increasing the limit or paginating.",
+      );
+    }
+    return results.map((row) => ({
+      canonicalName: row.canonicalName,
+      ...(row.embeddingSourceHash !== undefined && {
+        embeddingSourceHash: row.embeddingSourceHash,
+      }),
+    }));
   },
 });
 
@@ -884,9 +911,7 @@ function toPendingItem(
   };
 }
 
-function serializeProcessedItem(
-  item: ProcessedFoodItem,
-): StoredFoodItem {
+function serializeProcessedItem(item: ProcessedFoodItem): StoredFoodItem {
   return {
     userSegment: item.userSegment,
     parsedName: item.parsedName,
@@ -944,7 +969,7 @@ async function ensureFoodEmbeddings(ctx: ActionCtx): Promise<boolean> {
   if (!apiKey) return false;
 
   const existingRows = await ctx.runQuery(
-    internal.foodParsing.listFoodEmbeddings,
+    internal.foodParsing.listFoodEmbeddingVersions,
     {},
   );
   const documentsNeedingRefresh = getFoodDocumentsNeedingEmbeddingRefresh(
