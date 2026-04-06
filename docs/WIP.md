@@ -22,6 +22,41 @@
 
 ## Active: Tech-Debt Audit Cleanup
 
+### W2-05 — Consolidate zone colors into `src/lib/zoneColors.ts` (2026-04-06 17:45)
+
+- **Commit:** TBD
+- **Files:** `src/lib/zoneColors.ts`, `src/components/track/FoodMatchingModal.tsx`, `src/components/track/nutrition/NutritionCard.tsx`
+- **What:** Added a shared zone-color module and rewired both the food matching modal and nutrition card to import canonical badge colors from it. Zone 3 now uses the same caution styling in both surfaces instead of conflicting red/orange variants.
+- **Decisions:** Kept separate exports for class-based badges and background tokens because the two consumers render zone emphasis differently.
+
+### W2-03 — Consolidate activity type normalization into `src/lib/activityTypeUtils.ts` (2026-04-06 17:44)
+
+- **Commit:** TBD
+- **Files:** `src/lib/activityTypeUtils.ts`, `src/hooks/useDayStats.ts`, `src/hooks/useHabitLog.ts`, `src/lib/derivedHabitLogs.ts`, `src/pages/Track.tsx`
+- **What:** Extracted canonical `normalizeActivityTypeKey()` and replaced the duplicated activity normalization helpers across the track page, habit logging hook, day stats hook, and derived habit log rebuild. The shared helper now owns lowercase cleanup, alphanumeric normalization, the sleep edge case, and the `walk` to `walking` mapping.
+- **Decisions:** Kept the caller-level `isSleepHabit()` checks in place where they already controlled habit selection; the shared normalizer now guarantees the stored activity keys line up across modules.
+
+### W2-07 — Extract useIsMobile hook to shared location (2026-04-06 17:40)
+
+- **Commit:** TBD
+- **Files:** `src/hooks/useMediaQuery.ts`, `src/components/settings/DeleteConfirmDrawer.tsx`
+- **What:** Extracted the drawer's private mobile detection logic into a shared `useIsMobile(breakpoint = 768)` hook and switched `DeleteConfirmDrawer` to import it.
+- **Decisions:** Kept the hook's SSR default aligned with the prior drawer behavior by treating the first render as mobile when `window` is unavailable.
+
+### W2-06 — Pre-compile regex patterns in `shared/food*.ts` files (2026-04-06 17:30)
+
+- **Commit:** TBD
+- **Files:** `shared/foodNormalize.ts`, `shared/foodMatching.ts`, `shared/foodParsing.ts`
+- **What:** Hoisted filler-phrase, protected-phrase, and quantity regex construction to module scope. `normalizeFoodName()` now uses a single combined filler-phrase pattern, `protectPhrases()` uses pre-compiled phrase regexes, and `parseLeadingQuantity()` reuses pre-compiled measure regexes.
+- **Decisions:** Kept the parsing and normalization behavior unchanged; only the regex construction moved out of function bodies so repeated calls avoid re-instantiating patterns.
+
+### W2-04 — Consolidate time constants into `src/lib/timeConstants.ts` (2026-04-06)
+
+- **Commit:** TBD
+- **Files:** `src/lib/timeConstants.ts`, `src/components/patterns/database/columns.tsx`, `src/components/patterns/hero/BristolTrendTile.tsx`, `src/hooks/useFoodLlmMatching.ts`, `src/hooks/useUnresolvedFoodToast.ts`
+- **What:** Added `SIX_HOURS_MS` to the shared time constants module and rewired the scoped consumers to import `MS_PER_DAY`, `MS_PER_HOUR`, `MS_PER_MINUTE`, and `SIX_HOURS_MS` from `src/lib/timeConstants.ts` instead of maintaining local duplicates.
+- **Decisions:** Kept the existing `MS_PER_WEEK` and `HOURS_PER_DAY` exports untouched because they already live in the shared constants module and are not part of the duplicate set targeted by this task.
+
 ### W2-02 — Consolidate coerce/normalization utilities into `convex/lib/coerce.ts` (2026-04-06 17:08)
 
 - **Commit:** TBD
@@ -42,7 +77,7 @@
 - **Head:** `bf05641`
 - **Plans:** `docs/plans/2026-04-06-tech-debt-audit-cleanup-waves-0-1.json`, `docs/plans/2026-04-06-tech-debt-audit-cleanup-waves-2-3.json`
 - **What:** Reconstructed the Claude/Codex handoff state. Branch history shows the full waves 0-1 task series (`W0-01` through `W1-18`) already landed and pushed. Tracking docs were stale, so `ROADMAP.md` and `WORK-QUEUE.md` were updated to reflect this initiative as active work with wave 2 queued up.
-- **Next:** Execute `W2-03` from the waves 2-3 plan: consolidate activity type normalization into `src/lib/activityTypeUtils.ts`.
+- **Next:** Execute `W2-08` from the waves 2-3 plan: consolidate `foodEvidence` test factory functions.
 
 ### W1-10 — Replace manual WriteProcessedFoodItem type with Infer<> (2026-04-06)
 

@@ -2,11 +2,9 @@ import { isFoodPipelineType } from "@shared/logTypeUtils";
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import type { SyncedLog } from "@/lib/sync";
-import { MS_PER_HOUR } from "@/lib/timeConstants";
+import { MS_PER_HOUR, SIX_HOURS_MS } from "@/lib/timeConstants";
 import type { FoodItem, FoodLog, LiquidLog } from "@/types/domain";
 
-/** 6-hour processing window in milliseconds. */
-const PROCESSING_WINDOW_MS = 6 * MS_PER_HOUR;
 /** First 3 hours show a gentler message. */
 const EARLY_WINDOW_MS = 3 * MS_PER_HOUR;
 
@@ -40,7 +38,7 @@ function findUnresolvedFoodLogs(logs: SyncedLog[], nowMs: number): (FoodLog | Li
     const foodLog = log as FoodLog | LiquidLog;
     const ageMs = nowMs - foodLog.timestamp;
     // Only show toast for logs within the 6-hour window
-    if (ageMs > PROCESSING_WINDOW_MS || ageMs < 0) continue;
+    if (ageMs > SIX_HOURS_MS || ageMs < 0) continue;
     // Must have items to check
     if (foodLog.data.items.length === 0) continue;
     const hasUnresolved = foodLog.data.items.some(isItemUnresolved);

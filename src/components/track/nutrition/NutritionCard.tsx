@@ -39,6 +39,7 @@ import {
   titleCase,
 } from "@/lib/nutritionUtils";
 import { useAddSyncedLog, useRemoveSyncedLog } from "@/lib/sync";
+import { getZoneBadgeBackground } from "@/lib/zoneColors";
 import { CalorieDetailView } from "./CalorieDetailView";
 import { FavouritesView } from "./FavouritesView";
 import { FoodFilterView } from "./FoodFilterView";
@@ -319,14 +320,6 @@ function NutritionSearchInput({
   );
 }
 
-// ── Zone badge helpers ──────────────────────────────────────────────────────
-
-const ZONE_COLORS: Record<1 | 2 | 3, string> = {
-  1: "#34d399", // green
-  2: "#fbbf24", // yellow
-  3: "#f97316", // orange
-};
-
 // ── Search Result Row ────────────────────────────────────────────────────────
 
 function SearchResultRow({
@@ -350,7 +343,7 @@ function SearchResultRow({
   const portionLabel =
     portionData?.naturalUnit ?? `${portionData?.defaultPortionG ?? 0}g`;
 
-  const zoneColor = ZONE_COLORS[entry.zone];
+  const zoneColor = getZoneBadgeBackground(entry.zone);
 
   return (
     <div

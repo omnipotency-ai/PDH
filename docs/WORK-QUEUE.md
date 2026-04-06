@@ -68,13 +68,13 @@ Waves 0-1 were executed on `pans-labyrinth` and are represented in branch histor
 
 | Task | Title | Depends On | Status | Commit |
 |------|-------|-----------|--------|--------|
-| W2-01 | Consolidate OpenAI utility functions into `convex/lib/openai.ts` | — | done | |
-| W2-02 | Consolidate coerce/normalization utilities into `convex/lib/coerce.ts` | — | done | |
-| W2-03 | Consolidate activity type normalization into `src/lib/activityTypeUtils.ts` | — | pending | |
-| W2-04 | Consolidate time constants into `src/lib/timeConstants.ts` | — | pending | |
-| W2-05 | Consolidate zone colors into `src/lib/zoneColors.ts` | — | pending | |
-| W2-06 | Pre-compile regex patterns in `shared/food*.ts` files | — | pending | |
-| W2-07 | Extract `useIsMobile` hook to shared location | — | pending | |
+| W2-01 | Consolidate OpenAI utility functions into `convex/lib/openai.ts` | — | done | TBD |
+| W2-02 | Consolidate coerce/normalization utilities into `convex/lib/coerce.ts` | — | done | TBD |
+| W2-03 | Consolidate activity type normalization into `src/lib/activityTypeUtils.ts` | — | done | TBD |
+| W2-04 | Consolidate time constants into `src/lib/timeConstants.ts` | — | done | TBD |
+| W2-05 | Consolidate zone colors into `src/lib/zoneColors.ts` | — | done | TBD |
+| W2-06 | Pre-compile regex patterns in `shared/food*.ts` files | — | done | TBD |
+| W2-07 | Extract `useIsMobile` hook to shared location | — | done | TBD |
 | W2-08 | Consolidate `foodEvidence` test factory functions | — | pending | |
 | W2-09 | Fix stale theme storage key and create `storageKeys.ts` | — | pending | |
 | W2-10 | Consolidate `customFoodPresets` normalization and fix ID generation | — | pending | |

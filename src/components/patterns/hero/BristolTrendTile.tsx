@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import type { SyncedLog } from "@/lib/sync";
+import { MS_PER_DAY } from "@/lib/timeConstants";
 import { Sparkline } from "./Sparkline";
 import { getDateKey } from "./utils";
 
@@ -29,8 +30,6 @@ const BORDERLINE_LOW = 2.5;
 const BORDERLINE_HIGH = 5.5;
 /** Normal range midpoint — movement toward 4.0 is improvement, away is concern. */
 const NORMAL_MIDPOINT = 4.0;
-
-const MS_PER_DAY = 86_400_000;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 

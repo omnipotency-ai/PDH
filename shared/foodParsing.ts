@@ -135,6 +135,16 @@ const MEASURE_UNIT_MAP: ReadonlyMap<string, string> = new Map([
 const MEASURE_UNIT_PATTERN =
   "g|grams?|kg|kilograms?|ml|millilitres?|milliliters?|l|litres?|liters?|oz|ounces?|lb|pounds?|tbsp|tablespoons?|tsp|teaspoons?|cups?|pieces?|pcs?|pc|slices?|sl";
 
+const NUMERIC_MEASURE_PATTERN = new RegExp(
+  `^(\\d+(?:\\.\\d+)?)\\s*(${MEASURE_UNIT_PATTERN})\\s+(?:of\\s+)?(.+)$`,
+  "i",
+);
+
+const WORD_MEASURE_PATTERN = new RegExp(
+  `^(a|an|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\\s+(${MEASURE_UNIT_PATTERN})\\s+(?:of\\s+)?(.+)$`,
+  "i",
+);
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Public functions
 // ─────────────────────────────────────────────────────────────────────────────
@@ -205,10 +215,7 @@ export function parseLeadingQuantity(raw: string): {
     };
   }
 
-  const numericMeasureMatch = new RegExp(
-    `^(\\d+(?:\\.\\d+)?)\\s*(${MEASURE_UNIT_PATTERN})\\s+(?:of\\s+)?(.+)$`,
-    "i",
-  ).exec(trimmed);
+  const numericMeasureMatch = NUMERIC_MEASURE_PATTERN.exec(trimmed);
   if (numericMeasureMatch) {
     const unit =
       MEASURE_UNIT_MAP.get(numericMeasureMatch[2]?.toLowerCase() ?? "") ?? null;
@@ -219,10 +226,7 @@ export function parseLeadingQuantity(raw: string): {
     };
   }
 
-  const wordMeasureMatch = new RegExp(
-    `^(a|an|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\\s+(${MEASURE_UNIT_PATTERN})\\s+(?:of\\s+)?(.+)$`,
-    "i",
-  ).exec(trimmed);
+  const wordMeasureMatch = WORD_MEASURE_PATTERN.exec(trimmed);
   if (wordMeasureMatch) {
     return {
       parsedName: wordMeasureMatch[3]?.trim() ?? trimmed,

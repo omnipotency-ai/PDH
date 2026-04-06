@@ -1,11 +1,11 @@
 import { useMemo } from "react";
 import { useHabits } from "@/hooks/useProfile";
+import { normalizeActivityTypeKey } from "@/lib/activityTypeUtils";
 import { normalizeEpisodesCount } from "@/lib/analysis";
 import { type HabitConfig, isSleepHabit } from "@/lib/habitTemplates";
 import { normalizeFluidItemName } from "@/lib/normalizeFluidName";
 import type { SyncedLog } from "@/lib/sync";
-
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
+import { MS_PER_DAY } from "@/lib/timeConstants";
 
 interface UseDayStatsOptions {
   /** All synced logs (unfiltered). */
@@ -35,40 +35,18 @@ export interface DayStats {
   hadGapYesterday: boolean;
 }
 
-function toActivityTypeKey(value: string): string {
-  const key = value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-  if (/^walk(ing)?$/.test(key)) return "walk";
-  return key;
-}
-
-function getHabitsForActivityType(
-  habits: HabitConfig[],
-  activityType: string,
-): HabitConfig[] {
+function getHabitsForActivityType(habits: HabitConfig[], activityType: string): HabitConfig[] {
   if (activityType === "sleep") {
     return habits.filter((habit) => isSleepHabit(habit));
   }
-  return habits.filter(
-    (habit) => toActivityTypeKey(habit.name) === activityType,
-  );
+  return habits.filter((habit) => normalizeActivityTypeKey(habit.name) === activityType);
 }
 
-export function useDayStats({
-  logs,
-  todayStart,
-  todayEnd,
-}: UseDayStatsOptions): DayStats {
+export function useDayStats({ logs, todayStart, todayEnd }: UseDayStatsOptions): DayStats {
   const { habits } = useHabits();
 
   const todayLogs = useMemo(
-    () =>
-      logs.filter(
-        (log) => log.timestamp >= todayStart && log.timestamp < todayEnd,
-      ),
+    () => logs.filter((log) => log.timestamp >= todayStart && log.timestamp < todayEnd),
     [logs, todayStart, todayEnd],
   );
 
@@ -77,8 +55,7 @@ export function useDayStats({
 
     for (const log of todayLogs) {
       if (log.type === "habit") {
-        const habitId =
-          typeof log.data?.habitId === "string" ? log.data.habitId : "";
+        const habitId = typeof log.data?.habitId === "string" ? log.data.habitId : "";
         const quantity = Number(log.data?.quantity ?? 1);
         if (!habitId || !Number.isFinite(quantity) || quantity <= 0) continue;
         counts[habitId] = (counts[habitId] ?? 0) + quantity;
@@ -86,16 +63,9 @@ export function useDayStats({
       }
 
       if (log.type === "activity") {
-        const activityType = toActivityTypeKey(
-          String(log.data?.activityType ?? ""),
-        );
+        const activityType = normalizeActivityTypeKey(String(log.data?.activityType ?? ""));
         const durationMinutes = Number(log.data?.durationMinutes ?? 0);
-        if (
-          !activityType ||
-          !Number.isFinite(durationMinutes) ||
-          durationMinutes <= 0
-        )
-          continue;
+        if (!activityType || !Number.isFinite(durationMinutes) || durationMinutes <= 0) continue;
 
         for (const habit of getHabitsForActivityType(habits, activityType)) {
           const value =
@@ -114,14 +84,10 @@ export function useDayStats({
       for (const item of items) {
         const normalizedName = normalizeFluidItemName(item?.name);
         const quantity = Number(item.quantity ?? 0);
-        if (!normalizedName || !Number.isFinite(quantity) || quantity <= 0)
-          continue;
+        if (!normalizedName || !Number.isFinite(quantity) || quantity <= 0) continue;
 
         for (const habit of habits) {
-          if (
-            habit.logAs === "fluid" &&
-            normalizeFluidItemName(habit.name) === normalizedName
-          ) {
+          if (habit.logAs === "fluid" && normalizeFluidItemName(habit.name) === normalizedName) {
             counts[habit.id] = (counts[habit.id] ?? 0) + quantity;
           }
         }

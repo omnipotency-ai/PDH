@@ -11,25 +11,9 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import { useIsMobile } from "@/hooks/useMediaQuery";
 
 const CONFIRMATION_WORD = "DELETE";
-const MD_BREAKPOINT_PX = 768;
-
-function useIsMobile(): boolean {
-  const [isMobile, setIsMobile] = useState(() => {
-    if (typeof window === "undefined") return true;
-    return window.innerWidth < MD_BREAKPOINT_PX;
-  });
-
-  useEffect(() => {
-    const mql = window.matchMedia(`(min-width: ${MD_BREAKPOINT_PX}px)`);
-    const handler = () => setIsMobile(!mql.matches);
-    mql.addEventListener("change", handler);
-    return () => mql.removeEventListener("change", handler);
-  }, []);
-
-  return isMobile;
-}
 
 interface DeleteConfirmDrawerProps {
   open: boolean;

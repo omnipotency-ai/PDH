@@ -9,6 +9,7 @@ import { StatusBadge } from "@/components/patterns/database/StatusBadge";
 import { TrendIndicator } from "@/components/patterns/database/TrendIndicator";
 import type { FoodStat, FoodStatus, LocalTrialRecord } from "@/lib/analysis";
 import { computeBristolAverage } from "@/lib/foodStatusThresholds";
+import { MS_PER_DAY, MS_PER_HOUR, MS_PER_MINUTE } from "@/lib/timeConstants";
 import type { FoodPrimaryStatus, FoodTendency } from "@/types/domain";
 import { GROUP_COLORS } from "@/types/domain";
 
@@ -95,10 +96,6 @@ export interface FoodDatabaseRow {
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
-
-const MS_PER_MINUTE = 60_000;
-const MS_PER_HOUR = 3_600_000;
-const MS_PER_DAY = 86_400_000;
 
 /**
  * Format a timestamp as a relative time string (e.g., "2 days ago").

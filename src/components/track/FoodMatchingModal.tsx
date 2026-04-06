@@ -8,6 +8,7 @@ import { ResponsiveShell } from "@/components/ui/responsive-shell";
 import type { UnresolvedQueueItem } from "@/hooks/useUnresolvedFoodQueue";
 import { getErrorMessage } from "@/lib/errors";
 import { asConvexId } from "@/lib/sync";
+import { getZoneBadgeClasses, type Zone } from "@/lib/zoneColors";
 import type { FoodItem } from "@/types/domain";
 import { api } from "../../../convex/_generated/api";
 import { type FoodGroup, getGroupDisplayName } from "../../../shared/foodRegistry";
@@ -28,18 +29,12 @@ interface FoodMatchingModalProps {
 interface SearchOption {
   canonicalName: string;
   group: FoodGroup;
-  zone: 1 | 2 | 3;
+  zone: Zone;
   bucketKey: string;
   examples: ReadonlyArray<string>;
 }
 
 const GROUP_ORDER: ReadonlyArray<FoodGroup> = ["protein", "carbs", "fats", "seasoning"];
-
-const ZONE_COLORS: Record<number, string> = {
-  1: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
-  2: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-  3: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-};
 
 function formatConfidence(value: number | undefined): string | null {
   if (value === undefined || Number.isNaN(value)) return null;
@@ -340,7 +335,7 @@ export function FoodMatchingModal({
                           </div>
                           <div className="flex shrink-0 items-center gap-1.5">
                             <span
-                              className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${ZONE_COLORS[candidate.zone] ?? ""}`}
+                              className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${getZoneBadgeClasses(candidate.zone)}`}
                             >
                               Z{candidate.zone}
                             </span>
@@ -482,7 +477,7 @@ export function FoodMatchingModal({
                             )}
                           </div>
                           <span
-                            className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${ZONE_COLORS[option.zone] ?? ""}`}
+                            className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${getZoneBadgeClasses(option.zone)}`}
                           >
                             Z{option.zone}
                           </span>
