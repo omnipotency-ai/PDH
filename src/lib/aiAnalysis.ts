@@ -1,10 +1,17 @@
 import { isFoodPipelineType } from "@shared/logTypeUtils";
-import { DEFAULT_INSIGHT_MODEL, getModelLabel, getValidInsightModel } from "@/lib/aiModels";
+import {
+  DEFAULT_INSIGHT_MODEL,
+  getModelLabel,
+  getValidInsightModel,
+} from "@/lib/aiModels";
 import { checkRateLimit } from "@/lib/aiRateLimiter";
 import type { AllowedAiModel, ConvexAiCaller } from "@/lib/convexAiClient";
 import { debugWarn } from "@/lib/debugLog";
 import { getErrorMessage } from "@/lib/errors";
-import { INPUT_SAFETY_LIMITS, sanitizeUnknownStringsDeep } from "@/lib/inputSafety";
+import {
+  INPUT_SAFETY_LIMITS,
+  sanitizeUnknownStringsDeep,
+} from "@/lib/inputSafety";
 import { MS_PER_DAY, MS_PER_HOUR } from "@/lib/timeConstants";
 import type {
   AiNutritionistInsight,
@@ -54,10 +61,28 @@ function sanitizeNameForPrompt(name: string): string {
   // These can be used to manipulate how text is rendered or parsed in LLM prompts.
   // Ranges: LRM/RLM (U+200E–U+200F), LRE/RLE/PDF/LRO/RLO (U+202A–U+202E),
   //         LRI/RLI/FSI/PDI (U+2066–U+2069).
-  const withoutBidi = name.replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, "");
+  const withoutBidi = name.replace(
+    /[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g,
+    "",
+  );
   const stripped = withoutBidi.replace(/<[^>]*>/g, "").trim();
   if (stripped.length <= MAX_PREFERRED_NAME_LENGTH) return stripped;
   return stripped.slice(0, MAX_PREFERRED_NAME_LENGTH);
+}
+
+/**
+ * Sanitize a free-text health profile field for safe inclusion in an LLM prompt.
+ * Strips BiDi control characters and HTML tags, then truncates to maxLen.
+ * Truncation is silent — fields exceeding the cap are shortened, not rejected.
+ */
+function sanitizeProfileField(value: string, maxLen: number): string {
+  const withoutBidi = value.replace(
+    /[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g,
+    "",
+  );
+  const stripped = withoutBidi.replace(/<[^>]*>/g, "").trim();
+  if (stripped.length <= maxLen) return stripped;
+  return stripped.slice(0, maxLen);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -67,7 +92,10 @@ function truncateForStorage(
   maxLength = INPUT_SAFETY_LIMITS.aiPayloadString,
 ): string {
   if (value.length <= maxLength) return value;
-  const prefixLength = Math.max(0, maxLength - STORAGE_TRUNCATION_SUFFIX.length);
+  const prefixLength = Math.max(
+    0,
+    maxLength - STORAGE_TRUNCATION_SUFFIX.length,
+  );
   return `${value.slice(0, prefixLength)}${STORAGE_TRUNCATION_SUFFIX}`;
 }
 
@@ -98,7 +126,9 @@ interface AiAnalysisResult {
   inputLogCount: number;
 }
 
-type EducationalInsightValue = NonNullable<AiNutritionistInsight["educationalInsight"]>;
+type EducationalInsightValue = NonNullable<
+  AiNutritionistInsight["educationalInsight"]
+>;
 
 function normalizeEducationalKey(value: string): string {
   return value
@@ -111,7 +141,9 @@ function educationalKey(insight: EducationalInsightValue): string {
   return `${normalizeEducationalKey(insight.topic)}|${normalizeEducationalKey(insight.fact)}`;
 }
 
-function collectEducationalKeys(previousReports: PreviousReport[]): Set<string> {
+function collectEducationalKeys(
+  previousReports: PreviousReport[],
+): Set<string> {
   const seen = new Set<string>();
   for (const report of previousReports) {
     const insight = report.insight.educationalInsight;
@@ -241,7 +273,10 @@ function getDaysPostOp(surgeryDate: string): number | null {
   return Math.floor((now.getTime() - surgery.getTime()) / MS_PER_DAY);
 }
 
-function getBmi(heightCm: number | null, weightKg: number | null): string | null {
+function getBmi(
+  heightCm: number | null,
+  weightKg: number | null,
+): string | null {
   if (!heightCm || !weightKg || heightCm <= 0 || weightKg <= 0) return null;
   const heightM = heightCm / 100;
   const bmi = weightKg / (heightM * heightM);
@@ -313,7 +348,9 @@ function mapFoodLogs(logs: Array<LogEntry & { type: "food" }>): FoodLog[] {
           const qty = Number(item?.quantity);
           return {
             name,
-            canonicalName: item?.canonicalName ? String(item.canonicalName).trim() : null,
+            canonicalName: item?.canonicalName
+              ? String(item.canonicalName).trim()
+              : null,
             quantity: Number.isFinite(qty) && qty > 0 ? qty : null,
             unit: item?.unit ? String(item.unit).trim() : null,
           };
@@ -328,7 +365,9 @@ function mapFoodLogs(logs: Array<LogEntry & { type: "food" }>): FoodLog[] {
     });
 }
 
-function mapBowelEvents(logs: Array<LogEntry & { type: "digestion" }>): BowelEvent[] {
+function mapBowelEvents(
+  logs: Array<LogEntry & { type: "digestion" }>,
+): BowelEvent[] {
   return logs
     .sort((a, b) => a.timestamp - b.timestamp)
     .map((log) => {
@@ -376,7 +415,9 @@ function mapFluidLogs(logs: Array<LogEntry & { type: "fluid" }>): FluidLog[] {
     });
 }
 
-function mapActivityLogs(logs: Array<LogEntry & { type: "activity" }>): ActivityLog[] {
+function mapActivityLogs(
+  logs: Array<LogEntry & { type: "activity" }>,
+): ActivityLog[] {
   return logs
     .sort((a, b) => a.timestamp - b.timestamp)
     .map((log) => {
@@ -410,14 +451,18 @@ export interface RecentEventsResult {
  * Same output shape as the old buildLogContext, but each log type uses
  * its own cutoff time instead of a single fixed window.
  */
-export function buildRecentEvents(logs: LogEntry[], profile: HealthProfile): RecentEventsResult {
+export function buildRecentEvents(
+  logs: LogEntry[],
+  profile: HealthProfile,
+): RecentEventsResult {
   const now = Date.now();
   const cutoffs = buildCutoffs(profile, now);
 
   const foodLogs = mapFoodLogs(
     logs.filter(
       (log): log is LogEntry & { type: "food" } =>
-        (log.type === "food" || log.type === "liquid") && log.timestamp >= cutoffs.food,
+        (log.type === "food" || log.type === "liquid") &&
+        log.timestamp >= cutoffs.food,
     ) as Array<LogEntry & { type: "food" }>,
   );
 
@@ -469,13 +514,19 @@ export function buildRecentEvents(logs: LogEntry[], profile: HealthProfile): Rec
  * - "stable at 4.2"
  * - "insufficient data"
  */
-export function computeBristolTrend(weeklyDigests: WeeklyDigestInput[]): string {
+export function computeBristolTrend(
+  weeklyDigests: WeeklyDigestInput[],
+): string {
   // Take last 4 weeks that have Bristol data
-  const withBristol = weeklyDigests.filter((wd) => wd.avgBristolScore !== null).slice(-4);
+  const withBristol = weeklyDigests
+    .filter((wd) => wd.avgBristolScore !== null)
+    .slice(-4);
 
   if (withBristol.length < 2) return "insufficient data";
 
-  const scores = withBristol.map((wd) => wd.avgBristolScore).filter((s): s is number => s !== null);
+  const scores = withBristol
+    .map((wd) => wd.avgBristolScore)
+    .filter((s): s is number => s !== null);
   const first = scores[0];
   const last = scores[scores.length - 1];
   const scoreStr = scores.map((s) => s.toFixed(1)).join(" -> ");
@@ -493,7 +544,8 @@ export function computeBristolTrend(weeklyDigests: WeeklyDigestInput[]): string 
   const isWorseningHard = delta < 0 && last < 3; // Trending harder beyond ideal
 
   if (isImproving) return `improving (${scoreStr} weekly avg)`;
-  if (isWorseningLoose || isWorseningHard) return `worsening (${scoreStr} weekly avg)`;
+  if (isWorseningLoose || isWorseningHard)
+    return `worsening (${scoreStr} weekly avg)`;
 
   // General trend
   if (delta < 0) return `firming (${scoreStr} weekly avg)`;
@@ -551,7 +603,8 @@ function computeBristolChange(logs: LogEntry[]): number | null {
   for (const log of logs) {
     if (log.type !== "digestion") continue;
     const bristolCode = Number(log.data.bristolCode);
-    if (!Number.isFinite(bristolCode) || bristolCode < 1 || bristolCode > 7) continue;
+    if (!Number.isFinite(bristolCode) || bristolCode < 1 || bristolCode > 7)
+      continue;
     if (log.timestamp >= todayStart) {
       todayScores.push(bristolCode);
     } else if (log.timestamp >= yesterdayStart && log.timestamp < todayStart) {
@@ -562,7 +615,8 @@ function computeBristolChange(logs: LogEntry[]): number | null {
   if (todayScores.length === 0 || yesterdayScores.length === 0) return null;
 
   const todayAvg = todayScores.reduce((a, b) => a + b, 0) / todayScores.length;
-  const yesterdayAvg = yesterdayScores.reduce((a, b) => a + b, 0) / yesterdayScores.length;
+  const yesterdayAvg =
+    yesterdayScores.reduce((a, b) => a + b, 0) / yesterdayScores.length;
 
   return Math.round((todayAvg - yesterdayAvg) * 10) / 10;
 }
@@ -598,7 +652,9 @@ function findRecentCulpritExposure(
       const canonical = (item.canonicalName ?? "").toLowerCase().trim();
       if (canonical && culpritCanonicals.has(canonical)) {
         // Return the display name from the food trial
-        const trial = foodTrials.find((ft) => ft.canonicalName.toLowerCase() === canonical);
+        const trial = foodTrials.find(
+          (ft) => ft.canonicalName.toLowerCase() === canonical,
+        );
         return trial ? trial.displayName : canonical;
       }
     }
@@ -638,7 +694,9 @@ function computeHabitStreaks(logs: LogEntry[]): Record<string, number> {
     // Sort days and find the current streak ending today or yesterday
     const sortedDays = Array.from(days).sort();
     const today = new Date().toISOString().slice(0, 10);
-    const yesterday = new Date(Date.now() - MS_PER_DAY).toISOString().slice(0, 10);
+    const yesterday = new Date(Date.now() - MS_PER_DAY)
+      .toISOString()
+      .slice(0, 10);
 
     // Count backwards from the most recent day
     let streak = 0;
@@ -736,7 +794,8 @@ function computeStillInTransit(
 
       // Check if the food could still be in the gut:
       // max transit = center + spread (in minutes, converted to ms)
-      const maxTransitMs = (transit.centerMinutes + transit.spreadMinutes) * 60 * 1000;
+      const maxTransitMs =
+        (transit.centerMinutes + transit.spreadMinutes) * 60 * 1000;
       if (age < maxTransitMs) {
         result.push(transit.displayName);
         seen.add(canonical);
@@ -816,7 +875,12 @@ export function buildFoodContext(
   // Still in transit: foods beyond the event window but still in estimated transit
   const foodWindowMs = getFoodWindowHours(profile) * MS_PER_HOUR;
   const now = Date.now();
-  const stillInTransit = computeStillInTransit(logs, foodTrials, now, foodWindowMs);
+  const stillInTransit = computeStillInTransit(
+    logs,
+    foodTrials,
+    now,
+    foodWindowMs,
+  );
 
   // Next to try: building food with most assessments (closest to graduation)
   const nextToTry = computeNextToTry(foodTrials);
@@ -899,7 +963,10 @@ function formatFrequency(value: string): string {
   }
 }
 
-function buildSmokingContext(profile: HealthProfile, lifestyleSmoking: string): string {
+function buildSmokingContext(
+  profile: HealthProfile,
+  lifestyleSmoking: string,
+): string {
   const smokingDetailParts: string[] = [];
   if (profile.smokingCigarettesPerDay != null) {
     smokingDetailParts.push(`${profile.smokingCigarettesPerDay}/day`);
@@ -912,32 +979,44 @@ function buildSmokingContext(profile: HealthProfile, lifestyleSmoking: string): 
     : "";
 }
 
-function buildAlcoholContext(profile: HealthProfile, lifestyleAlcohol: string): string {
+function buildAlcoholContext(
+  profile: HealthProfile,
+  lifestyleAlcohol: string,
+): string {
   const alcoholDetailParts: string[] = [];
   const alcoholAmount = (profile.alcoholAmountPerSession ?? "").trim();
   const alcoholFrequency = (profile.alcoholFrequency ?? "").trim();
   if (alcoholAmount) alcoholDetailParts.push(`amount ${alcoholAmount}`);
-  if (alcoholFrequency) alcoholDetailParts.push(`frequency ${formatFrequency(alcoholFrequency)}`);
+  if (alcoholFrequency)
+    alcoholDetailParts.push(`frequency ${formatFrequency(alcoholFrequency)}`);
   if (profile.alcoholYearsAtCurrentLevel != null) {
-    alcoholDetailParts.push(`${profile.alcoholYearsAtCurrentLevel}y at this level`);
+    alcoholDetailParts.push(
+      `${profile.alcoholYearsAtCurrentLevel}y at this level`,
+    );
   }
   return lifestyleAlcohol === "yes" && alcoholDetailParts.length > 0
     ? `- Alcohol pattern: ${alcoholDetailParts.join(" | ")}`
     : "";
 }
 
-function buildSubstanceContext(profile: HealthProfile, lifestyleRecreational: string): string {
+function buildSubstanceContext(
+  profile: HealthProfile,
+  lifestyleRecreational: string,
+): string {
   const recreationalCategories = Array.isArray(profile.recreationalCategories)
     ? profile.recreationalCategories
     : [];
   const recreationalDetailParts: string[] = [];
   if (recreationalCategories.length > 0) {
-    recreationalDetailParts.push(`categories ${recreationalCategories.join(", ")}`);
+    recreationalDetailParts.push(
+      `categories ${recreationalCategories.join(", ")}`,
+    );
   }
   if (recreationalCategories.includes("stimulants")) {
     const stimulantParts: string[] = [];
     const frequency = (profile.recreationalStimulantsFrequency ?? "").trim();
-    if (frequency) stimulantParts.push(`frequency ${formatFrequency(frequency)}`);
+    if (frequency)
+      stimulantParts.push(`frequency ${formatFrequency(frequency)}`);
     if (profile.recreationalStimulantsYears != null) {
       stimulantParts.push(`${profile.recreationalStimulantsYears}y`);
     }
@@ -948,12 +1027,15 @@ function buildSubstanceContext(profile: HealthProfile, lifestyleRecreational: st
   if (recreationalCategories.includes("depressants")) {
     const depressantParts: string[] = [];
     const frequency = (profile.recreationalDepressantsFrequency ?? "").trim();
-    if (frequency) depressantParts.push(`frequency ${formatFrequency(frequency)}`);
+    if (frequency)
+      depressantParts.push(`frequency ${formatFrequency(frequency)}`);
     if (profile.recreationalDepressantsYears != null) {
       depressantParts.push(`${profile.recreationalDepressantsYears}y`);
     }
     if (depressantParts.length > 0) {
-      recreationalDetailParts.push(`depressants (${depressantParts.join(", ")})`);
+      recreationalDetailParts.push(
+        `depressants (${depressantParts.join(", ")})`,
+      );
     }
   }
   return lifestyleRecreational === "yes" && recreationalDetailParts.length > 0
@@ -961,13 +1043,18 @@ function buildSubstanceContext(profile: HealthProfile, lifestyleRecreational: st
     : "";
 }
 
-function buildSystemPrompt(profile: HealthProfile, prefs: AiPreferences): string {
+function buildSystemPrompt(
+  profile: HealthProfile,
+  prefs: AiPreferences,
+): string {
   const surgeryLabel =
     profile.surgeryType === "Other" && profile.surgeryTypeOther
       ? profile.surgeryTypeOther
       : profile.surgeryType;
 
-  const surgeryDateLabel = profile.surgeryDate ? `on ${profile.surgeryDate}` : "(date not set)";
+  const surgeryDateLabel = profile.surgeryDate
+    ? `on ${profile.surgeryDate}`
+    : "(date not set)";
 
   const genderLabel =
     profile.gender === "male"
@@ -999,24 +1086,40 @@ function buildSystemPrompt(profile: HealthProfile, prefs: AiPreferences): string
   if (bmi) {
     weightHeight.push(`BMI: ${bmi}`);
   }
-  const physicalStats = weightHeight.length > 0 ? `- ${weightHeight.join(" | ")}` : "";
+  const physicalStats =
+    weightHeight.length > 0 ? `- ${weightHeight.join(" | ")}` : "";
 
+  const otherConditionsSanitized = profile.otherConditions
+    ? sanitizeProfileField(profile.otherConditions, 200)
+    : "";
   const conditionsLine =
     Array.isArray(profile.comorbidities) && profile.comorbidities.length > 0
-      ? `- Health conditions: ${profile.comorbidities.join(", ")}${profile.otherConditions ? `, ${profile.otherConditions}` : ""}`
+      ? `- Health conditions: ${profile.comorbidities.join(", ")}${otherConditionsSanitized ? `, ${otherConditionsSanitized}` : ""}`
       : "";
 
-  const medicationsValue = (profile.medications ?? "").trim();
-  const supplementsValue = (profile.supplements ?? "").trim();
-  const allergiesValue = (profile.allergies ?? "").trim();
+  const medicationsValue = sanitizeProfileField(profile.medications ?? "", 500);
+  const supplementsValue = sanitizeProfileField(profile.supplements ?? "", 500);
+  const allergiesValue = sanitizeProfileField(profile.allergies ?? "", 500);
   const intolerancesValue = (profile.intolerances ?? "").trim();
-  const lifestyleNotesValue = (profile.lifestyleNotes ?? "").trim();
-  const dietaryHistoryValue = (profile.dietaryHistory ?? "").trim();
+  const lifestyleNotesValue = sanitizeProfileField(
+    profile.lifestyleNotes ?? "",
+    1000,
+  );
+  const dietaryHistoryValue = sanitizeProfileField(
+    profile.dietaryHistory ?? "",
+    1000,
+  );
 
-  const medicationsLine = medicationsValue ? `- Medications: ${medicationsValue}` : "";
-  const supplementsLine = supplementsValue ? `- Supplements: ${supplementsValue}` : "";
+  const medicationsLine = medicationsValue
+    ? `- Medications: ${medicationsValue}`
+    : "";
+  const supplementsLine = supplementsValue
+    ? `- Supplements: ${supplementsValue}`
+    : "";
   const allergiesLine = allergiesValue ? `- Allergies: ${allergiesValue}` : "";
-  const intolerancesLine = intolerancesValue ? `- Intolerances: ${intolerancesValue}` : "";
+  const intolerancesLine = intolerancesValue
+    ? `- Intolerances: ${intolerancesValue}`
+    : "";
   const lifestyleSmoking =
     profile.smokingStatus === "yes" ||
     profile.smokingStatus === "current" ||
@@ -1044,7 +1147,9 @@ function buildSystemPrompt(profile: HealthProfile, prefs: AiPreferences): string
       ? `- Lifestyle factors: ${[
           lifestyleSmoking ? `Smoking ${lifestyleSmoking}` : "",
           lifestyleAlcohol ? `Alcohol ${lifestyleAlcohol}` : "",
-          lifestyleRecreational ? `Recreational substances ${lifestyleRecreational}` : "",
+          lifestyleRecreational
+            ? `Recreational substances ${lifestyleRecreational}`
+            : "",
         ]
           .filter(Boolean)
           .join(" | ")}`
@@ -1052,10 +1157,17 @@ function buildSystemPrompt(profile: HealthProfile, prefs: AiPreferences): string
 
   const smokingDetailLine = buildSmokingContext(profile, lifestyleSmoking);
   const alcoholDetailLine = buildAlcoholContext(profile, lifestyleAlcohol);
-  const recreationalDetailLine = buildSubstanceContext(profile, lifestyleRecreational);
+  const recreationalDetailLine = buildSubstanceContext(
+    profile,
+    lifestyleRecreational,
+  );
 
-  const lifestyleNotesLine = lifestyleNotesValue ? `- Lifestyle notes: ${lifestyleNotesValue}` : "";
-  const dietaryHistoryLine = dietaryHistoryValue ? `- Dietary history: ${dietaryHistoryValue}` : "";
+  const lifestyleNotesLine = lifestyleNotesValue
+    ? `- Lifestyle notes: ${lifestyleNotesValue}`
+    : "";
+  const dietaryHistoryLine = dietaryHistoryValue
+    ? `- Dietary history: ${dietaryHistoryValue}`
+    : "";
 
   const profileSection = [
     `- Surgery: ${surgeryLabel} ${surgeryDateLabel} — Days post-op dynamically calculated and included in each payload`,
@@ -1323,10 +1435,16 @@ Rules for each field:
 // ─── Baseline averages context for AI prompts ────────────────────────────────
 
 /** Format a single delta line: "name: today X vs baseline Y (unit)" */
-function formatDeltaLine(label: string, delta: BaselineDelta, unit: string): string {
+function formatDeltaLine(
+  label: string,
+  delta: BaselineDelta,
+  unit: string,
+): string {
   const sign = delta.absoluteDelta >= 0 ? "+" : "";
   const pctStr =
-    delta.percentDelta !== null ? ` (${sign}${Math.round(delta.percentDelta * 100)}%)` : "";
+    delta.percentDelta !== null
+      ? ` (${sign}${Math.round(delta.percentDelta * 100)}%)`
+      : "";
   return `${label}: today ${Number.isInteger(delta.todayValue) ? delta.todayValue : delta.todayValue.toFixed(1)} vs avg ${Number.isInteger(delta.baselineAvg) ? delta.baselineAvg : delta.baselineAvg.toFixed(1)} ${unit}${pctStr}`;
 }
 
@@ -1372,11 +1490,19 @@ function buildBaselineContext(
   // Total fluid delta
   let totalFluidLine: string | null = null;
   if (baselines.totalFluidDelta) {
-    totalFluidLine = formatDeltaLine("total fluid", baselines.totalFluidDelta, "ml");
+    totalFluidLine = formatDeltaLine(
+      "total fluid",
+      baselines.totalFluidDelta,
+      "ml",
+    );
   }
 
   // Only include if we have at least some meaningful data
-  if (habitLines.length === 0 && fluidLines.length === 0 && digestionParts.length === 0) {
+  if (
+    habitLines.length === 0 &&
+    fluidLines.length === 0 &&
+    digestionParts.length === 0
+  ) {
     return null;
   }
 
@@ -1421,9 +1547,12 @@ export function buildPartialDayContext(
   const isEarlyInDay = currentHour < 12;
 
   // --- Time since last BM ---
-  const lastBm = bowelEvents.length > 0 ? bowelEvents[bowelEvents.length - 1] : undefined;
+  const lastBm =
+    bowelEvents.length > 0 ? bowelEvents[bowelEvents.length - 1] : undefined;
   const hoursSinceLastBm =
-    lastBm !== undefined ? Math.round((nowMs - lastBm.timestamp) / MS_PER_HOUR) : null;
+    lastBm !== undefined
+      ? Math.round((nowMs - lastBm.timestamp) / MS_PER_HOUR)
+      : null;
 
   // --- Foods currently in transit ---
   // A food is "in transit" if it was eaten after the most recent BM
@@ -1497,7 +1626,8 @@ export function buildUserMessage(params: BuildUserMessageParams): string {
     baselineAverages,
   } = params;
 
-  const { foodLogs, bowelEvents, habitLogs, fluidLogs, activityLogs } = recentEvents;
+  const { foodLogs, bowelEvents, habitLogs, fluidLogs, activityLogs } =
+    recentEvents;
 
   const now = new Date();
   const currentTime = now.toLocaleString("en-GB", {
@@ -1584,7 +1714,9 @@ export function parseAiInsight(raw: unknown): AiNutritionistInsight | null {
 
   // Parse the new directResponseToUser field
   const directResponseToUser: string | null =
-    typeof raw.directResponseToUser === "string" ? raw.directResponseToUser : null;
+    typeof raw.directResponseToUser === "string"
+      ? raw.directResponseToUser
+      : null;
 
   // Parse educationalInsight
   const rawEduInsight = raw.educationalInsight;
@@ -1600,7 +1732,8 @@ export function parseAiInsight(raw: unknown): AiNutritionistInsight | null {
 
   return {
     directResponseToUser,
-    summary: typeof raw.summary === "string" ? raw.summary : "No summary available.",
+    summary:
+      typeof raw.summary === "string" ? raw.summary : "No summary available.",
     suggestions: toStringArray(raw.suggestions),
     clinicalReasoning,
     educationalInsight,
@@ -1629,7 +1762,9 @@ export function parseAiInsight(raw: unknown): AiNutritionistInsight | null {
       : [],
     suspectedCulprits: Array.isArray(raw.suspectedCulprits)
       ? raw.suspectedCulprits.filter(
-          (item: unknown): item is AiNutritionistInsight["suspectedCulprits"][number] =>
+          (
+            item: unknown,
+          ): item is AiNutritionistInsight["suspectedCulprits"][number] =>
             isRecord(item) &&
             typeof item.food === "string" &&
             typeof item.confidence === "string" &&
@@ -1808,12 +1943,16 @@ export async function fetchAiInsights(
 
     // Token estimate logging
     const estimatedTokens = messages.reduce((sum, m) => {
-      const content = typeof m.content === "string" ? m.content : JSON.stringify(m.content);
+      const content =
+        typeof m.content === "string" ? m.content : JSON.stringify(m.content);
       return sum + Math.ceil(content.length / 4);
     }, 0);
 
     if (estimatedTokens > TOKEN_WARNING_THRESHOLD) {
-      debugWarn("Dr. Poo", `High token estimate (lightweight): ~${estimatedTokens} tokens.`);
+      debugWarn(
+        "Dr. Poo",
+        `High token estimate (lightweight): ~${estimatedTokens} tokens.`,
+      );
     }
 
     const startedAt = performance.now();
@@ -1827,7 +1966,9 @@ export async function fetchAiInsights(
       });
       rawContent = result.content;
     } catch (error) {
-      throw new Error(`AI nutritionist request failed: ${getErrorMessage(error)}`);
+      throw new Error(
+        `AI nutritionist request failed: ${getErrorMessage(error)}`,
+      );
     }
     const durationMs = Math.round(performance.now() - startedAt);
 
@@ -1840,7 +1981,9 @@ export async function fetchAiInsights(
 
     const insight = parseAiInsight(parsed);
     if (!insight) {
-      throw new Error("AI nutritionist returned an unexpected response structure.");
+      throw new Error(
+        "AI nutritionist returned an unexpected response structure.",
+      );
     }
 
     if (safePatientMessages.length === 0) {
@@ -1892,9 +2035,17 @@ export async function fetchAiInsights(
   const conversationHistory = safeEnhancedContext?.conversationHistory;
 
   // Build structured context objects
-  const patientSnapshot = buildPatientSnapshot(safeHealthProfile, foodTrials, weeklyDigests);
+  const patientSnapshot = buildPatientSnapshot(
+    safeHealthProfile,
+    foodTrials,
+    weeklyDigests,
+  );
   const deltaSignals = buildDeltaSignals(safeLogs, foodTrials);
-  const foodContextObj = buildFoodContext(foodTrials, safeLogs, safeHealthProfile);
+  const foodContextObj = buildFoodContext(
+    foodTrials,
+    safeLogs,
+    safeHealthProfile,
+  );
 
   const systemPrompt = buildSystemPrompt(safeHealthProfile, prefs);
 
@@ -1933,7 +2084,9 @@ export async function fetchAiInsights(
   const hasPreviousResponse = previousReports.length > 0;
 
   // Group recent suggestions by text with counts (from enhanced context)
-  const suggestionHistory = groupSuggestions(safeEnhancedContext?.recentSuggestions ?? []);
+  const suggestionHistory = groupSuggestions(
+    safeEnhancedContext?.recentSuggestions ?? [],
+  );
 
   // Transform weekly digests (already structured, just map to context shape)
   const weeklyContext: WeeklyDigestInput[] = weeklyDigests.map((wd) => ({
@@ -1969,7 +2122,8 @@ export async function fetchAiInsights(
 
   // Token estimate logging — warn if context is getting large
   const estimatedTokens = messages.reduce((sum, m) => {
-    const content = typeof m.content === "string" ? m.content : JSON.stringify(m.content);
+    const content =
+      typeof m.content === "string" ? m.content : JSON.stringify(m.content);
     return sum + Math.ceil(content.length / 4);
   }, 0);
 
@@ -1992,7 +2146,9 @@ export async function fetchAiInsights(
 
     rawContent = result.content;
   } catch (error) {
-    throw new Error(`AI nutritionist request failed: ${getErrorMessage(error)}`);
+    throw new Error(
+      `AI nutritionist request failed: ${getErrorMessage(error)}`,
+    );
   }
   const durationMs = Math.round(performance.now() - startedAt);
 
@@ -2005,7 +2161,9 @@ export async function fetchAiInsights(
 
   const insight = parseAiInsight(parsed);
   if (!insight) {
-    throw new Error("AI nutritionist returned an unexpected response structure.");
+    throw new Error(
+      "AI nutritionist returned an unexpected response structure.",
+    );
   }
 
   // Belt-and-suspenders: if no patient messages were pending, force directResponseToUser to null.
@@ -2014,7 +2172,10 @@ export async function fetchAiInsights(
     insight.directResponseToUser = null;
   }
 
-  const enrichedInsight = enforceNovelEducationalInsight(insight, previousReports);
+  const enrichedInsight = enforceNovelEducationalInsight(
+    insight,
+    previousReports,
+  );
 
   const serialisableMessages = messages.map((m) => ({
     role: m.role,
@@ -2145,7 +2306,11 @@ export async function fetchWeeklySummary(
     durationMs = Math.round(performance.now() - startedAt);
   } catch (error) {
     const message = getErrorMessage(error);
-    if (message.includes("401") || message.includes("Unauthorized") || message.includes("auth")) {
+    if (
+      message.includes("401") ||
+      message.includes("Unauthorized") ||
+      message.includes("auth")
+    ) {
       throw new Error("Weekly summary failed. Check your API key.");
     }
     throw new Error(`Weekly summary failed: ${message}`);
@@ -2165,7 +2330,9 @@ export async function fetchWeeklySummary(
   const keyFoods = isRecord(parsed.keyFoods) ? parsed.keyFoods : null;
   const result: WeeklySummaryResult = {
     weeklySummary:
-      typeof parsed.weeklySummary === "string" ? parsed.weeklySummary : "No summary available.",
+      typeof parsed.weeklySummary === "string"
+        ? parsed.weeklySummary
+        : "No summary available.",
     keyFoods: {
       safe: toStringArray(keyFoods?.safe),
       flagged: toStringArray(keyFoods?.flagged),
