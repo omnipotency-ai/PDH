@@ -90,32 +90,9 @@ export function FoodFilterView({
     [recentFoods],
   );
 
-  // Fix #26: Compute frequency map from 14-day logs.
-  // Count how many times each canonicalName appears across all food pipeline logs.
-  const frequentFoods = useMemo(() => {
-    const frequencyMap = new Map<string, number>();
-
-    for (const log of logs) {
-      if (!isFoodPipelineType(log.type)) continue;
-
-      const data = log.data as {
-        items: ReadonlyArray<{ canonicalName?: string | null }>;
-      };
-      for (const item of data.items) {
-        const canonical = item.canonicalName;
-        if (canonical == null) continue;
-        frequencyMap.set(canonical, (frequencyMap.get(canonical) ?? 0) + 1);
-      }
-    }
-
-    // Sort by frequency descending, filter to known foods, take top N.
-    const sorted = [...frequencyMap.entries()].sort((a, b) => b[1] - a[1]).map(([name]) => name);
-
-    return filterToKnownFoods(sorted).slice(0, MAX_ITEMS_PER_TAB);
-  }, [logs]);
-
-  // Frequency counts for display labels (only used by Frequent tab).
-  const frequencyCountMap = useMemo(() => {
+  // Fix #26 + perf: single pass over logs to build both the sorted frequent-foods list
+  // and the count map. Previously two identical scans with the same dependency array.
+  const { frequentFoods, frequencyCountMap } = useMemo(() => {
     const countMap = new Map<string, number>();
 
     for (const log of logs) {
@@ -131,7 +108,16 @@ export function FoodFilterView({
       }
     }
 
-    return countMap;
+    // Sort by frequency descending, filter to known foods, take top N.
+    const sorted = [...countMap.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([name]) => name);
+    const sortedFrequentFoods = filterToKnownFoods(sorted).slice(
+      0,
+      MAX_ITEMS_PER_TAB,
+    );
+
+    return { frequentFoods: sortedFrequentFoods, frequencyCountMap: countMap };
   }, [logs]);
 
   // Fix #31: Precompute resolved props in displayedItems memo.
@@ -153,11 +139,16 @@ export function FoodFilterView({
     return names.map((canonicalName) => {
       const portion = formatPortion(canonicalName);
       const calories = getDefaultCalories(canonicalName);
-      const count = activeTab === "frequent" ? frequencyCountMap.get(canonicalName) : undefined;
+      const count =
+        activeTab === "frequent"
+          ? frequencyCountMap.get(canonicalName)
+          : undefined;
 
       // For Frequent tab, prepend the logged count to the portion string.
       const portionDisplay =
-        count != null && count > 0 ? `Logged ${count}x${portion ? ` · ${portion}` : ""}` : portion;
+        count != null && count > 0
+          ? `Logged ${count}x${portion ? ` · ${portion}` : ""}`
+          : portion;
 
       return {
         canonicalName,
@@ -222,7 +213,9 @@ export function FoodFilterView({
               <Icon className="h-3.5 w-3.5" aria-hidden="true" />
               <span>
                 {tab.label}
-                {count > 0 && <span className="ml-1 font-normal opacity-60">({count})</span>}
+                {count > 0 && (
+                  <span className="ml-1 font-normal opacity-60">({count})</span>
+                )}
               </span>
             </button>
           );

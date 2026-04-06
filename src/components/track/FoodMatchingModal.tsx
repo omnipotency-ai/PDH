@@ -1,6 +1,19 @@
 import { useMutation, useQuery } from "convex/react";
-import { AlertTriangle, Check, FileText, MessageSquarePlus, Search } from "lucide-react";
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import {
+  AlertTriangle,
+  Check,
+  FileText,
+  MessageSquarePlus,
+  Search,
+} from "lucide-react";
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { toast } from "sonner";
 import { RawInputEditModal } from "@/components/track/RawInputEditModal";
 import { Button } from "@/components/ui/button";
@@ -11,7 +24,10 @@ import { asConvexId } from "@/lib/sync";
 import { getZoneBadgeClasses, type Zone } from "@/lib/zoneColors";
 import type { FoodItem } from "@/types/domain";
 import { api } from "../../../convex/_generated/api";
-import { type FoodGroup, getGroupDisplayName } from "../../../shared/foodRegistry";
+import {
+  type FoodGroup,
+  getGroupDisplayName,
+} from "../../../shared/foodRegistry";
 
 interface FoodMatchingModalProps {
   open: boolean;
@@ -34,7 +50,12 @@ interface SearchOption {
   examples: ReadonlyArray<string>;
 }
 
-const GROUP_ORDER: ReadonlyArray<FoodGroup> = ["protein", "carbs", "fats", "seasoning"];
+const GROUP_ORDER: ReadonlyArray<FoodGroup> = [
+  "protein",
+  "carbs",
+  "fats",
+  "seasoning",
+];
 
 function formatConfidence(value: number | undefined): string | null {
   if (value === undefined || Number.isNaN(value)) return null;
@@ -54,7 +75,9 @@ export function FoodMatchingModal({
   queue,
 }: FoodMatchingModalProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCanonical, setSelectedCanonical] = useState<string | null>(null);
+  const [selectedCanonical, setSelectedCanonical] = useState<string | null>(
+    null,
+  );
   const [activeBucketKey, setActiveBucketKey] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [rawInputEditOpen, setRawInputEditOpen] = useState(false);
@@ -76,7 +99,10 @@ export function FoodMatchingModal({
   const currentItemIndex = currentItem?.itemIndex ?? 0;
   const currentFoodItem = currentItem?.item;
   const currentFoodName =
-    currentItem?.foodName ?? currentFoodItem?.parsedName ?? currentFoodItem?.userSegment ?? "Food";
+    currentItem?.foodName ??
+    currentFoodItem?.parsedName ??
+    currentFoodItem?.userSegment ??
+    "Food";
   const currentRawInput = currentItem?.rawInput ?? "";
   const currentLogTimestamp = currentItem?.logTimestamp;
   const currentLogNotes = currentItem?.logNotes;
@@ -84,18 +110,22 @@ export function FoodMatchingModal({
 
   const candidateOptions = currentFoodItem?.matchCandidates ?? [];
   const bucketOptions = currentFoodItem?.bucketOptions ?? [];
-  const activeBucket = bucketOptions.find((bucket) => bucket.bucketKey === activeBucketKey);
+  const activeBucket = bucketOptions.find(
+    (bucket) => bucket.bucketKey === activeBucketKey,
+  );
   const confidenceLabel = formatConfidence(currentFoodItem?.matchConfidence);
   const defaultCandidateCanonical = candidateOptions[0]?.canonicalName ?? null;
+  const shouldSkipSearch =
+    !open || (deferredSearchQuery.length === 0 && activeBucketKey === null);
   const serverSearchOptions = useQuery(
     api.foodParsing.searchFoods,
-    open
-      ? {
+    shouldSkipSearch
+      ? "skip"
+      : {
           query: deferredSearchQuery,
           ...(activeBucketKey ? { bucketKey: activeBucketKey } : {}),
-          limit: deferredSearchQuery.length > 0 ? 40 : activeBucketKey ? 80 : 160,
-        }
-      : "skip",
+          limit: deferredSearchQuery.length > 0 ? 40 : 80,
+        },
   );
 
   useEffect(() => {
@@ -205,7 +235,9 @@ export function FoodMatchingModal({
 
   const handleSelectBucket = useCallback(
     (bucketKey: string) => {
-      const bucket = bucketOptions.find((option) => option.bucketKey === bucketKey);
+      const bucket = bucketOptions.find(
+        (option) => option.bucketKey === bucketKey,
+      );
       if (!bucket) return;
       setActiveBucketKey(bucketKey);
       setSelectedCanonical(bucket.canonicalOptions[0] ?? null);
@@ -227,7 +259,9 @@ export function FoodMatchingModal({
         }),
       });
       setTicketSubmitted(true);
-      toast.success(`Request submitted for "${currentFoodName}". We'll add it to the registry.`);
+      toast.success(
+        `Request submitted for "${currentFoodName}". We'll add it to the registry.`,
+      );
     } catch (err: unknown) {
       toast.error(getErrorMessage(err, "Failed to submit food request."));
     } finally {
@@ -265,7 +299,9 @@ export function FoodMatchingModal({
             <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-faint)]">
               Full meal
             </p>
-            <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">{currentRawInput}</p>
+            <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">
+              {currentRawInput}
+            </p>
           </div>
         )}
 
@@ -287,7 +323,9 @@ export function FoodMatchingModal({
                   Server assessment:
                 </span>{" "}
                 {confidenceLabel ?? "Pending review"}
-                {currentFoodItem?.matchStrategy ? ` via ${currentFoodItem.matchStrategy}` : ""}
+                {currentFoodItem?.matchStrategy
+                  ? ` via ${currentFoodItem.matchStrategy}`
+                  : ""}
               </div>
             )}
 
@@ -305,13 +343,16 @@ export function FoodMatchingModal({
                 </div>
                 <div className="grid gap-2">
                   {candidateOptions.slice(0, 3).map((candidate) => {
-                    const isSelected = selectedCanonical === candidate.canonicalName;
+                    const isSelected =
+                      selectedCanonical === candidate.canonicalName;
                     return (
                       <button
                         key={candidate.canonicalName}
                         type="button"
                         onClick={() =>
-                          setSelectedCanonical(isSelected ? null : candidate.canonicalName)
+                          setSelectedCanonical(
+                            isSelected ? null : candidate.canonicalName,
+                          )
                         }
                         className={`rounded-lg border px-3 py-2 text-left ${
                           isSelected
@@ -342,7 +383,9 @@ export function FoodMatchingModal({
                             <span className="rounded-full bg-[var(--color-bg-surface)] px-1.5 py-0.5 text-[10px] text-[var(--color-text-secondary)]">
                               {Math.round(candidate.combinedConfidence * 100)}%
                             </span>
-                            {isSelected && <Check className="h-4 w-4 text-[var(--section-food)]" />}
+                            {isSelected && (
+                              <Check className="h-4 w-4 text-[var(--section-food)]" />
+                            )}
                           </div>
                         </div>
                       </button>
@@ -450,7 +493,8 @@ export function FoodMatchingModal({
                       </span>
                     </div>
                     {groupData.options.map((option) => {
-                      const isSelected = selectedCanonical === option.canonicalName;
+                      const isSelected =
+                        selectedCanonical === option.canonicalName;
                       return (
                         <button
                           key={option.canonicalName}
@@ -458,7 +502,9 @@ export function FoodMatchingModal({
                           role="option"
                           aria-selected={isSelected}
                           onClick={() =>
-                            setSelectedCanonical(isSelected ? null : option.canonicalName)
+                            setSelectedCanonical(
+                              isSelected ? null : option.canonicalName,
+                            )
                           }
                           className={`flex w-full items-center gap-2 border-b border-[var(--color-border-default)] px-3 py-2 text-left last:border-b-0 ${
                             isSelected
@@ -516,11 +562,18 @@ export function FoodMatchingModal({
             </div>
 
             <div className="flex items-center justify-end gap-2 border-t border-[var(--color-border-default)] pt-3">
-              {isQueueMode && queue !== undefined && queueIndex < queue.length - 1 && (
-                <Button variant="ghost" size="sm" onClick={handleSkip} disabled={isSaving}>
-                  Skip
-                </Button>
-              )}
+              {isQueueMode &&
+                queue !== undefined &&
+                queueIndex < queue.length - 1 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleSkip}
+                    disabled={isSaving}
+                  >
+                    Skip
+                  </Button>
+                )}
               <Button
                 variant="ghost"
                 size="sm"
@@ -592,7 +645,9 @@ function TicketForm({
           <Check className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
         </div>
         <div>
-          <p className="text-sm font-medium text-[var(--color-text-primary)]">Request submitted</p>
+          <p className="text-sm font-medium text-[var(--color-text-primary)]">
+            Request submitted
+          </p>
           <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
             &ldquo;{foodName}&rdquo; will be reviewed and added to the registry.
           </p>
@@ -605,12 +660,16 @@ function TicketForm({
     <div className="space-y-3">
       <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-800 dark:bg-amber-950/30">
         <p className="text-xs text-amber-800 dark:text-amber-300">
-          If &ldquo;{foodName}&rdquo; still doesn&apos;t fit, submit it for a registry review.
+          If &ldquo;{foodName}&rdquo; still doesn&apos;t fit, submit it for a
+          registry review.
         </p>
       </div>
 
       <div className="space-y-1.5">
-        <label htmlFor="ticket-note" className="text-xs font-medium text-[var(--text-muted)]">
+        <label
+          htmlFor="ticket-note"
+          className="text-xs font-medium text-[var(--text-muted)]"
+        >
           Additional context (optional)
         </label>
         <textarea
