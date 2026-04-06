@@ -5,36 +5,11 @@ import { getHabitIcon } from "@/lib/habitIcons";
 import {
   getProgressColor,
   getProgressText,
-  type HabitProgressColor,
   shouldShowBadge,
 } from "@/lib/habitProgress";
 import { type HabitConfig, isCheckboxHabit } from "@/lib/habitTemplates";
 import type { UnitSystem } from "@/lib/units";
-
-// --- Color tint logic ---
-
-type TileColorTint = "default" | "emerald" | "orange" | "muted" | "red";
-
-const TINT_BY_PROGRESS_COLOR: Record<HabitProgressColor, TileColorTint> = {
-  neutral: "default",
-  "target-in-progress": "default",
-  "target-met": "emerald",
-  "cap-clear": "default",
-  "cap-under": "default",
-  "cap-warning": "orange",
-  "cap-at": "muted",
-  "cap-over": "red",
-};
-
-const TINT_CLASSES: Record<TileColorTint, string> = {
-  default: "bg-[var(--surface-2)] border-[var(--color-border-default)]",
-  emerald:
-    "bg-[rgba(52,211,153,0.12)] border-[rgba(52,211,153,0.35)] dark:bg-[rgba(52,211,153,0.12)] dark:border-[rgba(52,211,153,0.35)]",
-  orange:
-    "bg-[rgba(251,146,60,0.12)] border-[rgba(251,146,60,0.35)] dark:bg-[rgba(251,146,60,0.12)] dark:border-[rgba(251,146,60,0.35)]",
-  muted: "bg-[var(--surface-3)] border-[var(--color-border-default)] opacity-60",
-  red: "bg-[rgba(248,113,113,0.12)] border-[rgba(248,113,113,0.35)] dark:bg-[rgba(248,113,113,0.12)] dark:border-[rgba(248,113,113,0.35)]",
-};
+import { TINT_BY_PROGRESS_COLOR, TINT_CLASSES } from "./constants";
 
 // --- Props ---
 
@@ -64,13 +39,21 @@ export function QuickCaptureTile({
   const [animating, setAnimating] = useState(false);
   const previousProgressTextRef = useRef<string>("");
 
-  const progressText = getProgressText(habit, count, fluidTotalMl, "tile", unitSystem);
+  const progressText = getProgressText(
+    habit,
+    count,
+    fluidTotalMl,
+    "tile",
+    unitSystem,
+  );
   const progressColor = getProgressColor(habit, count, fluidTotalMl);
   const tint = TINT_BY_PROGRESS_COLOR[progressColor];
   const tintClass = TINT_CLASSES[tint];
   const isCheckboxTile = isCheckboxHabit(habit);
   const isCheckboxDone = isCheckboxTile && count > 0;
-  const badge = isCheckboxTile ? null : shouldShowBadge(habit, count, fluidTotalMl);
+  const badge = isCheckboxTile
+    ? null
+    : shouldShowBadge(habit, count, fluidTotalMl);
   const { Icon, toneClassName } = getHabitIcon(habit);
   useEffect(() => {
     if (isCheckboxTile) return;
@@ -136,7 +119,10 @@ export function QuickCaptureTile({
             className="animate-badge-pop-in absolute bottom-2 right-2 flex h-5 w-5 items-center justify-center rounded-full border border-[var(--color-border-default)] bg-[var(--surface-2)]"
             aria-hidden="true"
           >
-            <AlertTriangle className="h-3.5 w-3.5 text-red-500" strokeWidth={2.5} />
+            <AlertTriangle
+              className="h-3.5 w-3.5 text-red-500"
+              strokeWidth={2.5}
+            />
           </span>
         )}
 
@@ -161,7 +147,10 @@ export function QuickCaptureTile({
           </div>
         ) : (
           <div className="min-w-0 flex flex-1 flex-col justify-center gap-0.5">
-            <div className="relative h-4 min-w-0 overflow-hidden" aria-live="polite">
+            <div
+              className="relative h-4 min-w-0 overflow-hidden"
+              aria-live="polite"
+            >
               {outgoingText !== null && animating && (
                 <span
                   aria-hidden="true"
