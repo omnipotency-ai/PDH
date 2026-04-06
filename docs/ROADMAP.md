@@ -1,8 +1,9 @@
 > **Ref:** `docs/ROADMAP.md`
-> **Updated:** 2026-04-05
-> **Version:** 2.0
+> **Updated:** 2026-04-06
+> **Version:** 2.1
 > **History:**
 >
+> - v2.1 (2026-04-06) — added planning triage notes from completed roadmap mapping reports
 > - v2.0 (2026-04-05) — append-only discipline, status column on initiatives
 > - v1.0 (2026-04-05) — created from WORK-QUEUE.md and VISION.md
 
@@ -27,12 +28,13 @@
 
 ### Nutrition Card (Meal Logging Redesign)
 
-> **Status:** In Work Queue — plan active
-> **Plan:** `docs/plans/nutrition-card-implementation-plan.json`
+> **Status:** Done
+> **Plan (archived):** `docs/plans/archive/nutrition-card-impl-plan-waves-*.json`
 > **PRD (archived):** `docs/plans/archive/meal-logging-prd.md`
 > **Parent plan:** `docs/plans/data-integration-plan.md` (Wave 1)
+> **Merged:** PR #3 into `main` (2026-04-06)
 
-Chip-based, slot-aware meal builder replacing the old single text field. NutritionCard with search, staging, portions, 5-macro tracking, water modal, meal slot auto-detection. Waves 0-3 + spec fix complete. W4-01, W4-03, W5 remaining.
+Chip-based, slot-aware meal builder replacing the old single text field. NutritionCard with search, staging, portions, 5-macro tracking, water modal, meal slot auto-detection. All 6 waves (0-5) complete. 69 commits, 1430 tests, 211 files changed.
 
 ---
 
@@ -141,6 +143,38 @@ Structured meal planning based on safe food data.
 > Bugs, debt, and polish not yet assigned to an initiative plan.
 > When creating a plan for any initiative above, sweep this list for items that can be folded in.
 
+### Planning Triage Notes (2026-04-06)
+
+> Notes below come from the completed roadmap mapping reports already gathered in-session.
+> They are intended to speed up plan consolidation and do not represent a fresh repo-wide re-audit.
+
+| ID     | Current assessment                  | Planning note                                                                                                                   |
+| ------ | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| WQ-148 | Open, but broader than a quick tidy | Real rename candidate, but touches multiple imports and should be planned as a focused cleanup task rather than folded casually. |
+| WQ-150 | Likely stale / not cleanup          | `toLegacyFoodStatus` still appears live downstream; do not treat this as dead-code removal without a status-model redesign.      |
+| WQ-151 | Likely stale / unclear              | Mapping report did not confirm the original bug; verify before folding into a cleanup plan.                                     |
+| WQ-153 | Open and low-risk                   | Safe cleanup candidate. Remove unused `FILTER_OPTIONS`, `SortKey`, and `SortDir` exports if no plan dependency says otherwise.  |
+| WQ-155 | Open and low-risk                   | Safe cleanup candidate. Strip leftover work-ticket marker comments during the next cleanup pass.                                |
+| WQ-159 | Open and low-risk                   | Safe cleanup candidate. Inert `use client` directives can be removed in a mechanical cleanup batch.                             |
+| WQ-161 | Open and low-risk                   | Safe content cleanup candidate. Replace or remove placeholder `"New entry."` notes during registry cleanup.                     |
+| WQ-162 | Open, but editorial                 | Keep separate from mechanical cleanup. This needs an intentional clinical-rationale pass, not a drive-by edit.                  |
+| WQ-163 | Unconfirmed / likely stale          | Mapping report did not confirm the stale comment at the cited location; verify before folding into the plan.                    |
+| WQ-198 | Open and substantive                | Real issue area. Keep as a proper habit/sleep-data cleanup task rather than bundling into minor cleanup work.                   |
+| WQ-419 | Appears resolved on current branch  | Placeholder CSP domain was already removed when mapped. Treat as closed unless later regression appears.                         |
+| WQ-420 | Open                                | Still needs action: manifest/assets reference missing install-prompt screenshot/icon assets.                                    |
+| WQ-421 | Open                                | Still needs action: installable `512px` icon gap remains.                                                                       |
+| WQ-422 | Appears resolved on current branch  | `unsafe-inline` was already documented with an accepted-risk note when mapped. Treat as closed unless policy changes.           |
+| WQ-423 | Appears resolved on current branch  | Microphone policy was already opened up when mapped. Treat as closed unless voice scope changes.                                |
+| WQ-424 | Partially resolved / needs decision | PNG precache coverage exists; decide whether JPG/JPEG/WEBP support is still a requirement before planning more work.            |
+| WQ-425 | Appears resolved on current branch  | `dotenv` had already been moved to `devDependencies` when mapped. Treat as closed unless package drift reintroduces it.         |
+| WQ-426 | Appears resolved on current branch  | `next-themes` was already removed when mapped. Treat as closed unless dependency drift reintroduces it.                         |
+| WQ-427 | Appears resolved on current branch  | Stale transit-map `.gitignore` exclusions were already gone when mapped. Treat as closed unless they reappear.                  |
+| WQ-428 | Open                                | Still missing explicit unauthenticated app-load E2E coverage. Keep in the next release-hygiene/testing plan.                   |
+| WQ-429 | Appears resolved on current branch  | Document title was already made more descriptive when mapped. Treat as closed unless branding changes.                          |
+| WQ-430 | Appears resolved on current branch  | Package name was already lowercase when mapped. Treat as closed unless packaging needs change again.                            |
+| WQ-431 | Open                                | Still needs action: stale theme storage key fallback remains in `theme-provider.tsx`.                                           |
+| WQ-432 | Appears resolved on current branch  | Redundant `.playwright-cli` ignores were already simplified when mapped. Treat as closed unless ignore rules drift again.       |
+
 ### Track Page
 
 | ID     | Title                                                   | Sev  | Description                                                                                                                                                                                                                               |
@@ -158,6 +192,7 @@ Structured meal planning based on safe food data.
 | WQ-189 | Activity rows split label/time                          | Low  | Label and time separated.                                                                                                                                                                                                                 |
 | WQ-433 | Count food pipeline liquids toward total fluids         | Med  | Drinks logged via food search (Aquarius, electrolyte drinks) should count toward total fluid intake. Needs a way to identify liquid food items (registry flag, subcategory check, or unit=ml). Currently only `type: "fluid"` logs count. |
 | WQ-434 | Aquarius/electrolyte drink portion & calorie data wrong | Med  | Aquarius matched as "electrolyte drink" with 240g/60kcal default. Actual 100ml serving has different values. Food registry entry needs correcting, and liquid foods should log in ml not grams.                                           |
+| WQ-435 | Sleep & Weight quick capture require two clicks to open | Med  | Sleep and Weight quick capture buttons require two taps/clicks before the drawer opens. Should open on the first click.                                                                                                                   |
 
 ### Patterns Page
 
