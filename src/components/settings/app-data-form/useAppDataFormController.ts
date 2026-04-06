@@ -12,7 +12,7 @@ interface UseAppDataFormControllerArgs {
   clearLocalData: () => Promise<void>;
   exportBackup: () => Promise<AppBackupPayload>;
   importBackup: (payload: AppBackupPayload) => Promise<AppBackupImportResult>;
-  // SET-F003: null until Convex has loaded the profile — mutations must not fire
+  // null until Convex has loaded the profile — mutations must not fire
   // with stale defaults while null.
   healthProfile: HealthProfile | null;
   setHealthProfile: (updates: Partial<HealthProfile>) => void;
@@ -70,7 +70,7 @@ export function useAppDataFormController({
   const [isDeletingData, setIsDeletingData] = useState(false);
   const [isImportingBackup, setIsImportingBackup] = useState(false);
   const [isDeleteDrawerOpen, setIsDeleteDrawerOpen] = useState(false);
-  // SET-F004: state-driven import confirmation replaces window.confirm
+  // State-driven import confirmation replaces window.confirm
   const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
   // State-driven factory reset confirmation replaces window.confirm
   const [showFactoryResetConfirm, setShowFactoryResetConfirm] = useState(false);
@@ -120,7 +120,7 @@ export function useAppDataFormController({
     }
   };
 
-  // SET-F004: stages the file for confirmation instead of calling window.confirm.
+  // Stages the file for confirmation instead of calling window.confirm.
   // The component renders an inline confirmation UI and calls confirmImport on proceed.
   const handleImportBackup = (file: File | null) => {
     if (!file) return;

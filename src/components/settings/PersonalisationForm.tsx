@@ -36,7 +36,7 @@ function makeDrafts(presets: (FluidPreset | string)[]): FluidPresetDraft[] {
 //
 // Keeps a local raw string for the ingredients field so typing "pasta, cheese"
 // doesn't get clobbered by the parse→format round-trip on every keystroke
-// (Bug #46). An explicit Save button commits changes and shows a toast (Bug #47).
+// An explicit Save button commits changes and shows a toast.
 
 interface CustomFoodCardProps {
   preset: CustomFoodPreset;
@@ -63,7 +63,7 @@ function CustomFoodCard({ preset, onSave, onRemove }: CustomFoodCardProps) {
       toast.error("Food title is required.");
       return;
     }
-    // SET-F008: validate that at least one ingredient was parsed. An empty
+    // Validate that at least one ingredient was parsed. An empty
     // result after parsing means the input had no meaningful content.
     const ingredients = parseIngredientsInput(ingredientsRaw);
     if (ingredientsRaw.trim() && ingredients.length === 0) {

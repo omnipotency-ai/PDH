@@ -41,7 +41,7 @@ export function AiSuggestionsCard({
   const [open, setOpen] = useState(defaultOpen);
 
   async function handleGetSuggestions() {
-    // SET-F006: guard against double-click and clear stale error atomically.
+    // Guard against double-click and clear stale error atomically.
     if (loading) return;
     setLoading(true);
     setError(null);
