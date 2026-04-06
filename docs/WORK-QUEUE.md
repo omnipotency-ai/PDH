@@ -49,3 +49,44 @@ All 6 waves complete (W0-W5), 69 commits, 1430 tests, 211 files changed.
 - ~~WQ-416~~ Extract nutrition utils (done W2)
 - ~~WQ-417~~ Meal-slot-scoped recent foods (done W2)
 - ~~WQ-418~~ Clean dead water store state (done W2)
+
+---
+
+## Active: Tech-Debt Audit Cleanup
+
+> **Status:** IN PROGRESS (2026-04-06) — waves 0-1 complete on `pans-labyrinth`, wave 2 starting
+> **Plan (waves 0-1):** [`docs/plans/2026-04-06-tech-debt-audit-cleanup-waves-0-1.json`](plans/2026-04-06-tech-debt-audit-cleanup-waves-0-1.json)
+> **Plan (waves 2-3):** [`docs/plans/2026-04-06-tech-debt-audit-cleanup-waves-2-3.json`](plans/2026-04-06-tech-debt-audit-cleanup-waves-2-3.json)
+> **Plan (waves 4-5):** [`docs/plans/2026-04-06-tech-debt-audit-cleanup-waves-4-5.json`](plans/2026-04-06-tech-debt-audit-cleanup-waves-4-5.json)
+> **Plan (wave 6):** [`docs/plans/2026-04-06-tech-debt-audit-cleanup-wave-6.json`](plans/2026-04-06-tech-debt-audit-cleanup-wave-6.json)
+> **PRD:** [`docs/prd/2026-04-06-tech-debt-audit-cleanup.md`](prd/2026-04-06-tech-debt-audit-cleanup.md)
+> **Branch:** `pans-labyrinth`
+
+Waves 0-1 were executed on `pans-labyrinth` and are represented in branch history by task commits `W0-01` through `W1-18`. The next executable task is `W2-01`.
+
+### Wave 2
+
+| Task | Title | Depends On | Status | Commit |
+|------|-------|-----------|--------|--------|
+| W2-01 | Consolidate OpenAI utility functions into `convex/lib/openai.ts` | — | done | |
+| W2-02 | Consolidate coerce/normalization utilities into `convex/lib/coerce.ts` | — | done | |
+| W2-03 | Consolidate activity type normalization into `src/lib/activityTypeUtils.ts` | — | pending | |
+| W2-04 | Consolidate time constants into `src/lib/timeConstants.ts` | — | pending | |
+| W2-05 | Consolidate zone colors into `src/lib/zoneColors.ts` | — | pending | |
+| W2-06 | Pre-compile regex patterns in `shared/food*.ts` files | — | pending | |
+| W2-07 | Extract `useIsMobile` hook to shared location | — | pending | |
+| W2-08 | Consolidate `foodEvidence` test factory functions | — | pending | |
+| W2-09 | Fix stale theme storage key and create `storageKeys.ts` | — | pending | |
+| W2-10 | Consolidate `customFoodPresets` normalization and fix ID generation | — | pending | |
+
+### Wave 3
+
+| Task | Title | Depends On | Status | Commit |
+|------|-------|-----------|--------|--------|
+| W3-01 | Split `convex/logs.ts` into focused modules | — | pending | |
+| W3-02 | Split `routeTree.tsx`; extract layout components | — | pending | |
+| W3-03 | Split `SmartViews.tsx`; extract utility logic to `smartViewUtils.ts` | — | pending | |
+| W3-04 | Relocate Dr Poo components from `archive/` to `dr-poo/` | — | pending | |
+| W3-05 | Extract store configuration constants from `src/store.ts` | — | pending | |
+| W3-06 | Split `LogEntry.tsx`; delegate to SubRow components | — | pending | |
+| W3-07 | Split `aiAnalysis.ts` into focused modules | — | pending | |

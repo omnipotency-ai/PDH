@@ -23,9 +23,7 @@ import {
   hasStoredApiKey,
   storeApiKey,
 } from "./lib/apiKeys";
-
-// Same pattern used in foodLlmMatching.ts and ai.ts
-const OPENAI_API_KEY_PATTERN = /^sk-[A-Za-z0-9_-]{20,}$/;
+import { OPENAI_API_KEY_PATTERN } from "./lib/openai";
 
 /**
  * Store the user's OpenAI API key (encrypted) in their profile.

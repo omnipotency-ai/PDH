@@ -20,6 +20,30 @@
 
 <!-- Implementer agents: prepend new entries HERE, above the completed summaries -->
 
+## Active: Tech-Debt Audit Cleanup
+
+### W2-02 — Consolidate coerce/normalization utilities into `convex/lib/coerce.ts` (2026-04-06 17:08)
+
+- **Commit:** TBD
+- **Files:** `convex/lib/coerce.ts`, `convex/logs.ts`, `convex/migrations.ts`, `convex/ingredientNutritionApi.ts`
+- **What:** Extracted canonical Convex-side coercion helpers into `convex/lib/coerce.ts`: `asTrimmedString`, `asNumber`, `asStringArray`, `asRecord`, plus shared `slugifyName` and `inferHabitTypeFromName`. Rewired `logs.ts`, `migrations.ts`, and `ingredientNutritionApi.ts` to import from the shared module and removed the duplicate local helper implementations and `// SYNC WITH` drift comment.
+- **Decisions:** The shared helpers take small options to preserve existing call-site semantics instead of forcing a single lossy implementation. `ingredientNutritionApi.ts` uses whitespace-normalizing string coercion and string-number coercion through options; migrations/logs keep their stricter trimming behavior.
+
+### W2-01 — Consolidate OpenAI utility functions into `convex/lib/openai.ts` (2026-04-06 17:05)
+
+- **Commit:** TBD
+- **Files:** `convex/lib/openai.ts`, `convex/ai.ts`, `convex/foodLlmMatching.ts`, `convex/profiles.ts`
+- **What:** Extracted `OPENAI_API_KEY_PATTERN`, `maskApiKey`, and canonical `classifyOpenAiHttpError` into `convex/lib/openai.ts`. Rewired all three consumers to import from the shared module and removed the duplicated local helpers.
+- **Decisions:** Kept the reconciled classifier intentionally narrow: `401/403 -> KEY_ERROR`, `429 -> QUOTA_ERROR`, everything else -> `NETWORK_ERROR`. That preserves current caller behavior while removing the dead double-fallthrough branches.
+
+### Initiative State — Waves 0-1 complete, Wave 2 starting (2026-04-06 17:05)
+
+- **Branch:** `pans-labyrinth`
+- **Head:** `bf05641`
+- **Plans:** `docs/plans/2026-04-06-tech-debt-audit-cleanup-waves-0-1.json`, `docs/plans/2026-04-06-tech-debt-audit-cleanup-waves-2-3.json`
+- **What:** Reconstructed the Claude/Codex handoff state. Branch history shows the full waves 0-1 task series (`W0-01` through `W1-18`) already landed and pushed. Tracking docs were stale, so `ROADMAP.md` and `WORK-QUEUE.md` were updated to reflect this initiative as active work with wave 2 queued up.
+- **Next:** Execute `W2-03` from the waves 2-3 plan: consolidate activity type normalization into `src/lib/activityTypeUtils.ts`.
+
 ### W1-10 — Replace manual WriteProcessedFoodItem type with Infer<> (2026-04-06)
 
 - **Commit:** TBD

@@ -4,6 +4,11 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { action } from "./_generated/server";
 import { requireAuth } from "./lib/auth";
+import {
+  classifyOpenAiHttpError,
+  maskApiKey,
+  OPENAI_API_KEY_PATTERN,
+} from "./lib/openai";
 
 // 5-minute server-side cooldown per user per feature type.
 const AI_RATE_LIMIT_MS = 300_000;
@@ -11,29 +16,7 @@ const AI_RATE_LIMIT_MS = 300_000;
 // Allowed OpenAI models — constrained to prevent arbitrary model strings.
 // Keep in sync with src/lib/aiModels.ts INSIGHT_MODEL_OPTIONS + BACKGROUND_MODEL
 // and convex/validators.ts allowedModelsValidator.
-const allowedModels = v.union(v.literal("gpt-5.4"), v.literal("gpt-5-mini"));
-
-const OPENAI_API_KEY_PATTERN = /^sk-[A-Za-z0-9_-]{20,}$/;
-
-/**
- * Mask an API key for safe logging: show only the last 4 characters.
- * Returns "****" if the key is too short or empty.
- */
-function maskApiKey(key: string): string {
-  if (key.length <= 4) return "****";
-  return `****${key.slice(-4)}`;
-}
-
-/**
- * Classify an OpenAI API error by HTTP status code into a structured error code.
- * These codes allow the client to distinguish error types and show appropriate UI.
- */
-function classifyOpenAiError(status: number): string {
-  if (status === 401 || status === 403) return "KEY_ERROR";
-  if (status === 429) return "QUOTA_ERROR";
-  if (status >= 500) return "NETWORK_ERROR";
-  return "NETWORK_ERROR";
-}
+const allowedModels = v.union(v.literal("gpt-5.4"), v.literal("gpt-5.4-mini"));
 
 /**
  * Generic OpenAI chat completion action.
@@ -174,7 +157,9 @@ export const chatCompletion = action({
           : undefined;
 
       const errorCode =
-        status !== undefined ? classifyOpenAiError(status) : "NETWORK_ERROR";
+        status !== undefined
+          ? classifyOpenAiHttpError(status)
+          : "NETWORK_ERROR";
       const message =
         err instanceof Error ? err.message : "Unknown OpenAI error";
 

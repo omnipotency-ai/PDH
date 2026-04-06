@@ -54,7 +54,7 @@ import { foodItemValidator } from "./validators";
 
 const EVIDENCE_WINDOW_MS = 6 * 60 * 60 * 1000;
 const OPENAI_EMBEDDING_MODEL = "text-embedding-3-small";
-const OPENAI_FALLBACK_MODEL = "gpt-4o-mini";
+const OPENAI_FALLBACK_MODEL = "gpt-5.4-mini";
 const OPENAI_API_URL = "https://api.openai.com/v1";
 const EMBEDDING_DIMENSIONS = 1536;
 

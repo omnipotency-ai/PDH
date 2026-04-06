@@ -3,41 +3,15 @@
 import { v } from "convex/values";
 import { action } from "./_generated/server";
 import { requireAuth } from "./lib/auth";
-
-function asString(value: unknown): string | null {
-  if (typeof value !== "string") return null;
-  const normalized = value.trim().replace(/\s+/g, " ");
-  return normalized.length > 0 ? normalized : null;
-}
-
-function asNumber(value: unknown): number | null {
-  const numeric = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(numeric)) return null;
-  return numeric;
-}
-
-function asStringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  const out: string[] = [];
-  const seen = new Set<string>();
-  for (const row of value) {
-    const normalized = asString(row);
-    if (!normalized) continue;
-    if (seen.has(normalized)) continue;
-    seen.add(normalized);
-    out.push(normalized);
-    if (out.length >= 20) break;
-  }
-  return out;
-}
+import { asNumber, asStringArray, asTrimmedString } from "./lib/coerce";
 
 function readNutrient(
   nutriments: Record<string, unknown>,
   keys: string[],
 ): number | null {
   for (const key of keys) {
-    const value = asNumber(nutriments[key]);
-    if (value !== null) return value;
+    const value = asNumber(nutriments[key], { coerceString: true });
+    if (value !== undefined) return value;
   }
   return null;
 }
@@ -100,8 +74,10 @@ export const searchOpenFoodFacts = action({
     const rows = Array.isArray(payload.products) ? payload.products : [];
     const mapped = rows
       .map((row) => {
-        const displayName = asString(row.product_name);
-        if (!displayName) return null;
+        const displayName = asTrimmedString(row.product_name, {
+          normalizeWhitespace: true,
+        });
+        if (displayName === undefined) return null;
 
         const nutriments =
           row.nutriments !== null && typeof row.nutriments === "object"
@@ -109,11 +85,20 @@ export const searchOpenFoodFacts = action({
             : {};
 
         return {
-          externalId: asString(row.code) ?? displayName.toLowerCase(),
+          externalId:
+            asTrimmedString(row.code, { normalizeWhitespace: true }) ??
+            displayName.toLowerCase(),
           displayName,
-          brand: asString(row.brands),
-          ingredientsText: asString(row.ingredients_text),
-          categories: asStringArray(row.categories_tags),
+          brand: asTrimmedString(row.brands, { normalizeWhitespace: true }) ?? null,
+          ingredientsText:
+            asTrimmedString(row.ingredients_text, {
+              normalizeWhitespace: true,
+            }) ?? null,
+          categories: asStringArray(row.categories_tags, {
+            normalizeWhitespace: true,
+            dedupe: true,
+            maxItems: 20,
+          }),
           nutritionPer100g: {
             kcal: readNutrient(nutriments, ["energy-kcal_100g", "energy-kcal"]),
             fatG: readNutrient(nutriments, ["fat_100g", "fat"]),

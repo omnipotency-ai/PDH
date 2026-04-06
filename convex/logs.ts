@@ -13,6 +13,14 @@ import {
   query,
 } from "./_generated/server";
 import { requireAuth } from "./lib/auth";
+import {
+  asNumber,
+  asRecord,
+  asStringArray,
+  asTrimmedString,
+  inferHabitTypeFromName,
+  slugifyName,
+} from "./lib/coerce";
 import { sanitizeUnknownStringsDeep } from "./lib/inputSafety";
 import {
   type aiInsightValidator,
@@ -71,12 +79,6 @@ const KNOWN_HABIT_UNITS = new Set<string>([
   "hours",
 ] as const);
 
-function asTrimmedString(value: unknown): string | undefined {
-  if (typeof value !== "string") return undefined;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : undefined;
-}
-
 function asFiniteNumber(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value)
     ? value
@@ -119,10 +121,11 @@ function normalizeStoredFluidPresets(
 
 /** Known legacy model names that should be normalized to current values. */
 const LEGACY_AI_MODEL_MAP: Record<string, string> = {
-  "gpt-4o-mini": "gpt-5-mini",
+  "gpt-5-mini": "gpt-5.4-mini",
+  "gpt-4o-mini": "gpt-5.4-mini",
   "gpt-4o": "gpt-5.4",
-  "gpt-4.1-nano": "gpt-5-mini",
-  "gpt-4.1-mini": "gpt-5-mini",
+  "gpt-4.1-nano": "gpt-5.4-mini",
+  "gpt-4.1-mini": "gpt-5.4-mini",
   "gpt-5.2": "gpt-5.4",
 };
 
@@ -509,31 +512,6 @@ async function recanonicalizeFoodLogsForUser(
   };
 }
 
-function slugifyHabitName(value: string): string {
-  const slug = value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-  return slug || "custom";
-}
-
-// SYNC WITH src/lib/habitTemplates.ts:inferHabitTypeFromName
-function inferHabitTypeFromName(name: string): string {
-  const key = name.toLowerCase().trim();
-  if (/sleep|nap/.test(key)) return "sleep";
-  if (/walk|movement|steps|run|yoga|stretch|breath|swim|workout/.test(key)) {
-    return "activity";
-  }
-  if (/water|hydrat|tea|coffee|electrolyte|juice/.test(key)) return "fluid";
-  if (/cig|smok|nicotine|alcohol|beer|wine|spirit|sweet|candy|drug/.test(key)) {
-    return "destructive";
-  }
-  if (/med|pill|tablet|medicine|dressing|wound/.test(key)) return "checkbox";
-  if (/weight|weigh/.test(key)) return "weight";
-  return "count";
-}
-
 function normalizeHabitType(rawType: string | undefined, name: string): string {
   if (rawType) {
     const normalized = rawType.trim().toLowerCase();
@@ -684,7 +662,7 @@ function normalizeStoredProfileHabit(
     habitType: string;
     templateKey?: string;
   } = {
-    id: asTrimmedString(raw.id) ?? `habit_${slugifyHabitName(name)}_${index}`,
+    id: asTrimmedString(raw.id) ?? `habit_${slugifyName(name)}_${index}`,
     name,
     kind,
     unit,
@@ -1505,26 +1483,9 @@ async function listRowsByUserId(
   });
 }
 
-function asNumber(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value)
-    ? value
-    : undefined;
-}
-
 function asString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim().length > 0
     ? value.trim()
-    : undefined;
-}
-
-function asStringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return value.filter((item): item is string => typeof item === "string");
-}
-
-function asRecord(value: unknown): Record<string, unknown> | undefined {
-  return value !== null && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
     : undefined;
 }
 

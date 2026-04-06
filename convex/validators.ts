@@ -257,7 +257,7 @@ export const aiPreferencesValidator = v.object({
     dinner: v.string(),
     lateEveningSnack: v.string(),
   }),
-  aiModel: v.union(v.literal("gpt-5-mini"), v.literal("gpt-5.4")),
+  aiModel: v.union(v.literal("gpt-5.4-mini"), v.literal("gpt-5.4")),
   approach: v.union(
     v.literal("supportive"),
     v.literal("personal"),

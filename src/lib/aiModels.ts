@@ -8,10 +8,10 @@
  */
 
 /** Model used for coaching snippets, pane summaries, suggestions, and food parsing. */
-export const BACKGROUND_MODEL = "gpt-5-mini";
+export const BACKGROUND_MODEL = "gpt-5.4-mini";
 
 /** Ordered list of models the user may pick for insight/analysis tasks. */
-export const INSIGHT_MODEL_OPTIONS = ["gpt-5.4", "gpt-5-mini"] as const;
+export const INSIGHT_MODEL_OPTIONS = ["gpt-5.4", "gpt-5.4-mini"] as const;
 
 /** Default insight model for new users / factory reset. */
 export const DEFAULT_INSIGHT_MODEL: InsightModel = "gpt-5.4";
@@ -23,7 +23,14 @@ export type InsightModel = (typeof INSIGHT_MODEL_OPTIONS)[number];
 const VALID_INSIGHT_MODELS: ReadonlySet<string> = new Set<string>(INSIGHT_MODEL_OPTIONS);
 
 /** Backward-compatible aliases for previously stored model names. */
-const LEGACY_INSIGHT_MODEL_ALIASES: Readonly<Record<string, InsightModel>> = {};
+const LEGACY_INSIGHT_MODEL_ALIASES: Readonly<Record<string, InsightModel>> = {
+  "gpt-5-mini": "gpt-5.4-mini",
+  "gpt-5.2": "gpt-5.4",
+  "gpt-4o-mini": "gpt-5.4-mini",
+  "gpt-4o": "gpt-5.4",
+  "gpt-4.1-nano": "gpt-5.4-mini",
+  "gpt-4.1-mini": "gpt-5.4-mini",
+};
 
 /** Type guard: checks whether a value is a valid InsightModel. */
 function isInsightModel(value: unknown): value is InsightModel {
@@ -42,8 +49,8 @@ export function getValidInsightModel(model: unknown): InsightModel {
 /** Human-readable label for a model name. */
 export function getModelLabel(model: string): string {
   switch (model) {
-    case "gpt-5-mini":
-      return "GPT-5 Mini";
+    case "gpt-5.4-mini":
+      return "GPT-5.4 Mini";
     case "gpt-5.4":
       return "GPT-5.4";
     default:
