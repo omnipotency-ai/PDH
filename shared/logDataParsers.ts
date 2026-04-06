@@ -18,7 +18,7 @@ export interface ParsedDigestiveData {
   episodesCount: number | undefined;
 }
 
-export interface ParsedFoodItem {
+export interface ParsedLogFoodItem {
   name?: string;
   rawName?: string;
   parsedName?: string;
@@ -27,7 +27,7 @@ export interface ParsedFoodItem {
 }
 
 export interface ParsedFoodData {
-  items: ParsedFoodItem[];
+  items: ParsedLogFoodItem[];
 }
 
 export interface ParsedHabitData {
@@ -101,7 +101,7 @@ export function parseFoodData(data: unknown): ParsedFoodData | null {
   if (!isRecord(data)) return null;
   if (!Array.isArray(data.items)) return null;
 
-  const items: ParsedFoodItem[] = [];
+  const items: ParsedLogFoodItem[] = [];
   for (const item of data.items) {
     if (!isRecord(item)) continue;
     items.push({
