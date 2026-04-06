@@ -14,7 +14,10 @@
  */
 
 import { FOOD_PORTION_DATA } from "@shared/foodPortionData";
-import { FOOD_REGISTRY, type FoodRegistryEntry } from "@shared/foodRegistryData";
+import {
+  FOOD_REGISTRY,
+  type FoodRegistryEntry,
+} from "@shared/foodRegistryData";
 import Fuse, { type IFuseOptions } from "fuse.js";
 import { useDeferredValue, useMemo, useReducer } from "react";
 import {
@@ -26,7 +29,11 @@ import {
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
-export type NutritionView = "none" | "favourites" | "foodFilter" | "calorieDetail";
+export type NutritionView =
+  | "none"
+  | "favourites"
+  | "foodFilter"
+  | "calorieDetail";
 
 export interface StagedItem {
   /** Unique ID for this staging row. */
@@ -117,9 +124,9 @@ const FOOD_REGISTRY_CANONICALS: ReadonlySet<string> = new Set(
 
 /** O(1) lookup set for canonical names of liquid foods (category "drink" or "beverage"). */
 const LIQUID_CANONICALS: ReadonlySet<string> = new Set(
-  FOOD_REGISTRY.filter((entry) => entry.category === "drink" || entry.category === "beverage").map(
-    (entry) => entry.canonical,
-  ),
+  FOOD_REGISTRY.filter(
+    (entry) => entry.category === "drink" || entry.category === "beverage",
+  ).map((entry) => entry.canonical),
 );
 
 // ── ID generation ───────────────────────────────────────────────────────────
@@ -169,9 +176,13 @@ export function createStagedItem(canonicalName: string): StagedItem | null {
  * - portionG <= 0 is clamped to MIN_PORTION_G (1g)
  * - NaN portionG is clamped to MIN_PORTION_G (1g)
  */
-export function recalculateMacros(item: StagedItem, newPortionG: number): StagedItem {
+export function recalculateMacros(
+  item: StagedItem,
+  newPortionG: number,
+): StagedItem {
   // #80: Guard against NaN and non-positive values.
-  const safePortionG = Number.isNaN(newPortionG) || newPortionG <= 0 ? MIN_PORTION_G : newPortionG;
+  const safePortionG =
+    Number.isNaN(newPortionG) || newPortionG <= 0 ? MIN_PORTION_G : newPortionG;
 
   const macros = computeMacrosForPortion(item.canonicalName, safePortionG);
   return {
@@ -184,7 +195,9 @@ export function recalculateMacros(item: StagedItem, newPortionG: number): Staged
 /**
  * Compute aggregate totals for a list of staging items.
  */
-export function computeStagingTotals(items: ReadonlyArray<StagedItem>): StagingTotals {
+export function computeStagingTotals(
+  items: ReadonlyArray<StagedItem>,
+): StagingTotals {
   let calories = 0;
   let protein = 0;
   let carbs = 0;
@@ -213,9 +226,15 @@ export function computeStagingTotals(items: ReadonlyArray<StagedItem>): StagingT
 
 // ── Reducer ─────────────────────────────────────────────────────────────────
 
-export function nutritionReducer(state: NutritionState, action: NutritionAction): NutritionState {
+export function nutritionReducer(
+  state: NutritionState,
+  action: NutritionAction,
+): NutritionState {
   // Reset lastRemovedItem on every action; ADJUST_STAGING_PORTION overrides below.
-  const base = state.lastRemovedItem !== null ? { ...state, lastRemovedItem: null } : state;
+  const base =
+    state.lastRemovedItem !== null
+      ? { ...state, lastRemovedItem: null }
+      : state;
 
   switch (action.type) {
     case "SET_VIEW":
@@ -237,10 +256,14 @@ export function nutritionReducer(state: NutritionState, action: NutritionAction)
       );
 
       if (existingIndex !== -1) {
-        // Aggregate: increment portion by unitWeightG or defaultPortionG
+        // Aggregate: increment portion by unitWeightG or defaultPortionG, clamped to MAX_PORTION_G.
         const existing = base.stagingItems[existingIndex];
-        const increment = portionData.unitWeightG ?? portionData.defaultPortionG;
-        const newPortionG = existing.portionG + increment;
+        const increment =
+          portionData.unitWeightG ?? portionData.defaultPortionG;
+        const newPortionG = Math.min(
+          existing.portionG + increment,
+          MAX_PORTION_G,
+        );
         const updated = recalculateMacros(existing, newPortionG);
 
         const newItems = [...base.stagingItems];
@@ -354,9 +377,16 @@ function createInitialState(): NutritionState {
 // ── Hook ────────────────────────────────────────────────────────────────────
 
 export function useNutritionStore() {
-  const [state, dispatch] = useReducer(nutritionReducer, undefined, createInitialState);
+  const [state, dispatch] = useReducer(
+    nutritionReducer,
+    undefined,
+    createInitialState,
+  );
 
-  const searchResults = useMemo(() => searchFoodRegistry(state.searchQuery), [state.searchQuery]);
+  const searchResults = useMemo(
+    () => searchFoodRegistry(state.searchQuery),
+    [state.searchQuery],
+  );
 
   // Fix #28: Defer search results so staging interactions don't block search rendering.
   const deferredSearchResults = useDeferredValue(searchResults);

@@ -168,8 +168,8 @@
   ],
   "summary": {
     "critical": 0,
-    "high": 0,
-    "moderate": 0,
-    "nice_to_have": 0
+    "high": 3,
+    "moderate": 7,
+    "nice_to_have": 4
   }
 }

@@ -185,6 +185,7 @@ export default defineSchema({
     .index("by_aiAnalysisId", ["aiAnalysisId"])
     .index("by_userId", ["userId"])
     .index("by_userId_timestamp", ["userId", "timestamp"])
+    .index("by_userId_aiAnalysisId", ["userId", "aiAnalysisId"])
     .searchIndex("search_content", {
       searchField: "content",
       filterFields: ["userId"],
