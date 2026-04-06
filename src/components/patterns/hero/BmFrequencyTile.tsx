@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { normalizeEpisodesCount } from "@/lib/analysis";
 import type { SyncedLog } from "@/lib/sync";
 import { Sparkline } from "./Sparkline";
-import { getDateKey } from "./utils";
+import { getCutoffTimestamp, getDateKey, getRecentDateKeys } from "./utils";
 
 type DigestionLog = Extract<SyncedLog, { type: "digestion" }>;
 
@@ -10,6 +10,7 @@ type DigestionLog = Extract<SyncedLog, { type: "digestion" }>;
 
 interface BmFrequencyTileProps {
   digestionLogs: DigestionLog[];
+  nowMs: number;
 }
 
 interface DailyCount {
@@ -32,26 +33,19 @@ const SPARKLINE_DAYS = 7;
  *
  * Uses calendar midnight boundaries so that the cutoff aligns with day buckets.
  */
-function computeDailyCounts(
+export function computeDailyCounts(
   digestionLogs: Array<{ timestamp: number; episodesCount: number }>,
   days: number,
+  nowMs: number,
 ): DailyCount[] {
-  const now = new Date();
-  // Build a map of all day keys we care about, initialized to 0
-  const dateKeys: string[] = [];
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-    dateKeys.push(getDateKey(d.getTime()));
-  }
+  const dateKeys = getRecentDateKeys(nowMs, days);
 
   const countByDate = new Map<string, number>();
   for (const key of dateKeys) {
     countByDate.set(key, 0);
   }
 
-  // Compute cutoff from calendar midnight boundary instead of raw ms offset
-  const cutoffDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - days);
-  const cutoff = cutoffDate.getTime();
+  const cutoff = getCutoffTimestamp(nowMs, days);
 
   // Tally digestion logs into buckets
   for (const log of digestionLogs) {
@@ -71,33 +65,23 @@ function computeDailyCounts(
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function BmFrequencyTile({ digestionLogs }: BmFrequencyTileProps) {
-  const digestionCounts = useMemo(() => {
-    const result: Array<{ timestamp: number; episodesCount: number }> = [];
+export function BmFrequencyTile({ digestionLogs, nowMs }: BmFrequencyTileProps) {
+  const { sparklinePoints, todayCount, hasData } = useMemo(() => {
+    const digestionCounts: Array<{ timestamp: number; episodesCount: number }> = [];
     for (const log of digestionLogs) {
-      result.push({
+      digestionCounts.push({
         timestamp: log.timestamp,
         episodesCount: normalizeEpisodesCount(log.data?.episodesCount),
       });
     }
-    return result;
-  }, [digestionLogs]);
 
-  // Compute 7-day daily counts (always 7 entries, one per day)
-  const dailyCounts = useMemo(
-    () => computeDailyCounts(digestionCounts, SPARKLINE_DAYS),
-    [digestionCounts],
-  );
-
-  // Map to the format expected by the Sparkline component
-  const sparklinePoints = useMemo(
-    () => dailyCounts.map((d) => ({ dateKey: d.dateKey, value: d.count })),
-    [dailyCounts],
-  );
-
-  const todayCount = dailyCounts.at(-1)?.count ?? 0;
-
-  const hasData = digestionCounts.length > 0;
+    const dailyCounts = computeDailyCounts(digestionCounts, SPARKLINE_DAYS, nowMs);
+    return {
+      sparklinePoints: dailyCounts.map((d) => ({ dateKey: d.dateKey, value: d.count })),
+      todayCount: dailyCounts.at(-1)?.count ?? 0,
+      hasData: digestionCounts.length > 0,
+    };
+  }, [digestionLogs, nowMs]);
 
   return (
     <div data-slot="bm-frequency-tile" className="flex flex-col gap-2">
@@ -115,7 +99,7 @@ export function BmFrequencyTile({ digestionLogs }: BmFrequencyTileProps) {
               </div>
             </div>
 
-            {dailyCounts.length >= 2 && (
+            {sparklinePoints.length >= 2 && (
               <Sparkline
                 data={sparklinePoints}
                 color="var(--section-summary)"
