@@ -16,6 +16,7 @@ export const add = mutation({
     model: v.string(),
     durationMs: v.number(),
     generatedAt: v.number(),
+    promptVersion: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const { userId } = await requireAuth(ctx);
@@ -37,6 +38,9 @@ export const add = mutation({
         model: args.model,
         durationMs: args.durationMs,
         generatedAt: args.generatedAt,
+        ...(args.promptVersion !== undefined && {
+          promptVersion: args.promptVersion,
+        }),
       });
       return existing._id;
     }

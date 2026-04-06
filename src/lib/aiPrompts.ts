@@ -68,7 +68,7 @@ export interface FoodTrialSummaryInput {
 
 // ─── Weekly digest context for AI prompts ────────────────────────────────────
 
-export interface WeeklyDigestInput {
+export interface WeeklyContext {
   weekStart: string;
   avgBristolScore: number | null;
   totalBowelEvents: number;
@@ -163,7 +163,7 @@ export interface BuildUserMessageParams {
   hasPreviousResponse: boolean;
   patientMessages: DrPooReply[];
   suggestionHistory: SuggestionHistoryEntry[];
-  weeklyContext: WeeklyDigestInput[];
+  weeklyContext: WeeklyContext[];
   previousWeeklySummary?: PreviousWeeklySummary;
   baselineAverages?: BaselineAverages;
 }
@@ -439,7 +439,7 @@ export function buildRecentEvents(
  * Compute a human-readable Bristol trend from the last 2-4 weekly digests.
  */
 export function computeBristolTrend(
-  weeklyDigests: WeeklyDigestInput[],
+  weeklyDigests: WeeklyContext[],
 ): string {
   // Take last 4 weeks that have Bristol data
   const withBristol = weeklyDigests
@@ -480,9 +480,10 @@ export function computeBristolTrend(
 export function buildPatientSnapshot(
   profile: HealthProfile,
   foodTrials: FoodTrialSummaryInput[],
-  weeklyDigests: WeeklyDigestInput[],
+  weeklyDigests: WeeklyContext[],
+  nowMs: number = Date.now(),
 ): Record<string, unknown> {
-  const daysPostOp = getDaysPostOp(profile.surgeryDate);
+  const daysPostOp = getDaysPostOp(profile.surgeryDate, nowMs);
 
   const surgeryType =
     profile.surgeryType === "Other" && profile.surgeryTypeOther
@@ -1436,11 +1437,7 @@ export function buildPartialDayContext(
 ): Record<string, unknown> {
   const nowMs = now.getTime();
 
-  const reportTime = now.toLocaleString("en-GB", {
-    weekday: "long",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const reportTime = formatTime(nowMs);
   const currentHour = now.getHours();
   const isEarlyInDay = currentHour < 12;
 
@@ -1508,13 +1505,7 @@ export function buildUserMessage(params: BuildUserMessageParams): string {
     recentEvents;
 
   const now = new Date();
-  const currentTime = now.toLocaleString("en-GB", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const currentTime = formatTime(now.getTime());
 
   const partialDayContext = buildPartialDayContext(foodLogs, bowelEvents, now);
 

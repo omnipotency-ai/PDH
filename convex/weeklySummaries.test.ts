@@ -22,6 +22,7 @@ describe("weeklySummaries", () => {
       model: "test-model",
       durationMs: 500,
       generatedAt: Date.now(),
+      promptVersion: 3,
     });
 
     const summary = await t
@@ -33,6 +34,7 @@ describe("weeklySummaries", () => {
     expect(summary).not.toBeNull();
     expect(summary?.weeklySummary).toBe("Good week overall");
     expect(summary?.keyFoods.safe).toContain("banana");
+    expect(summary?.promptVersion).toBe(3);
   });
 
   it("throws when querying without auth identity", async () => {

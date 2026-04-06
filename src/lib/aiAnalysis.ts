@@ -22,7 +22,7 @@ export type {
   PreviousWeeklySummary,
   RecentEventsResult,
   SuggestionHistoryEntry,
-  WeeklyDigestInput,
+  WeeklyContext,
 } from "./aiPrompts";
 
 export {

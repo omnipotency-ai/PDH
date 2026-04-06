@@ -1,8 +1,9 @@
 import { useAction } from "convex/react";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useApiKeyContext } from "@/contexts/ApiKeyContext";
 import { useAiPreferences } from "@/hooks/useProfile";
 import { fetchWeeklySummary } from "@/lib/aiAnalysis";
+import { formatTime } from "@/lib/aiUtils";
 import { debugLog } from "@/lib/debugLog";
 import { isDigestionLog } from "@/lib/logTypeGuards";
 import {
@@ -15,8 +16,7 @@ import {
 import { api } from "../../convex/_generated/api";
 
 /**
- * Boundary hour for half-week periods (local time — Barcelona CET/CEST).
- * Both Sunday and Wednesday boundaries fire at this hour.
+ * Boundary hour for half-week periods.
  */
 const BOUNDARY_HOUR = 21; // 9:00 PM local time
 
@@ -28,8 +28,8 @@ const BOUNDARY_HOUR = 21; // 9:00 PM local time
  *   Sunday 21:00 → Wednesday 20:59:59
  *   Wednesday 21:00 → Sunday 20:59:59
  */
-export function getLastHalfWeekBoundary(): Date {
-  const now = new Date();
+export function getLastHalfWeekBoundary(nowMs: number = Date.now()): Date {
+  const now = new Date(nowMs);
   const day = now.getDay(); // 0=Sun, 3=Wed
   const hour = now.getHours();
   const target = new Date(now);
@@ -63,16 +63,25 @@ export function getLastHalfWeekBoundary(): Date {
   return target;
 }
 
+function getNextHalfWeekBoundaryMs(nowMs: number): number {
+  const lastBoundary = getLastHalfWeekBoundary(nowMs);
+  const nextBoundary = new Date(lastBoundary);
+  nextBoundary.setDate(
+    nextBoundary.getDate() + (lastBoundary.getDay() === 0 ? 3 : 4),
+  );
+  return nextBoundary.getTime();
+}
+
 /**
  * Get the period that just completed (the half-week before the most recent boundary).
  * Used by the auto-trigger to know which period to summarise.
  */
-function getCompletedPeriodBounds(): {
+function getCompletedPeriodBounds(nowMs: number = Date.now()): {
   startMs: number;
   endMs: number;
   periodLabel: string;
 } {
-  const lastBoundary = getLastHalfWeekBoundary();
+  const lastBoundary = getLastHalfWeekBoundary(nowMs);
   const endMs = lastBoundary.getTime();
 
   // Find the boundary before lastBoundary
@@ -103,11 +112,28 @@ export function useWeeklySummaryAutoTrigger() {
   const { aiPreferences } = useAiPreferences();
   const latestSummary = useLatestWeeklySummary();
   const addWeeklySummary = useAddWeeklySummary();
+  const [clockMs, setClockMs] = useState(() => Date.now());
 
-  // Memoize boundary computation — getCompletedPeriodBounds() is pure but allocates
-  // new Date objects. The result only changes when a half-week boundary passes, so
-  // keying on the boundary timestamp avoids recomputation on every render.
-  const { startMs, endMs, periodLabel } = useMemo(() => getCompletedPeriodBounds(), []);
+  const { startMs, endMs, periodLabel } = getCompletedPeriodBounds(clockMs);
+
+  useEffect(() => {
+    const timeoutMs = Math.max(1, getNextHalfWeekBoundaryMs(clockMs) - Date.now());
+    const timeoutId = window.setTimeout(() => {
+      setClockMs(Date.now());
+    }, timeoutMs);
+    return () => window.clearTimeout(timeoutId);
+  }, [clockMs]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        setClockMs(Date.now());
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, []);
 
   const conversations = useConversationsByDateRange(startMs, endMs);
   const suggestions = useSuggestionsByDateRange(startMs, endMs);
@@ -144,13 +170,7 @@ export function useWeeklySummaryAutoTrigger() {
       (msg: { role: string; content: string; timestamp: number }) => ({
         role: msg.role,
         content: msg.content,
-        timestamp: new Date(msg.timestamp).toLocaleString("en-GB", {
-          weekday: "short",
-          month: "short",
-          day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
+        timestamp: formatTime(msg.timestamp),
       }),
     );
 
@@ -160,13 +180,7 @@ export function useWeeklySummaryAutoTrigger() {
       .filter(isDigestionLog)
       .filter((log) => typeof log.data.notes === "string" && log.data.notes.trim() !== "")
       .map((log) => ({
-        timestamp: new Date(log.timestamp).toLocaleString("en-GB", {
-          weekday: "short",
-          month: "short",
-          day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
+        timestamp: formatTime(log.timestamp),
         bristolCode: typeof log.data.bristolCode === "number" ? log.data.bristolCode : null,
         notes: String(log.data.notes).trim(),
       }));
@@ -196,6 +210,7 @@ export function useWeeklySummaryAutoTrigger() {
         model,
         durationMs: response.durationMs,
         generatedAt: Date.now(),
+        promptVersion: aiPreferencesRef.current.promptVersion,
       });
 
       debugLog(

@@ -15,6 +15,7 @@ import {
   prefersSummaryCandidate,
 } from "../shared/foodNormalize";
 import { getLoggedFoodIdentity } from "../shared/foodProjection";
+import { getWeekStart } from "../shared/weekUtils";
 import type {
   FoodAssessmentCausalRole,
   FoodAssessmentChangeType,
@@ -422,23 +423,6 @@ export const updateFoodTrialSummary = internalMutation({
 // ---------------------------------------------------------------------------
 // Weekly Digest Computation
 // ---------------------------------------------------------------------------
-
-function getWeekStart(timestamp: number): {
-  weekStart: string;
-  weekStartTimestamp: number;
-} {
-  const date = new Date(timestamp);
-  const day = date.getDay();
-  // Shift so Monday = 0. Sunday (0) maps to -6, others map to (1 - day).
-  const diff = day === 0 ? -6 : 1 - day;
-  const monday = new Date(date);
-  monday.setDate(date.getDate() + diff);
-  monday.setHours(0, 0, 0, 0);
-  return {
-    weekStart: monday.toISOString().split("T")[0],
-    weekStartTimestamp: monday.getTime(),
-  };
-}
 
 /**
  * Core logic for recomputing the weeklyDigest row for the week

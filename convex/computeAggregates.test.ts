@@ -2,6 +2,7 @@ import { convexTest } from "convex-test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
+import { getWeekStart } from "../shared/weekUtils";
 import {
   TEST_AI_INSIGHT,
   TEST_AI_REQUEST,
@@ -182,17 +183,12 @@ describe("computeAggregates", () => {
       now,
     });
 
-    // Compute Monday 00:00:00 for the week containing `now`
-    const nowDate = new Date(now);
-    const day = nowDate.getDay();
-    const diff = day === 0 ? -6 : 1 - day;
-    const monday = new Date(nowDate);
-    monday.setDate(nowDate.getDate() + diff);
-    monday.setHours(0, 0, 0, 0);
+    // Compute Monday 00:00:00 UTC for the week containing `now`.
+    const monday = getWeekStart(now);
 
     const digest = await t
       .withIdentity({ subject: userId })
-      .query(api.aggregateQueries.currentWeekDigest, { weekStartMs: monday.getTime() });
+      .query(api.aggregateQueries.currentWeekDigest, { weekStartMs: monday.weekStartTimestamp });
 
     expect(digest).toBeDefined();
     expect(digest?.foodsFlagged).toBe(1);

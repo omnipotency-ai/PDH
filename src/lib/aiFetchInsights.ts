@@ -1,4 +1,8 @@
-import { DEFAULT_INSIGHT_MODEL, getValidInsightModel } from "@/lib/aiModels";
+import {
+  DEFAULT_INSIGHT_MODEL,
+  getValidInsightModel,
+  INSIGHT_MODEL_OPTIONS,
+} from "@/lib/aiModels";
 import { checkRateLimit } from "@/lib/aiRateLimiter";
 import type { AllowedAiModel, ConvexAiCaller } from "@/lib/convexAiClient";
 import { formatTime, getDaysPostOp } from "@/lib/aiUtils";
@@ -23,7 +27,7 @@ import type {
   PreviousReport,
   PreviousWeeklySummary,
   SuggestionHistoryEntry,
-  WeeklyDigestInput,
+  WeeklyContext,
 } from "@/lib/aiPrompts";
 import type { BaselineAverages } from "@/types/domain";
 import {
@@ -47,7 +51,7 @@ export type {
   PreviousReport,
   PreviousWeeklySummary,
   SuggestionHistoryEntry,
-  WeeklyDigestInput,
+  WeeklyContext,
 };
 
 // ─── Types defined here (fetch-layer concerns) ────────────────────────────────
@@ -61,7 +65,7 @@ interface ConversationMessage {
 export interface EnhancedAiContext {
   foodTrials?: FoodTrialSummaryInput[];
   conversationHistory?: ConversationMessage[];
-  weeklyContext?: WeeklyDigestInput[];
+  weeklyContext?: WeeklyContext[];
   previousWeeklySummary?: PreviousWeeklySummary;
   recentSuggestions?: Array<{
     text: string;
@@ -165,6 +169,7 @@ export async function fetchAiInsights(
   options?: FetchAiInsightsOptions,
 ): Promise<AiAnalysisResult> {
   checkRateLimit();
+  const nowMs = Date.now();
   const isLightweight = options?.lightweight === true;
 
   const safePatientMessages = sanitizeUnknownStringsDeep(patientMessages, {
@@ -208,16 +213,9 @@ export async function fetchAiInsights(
     }
 
     // Build a minimal user message with just the patient's question and profile snapshot
-    const now = new Date();
-    const currentTime = now.toLocaleString("en-GB", {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    const currentTime = formatTime(nowMs);
 
-    const daysPostOp = getDaysPostOp(safeHealthProfile.surgeryDate);
+    const daysPostOp = getDaysPostOp(safeHealthProfile.surgeryDate, nowMs);
     const lightweightPayload: Record<string, unknown> = {
       currentTime,
       mode: "conversation-only",
@@ -344,6 +342,7 @@ export async function fetchAiInsights(
     safeHealthProfile,
     foodTrials,
     weeklyDigests,
+    nowMs,
   );
   const deltaSignals = buildDeltaSignals(safeLogs, foodTrials);
   const foodContextObj = buildFoodContext(
@@ -390,7 +389,7 @@ export async function fetchAiInsights(
     safeEnhancedContext?.recentSuggestions ?? [],
   );
 
-  const weeklyContext: WeeklyDigestInput[] = weeklyDigests.map((wd) => ({
+  const weeklyContext: WeeklyContext[] = weeklyDigests.map((wd) => ({
     weekStart: wd.weekStart,
     avgBristolScore: wd.avgBristolScore,
     totalBowelEvents: wd.totalBowelEvents,
@@ -545,6 +544,22 @@ export async function fetchWeeklySummary(
   durationMs: number;
 }> {
   checkRateLimit();
+  const legacyModelAliases = new Set([
+    "gpt-5-mini",
+    "gpt-5.2",
+    "gpt-4o-mini",
+    "gpt-4o",
+    "gpt-4.1-nano",
+    "gpt-4.1-mini",
+  ]);
+  if (
+    typeof model === "string" &&
+    !INSIGHT_MODEL_OPTIONS.includes(model as (typeof INSIGHT_MODEL_OPTIONS)[number]) &&
+    !legacyModelAliases.has(model)
+  ) {
+    throw new Error(`Unsupported weekly summary model: ${model}`);
+  }
+  const validatedModel = getValidInsightModel(model);
 
   const sanitized = sanitizeUnknownStringsDeep(input, {
     maxStringLength: INPUT_SAFETY_LIMITS.aiPayloadString,
@@ -582,7 +597,7 @@ export async function fetchWeeklySummary(
   try {
     const result = await callAi({
       apiKey,
-      model,
+      model: validatedModel,
       messages,
       responseFormat: { type: "json_object" },
     });
