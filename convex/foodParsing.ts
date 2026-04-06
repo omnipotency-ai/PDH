@@ -15,7 +15,7 @@
  * downstream contract.
  */
 
-import { ConvexError, v } from "convex/values";
+import { ConvexError, type Infer, v } from "convex/values";
 import {
   createFoodMatcherContext,
   type FoodMatchBucketOption,
@@ -46,6 +46,7 @@ import {
 } from "./_generated/server";
 import { requireAuth } from "./lib/auth";
 import { addToKnownFoods } from "./lib/knownFoods";
+import { foodItemValidator } from "./validators";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -94,59 +95,11 @@ interface ProcessedFoodItem {
 }
 
 /**
- * Write-side variant of ProcessedFoodItem. Derived from ProcessedFoodItem but
- * with matchCandidates and bucketOptions expanded to plain object literals
- * (required by the Convex validator — it cannot accept class instances or
- * branded types from FoodMatchCandidate/FoodMatchBucketOption). Legacy-only
- * fields (name, rawName, defaultPortionDisplay, preparation, spiceLevel) are
- * omitted because they are never written by the pipeline.
+ * Write-side representation of a food item, derived directly from the Convex
+ * validator to stay in sync automatically. This is the shape accepted by
+ * writeProcessedItems and the foodItem array in the logs table.
  */
-// TODO: derive from validator using Infer<> to keep in sync
-type WriteProcessedFoodItem = Omit<
-  ProcessedFoodItem,
-  | "matchCandidates"
-  | "bucketOptions"
-  | "quantityText"
-  | "name"
-  | "rawName"
-  | "defaultPortionDisplay"
-  | "preparation"
-  | "spiceLevel"
-> & {
-  // Narrowed from ProcessedFoodItem's `string | null | undefined` to match
-  // the Convex validator which only accepts `string | null` (not undefined).
-  quantityText?: string | null;
-  matchCandidates?: Array<{
-    canonicalName: string;
-    zone: 1 | 2 | 3;
-    group: "protein" | "carbs" | "fats" | "seasoning";
-    line:
-      | "meat_fish"
-      | "eggs_dairy"
-      | "vegetable_protein"
-      | "grains"
-      | "vegetables"
-      | "fruit"
-      | "oils"
-      | "dairy_fats"
-      | "nuts_seeds"
-      | "sauces_condiments"
-      | "herbs_spices";
-    bucketKey: string;
-    bucketLabel: string;
-    resolver: "alias" | "fuzzy" | "embedding" | "combined" | "llm";
-    combinedConfidence: number;
-    fuzzyScore: number | null;
-    embeddingScore: number | null;
-    examples: string[];
-  }>;
-  bucketOptions?: Array<{
-    bucketKey: string;
-    bucketLabel: string;
-    canonicalOptions: string[];
-    bestConfidence: number;
-  }>;
-};
+type WriteProcessedFoodItem = Infer<typeof foodItemValidator>;
 
 interface FoodLogData {
   rawInput?: string;
@@ -1183,7 +1136,6 @@ async function upsertLearnedAlias(
   aliasText: string,
   canonicalName: string,
   source: "user" | "bucket",
-  now?: number,
 ): Promise<void> {
   const normalizedAlias = normalizeFoodMatchText(aliasText);
   if (!normalizedAlias) return;
@@ -1195,7 +1147,7 @@ async function upsertLearnedAlias(
     )
     .unique();
 
-  const timestamp = now ?? Date.now();
+  const timestamp = Date.now();
   if (existing) {
     await ctx.db.patch(existing._id, {
       aliasText,
@@ -1355,6 +1307,7 @@ export const processLogInternal = internalAction({
       internal.foodParsing.processEvidence,
       {
         logId: snapshot.logId,
+        now: Date.now(),
       },
     );
   },
@@ -1369,7 +1322,7 @@ export const applyLlmResults = internalMutation({
     logId: v.id("logs"),
     userId: v.string(),
     expectedItemsVersion: v.number(),
-    now: v.optional(v.number()),
+    now: v.number(),
     resolvedItems: v.array(
       v.object({
         userSegment: v.string(),
@@ -1548,7 +1501,7 @@ export const applyLlmResults = internalMutation({
           recoveryStage: item.recoveryStage,
         }),
         ...(item.spiceLevel !== undefined && { spiceLevel: item.spiceLevel }),
-        createdAt: args.now ?? Date.now(),
+        createdAt: args.now,
       });
     }
   },
@@ -1559,7 +1512,7 @@ export const applyLlmResults = internalMutation({
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const processEvidence = internalMutation({
-  args: { logId: v.id("logs"), now: v.optional(v.number()) },
+  args: { logId: v.id("logs"), now: v.number() },
   handler: async (ctx, args) => {
     const log = await ctx.db.get(args.logId);
     if (!log || !isFoodPipelineType(log.type)) return;
@@ -1567,7 +1520,7 @@ export const processEvidence = internalMutation({
     const data = log.data as FoodLogData;
     if (data.evidenceProcessedAt != null) return;
 
-    const evidenceProcessedAt = args.now ?? Date.now();
+    const evidenceProcessedAt = args.now;
 
     if (!data.items || data.items.length === 0) {
       // No items to process — just mark the evidence window as closed.
@@ -1656,7 +1609,6 @@ export const resolveItem = mutation({
     logId: v.id("logs"),
     itemIndex: v.number(),
     canonicalName: v.string(),
-    now: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const { userId } = await requireAuth(ctx);
@@ -1790,7 +1742,7 @@ export const resolveItem = mutation({
         ...(updatedItem.spiceLevel !== undefined && {
           spiceLevel: updatedItem.spiceLevel,
         }),
-        createdAt: args.now ?? Date.now(),
+        createdAt: Date.now(),
       });
     }
   },

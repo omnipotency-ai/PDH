@@ -351,7 +351,7 @@ const foodMatchBucketValidator = v.object({
   bestConfidence: v.number(),
 });
 
-const foodItemValidator = v.object({
+export const foodItemValidator = v.object({
   // New field names
   userSegment: v.optional(v.string()),
   parsedName: v.optional(v.string()),

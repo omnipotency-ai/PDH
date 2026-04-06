@@ -1,0 +1,584 @@
+{
+  "plan": "Tech-Debt Audit Cleanup — Waves 2–3",
+  "prd": "docs/prd/2026-04-06-tech-debt-audit-cleanup.md",
+  "auditReport": "docs/2026-04-06/audit/FINAL-AUDIT-REPORT.md",
+  "createdAt": "2026-04-06",
+  "waveDependencies": {
+    "wave2": ["WAVE_1_COMPLETE"],
+    "wave3": ["WAVE_2_COMPLETE"],
+    "note": "Wave 2 depends on Wave 1 (dead code removal simplifies dedup targets). Wave 3 depends on Wave 2 (split files should import from canonical utilities)."
+  },
+  "verificationGate": {
+    "commands": [
+      "bun run typecheck",
+      "bun run lint:fix",
+      "bun run build",
+      "bun run test"
+    ],
+    "policy": "All four must pass after each wave before advancing."
+  },
+  "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+  "tasks": [
+    {
+      "id": "W2-01",
+      "title": "Consolidate OpenAI utility functions into convex/lib/openai.ts",
+      "wave": 2,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "Three files each define their own copy of OPENAI_API_KEY_PATTERN, maskApiKey(), and an HTTP error classifier (classifyOpenAiError in ai.ts vs classifyHttpError in foodLlmMatching.ts). The two error classifiers have subtly diverged with dead-code double-fallthrough. Fix: (1) Create convex/lib/openai.ts exporting OPENAI_API_KEY_PATTERN, maskApiKey, and classifyOpenAiHttpError (reconcile the two diverged classifiers into one canonical version, removing the dead fallthrough). (2) In convex/ai.ts, convex/foodLlmMatching.ts, and convex/profiles.ts: import from convex/lib/openai.ts and delete the local definitions. (3) Delete the acknowledging comment in profiles.ts. Read convex/_generated/ai/guidelines.md first for Convex import conventions.",
+      "files": {
+        "read": [
+          "convex/ai.ts",
+          "convex/foodLlmMatching.ts",
+          "convex/profiles.ts",
+          "convex/_generated/ai/guidelines.md"
+        ],
+        "edit": [
+          "convex/ai.ts",
+          "convex/foodLlmMatching.ts",
+          "convex/profiles.ts"
+        ],
+        "create": ["convex/lib/openai.ts"]
+      },
+      "acceptanceCriteria": [
+        "OPENAI_API_KEY_PATTERN defined in exactly one file: convex/lib/openai.ts",
+        "maskApiKey defined in exactly one file: convex/lib/openai.ts",
+        "classifyOpenAiHttpError defined in exactly one file (no diverged copies)",
+        "Dead-code double-fallthrough in error classifier eliminated",
+        "convex/ai.ts, convex/foodLlmMatching.ts, convex/profiles.ts import from convex/lib/openai.ts",
+        "Typecheck passes",
+        "All existing tests pass"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W2-02",
+      "title": "Consolidate coerce/normalization utilities into convex/lib/coerce.ts",
+      "wave": 2,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "asTrimmedString, asNumber, asStringArray, asRecord are each independently defined in logs.ts (twice — top and near L1508), migrations.ts, and ingredientNutritionApi.ts with non-identical variants. slugify in migrations.ts and slugifyHabitName in logs.ts are byte-for-byte identical except function name. inferHabitType and inferHabitTypeFromName have slightly different regex coverage with manual '// SYNC WITH' comments. Fix: (1) Create convex/lib/coerce.ts with canonical asTrimmedString, asNumber, asStringArray, asRecord (reconcile the non-identical variants — pick the most correct/complete version). (2) Add canonical slugifyName and inferHabitTypeFromName. (3) Update all three files to import from convex/lib/coerce.ts. Delete all local definitions. (4) Delete all '// SYNC WITH' comments. Read convex/_generated/ai/guidelines.md first.",
+      "files": {
+        "read": [
+          "convex/logs.ts",
+          "convex/migrations.ts",
+          "convex/ingredientNutritionApi.ts",
+          "convex/_generated/ai/guidelines.md"
+        ],
+        "edit": [
+          "convex/logs.ts",
+          "convex/migrations.ts",
+          "convex/ingredientNutritionApi.ts"
+        ],
+        "create": ["convex/lib/coerce.ts"]
+      },
+      "acceptanceCriteria": [
+        "asTrimmedString, asNumber, asStringArray, asRecord defined in exactly one file: convex/lib/coerce.ts",
+        "slugifyName (or slugifyHabitName) defined in exactly one place",
+        "inferHabitTypeFromName defined in exactly one place",
+        "No '// SYNC WITH' comments remain in codebase (grep verification)",
+        "No duplicate coerce helpers in logs.ts (both top-of-file and L1508 copies removed)",
+        "Typecheck passes",
+        "All existing tests pass"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W2-03",
+      "title": "Consolidate activity type normalization into src/lib/activityTypeUtils.ts",
+      "wave": 2,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "Four files implement the same activity type normalization (lowercasing, replacing non-alphanumeric chars, mapping 'walk' to 'walking') with diverged implementations: useDayStats.ts has toActivityType handling sleep early, useHabitLog.ts has toActivityTypeKey, derivedHabitLogs.ts has normalizeKey + normalizeActivityType, Track.tsx has toActivityTypeKey + its own regex. Fix: (1) Create src/lib/activityTypeUtils.ts with a single normalizeActivityTypeKey(value: string): string. Handle the sleep edge case, walk→walking mapping, lowercase, and alphanumeric normalization in one canonical function. (2) Import in all four files. Delete local implementations.",
+      "files": {
+        "read": [
+          "src/hooks/useDayStats.ts",
+          "src/hooks/useHabitLog.ts",
+          "src/lib/derivedHabitLogs.ts",
+          "src/pages/Track.tsx"
+        ],
+        "edit": [
+          "src/hooks/useDayStats.ts",
+          "src/hooks/useHabitLog.ts",
+          "src/lib/derivedHabitLogs.ts",
+          "src/pages/Track.tsx"
+        ],
+        "create": ["src/lib/activityTypeUtils.ts"]
+      },
+      "acceptanceCriteria": [
+        "normalizeActivityTypeKey defined in exactly one file: src/lib/activityTypeUtils.ts",
+        "All four files import from src/lib/activityTypeUtils.ts",
+        "No local toActivityType, toActivityTypeKey, normalizeKey, normalizeActivityType functions remain",
+        "Sleep, walk→walking, and alphanumeric normalization all handled in canonical function",
+        "Typecheck passes",
+        "All existing tests pass"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W2-04",
+      "title": "Consolidate time constants into src/lib/timeConstants.ts",
+      "wave": 2,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "MS_PER_DAY = 86_400_000 is defined locally in columns.tsx, BristolTrendTile.tsx, useFoodLlmMatching.ts, useUnresolvedFoodToast.ts. The 6-hour window constant is SIX_HOURS_MS in one file and PROCESSING_WINDOW_MS in another. Fix: (1) Create src/lib/timeConstants.ts with MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY, SIX_HOURS_MS (and any other time constants found during the task). (2) Import in all four files (and any others found during grep). Delete local definitions.",
+      "files": {
+        "read": [
+          "src/components/patterns/database/columns.tsx",
+          "src/components/patterns/hero/BristolTrendTile.tsx",
+          "src/hooks/useFoodLlmMatching.ts",
+          "src/hooks/useUnresolvedFoodToast.ts"
+        ],
+        "edit": [
+          "src/components/patterns/database/columns.tsx",
+          "src/components/patterns/hero/BristolTrendTile.tsx",
+          "src/hooks/useFoodLlmMatching.ts",
+          "src/hooks/useUnresolvedFoodToast.ts"
+        ],
+        "create": ["src/lib/timeConstants.ts"]
+      },
+      "acceptanceCriteria": [
+        "MS_PER_DAY defined in exactly one file: src/lib/timeConstants.ts",
+        "No local MS_PER_DAY, SIX_HOURS_MS, or PROCESSING_WINDOW_MS definitions outside timeConstants.ts",
+        "All consumers import from src/lib/timeConstants.ts",
+        "Typecheck passes"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W2-05",
+      "title": "Consolidate zone colors into src/lib/zoneColors.ts",
+      "wave": 2,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "ZONE_COLORS is defined in FoodMatchingModal.tsx (Tailwind compound classes) and NutritionCard.tsx (raw hex colors) with different semantics — zone 3 is red in the modal but orange in the card. Fix: (1) Create src/lib/zoneColors.ts with a single canonical zone color map. Resolve the zone 3 inconsistency: check the design intent and pick one color. Export both Tailwind class variants and raw hex if both are needed (e.g., ZONE_BG_CLASSES and ZONE_HEX). (2) Import in both components. Delete local ZONE_COLORS definitions.",
+      "files": {
+        "read": [
+          "src/components/track/FoodMatchingModal.tsx",
+          "src/components/track/nutrition/NutritionCard.tsx"
+        ],
+        "edit": [
+          "src/components/track/FoodMatchingModal.tsx",
+          "src/components/track/nutrition/NutritionCard.tsx"
+        ],
+        "create": ["src/lib/zoneColors.ts"]
+      },
+      "acceptanceCriteria": [
+        "ZONE_COLORS defined in exactly one canonical location: src/lib/zoneColors.ts",
+        "Zone 3 color is consistent between modal and card",
+        "Both components import from src/lib/zoneColors.ts",
+        "Typecheck passes",
+        "Build succeeds"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": true
+      }
+    },
+    {
+      "id": "W2-06",
+      "title": "Pre-compile regex patterns in shared/food*.ts files",
+      "wave": 2,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "Multiple shared food files compile regexes inside function bodies on every call: foodNormalize.ts normalizeFoodName (~L229) creates RegExp in a FILLER_PHRASES loop, foodMatching.ts protectPhrases (~L179) creates RegExp inside a loop, foodParsing.ts parseLeadingQuantity (~L207,L221) creates two RegExps from template literals. Fix: (1) In foodNormalize.ts: build a single combined pattern at module scope: `const FILLER_PHRASE_PATTERN = new RegExp(FILLER_PHRASES.map(p => `\\\\b${p}\\\\b`).join('|'), 'gi');`. (2) In foodMatching.ts: hoist phrase regexes to module scope as a const Map or array of pre-compiled patterns. (3) In foodParsing.ts: hoist the two RegExp calls from parseLeadingQuantity to module-level constants alongside MEASURE_UNIT_PATTERN.",
+      "files": {
+        "read": [
+          "shared/foodNormalize.ts",
+          "shared/foodMatching.ts",
+          "shared/foodParsing.ts"
+        ],
+        "edit": [
+          "shared/foodNormalize.ts",
+          "shared/foodMatching.ts",
+          "shared/foodParsing.ts"
+        ],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "No `new RegExp(...)` inside function bodies in shared/food*.ts (grep verification)",
+        "All regex patterns hoisted to module-level const",
+        "FILLER_PHRASES compiled into single combined pattern",
+        "parseLeadingQuantity patterns hoisted alongside MEASURE_UNIT_PATTERN",
+        "Typecheck passes",
+        "All existing food-related tests pass"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W2-07",
+      "title": "Extract useIsMobile hook to shared location",
+      "wave": 2,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "DeleteConfirmDrawer.tsx (~L18-31) defines a private useIsMobile() hook with hardcoded 768px breakpoint. The codebase has ResponsiveShell for the same pattern. Fix: Either (A) create src/hooks/useMediaQuery.ts with a useIsMobile(breakpoint = 768) hook and import in DeleteConfirmDrawer, or (B) migrate DeleteConfirmDrawer to use ResponsiveShell. Option A is simpler and more reusable. Check if other components have inline mobile detection that could also use this hook.",
+      "files": {
+        "read": [
+          "src/components/settings/DeleteConfirmDrawer.tsx",
+          "src/components/ui/responsive-shell.tsx"
+        ],
+        "edit": ["src/components/settings/DeleteConfirmDrawer.tsx"],
+        "create": ["src/hooks/useMediaQuery.ts"]
+      },
+      "acceptanceCriteria": [
+        "useIsMobile importable from src/hooks/useMediaQuery.ts (or equivalent shared location)",
+        "DeleteConfirmDrawer imports from shared location (no private useIsMobile)",
+        "Breakpoint is configurable (default 768)",
+        "Typecheck passes"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W2-08",
+      "title": "Consolidate foodEvidence test factory functions",
+      "wave": 2,
+      "dependsOn": [],
+      "skill": "test-writer",
+      "description": "Three test files (foodEvidence.test.ts, foodEvidence.thresholds.test.ts, foodEvidence.trigger.test.ts) each copy-paste foodLog, digestionLog, and buildDailyTrialSeries factory functions with near-identical implementations. Fix: (1) Create shared/__tests__/foodEvidenceTestHelpers.ts with the canonical factory functions. (2) Import in all three test files. Delete the local copies. (3) Ensure the canonical versions handle all edge cases from the three variants.",
+      "files": {
+        "read": [
+          "shared/__tests__/foodEvidence.test.ts",
+          "shared/__tests__/foodEvidence.thresholds.test.ts",
+          "shared/__tests__/foodEvidence.trigger.test.ts"
+        ],
+        "edit": [
+          "shared/__tests__/foodEvidence.test.ts",
+          "shared/__tests__/foodEvidence.thresholds.test.ts",
+          "shared/__tests__/foodEvidence.trigger.test.ts"
+        ],
+        "create": ["shared/__tests__/foodEvidenceTestHelpers.ts"]
+      },
+      "acceptanceCriteria": [
+        "foodLog, digestionLog, buildDailyTrialSeries defined in exactly one file: foodEvidenceTestHelpers.ts",
+        "All three test files import from the helper",
+        "No local factory function copies remain in test files",
+        "All existing foodEvidence tests pass"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run test"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W2-09",
+      "title": "Fix stale theme storage key and create storageKeys.ts",
+      "wave": 2,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "ThemeProvider uses 'kaka-tracker-theme' as the default storageKey — the old project name. No try-catch guard on localStorage. Fix: (1) Create src/lib/storageKeys.ts with named storage key constants: `export const THEME_STORAGE_KEY = 'pdh-theme';`. Check for any other localStorage keys in the codebase that should be centralized here. (2) In theme-provider.tsx (~L37): import and use THEME_STORAGE_KEY as default. Wrap localStorage.getItem and setItem in try-catch with fallback to defaultTheme. (3) Find any clearLocalData / factory-reset helper and ensure it includes pdh-theme. Also covers WQ-431 from ROADMAP.",
+      "files": {
+        "read": ["src/components/theme-provider.tsx", "src/main.tsx"],
+        "edit": ["src/components/theme-provider.tsx"],
+        "create": ["src/lib/storageKeys.ts"]
+      },
+      "acceptanceCriteria": [
+        "grep 'kaka-tracker-theme' src/ returns zero matches",
+        "THEME_STORAGE_KEY = 'pdh-theme' exported from src/lib/storageKeys.ts",
+        "ThemeProvider localStorage access wrapped in try-catch",
+        "clearLocalData (or equivalent) includes pdh-theme key",
+        "Typecheck passes"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W2-10",
+      "title": "Consolidate customFoodPresets normalization and fix ID generation",
+      "wave": 2,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "customFoodPresets.ts has duplicated normalization between load and save (both do .trim().slice(0, 80) for names, .slice(0, 20) for ingredients, .slice(0, 12) for lists). Magic numbers have no named constants. ID generation uses Math.random() with only 10,001 possible values. Fix: (1) Extract named constants: MAX_PRESET_NAME_LENGTH = 80, MAX_INGREDIENT_NAME_LENGTH = 20, MAX_PRESETS = 12. (2) Extract a normalizePreset(preset) helper used by both load and save. (3) Replace Math.random()-based ID with crypto.randomUUID().",
+      "files": {
+        "read": ["src/lib/customFoodPresets.ts"],
+        "edit": ["src/lib/customFoodPresets.ts"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "Named constants for all magic numbers (80, 20, 12)",
+        "Single normalizePreset helper used by both load and save",
+        "No Math.random() for ID generation (uses crypto.randomUUID())",
+        "Typecheck passes"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W3-01",
+      "title": "Split convex/logs.ts (2238 LOC) into focused modules",
+      "wave": 3,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "convex/logs.ts owns log CRUD, profile management (10+ normalizers), habit config normalization (~200 lines), backup export/import (~600 lines), data access helpers, and batchUpdateFoodItems. Fix: Split into at minimum: (1) convex/logs.ts — log CRUD mutations only (target < 800 LOC). (2) convex/profileMutations.ts — replaceProfile, patchProfile, getProfile with normalization helpers. The 60-line inline payload construction repeated in both replaceProfile and patchProfile should be extracted to a single helper. (3) convex/backup.ts — exportBackup, importBackup, deleteAllUserData with coerce helpers (which should now import from convex/lib/coerce.ts created in W2-02). Update all internal/public API references. Update all import sites across the codebase. Read convex/_generated/ai/guidelines.md for mutation registration patterns.",
+      "files": {
+        "read": [
+          "convex/logs.ts",
+          "convex/lib/coerce.ts",
+          "convex/_generated/ai/guidelines.md"
+        ],
+        "edit": ["convex/logs.ts"],
+        "create": ["convex/profileMutations.ts", "convex/backup.ts"]
+      },
+      "acceptanceCriteria": [
+        "convex/logs.ts is under 800 lines and contains only log CRUD",
+        "convex/profileMutations.ts exists with replaceProfile, patchProfile, getProfile",
+        "convex/backup.ts exists with exportBackup, importBackup, deleteAllUserData",
+        "Shared payload construction extracted to single helper (not duplicated between replaceProfile/patchProfile)",
+        "Backup coerce helpers import from convex/lib/coerce.ts (not local definitions)",
+        "All internal API references updated (ctx.runMutation, ctx.scheduler, etc.)",
+        "All client-side import paths updated",
+        "Typecheck passes",
+        "All existing tests pass"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W3-02",
+      "title": "Split routeTree.tsx (433 LOC) — extract layout components",
+      "wave": 3,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "routeTree.tsx contains RouteErrorBoundary, AuthLoadingFallback, GlobalHeader (with full navigation rendering), AppLayout, and all route definitions — conflating route config with UI. Fix: (1) Create src/components/layout/RouteErrorBoundary.tsx. (2) Create src/components/layout/AuthLoadingFallback.tsx. (3) Create src/components/layout/GlobalHeader.tsx (with full nav rendering). (4) Create src/components/layout/AppLayout.tsx if needed. (5) Create src/components/layout/index.ts barrel. (6) Keep routeTree.tsx focused on route definitions only (target < 150 lines). Import layout components from the new location.",
+      "files": {
+        "read": ["src/routeTree.tsx"],
+        "edit": ["src/routeTree.tsx"],
+        "create": [
+          "src/components/layout/RouteErrorBoundary.tsx",
+          "src/components/layout/AuthLoadingFallback.tsx",
+          "src/components/layout/GlobalHeader.tsx",
+          "src/components/layout/index.ts"
+        ]
+      },
+      "acceptanceCriteria": [
+        "src/routeTree.tsx is under 150 lines (route definitions only)",
+        "RouteErrorBoundary lives in src/components/layout/",
+        "AuthLoadingFallback lives in src/components/layout/",
+        "GlobalHeader lives in src/components/layout/",
+        "Barrel file exports all layout components",
+        "Typecheck passes",
+        "Build succeeds"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W3-03",
+      "title": "Split SmartViews.tsx — extract utility logic to smartViewUtils.ts",
+      "wave": 3,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "SmartViews.tsx (~L1-113) exports runtime validation/normalisation functions, equality helpers, filter-matching functions, Set constants, type definitions, AND the React component. FilterSheet.tsx defines SORT_OPTIONS independently while SmartViews has SORTABLE_COLUMN_IDS — same IDs, can silently diverge. Fix: (1) Create src/components/patterns/database/smartViewUtils.ts with all normalisation, equality, row-matching, row-counting functions and SORTABLE_COLUMN_IDS. (2) Define SORT_OPTIONS once in smartViewUtils.ts and derive SORTABLE_COLUMN_IDS from it. (3) SmartViews.tsx keeps only the React component, importing helpers. (4) FilterSheet.tsx imports SORT_OPTIONS from smartViewUtils.ts.",
+      "files": {
+        "read": [
+          "src/components/patterns/database/SmartViews.tsx",
+          "src/components/patterns/database/FilterSheet.tsx"
+        ],
+        "edit": [
+          "src/components/patterns/database/SmartViews.tsx",
+          "src/components/patterns/database/FilterSheet.tsx"
+        ],
+        "create": ["src/components/patterns/database/smartViewUtils.ts"]
+      },
+      "acceptanceCriteria": [
+        "SmartViews.tsx contains only the React component (no utility exports)",
+        "smartViewUtils.ts contains all normalisation, equality, matching helpers",
+        "SORT_OPTIONS defined once in smartViewUtils.ts",
+        "SORTABLE_COLUMN_IDS derived from SORT_OPTIONS (not independently defined)",
+        "FilterSheet imports SORT_OPTIONS from smartViewUtils.ts",
+        "Typecheck passes"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W3-04",
+      "title": "Relocate Dr Poo components from archive/ to dr-poo/",
+      "wave": 3,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "DrPooReport.tsx, MealIdeaCard.tsx, and AnalysisProgressOverlay.tsx live in src/components/archive/ but are imported by the Track page. The 'archive/' directory implies components only used on Archive. MealIdeaCard is also not re-exported from the ai-insights/index.ts barrel. Fix: (1) Create src/components/dr-poo/ directory. (2) Move DrPooReport.tsx, MealIdeaCard.tsx, AnalysisProgressOverlay.tsx to src/components/dr-poo/. (3) Create src/components/dr-poo/index.ts barrel exporting all three (including MealIdeaCard which was missing from the old barrel). (4) Update all import sites. Clean up empty archive/ai-insights/ if nothing remains.",
+      "files": {
+        "read": [
+          "src/components/archive/DrPooReport.tsx",
+          "src/components/archive/ai-insights/AnalysisProgressOverlay.tsx",
+          "src/components/archive/ai-insights/index.ts",
+          "src/components/track/dr-poo/AiInsightsBody.tsx"
+        ],
+        "edit": ["src/components/track/dr-poo/AiInsightsBody.tsx"],
+        "create": [
+          "src/components/dr-poo/DrPooReport.tsx",
+          "src/components/dr-poo/MealIdeaCard.tsx",
+          "src/components/dr-poo/AnalysisProgressOverlay.tsx",
+          "src/components/dr-poo/index.ts"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Dr Poo components live in src/components/dr-poo/",
+        "MealIdeaCard is included in the barrel export",
+        "All import sites reference src/components/dr-poo/",
+        "No Dr Poo component files remain in src/components/archive/",
+        "Typecheck passes",
+        "Build succeeds"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W3-05",
+      "title": "Extract store configuration constants from src/store.ts",
+      "wave": 3,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "src/store.ts exports DEFAULT_FLUID_PRESETS, MAX_FLUID_PRESETS, BLOCKED_FLUID_PRESET_NAMES, DEFAULT_HEALTH_PROFILE alongside Zustand state. The createLogTypeGuard factory adds indirection without benefit. Fix: (1) Create src/lib/fluidPresets.ts and move fluid preset constants there. (2) Move DEFAULT_HEALTH_PROFILE to an appropriate location (e.g., shared/domain.ts or src/lib/defaults.ts — check what exists). (3) Replace createLogTypeGuard factory with direct function declarations (simpler, same functionality). (4) store.ts should export only Zustand store state and actions.",
+      "files": {
+        "read": ["src/store.ts"],
+        "edit": ["src/store.ts"],
+        "create": ["src/lib/fluidPresets.ts"]
+      },
+      "acceptanceCriteria": [
+        "src/store.ts exports only Zustand store state and actions",
+        "DEFAULT_FLUID_PRESETS, MAX_FLUID_PRESETS, BLOCKED_FLUID_PRESET_NAMES in src/lib/fluidPresets.ts",
+        "DEFAULT_HEALTH_PROFILE moved to appropriate defaults/domain file",
+        "createLogTypeGuard factory replaced with direct functions",
+        "All import sites updated",
+        "Typecheck passes"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W3-06",
+      "title": "Split LogEntry.tsx (741 LOC) — delegate to SubRow components",
+      "wave": 3,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "src/components/track/today-log/rows/LogEntry.tsx is 741 lines with log-type editing logic that should be delegated to existing SubRow components. Fix: Identify which blocks of editing logic per log type (food, bowel, sleep, activity, habit, fluid, etc.) can be extracted to their respective SubRow components. Move the rendering and edit handling for each type into the corresponding SubRow. LogEntry.tsx should become a dispatcher that renders the appropriate SubRow based on log type. Target: under 400 lines.",
+      "files": {
+        "read": ["src/components/track/today-log/rows/LogEntry.tsx"],
+        "edit": ["src/components/track/today-log/rows/LogEntry.tsx"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "LogEntry.tsx is under 400 lines",
+        "Log-type editing logic delegated to SubRow components",
+        "LogEntry acts as a type-based dispatcher",
+        "Typecheck passes",
+        "All existing tests pass",
+        "Build succeeds"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run test",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": true
+      }
+    },
+    {
+      "id": "W3-07",
+      "title": "Split aiAnalysis.ts (2178 LOC) into focused modules",
+      "wave": 3,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "src/lib/aiAnalysis.ts is 2178 lines mixing prompt construction, response parsing, and fetch orchestration. Fix: Split into at minimum: (1) src/lib/aiPrompts.ts — system prompt construction, health profile embedding, sanitization helpers. (2) src/lib/aiParsing.ts — response parsing, JSON extraction, validation. (3) src/lib/aiFetchInsights.ts — fetch orchestration, error handling, retry logic. Also refactor buildUserMessage (WQ-193): replace the 15 positional parameters with a single options object. Update all import sites across the codebase. IMPORTANT: W0-03, W0-04, W0-05 must have already landed (they edit aiAnalysis.ts for security fixes). This split should preserve those fixes.",
+      "files": {
+        "read": ["src/lib/aiAnalysis.ts"],
+        "edit": ["src/lib/aiAnalysis.ts"],
+        "create": [
+          "src/lib/aiPrompts.ts",
+          "src/lib/aiParsing.ts",
+          "src/lib/aiFetchInsights.ts"
+        ]
+      },
+      "acceptanceCriteria": [
+        "src/lib/aiAnalysis.ts no longer exists (or is a thin re-export barrel under 50 lines)",
+        "aiPrompts.ts handles prompt construction and sanitization",
+        "aiParsing.ts handles response parsing and validation",
+        "aiFetchInsights.ts handles fetch orchestration",
+        "buildUserMessage uses an options object instead of 15 positional params",
+        "Security fixes from W0-03/04/05 preserved in the split files",
+        "All import sites updated",
+        "Typecheck passes",
+        "All existing tests pass",
+        "Build succeeds"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run test",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    }
+  ]
+}
