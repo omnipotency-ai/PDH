@@ -2634,7 +2634,7 @@ const ZONE_3: ReadonlyArray<FoodRegistryEntry> = [
       "deep fried fish",
       "fish in batter",
     ],
-    notes: "Deep fried in batter. New entry.",
+    notes: "Deep fried in batter.",
   },
   {
     canonical: "chili con carne",
