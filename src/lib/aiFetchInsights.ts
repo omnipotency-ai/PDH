@@ -1,6 +1,7 @@
 import { DEFAULT_INSIGHT_MODEL, getValidInsightModel } from "@/lib/aiModels";
 import { checkRateLimit } from "@/lib/aiRateLimiter";
 import type { AllowedAiModel, ConvexAiCaller } from "@/lib/convexAiClient";
+import { formatTime, getDaysPostOp } from "@/lib/aiUtils";
 import { debugWarn } from "@/lib/debugLog";
 import { getErrorMessage } from "@/lib/errors";
 import {
@@ -112,27 +113,6 @@ interface AiAnalysisResult {
 export interface FetchAiInsightsOptions {
   /** When true, send only patient snapshot + conversation history (no full logs/trials/digests). */
   lightweight?: boolean;
-}
-
-// ─── Module-level helpers ─────────────────────────────────────────────────────
-
-function formatTime(timestamp: number): string {
-  return new Date(timestamp).toLocaleString("en-GB", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function getDaysPostOp(surgeryDate: string): number | null {
-  if (!surgeryDate) return null;
-  const surgery = new Date(surgeryDate);
-  if (Number.isNaN(surgery.getTime())) return null;
-  return Math.floor(
-    (new Date().getTime() - surgery.getTime()) / (24 * 60 * 60 * 1000),
-  );
 }
 
 // ─── Suggestion grouping ──────────────────────────────────────────────────────
@@ -284,9 +264,20 @@ export async function fetchAiInsights(
       });
       rawContent = result.content;
     } catch (error) {
-      throw new Error(
-        `AI nutritionist request failed: ${getErrorMessage(error)}`,
-      );
+      const message = getErrorMessage(error);
+      if (
+        message.includes("401") ||
+        message.includes("Unauthorized") ||
+        message.includes("auth")
+      ) {
+        throw new Error("AI nutritionist request failed. Check your API key.");
+      }
+      if (message.includes("429") || message.includes("rate limit")) {
+        throw new Error(
+          "AI nutritionist request failed. Rate limit reached — please wait a moment and try again.",
+        );
+      }
+      throw new Error(`AI nutritionist request failed: ${message}`);
     }
     const durationMs = Math.round(performance.now() - startedAt);
 
@@ -454,9 +445,20 @@ export async function fetchAiInsights(
     });
     rawContent = result.content;
   } catch (error) {
-    throw new Error(
-      `AI nutritionist request failed: ${getErrorMessage(error)}`,
-    );
+    const message = getErrorMessage(error);
+    if (
+      message.includes("401") ||
+      message.includes("Unauthorized") ||
+      message.includes("auth")
+    ) {
+      throw new Error("AI nutritionist request failed. Check your API key.");
+    }
+    if (message.includes("429") || message.includes("rate limit")) {
+      throw new Error(
+        "AI nutritionist request failed. Rate limit reached — please wait a moment and try again.",
+      );
+    }
+    throw new Error(`AI nutritionist request failed: ${message}`);
   }
   const durationMs = Math.round(performance.now() - startedAt);
 
