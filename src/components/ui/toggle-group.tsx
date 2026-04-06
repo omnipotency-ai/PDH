@@ -1,5 +1,3 @@
-"use client";
-
 import { Toggle as TogglePrimitive } from "@base-ui/react/toggle";
 import { ToggleGroup as ToggleGroupPrimitive } from "@base-ui/react/toggle-group";
 import type { VariantProps } from "class-variance-authority";
@@ -64,7 +62,9 @@ function ToggleGroup({
       data-spacing={spacing}
       multiple={multiple}
       {...(groupValue !== undefined && { value: groupValue })}
-      {...(groupDefaultValue !== undefined && { defaultValue: groupDefaultValue })}
+      {...(groupDefaultValue !== undefined && {
+        defaultValue: groupDefaultValue,
+      })}
       {...(onValueChange && {
         onValueChange: (nextValue: string[]) =>
           onValueChange(multiple ? nextValue : (nextValue[0] ?? "")),
