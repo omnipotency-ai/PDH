@@ -22,6 +22,27 @@
 
 ## Active: Tech-Debt Audit Cleanup
 
+### W2-10 — Consolidate `customFoodPresets` normalization and fix ID generation (2026-04-06 19:05)
+
+- **Commit:** TBD
+- **Files:** `src/lib/customFoodPresets.ts`, `src/components/settings/PersonalisationForm.tsx`
+- **What:** Replaced the ad hoc preset normalization paths with shared constants and a single `normalizePreset()` helper, switched blank preset IDs to `crypto.randomUUID()`, and rewired the personalisation form to consume the shared preset limits.
+- **Decisions:** Interpreted the ingredient `20` limit as an ingredient-name length cap rather than a list-length cap, so normalization now truncates individual ingredient names instead of trimming the number of ingredients entered.
+
+### W2-09 — Fix stale theme storage key and create `storageKeys.ts` (2026-04-06 19:03)
+
+- **Commit:** TBD
+- **Files:** `src/lib/storageKeys.ts`, `src/components/theme-provider.tsx`, `src/main.tsx`, `src/components/settings/AppDataForm.tsx`
+- **What:** Added a shared theme storage key constant, switched theme persistence from the stale `kaka-tracker-theme` name to `pdh-theme`, guarded theme localStorage reads and writes with try/catch, and included the theme key in local factory-reset cleanup.
+- **Decisions:** Kept `ThemeProvider`’s `storageKey` prop so existing call sites stay flexible while defaulting to the shared key.
+
+### W2-08 — Consolidate `foodEvidence` test factory functions (2026-04-06 19:00)
+
+- **Commit:** TBD
+- **Files:** `shared/__tests__/foodEvidenceTestHelpers.ts`, `shared/__tests__/foodEvidence.test.ts`, `shared/__tests__/foodEvidence.thresholds.test.ts`, `shared/__tests__/foodEvidence.trigger.test.ts`
+- **What:** Extracted canonical `foodLog`, `digestionLog`, and `buildDailyTrialSeries` factories for the food evidence test suite and switched all three duplicated test files to import from the shared helper.
+- **Decisions:** Extended the shared `buildDailyTrialSeries()` signature with an optional `confounderHabit` so the helper preserves the confounded-trial edge case from the main food evidence suite without forcing it into the threshold-only tests.
+
 ### W2-05 — Consolidate zone colors into `src/lib/zoneColors.ts` (2026-04-06 17:45)
 
 - **Commit:** TBD
@@ -71,13 +92,13 @@
 - **What:** Extracted `OPENAI_API_KEY_PATTERN`, `maskApiKey`, and canonical `classifyOpenAiHttpError` into `convex/lib/openai.ts`. Rewired all three consumers to import from the shared module and removed the duplicated local helpers.
 - **Decisions:** Kept the reconciled classifier intentionally narrow: `401/403 -> KEY_ERROR`, `429 -> QUOTA_ERROR`, everything else -> `NETWORK_ERROR`. That preserves current caller behavior while removing the dead double-fallthrough branches.
 
-### Initiative State — Waves 0-1 complete, Wave 2 starting (2026-04-06 17:05)
+### Initiative State — Wave 2 complete, Wave 3 queued (2026-04-06 19:06)
 
 - **Branch:** `pans-labyrinth`
-- **Head:** `bf05641`
+- **Head:** `b16f922`
 - **Plans:** `docs/plans/2026-04-06-tech-debt-audit-cleanup-waves-0-1.json`, `docs/plans/2026-04-06-tech-debt-audit-cleanup-waves-2-3.json`
-- **What:** Reconstructed the Claude/Codex handoff state. Branch history shows the full waves 0-1 task series (`W0-01` through `W1-18`) already landed and pushed. Tracking docs were stale, so `ROADMAP.md` and `WORK-QUEUE.md` were updated to reflect this initiative as active work with wave 2 queued up.
-- **Next:** Execute `W2-08` from the waves 2-3 plan: consolidate `foodEvidence` test factory functions.
+- **What:** Executed the remaining Wave 2 utility-consolidation tasks through two parallel batches. Wave 2 now has shared activity type normalization, time constants, zone colors, regex helpers, media-query hooks, storage keys, and food evidence test factories in place, with preset normalization and theme persistence cleanup landed as the final batch.
+- **Next:** Execute `W3-01` from the waves 2-3 plan: split `convex/logs.ts` into focused modules.
 
 ### W1-10 — Replace manual WriteProcessedFoodItem type with Infer<> (2026-04-06)
 

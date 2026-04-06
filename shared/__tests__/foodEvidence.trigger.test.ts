@@ -7,46 +7,12 @@ import {
   TRIGGER_WEIGHT_BRISTOL_7,
   TRIGGER_WINDOW_MINUTES,
 } from "../foodEvidence";
+import { digestionLog, foodLog } from "./foodEvidenceTestHelpers";
 
 const HOUR = 60 * 60 * 1000;
 const MINUTE = 60 * 1000;
 const DAY = 24 * HOUR;
 const BASE_TIME = Date.UTC(2026, 0, 1, 8, 0, 0);
-
-function foodLog(id: string, timestamp: number, name: string): FoodEvidenceLog {
-  return {
-    id,
-    timestamp,
-    type: "food",
-    data: {
-      items: [
-        {
-          name,
-          canonicalName: name.toLowerCase(),
-          quantity: 1,
-          unit: "portion",
-        },
-      ],
-    },
-  };
-}
-
-function digestionLog(
-  id: string,
-  timestamp: number,
-  bristolCode: number,
-  episodesCount = 1,
-): FoodEvidenceLog {
-  return {
-    id,
-    timestamp,
-    type: "digestion",
-    data: {
-      bristolCode,
-      episodesCount,
-    },
-  };
-}
 
 describe("trigger correlation constants", () => {
   it("TRIGGER_WINDOW_MINUTES is 180 (3 hours)", () => {

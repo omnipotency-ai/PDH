@@ -70,7 +70,8 @@ export function ArtificialIntelligenceSection({
           ))}
         </select>
         <p className="text-[10px] text-[var(--text-faint)]">
-          Background tasks always use GPT-5.4 Mini. This setting controls Dr. Poo and insight reports.
+          Background tasks always use GPT-5.4 Mini. This setting controls Dr. Poo and insight
+          reports.
         </p>
       </div>
     </div>

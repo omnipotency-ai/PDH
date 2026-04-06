@@ -5,6 +5,7 @@ import { useApiKeyContext } from "@/contexts/ApiKeyContext";
 import { useProfileContext } from "@/contexts/ProfileContext";
 import { useAiPreferences, useHealthProfile, useUnitSystem } from "@/hooks/useProfile";
 import { getErrorMessage } from "@/lib/errors";
+import { THEME_STORAGE_KEY } from "@/lib/storageKeys";
 import {
   useDeleteAllSyncedData,
   useExportBackup,
@@ -26,6 +27,7 @@ const LOCAL_APP_STORAGE_KEYS = [
   "patterns-filter-state-v1",
   "track.pending-food-draft",
   "caca-custom-food-presets-v1",
+  THEME_STORAGE_KEY,
 ] as const;
 const LOCAL_APP_STORAGE_PREFIXES = ["quick-capture-destructive-rollover:"] as const;
 

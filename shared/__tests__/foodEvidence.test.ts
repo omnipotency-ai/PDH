@@ -3,48 +3,17 @@ import {
   buildFoodEvidenceResult,
   type FoodAssessmentRecord,
   type FoodEvidenceLog,
-  type HabitLike,
   normalizeAssessmentRecord,
 } from "../foodEvidence";
+import {
+  buildDailyTrialSeries,
+  digestionLog,
+  foodLog,
+} from "./foodEvidenceTestHelpers";
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
 const BASE_TIME = Date.UTC(2026, 0, 1, 8, 0, 0);
-
-function foodLog(id: string, timestamp: number, name: string): FoodEvidenceLog {
-  return {
-    id,
-    timestamp,
-    type: "food",
-    data: {
-      items: [
-        {
-          name,
-          canonicalName: name.toLowerCase(),
-          quantity: 1,
-          unit: "portion",
-        },
-      ],
-    },
-  };
-}
-
-function digestionLog(
-  id: string,
-  timestamp: number,
-  bristolCode: number,
-  episodesCount = 1,
-): FoodEvidenceLog {
-  return {
-    id,
-    timestamp,
-    type: "digestion",
-    data: {
-      bristolCode,
-      episodesCount,
-    },
-  };
-}
 
 function habitLog(
   id: string,
@@ -78,47 +47,6 @@ function activityLog(
     data: args,
   };
 }
-
-function buildDailyTrialSeries(args: {
-  foodName: string;
-  trialCount: number;
-  transitHours: number;
-  bristolCodes: number[];
-  confoundedIndexes?: number[];
-}): {
-  habits: HabitLike[];
-  logs: FoodEvidenceLog[];
-} {
-  const confoundedIndexes = new Set(args.confoundedIndexes ?? []);
-  const habits: HabitLike[] = [{ id: "nicotine", name: "Nicotine" }];
-  const logs: FoodEvidenceLog[] = [];
-
-  for (let index = 0; index < args.trialCount; index += 1) {
-    const foodAt = BASE_TIME + index * DAY;
-    const bowelAt = foodAt + args.transitHours * HOUR;
-    logs.push(foodLog(`food-${index}`, foodAt, args.foodName));
-    logs.push(
-      digestionLog(
-        `digestion-${index}`,
-        bowelAt,
-        args.bristolCodes[index] ?? args.bristolCodes[args.bristolCodes.length - 1] ?? 4,
-      ),
-    );
-
-    if (confoundedIndexes.has(index)) {
-      logs.push(
-        habitLog(`habit-${index}`, foodAt + 30 * 60 * 1000, {
-          habitId: "nicotine",
-          name: "Nicotine",
-          quantity: 5,
-        }),
-      );
-    }
-  }
-
-  return { habits, logs };
-}
-
 describe("buildFoodEvidenceResult", () => {
   it("treats Bristol 1 as a severe constipated outcome", () => {
     const logs = [
@@ -253,6 +181,7 @@ describe("buildFoodEvidenceResult", () => {
       transitHours: 20,
       bristolCodes,
       confoundedIndexes: [27],
+      confounderHabit: { id: "nicotine", name: "Nicotine" },
     });
     logs.push(
       habitLog("habit-27-caffeine", BASE_TIME + 27 * DAY + HOUR, {

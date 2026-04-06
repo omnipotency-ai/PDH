@@ -51,9 +51,7 @@ export function getCelebration(
     `${habit.name} locked in.`,
     `${habit.name} target reached — well done.`,
   ];
-  const messageHash = habit.name
-    .split("")
-    .reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  const messageHash = habit.name.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
   const messageIndex = messageHash % dailyMessages.length;
 
   return {

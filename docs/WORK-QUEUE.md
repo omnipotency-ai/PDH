@@ -54,7 +54,7 @@ All 6 waves complete (W0-W5), 69 commits, 1430 tests, 211 files changed.
 
 ## Active: Tech-Debt Audit Cleanup
 
-> **Status:** IN PROGRESS (2026-04-06) — waves 0-1 complete on `pans-labyrinth`, wave 2 starting
+> **Status:** IN PROGRESS (2026-04-06) — waves 0-2 complete on `pans-labyrinth`, wave 3 ready
 > **Plan (waves 0-1):** [`docs/plans/2026-04-06-tech-debt-audit-cleanup-waves-0-1.json`](plans/2026-04-06-tech-debt-audit-cleanup-waves-0-1.json)
 > **Plan (waves 2-3):** [`docs/plans/2026-04-06-tech-debt-audit-cleanup-waves-2-3.json`](plans/2026-04-06-tech-debt-audit-cleanup-waves-2-3.json)
 > **Plan (waves 4-5):** [`docs/plans/2026-04-06-tech-debt-audit-cleanup-waves-4-5.json`](plans/2026-04-06-tech-debt-audit-cleanup-waves-4-5.json)
@@ -62,7 +62,7 @@ All 6 waves complete (W0-W5), 69 commits, 1430 tests, 211 files changed.
 > **PRD:** [`docs/prd/2026-04-06-tech-debt-audit-cleanup.md`](prd/2026-04-06-tech-debt-audit-cleanup.md)
 > **Branch:** `pans-labyrinth`
 
-Waves 0-1 were executed on `pans-labyrinth` and are represented in branch history by task commits `W0-01` through `W1-18`. The next executable task is `W2-01`.
+Waves 0-2 were executed on `pans-labyrinth`. Waves 0-1 are represented in branch history by task commits `W0-01` through `W1-18`. Wave 2 landed in batch commits on the same branch. The next executable task is `W3-01`.
 
 ### Wave 2
 
@@ -75,9 +75,9 @@ Waves 0-1 were executed on `pans-labyrinth` and are represented in branch histor
 | W2-05 | Consolidate zone colors into `src/lib/zoneColors.ts` | — | done | TBD |
 | W2-06 | Pre-compile regex patterns in `shared/food*.ts` files | — | done | TBD |
 | W2-07 | Extract `useIsMobile` hook to shared location | — | done | TBD |
-| W2-08 | Consolidate `foodEvidence` test factory functions | — | pending | |
-| W2-09 | Fix stale theme storage key and create `storageKeys.ts` | — | pending | |
-| W2-10 | Consolidate `customFoodPresets` normalization and fix ID generation | — | pending | |
+| W2-08 | Consolidate `foodEvidence` test factory functions | — | done | TBD |
+| W2-09 | Fix stale theme storage key and create `storageKeys.ts` | — | done | TBD |
+| W2-10 | Consolidate `customFoodPresets` normalization and fix ID generation | — | done | TBD |
 
 ### Wave 3
 

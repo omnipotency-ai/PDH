@@ -168,9 +168,7 @@ export function useIngredientProfiles() {
 
 export function useUpsertIngredientProfile() {
   const upsert = useMutation(api.ingredientProfiles.upsert);
-  return (
-    payload: Omit<FunctionArgs<typeof api.ingredientProfiles.upsert>, "now">,
-  ) =>
+  return (payload: Omit<FunctionArgs<typeof api.ingredientProfiles.upsert>, "now">) =>
     upsert({
       now: Date.now(),
       ...sanitizeUnknownStringsDeep(payload),

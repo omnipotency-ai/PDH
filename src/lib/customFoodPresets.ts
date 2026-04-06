@@ -4,6 +4,9 @@ export interface CustomFoodPreset {
   ingredients: string[];
 }
 
+export const MAX_PRESET_NAME_LENGTH = 80;
+export const MAX_INGREDIENT_NAME_LENGTH = 20;
+export const MAX_PRESETS = 12;
 export const CUSTOM_FOOD_PRESETS_STORAGE_KEY = "caca-custom-food-presets-v1";
 
 function isCustomFoodPreset(value: unknown): value is CustomFoodPreset {
@@ -19,7 +22,7 @@ function isCustomFoodPreset(value: unknown): value is CustomFoodPreset {
 
 export function createBlankCustomFoodPreset(): CustomFoodPreset {
   return {
-    id: `food_${Date.now()}_${Math.round(Math.random() * 10000)}`,
+    id: crypto.randomUUID(),
     name: "",
     ingredients: [],
   };
@@ -28,13 +31,22 @@ export function createBlankCustomFoodPreset(): CustomFoodPreset {
 export function parseIngredientsInput(value: string): string[] {
   return value
     .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .slice(0, 20);
+    .map((item) => item.trim().slice(0, MAX_INGREDIENT_NAME_LENGTH))
+    .filter(Boolean);
 }
 
 export function formatIngredientsInput(ingredients: string[]): string {
   return ingredients.join(", ");
+}
+
+function normalizePreset(preset: CustomFoodPreset): CustomFoodPreset {
+  return {
+    id: preset.id,
+    name: preset.name.trim().slice(0, MAX_PRESET_NAME_LENGTH),
+    ingredients: preset.ingredients
+      .map((item) => item.trim().slice(0, MAX_INGREDIENT_NAME_LENGTH))
+      .filter(Boolean),
+  };
 }
 
 export function loadCustomFoodPresets(): CustomFoodPreset[] {
@@ -44,17 +56,7 @@ export function loadCustomFoodPresets(): CustomFoodPreset[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
-    return parsed
-      .filter(isCustomFoodPreset)
-      .map((preset) => ({
-        id: preset.id,
-        name: preset.name.trim().slice(0, 80),
-        ingredients: preset.ingredients
-          .map((item) => item.trim())
-          .filter(Boolean)
-          .slice(0, 20),
-      }))
-      .slice(0, 12);
+    return parsed.filter(isCustomFoodPreset).map(normalizePreset).slice(0, MAX_PRESETS);
   } catch {
     return [];
   }
@@ -63,16 +65,9 @@ export function loadCustomFoodPresets(): CustomFoodPreset[] {
 export function saveCustomFoodPresets(presets: CustomFoodPreset[]): void {
   if (typeof window === "undefined") return;
   const normalized = presets
-    .map((preset) => ({
-      id: preset.id,
-      name: preset.name.trim().slice(0, 80),
-      ingredients: preset.ingredients
-        .map((item) => item.trim())
-        .filter(Boolean)
-        .slice(0, 20),
-    }))
+    .map(normalizePreset)
     .filter((preset) => preset.name.length > 0)
-    .slice(0, 12);
+    .slice(0, MAX_PRESETS);
 
   try {
     window.localStorage.setItem(CUSTOM_FOOD_PRESETS_STORAGE_KEY, JSON.stringify(normalized));

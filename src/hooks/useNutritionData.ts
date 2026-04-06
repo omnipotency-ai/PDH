@@ -177,9 +177,7 @@ export function useNutritionData(targetDate?: Date): NutritionData {
     [targetDate],
   );
   const activeDayStart = targetDate ? selectedDayStart : Number(todayKey);
-  const activeDayEnd = targetDate
-    ? selectedDayEnd
-    : activeDayStart + MS_PER_DAY;
+  const activeDayEnd = targetDate ? selectedDayEnd : activeDayStart + MS_PER_DAY;
 
   // Split logs into active-day food+liquid and fluid logs.
   const { todayFoodLogs, todayFluidLogs } = useMemo(
@@ -188,16 +186,10 @@ export function useNutritionData(targetDate?: Date): NutritionData {
   );
 
   // Derive calorie total.
-  const totalCaloriesToday = useMemo(
-    () => calculateTotalCalories(todayFoodLogs),
-    [todayFoodLogs],
-  );
+  const totalCaloriesToday = useMemo(() => calculateTotalCalories(todayFoodLogs), [todayFoodLogs]);
 
   // Derive macro totals.
-  const totalMacrosToday = useMemo(
-    () => calculateTotalMacros(todayFoodLogs),
-    [todayFoodLogs],
-  );
+  const totalMacrosToday = useMemo(() => calculateTotalMacros(todayFoodLogs), [todayFoodLogs]);
 
   // Derive fluid totals: all fluids + water-only subset.
   const { totalFluidsMl, waterOnlyMl } = useMemo(() => {
@@ -220,10 +212,7 @@ export function useNutritionData(targetDate?: Date): NutritionData {
   }, [todayFluidLogs]);
 
   // Group today's food logs by meal slot.
-  const logsByMealSlot = useMemo(
-    () => groupByMealSlot(todayFoodLogs),
-    [todayFoodLogs],
-  );
+  const logsByMealSlot = useMemo(() => groupByMealSlot(todayFoodLogs), [todayFoodLogs]);
 
   // Calculate calories per meal slot.
   // Intentionally simple: 4 calls over small arrays. Single-pass accumulation not worth the complexity.
@@ -292,8 +281,7 @@ export function useNutritionData(targetDate?: Date): NutritionData {
 
   // Fall back to global recents if no slot-specific foods exist.
   // Both branches are stable memo references — no new array allocated
-  const recentFoods =
-    slotRecentFoods.length > 0 ? slotRecentFoods : allRecentFoods;
+  const recentFoods = slotRecentFoods.length > 0 ? slotRecentFoods : allRecentFoods;
 
   return {
     todayFoodLogs,

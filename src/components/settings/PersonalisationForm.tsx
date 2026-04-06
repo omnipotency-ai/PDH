@@ -10,6 +10,8 @@ import {
   createBlankCustomFoodPreset,
   formatIngredientsInput,
   loadCustomFoodPresets,
+  MAX_PRESET_NAME_LENGTH,
+  MAX_PRESETS,
   parseIngredientsInput,
   saveCustomFoodPresets,
 } from "@/lib/customFoodPresets";
@@ -83,7 +85,7 @@ function CustomFoodCard({ preset, onSave, onRemove }: CustomFoodCardProps) {
               <Label className="text-[10px] text-[var(--text-faint)]">Food title</Label>
               <Input
                 value={name}
-                maxLength={80}
+                maxLength={MAX_PRESET_NAME_LENGTH}
                 onChange={(event) => setName(event.target.value)}
                 placeholder="e.g. Lasagna"
                 className="h-8"
@@ -204,10 +206,7 @@ export function PersonalisationForm() {
   };
 
   const addCustomFoodCard = () => {
-    const MAX_CUSTOM_FOOD_PRESETS = 12;
-    setCustomFoodPresets((prev) =>
-      [...prev, createBlankCustomFoodPreset()].slice(0, MAX_CUSTOM_FOOD_PRESETS),
-    );
+    setCustomFoodPresets((prev) => [...prev, createBlankCustomFoodPreset()].slice(0, MAX_PRESETS));
   };
 
   const saveCustomFoodCard = (id: string, name: string, ingredients: string[]) => {

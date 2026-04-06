@@ -1,5 +1,6 @@
 import type React from "react";
 import { createContext, useContext, useEffect, useState } from "react";
+import { THEME_STORAGE_KEY } from "@/lib/storageKeys";
 
 type Theme = "dark" | "light" | "system";
 
@@ -34,12 +35,17 @@ function resolveSystemTheme(): "dark" | "light" {
 export function ThemeProvider({
   children,
   defaultTheme = "system",
-  storageKey = "kaka-tracker-theme",
+  storageKey = THEME_STORAGE_KEY,
   ...props
 }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(() => {
-    const stored = localStorage.getItem(storageKey);
-    return isTheme(stored) ? stored : defaultTheme;
+    if (typeof window === "undefined") return defaultTheme;
+    try {
+      const stored = localStorage.getItem(storageKey);
+      return isTheme(stored) ? stored : defaultTheme;
+    } catch {
+      return defaultTheme;
+    }
   });
 
   useEffect(() => {
@@ -63,7 +69,13 @@ export function ThemeProvider({
   const value = {
     theme,
     setTheme: (theme: Theme) => {
-      localStorage.setItem(storageKey, theme);
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem(storageKey, theme);
+        } catch {
+          // Ignore storage failures and keep the in-memory theme state.
+        }
+      }
       setTheme(theme);
     },
   };

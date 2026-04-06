@@ -7,10 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { usePendingReplies } from "@/hooks/usePendingReplies";
 import { getLastHalfWeekBoundary } from "@/hooks/useWeeklySummaryAutoTrigger";
 import { AI_MARKDOWN_COMPONENTS } from "@/lib/aiMarkdownComponents";
-import {
-  useConversationsByDateRange,
-  useLatestWeeklySummary,
-} from "@/lib/sync";
+import { useConversationsByDateRange, useLatestWeeklySummary } from "@/lib/sync";
 import { useStore } from "@/store";
 
 interface ConversationPanelProps {
@@ -28,13 +25,8 @@ const COLLAPSED_MESSAGE_STYLE = {
 const AI_CONTENT_MAX_CHARS = 50_000;
 const REHYPE_PLUGINS = [rehypeSanitize];
 
-export function ConversationPanel({
-  onSendNow,
-  replyInputRef,
-}: ConversationPanelProps) {
-  const [expandedMessageIds, setExpandedMessageIds] = useState<Set<string>>(
-    () => new Set(),
-  );
+export function ConversationPanel({ onSendNow, replyInputRef }: ConversationPanelProps) {
+  const [expandedMessageIds, setExpandedMessageIds] = useState<Set<string>>(() => new Set());
 
   // Far-future constant so stableEndMs never goes stale across the memo lifetime.
   const STABLE_END = 9_999_999_999_999;
@@ -50,8 +42,7 @@ export function ConversationPanel({
 
   // While analysis is in flight, pending replies have been captured and are
   // being processed — suppress optimistic rendering to prevent duplication.
-  const analysisInProgress =
-    aiAnalysisStatus === "sending" || aiAnalysisStatus === "receiving";
+  const analysisInProgress = aiAnalysisStatus === "sending" || aiAnalysisStatus === "receiving";
 
   // Dedup optimistic messages by Convex _id — once a pending reply appears in
   // the subscription results, we no longer need to render it optimistically.
@@ -70,9 +61,7 @@ export function ConversationPanel({
       analysisInProgress
         ? []
         : pendingReplies
-            .filter(
-              (r: { _id: unknown }) => !confirmedMessageIds.has(String(r._id)),
-            )
+            .filter((r: { _id: unknown }) => !confirmedMessageIds.has(String(r._id)))
             .map((r: { _id: unknown; content: string; timestamp: number }) => ({
               _id: `optimistic-${r.timestamp}` as const,
               role: "user" as const,
@@ -92,8 +81,7 @@ export function ConversationPanel({
   // (i.e. its end timestamp is before the current half-week boundary). This
   // prevents showing an in-progress summary for the current period.
   const periodSummary =
-    latestWeeklySummary &&
-    latestWeeklySummary.weekEndTimestamp <= halfWeekStartMs
+    latestWeeklySummary && latestWeeklySummary.weekEndTimestamp <= halfWeekStartMs
       ? latestWeeklySummary
       : null;
 
@@ -125,10 +113,7 @@ export function ConversationPanel({
       className="rounded-2xl border border-[var(--section-log)]/35 bg-[var(--surface-1)]/85 px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
     >
       {/* Scrollable message area */}
-      <ScrollArea
-        data-slot="conversation-messages"
-        className="max-h-[28rem] min-h-[6rem] pr-2"
-      >
+      <ScrollArea data-slot="conversation-messages" className="max-h-[28rem] min-h-[6rem] pr-2">
         <div className="flex min-h-full flex-col gap-4 py-1 pb-4">
           {!hasContent && (
             <div className="flex flex-1 items-center justify-center py-6">
@@ -141,22 +126,15 @@ export function ConversationPanel({
           {/* Period summary — pinned at top */}
           {periodSummary && (
             <ExpandableMessage
-              expanded={expandedMessageIds.has(
-                `summary-${periodSummary.weekEndTimestamp}`,
-              )}
+              expanded={expandedMessageIds.has(`summary-${periodSummary.weekEndTimestamp}`)}
               messageId={`summary-${periodSummary.weekEndTimestamp}`}
               onToggle={toggleExpandedMessage}
               timeLabel={`Period summary to ${periodLabel}`}
             >
               <AssistantMessage
-                expanded={expandedMessageIds.has(
-                  `summary-${periodSummary.weekEndTimestamp}`,
-                )}
+                expanded={expandedMessageIds.has(`summary-${periodSummary.weekEndTimestamp}`)}
               >
-                <Markdown
-                  components={AI_MARKDOWN_COMPONENTS}
-                  rehypePlugins={REHYPE_PLUGINS}
-                >
+                <Markdown components={AI_MARKDOWN_COMPONENTS} rehypePlugins={REHYPE_PLUGINS}>
                   {periodSummary.weeklySummary.slice(0, AI_CONTENT_MAX_CHARS)}
                 </Markdown>
               </AssistantMessage>
@@ -205,10 +183,7 @@ export function ConversationPanel({
                 timeLabel={timeLabel}
               >
                 <AssistantMessage expanded={expanded}>
-                  <Markdown
-                    components={AI_MARKDOWN_COMPONENTS}
-                    rehypePlugins={REHYPE_PLUGINS}
-                  >
+                  <Markdown components={AI_MARKDOWN_COMPONENTS} rehypePlugins={REHYPE_PLUGINS}>
                     {msg.content.slice(0, AI_CONTENT_MAX_CHARS)}
                   </Markdown>
                 </AssistantMessage>
@@ -254,9 +229,7 @@ function ExpandableMessage({
         isRightAligned ? "items-end pl-5 pr-0" : "pl-0 pr-5"
       } ${optimistic ? "opacity-60" : ""}`}
     >
-      <div
-        className={`relative w-full ${isRightAligned ? "max-w-[92%]" : "max-w-[94%]"}`}
-      >
+      <div className={`relative w-full ${isRightAligned ? "max-w-[92%]" : "max-w-[94%]"}`}>
         <button
           type="button"
           onClick={() => onToggle(messageId)}
@@ -280,13 +253,7 @@ function ExpandableMessage({
 }
 
 /** Assistant message — no bubble, just markdown text on the page background */
-function AssistantMessage({
-  children,
-  expanded,
-}: {
-  children: ReactNode;
-  expanded: boolean;
-}) {
+function AssistantMessage({ children, expanded }: { children: ReactNode; expanded: boolean }) {
   return (
     <div
       className="prose prose-xs dark:prose-invert max-w-none text-xs leading-relaxed text-[var(--text)] [&_strong]:font-semibold [&_em]:text-[var(--text-muted)] [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_h1]:text-sm [&_h1]:font-semibold [&_h2]:text-xs [&_h2]:font-semibold [&_h3]:text-xs [&_h3]:font-medium [&_p]:my-1"

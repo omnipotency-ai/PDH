@@ -15,11 +15,7 @@ interface CelebrationTriggerResult {
    * Checks if a target goal was just met and triggers celebration if so.
    * Only fires when crossing the threshold (not when already past it).
    */
-  checkAndCelebrateGoal: (
-    habit: HabitConfig,
-    previousValue: number,
-    nextValue: number,
-  ) => void;
+  checkAndCelebrateGoal: (habit: HabitConfig, previousValue: number, nextValue: number) => void;
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────

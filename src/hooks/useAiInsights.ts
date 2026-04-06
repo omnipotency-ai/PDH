@@ -12,8 +12,8 @@ import {
   type PreviousReport,
   parseAiInsight,
 } from "@/lib/aiAnalysis";
-import { DEFAULT_INSIGHT_MODEL } from "@/lib/aiModels";
 import { formatAiError } from "@/lib/aiErrorFormatter";
+import { DEFAULT_INSIGHT_MODEL } from "@/lib/aiModels";
 import {
   useAddAiAnalysis,
   useAddAssistantMessage,
@@ -26,12 +26,7 @@ import {
   useWeeklyDigests,
 } from "@/lib/sync";
 import { useStore } from "@/store";
-import type {
-  AiPreferences,
-  DrPooReply,
-  HealthProfile,
-  LogEntry,
-} from "@/types/domain";
+import type { AiPreferences, DrPooReply, HealthProfile, LogEntry } from "@/types/domain";
 import { api } from "../../convex/_generated/api";
 
 const COOLDOWN_MS = 21_600_000; // 6 hours
@@ -83,9 +78,7 @@ export function useAiInsights() {
 
   const addAiAnalysis = useAddAiAnalysis();
   const addAssistantMessage = useAddAssistantMessage();
-  const claimPendingReplies = useMutation(
-    api.conversations.claimPendingReplies,
-  );
+  const claimPendingReplies = useMutation(api.conversations.claimPendingReplies);
 
   // Use a ref to track the in-flight request — prevents concurrent analysis runs
   const abortRef = useRef<AbortController | null>(null);
@@ -110,16 +103,10 @@ export function useAiInsights() {
     };
   }, []);
 
-  const conversationHistory = useConversationsByDateRange(
-    halfWeekStartMs,
-    stableEndMs,
-  );
+  const conversationHistory = useConversationsByDateRange(halfWeekStartMs, stableEndMs);
 
   // Suggestions: current half-week only (same boundary as conversations)
-  const recentSuggestions = useSuggestionsByDateRange(
-    halfWeekStartMs,
-    stableEndMs,
-  );
+  const recentSuggestions = useSuggestionsByDateRange(halfWeekStartMs, stableEndMs);
 
   const latestWeeklySummary = useLatestWeeklySummary();
 
@@ -200,15 +187,10 @@ export function useAiInsights() {
         }
       } else {
         const freshLogs = dataRef.current.logs;
-        const hasBowelContext = freshLogs.some(
-          (log) => log.type === "digestion",
-        );
+        const hasBowelContext = freshLogs.some((log) => log.type === "digestion");
         const hasQuestionContext = pendingReplies.length > 0;
         if (!hasBowelContext && !hasQuestionContext) {
-          setAiAnalysisStatus(
-            "error",
-            "Log a bowel movement or send a question first.",
-          );
+          setAiAnalysisStatus("error", "Log a bowel movement or send a question first.");
           loadingRef.current = false;
           return;
         }
@@ -223,24 +205,16 @@ export function useAiInsights() {
             const history = dataRef.current.history ?? [];
             const results: PreviousReport[] = [];
             for (const a of history) {
-              if (a.insight === null || a.insight === undefined || a.error)
-                continue;
+              if (a.insight === null || a.insight === undefined || a.error) continue;
               const parsed = parseAiInsight(a.insight);
-              if (parsed)
-                results.push({ timestamp: a.timestamp, insight: parsed });
+              if (parsed) results.push({ timestamp: a.timestamp, insight: parsed });
             }
             return results;
           })();
 
       // Conversation history is always included (both modes need it)
-      const conversationHistoryMapped = (
-        dataRef.current.conversationHistory ?? []
-      ).map(
-        (msg: {
-          role: "user" | "assistant";
-          content: string;
-          timestamp: number;
-        }) => ({
+      const conversationHistoryMapped = (dataRef.current.conversationHistory ?? []).map(
+        (msg: { role: "user" | "assistant"; content: string; timestamp: number }) => ({
           role: msg.role,
           content: msg.content,
           timestamp: msg.timestamp,
@@ -266,11 +240,7 @@ export function useAiInsights() {
               foodsFlagged: wd.foodsFlagged,
             })),
             recentSuggestions: (dataRef.current.recentSuggestions ?? []).map(
-              (s: {
-                text: string;
-                textNormalized: string;
-                reportTimestamp: number;
-              }) => ({
+              (s: { text: string; textNormalized: string; reportTimestamp: number }) => ({
                 text: s.text,
                 textNormalized: s.textNormalized,
                 reportTimestamp: s.reportTimestamp,
@@ -278,11 +248,9 @@ export function useAiInsights() {
             ),
             ...(dataRef.current.latestWeeklySummary && {
               previousWeeklySummary: {
-                weeklySummary:
-                  dataRef.current.latestWeeklySummary.weeklySummary,
+                weeklySummary: dataRef.current.latestWeeklySummary.weeklySummary,
                 keyFoods: dataRef.current.latestWeeklySummary.keyFoods,
-                carryForwardNotes:
-                  dataRef.current.latestWeeklySummary.carryForwardNotes,
+                carryForwardNotes: dataRef.current.latestWeeklySummary.carryForwardNotes,
               },
             }),
             ...(dataRef.current.baselineAverages !== null && {
@@ -327,10 +295,7 @@ export function useAiInsights() {
             await claimPendingReplies({ aiAnalysisId: analysisId });
 
             if (result.insight.summary) {
-              await dataRef.current.addAssistantMessage(
-                result.insight.summary,
-                analysisId,
-              );
+              await dataRef.current.addAssistantMessage(result.insight.summary, analysisId);
             }
             if (result.insight.directResponseToUser) {
               await dataRef.current.addAssistantMessage(
@@ -366,25 +331,15 @@ export function useAiInsights() {
             durationMs: 0,
             inputLogCount: isLightweight
               ? 0
-              : dataRef.current.logs.filter((l) => l.type === "digestion")
-                  .length,
+              : dataRef.current.logs.filter((l) => l.type === "digestion").length,
             error: message,
-          }).catch((saveErr) =>
-            console.error("[AI Nutritionist] Failed to save error:", saveErr),
-          );
+          }).catch((saveErr) => console.error("[AI Nutritionist] Failed to save error:", saveErr));
         }
       } finally {
         loadingRef.current = false;
       }
     },
-    [
-      apiKey,
-      callAi,
-      setAiAnalysisStatus,
-      addAiAnalysis,
-      claimPendingReplies,
-      markInsightRun,
-    ],
+    [apiKey, callAi, setAiAnalysisStatus, addAiAnalysis, claimPendingReplies, markInsightRun],
   );
 
   // Background trigger (after logging bowel movement) — cooldown-gated, Bristol-aware.
@@ -405,10 +360,8 @@ export function useAiInsights() {
       if (options?.autoSendEnabled === false) return;
 
       const bristolScore = options?.bristolScore;
-      const latestAiInsightAt =
-        dataRef.current.latestSuccessfulAnalysis?.timestamp ?? null;
-      const cooldownPassed =
-        !latestAiInsightAt || Date.now() - latestAiInsightAt >= COOLDOWN_MS;
+      const latestAiInsightAt = dataRef.current.latestSuccessfulAnalysis?.timestamp ?? null;
+      const cooldownPassed = !latestAiInsightAt || Date.now() - latestAiInsightAt >= COOLDOWN_MS;
 
       if (!cooldownPassed) {
         // Inside cooldown — only Bristol 7 can break through, and only if
@@ -418,9 +371,7 @@ export function useAiInsights() {
         const sixHoursAgo = Date.now() - COOLDOWN_MS;
         const has7InLastSixHours = dataRef.current.logs.some(
           (log) =>
-            log.type === "digestion" &&
-            log.timestamp > sixHoursAgo &&
-            log.data.bristolCode === 7,
+            log.type === "digestion" && log.timestamp > sixHoursAgo && log.data.bristolCode === 7,
         );
         // The current BM hasn't been saved to logs yet at this point,
         // so if we find a 7 in the logs it's a *previous* 7 — skip.
@@ -435,10 +386,8 @@ export function useAiInsights() {
   // sendNow: manual trigger. During cooldown, use lightweight mode (conversation-only).
   // Reads latestSuccessfulAnalysis from dataRef for the same reason as triggerAnalysis.
   const sendNow = useCallback(() => {
-    const latestAiInsightAt =
-      dataRef.current.latestSuccessfulAnalysis?.timestamp ?? null;
-    const isInCooldown =
-      latestAiInsightAt != null && Date.now() - latestAiInsightAt < COOLDOWN_MS;
+    const latestAiInsightAt = dataRef.current.latestSuccessfulAnalysis?.timestamp ?? null;
+    const isInCooldown = latestAiInsightAt != null && Date.now() - latestAiInsightAt < COOLDOWN_MS;
     return runAnalysis(isInCooldown ? { lightweight: true } : undefined);
   }, [runAnalysis]);
 

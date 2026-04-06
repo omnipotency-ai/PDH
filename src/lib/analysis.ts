@@ -1,6 +1,6 @@
+import { resolveCanonicalFoodName } from "@shared/foodCanonicalName";
 import { buildFoodEvidenceResult, toLegacyFoodStatus } from "@shared/foodEvidence";
 import { formatCanonicalFoodDisplayName } from "@shared/foodNormalize";
-import { resolveCanonicalFoodName } from "@shared/foodCanonicalName";
 import type { FoodTrialStatus, SyncedLog } from "@/lib/sync";
 import type { DigestiveLogData, FoodPrimaryStatus, FoodTendency } from "@/types/domain";
 
