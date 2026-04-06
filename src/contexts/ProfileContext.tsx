@@ -1,11 +1,11 @@
 import { useMutation, useQuery } from "convex/react";
 import { createContext, type ReactNode, useCallback, useContext, useMemo, useRef } from "react";
+import { DEFAULT_HEALTH_PROFILE } from "@/lib/defaults";
 import type { SleepGoal } from "@/lib/gamificationDefaults";
 import { DEFAULT_SLEEP_GOAL } from "@/lib/gamificationDefaults";
 import type { HabitConfig } from "@/lib/habitTemplates";
 import { getDefaultHabitTemplates } from "@/lib/habitTemplates";
 import type { UnitSystem } from "@/lib/units";
-import { DEFAULT_HEALTH_PROFILE } from "@/store";
 import type {
   AiPreferences,
   FluidPreset,

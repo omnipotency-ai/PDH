@@ -4,6 +4,7 @@ import { useApiKeyContext } from "@/contexts/ApiKeyContext";
 import { useAiPreferences } from "@/hooks/useProfile";
 import { fetchWeeklySummary } from "@/lib/aiAnalysis";
 import { debugLog } from "@/lib/debugLog";
+import { isDigestionLog } from "@/lib/logTypeGuards";
 import {
   useAddWeeklySummary,
   useConversationsByDateRange,
@@ -11,7 +12,6 @@ import {
   useSuggestionsByDateRange,
   useSyncedLogsByRange,
 } from "@/lib/sync";
-import { isDigestionLog } from "@/store";
 import { api } from "../../convex/_generated/api";
 
 /**

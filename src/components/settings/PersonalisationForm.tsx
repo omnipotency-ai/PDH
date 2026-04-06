@@ -15,7 +15,7 @@ import {
   parseIngredientsInput,
   saveCustomFoodPresets,
 } from "@/lib/customFoodPresets";
-import { BLOCKED_FLUID_PRESET_NAMES, MAX_FLUID_PRESETS } from "@/store";
+import { BLOCKED_FLUID_PRESET_NAMES, MAX_FLUID_PRESETS } from "@/lib/fluidPresets";
 import type { FluidPreset, FluidPresetDraft } from "@/types/domain";
 import { FoodPersonalisationSection } from "./FoodPersonalisationSection";
 import { CustomDrinksSection, DrPooSection } from "./tracking-form";
