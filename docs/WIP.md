@@ -24,7 +24,7 @@
 
 ### W4-09 — Optimize listFoodEmbeddings staleness check — avoid reading full vectors (2026-04-06 21:00)
 
-- **Commit:** `TBD`
+- **Commit:** `c4b22fb`
 - **Files:** `convex/foodParsing.ts`
 - **What:** Added `listFoodEmbeddingVersions` internalQuery that maps `foodEmbeddings` documents to `FoodEmbeddingVersionRow` (canonicalName + embeddingSourceHash only) before returning. Updated `ensureFoodEmbeddings` to call `listFoodEmbeddingVersions` instead of `listFoodEmbeddings`. Convex cannot project fields server-side, but stripping the 1536-float vectors from the return value reduces the cross-function response payload from ~12MB to ~50KB for 1000 entries.
 - **Decisions:** Kept `listFoodEmbeddings` unchanged for callers that genuinely need full vector data. `FoodEmbeddingVersionRow` type already existed with exactly the two needed fields. Used conditional spread for `embeddingSourceHash` to satisfy `exactOptionalPropertyTypes`.
