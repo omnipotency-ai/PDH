@@ -16,12 +16,18 @@ interface CoachingContext {
   streakSummaries: Record<string, HabitStreakSummary>;
 }
 
-function getTodayFluidValue(context: CoachingContext, habit: HabitConfig): number {
+function getTodayFluidValue(
+  context: CoachingContext,
+  habit: HabitConfig,
+): number {
   const nameKey = normalizeFluidItemName(habit.name);
   return context.todayFluidMl[habit.id] ?? context.todayFluidMl[nameKey] ?? 0;
 }
 
-function getTodayHabitValue(context: CoachingContext, habit: HabitConfig): number {
+function getTodayHabitValue(
+  context: CoachingContext,
+  habit: HabitConfig,
+): number {
   const countValue = context.todayCounts[habit.id] ?? 0;
   if (habit.logAs !== "fluid") return countValue;
   return isCapHabit(habit) ? countValue : getTodayFluidValue(context, habit);
@@ -36,6 +42,7 @@ export async function generateCoachingSnippet(
     timeOfDay: string; // "morning" | "afternoon" | "evening"
     hadGapYesterday: boolean;
   },
+  surgeryType = "digestive condition",
 ): Promise<string> {
   checkRateLimit();
 
@@ -62,7 +69,7 @@ export async function generateCoachingSnippet(
   const systemPrompt = [
     "Given today's habit totals and recent streak data, respond in 180 characters or fewer",
     "with one piece of practical advice, encouragement, or contextual reward",
-    "for a post-surgery anastomosis recovery patient.",
+    `for a ${surgeryType} recovery patient.`,
     "Rules:",
     "- If user exceeded a target for 7+ days, suggest raising it slightly",
     "- If user consistently misses, suggest lowering it",
@@ -121,7 +128,9 @@ export function getHeuristicCoachingMessage(
 
   // 2. All targets met
   if (targetHabits.length > 0) {
-    const allMet = targetHabits.every((h) => todayValue(h) >= (h.dailyTarget ?? 0));
+    const allMet = targetHabits.every(
+      (h) => todayValue(h) >= (h.dailyTarget ?? 0),
+    );
     if (allMet) {
       return "All targets hit today \u2014 well done.";
     }
@@ -214,7 +223,11 @@ export function getHeuristicCoachingMessage(
   // 11. Partial success fallback (any habit with some good days)
   for (const h of activeHabits) {
     const streak = context.streakSummaries[h.id];
-    if (streak && streak.goodDaysInWindow > 0 && streak.goodDaysInWindow < streak.windowSize) {
+    if (
+      streak &&
+      streak.goodDaysInWindow > 0 &&
+      streak.goodDaysInWindow < streak.windowSize
+    ) {
       return `${streak.goodDaysInWindow} of ${streak.windowSize} days on track. Progress, not perfection.`;
     }
   }
@@ -233,6 +246,7 @@ export async function generateHabitSnippet(
     daySummaries: HabitDaySummary[];
     streakSummary: HabitStreakSummary;
   },
+  surgeryType = "digestive condition",
 ): Promise<string> {
   checkRateLimit();
 
@@ -256,7 +270,7 @@ export async function generateHabitSnippet(
 
   const systemPrompt = [
     "Given this habit's 7-day history, provide one short, specific insight or suggestion",
-    "in 100 characters or fewer for a post-surgery anastomosis recovery patient.",
+    `in 100 characters or fewer for a ${surgeryType} recovery patient.`,
     "Reply with ONLY the insight text, nothing else.",
   ].join("\n");
 
@@ -290,7 +304,9 @@ export function heuristicHabitSnippet(
   daySummaries: HabitDaySummary[],
   streakSummary: HabitStreakSummary,
 ): string {
-  const last7 = [...daySummaries].sort((a, b) => a.date.localeCompare(b.date)).slice(-7);
+  const last7 = [...daySummaries]
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(-7);
   const latest = last7[last7.length - 1];
   const latestValue = latest?.totalValue ?? 0;
 
@@ -362,7 +378,9 @@ export async function generateSettingsSuggestions(
           : "no target/cap";
 
       // Gather recent day summaries for this habit
-      const daySums = context.recentDaySummaries.filter((s) => s.habitId === h.id);
+      const daySums = context.recentDaySummaries.filter(
+        (s) => s.habitId === h.id,
+      );
       const values = daySums.map((s) => s.totalValue);
       const goodDays = daySums.filter((s) => s.isGoodDay).length;
 
