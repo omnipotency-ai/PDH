@@ -417,9 +417,8 @@ export const listFoodEmbeddings = internalQuery({
     // For staleness checks, use listFoodEmbeddingVersions instead.
     const results = await ctx.db.query("foodEmbeddings").take(1000);
     if (results.length === 1000) {
-      console.warn(
-        "listFoodEmbeddings: result count equals 1000 — results may be truncated. " +
-          "Consider increasing the limit or paginating.",
+      throw new Error(
+        "listFoodEmbeddings: hit 1000-row cap — results are truncated. Implement pagination.",
       );
     }
     return results;
@@ -441,9 +440,8 @@ export const listFoodEmbeddingVersions = internalQuery({
   handler: async (ctx): Promise<FoodEmbeddingVersionRow[]> => {
     const results = await ctx.db.query("foodEmbeddings").take(1000);
     if (results.length === 1000) {
-      console.warn(
-        "listFoodEmbeddingVersions: result count equals 1000 — results may be truncated. " +
-          "Consider increasing the limit or paginating.",
+      throw new Error(
+        "listFoodEmbeddingVersions: hit 1000-row cap — staleness check is incomplete. Implement pagination.",
       );
     }
     return results.map((row) => ({
