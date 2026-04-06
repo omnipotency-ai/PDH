@@ -21,7 +21,7 @@
       "category": "convex",
       "file": "convex/logs.ts",
       "line": 741,
-      "title": "listAll query does unbounded collect() — WQ-087 still open",
+      "title": "listAll query does unbounded collect() \u2014 WQ-087 still open",
       "description": "The `listAll` query (backing `useAllSyncedLogs`) calls `.collect()` with no limit. For a long-term user this will scan every log row on every subscription tick. The work queue already tracks this as WQ-087 (incorrectly marked done, then reopened per the 2026-03-21 audit). The query is called from `SyncedLogsContext` which wraps the entire app, so it fires for every authenticated page view.",
       "fix": "Add a hard ceiling (e.g. 10 000) and paginate, OR restructure so the context only fetches the window callers actually need. At minimum add `.take(N)` until pagination is implemented.",
       "implemented": false
@@ -34,7 +34,7 @@
       "line": 762,
       "title": "count query does an unbounded collect() to count rows",
       "description": "The `count` query fetches every row just to return `rows.length`. Convex has no native COUNT aggregate, but collecting all documents just to count them wastes both bandwidth and time proportional to the user's history. This will degrade as data grows.",
-      "fix": "Use a Convex aggregate (if available) or store a denormalized count document that is incremented/decremented by the `add` / `remove` mutations. If neither option is feasible, at minimum document the limitation and gate use to admin/debugging contexts only — do not call it in production UI code.",
+      "fix": "Use a Convex aggregate (if available) or store a denormalized count document that is incremented/decremented by the `add` / `remove` mutations. If neither option is feasible, at minimum document the limitation and gate use to admin/debugging contexts only \u2014 do not call it in production UI code.",
       "implemented": false
     },
     {
@@ -43,9 +43,9 @@
       "category": "convex",
       "file": "src/lib/syncAi.ts",
       "line": 101,
-      "title": "Date.now() used inside Convex mutation payload — non-determinism risk",
+      "title": "Date.now() used inside Convex mutation payload \u2014 non-determinism risk",
       "description": "`useAddUserMessage` and `useAddAssistantMessage` both pass `timestamp: Date.now()` directly to a Convex mutation. This is called from the client, so it is not inside a mutation handler (it is not technically non-determinism in the Convex replay sense), but the timestamp is generated on the client clock, which may be wrong, skewed, or manipulated by the user. Any time-sorted query over conversation messages will produce inconsistent results if two clients or two rapid calls produce colliding or out-of-order timestamps. The standard Convex pattern is to let the server generate the timestamp inside the mutation handler.",
-      "fix": "Remove `timestamp` from the client payload and generate it inside the Convex mutation handler using `Date.now()` (which is allowed inside Convex mutations — it is deterministic within a single execution). This closes the client-clock manipulation vector.",
+      "fix": "Remove `timestamp` from the client payload and generate it inside the Convex mutation handler using `Date.now()` (which is allowed inside Convex mutations \u2014 it is deterministic within a single execution). This closes the client-clock manipulation vector.",
       "implemented": false
     },
     {
@@ -54,8 +54,8 @@
       "category": "convex",
       "file": "convex/logs.ts",
       "line": 722,
-      "title": "Raw ctx.auth.getUserIdentity() used instead of requireAuth — legacy pattern not yet migrated",
-      "description": "All handlers in `convex/logs.ts` (and the other Convex files inspected) call `ctx.auth.getUserIdentity()` directly and then `if (identity === null) throw new Error(\"Not authenticated\")`. The CLAUDE.md and auth ADR specify that `requireAuth(ctx)` from `convex/lib/auth.ts` is the canonical pattern. The raw pattern is the legacy form flagged as HIGH — 60+ instances still remain. This file is the single biggest source of that debt since it is called on virtually every user action.",
+      "title": "Raw ctx.auth.getUserIdentity() used instead of requireAuth \u2014 legacy pattern not yet migrated",
+      "description": "All handlers in `convex/logs.ts` (and the other Convex files inspected) call `ctx.auth.getUserIdentity()` directly and then `if (identity === null) throw new Error(\"Not authenticated\")`. The CLAUDE.md and auth ADR specify that `requireAuth(ctx)` from `convex/lib/auth.ts` is the canonical pattern. The raw pattern is the legacy form flagged as HIGH \u2014 60+ instances still remain. This file is the single biggest source of that debt since it is called on virtually every user action.",
       "fix": "Replace each `const identity = await ctx.auth.getUserIdentity(); if (identity === null) throw ...` block with `const { userId } = await requireAuth(ctx);` from `convex/lib/auth.ts`. This is mechanical and safe to do in a single PR.",
       "implemented": false
     },
@@ -65,10 +65,12 @@
       "category": "correctness",
       "file": "src/lib/migrateLegacyStorage.ts",
       "line": 87,
-      "title": "Migration calls patchProfile before deleting the legacy blob — partial-failure window",
-      "description": "If `patchProfile` succeeds but `del(LEGACY_KEY)` fails, the migration will not re-run (because `raw` is truthy on the next run), meaning the legacy blob lives forever but won't cause harm. However, if `patchProfile` throws, the migration exits with an unhandled rejection and the legacy blob is never deleted. On the next app load, the migration runs again, re-patching the same fields (idempotent for Convex `upsert`, but not proven so for all callers), and re-calling `setApiKey` with the same key (harmless). This is probably safe, but the logic flow should be documented. More critically, there is no caller-visible error if `patchProfile` throws — the `await patchProfile(updates)` is not inside a try/catch, so it will propagate as an unhandled promise rejection and the function will exit without deleting the blob.",
+      "title": "Migration calls patchProfile before deleting the legacy blob \u2014 partial-failure window",
+      "description": "If `patchProfile` succeeds but `del(LEGACY_KEY)` fails, the migration will not re-run (because `raw` is truthy on the next run), meaning the legacy blob lives forever but won't cause harm. However, if `patchProfile` throws, the migration exits with an unhandled rejection and the legacy blob is never deleted. On the next app load, the migration runs again, re-patching the same fields (idempotent for Convex `upsert`, but not proven so for all callers), and re-calling `setApiKey` with the same key (harmless). This is probably safe, but the logic flow should be documented. More critically, there is no caller-visible error if `patchProfile` throws \u2014 the `await patchProfile(updates)` is not inside a try/catch, so it will propagate as an unhandled promise rejection and the function will exit without deleting the blob.",
       "fix": "Wrap `patchProfile(updates)` in a try/catch. On failure, log a clear error and return false (do not attempt deletion). This makes the failure observable and keeps the blob for retry.",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "SSL-006",
@@ -79,7 +81,9 @@
       "title": "API key from legacy storage is written without validation",
       "description": "`data.openAiApiKey` is written to the new `apiKeyStore` via `setApiKey()` if it is a non-empty string. There is no format validation (e.g. `sk-` prefix check). A corrupted or injected key would silently propagate to the new store and then be sent to the OpenAI API on the next AI call, producing a confusing auth error rather than a clear migration-time warning.",
       "fix": "Add a basic format check (e.g. `data.openAiApiKey.startsWith('sk-')`) before writing. Log a warning and skip if invalid. This is a one-time migration path so the cost is low.",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "SSL-007",
@@ -87,7 +91,7 @@
       "category": "correctness",
       "file": "src/lib/baselineAverages.ts",
       "line": 209,
-      "title": "All fluid types share the same calendarDaySpan denominator — averages are deflated when new fluid types are added",
+      "title": "All fluid types share the same calendarDaySpan denominator \u2014 averages are deflated when new fluid types are added",
       "description": "The `fluidCalendarDays` divisor is computed from the span of ALL fluid log timestamps. If a user has been logging water for 90 days but only started logging tea 5 days ago, tea's `avgMlPerDay` is divided by 90 (not 5), making it look like they barely drink tea. The per-habit section correctly uses a per-habit span; the fluid section does not.",
       "fix": "Compute a per-fluid-name calendarDaySpan from the timestamps of logs that contain that fluid item, in the same way per-habit spans are computed. Replace the shared `fluidCalendarDays` with per-fluid denominators when populating `fluidBaselines`.",
       "implemented": false
@@ -100,7 +104,7 @@
       "line": 230,
       "title": "normalizeDigestiveCategory throws on out-of-range bristolCode from untrusted data",
       "description": "`normalizeDigestiveCategory` passes `Number(data?.bristolCode)` directly to `bristolToConsistency`, which throws if the code is outside 1-7. The function is declared to accept `Record<string, unknown>`, meaning it can be called with external/legacy data containing Bristol codes outside the 1-7 range (e.g. 0, 8, or a float). A throw inside a data-mapping function can crash the analysis pipeline rather than skipping the bad record.",
-      "fix": "Check the range before calling `bristolToConsistency`: `if (Number.isFinite(code) && code >= 1 && code <= 7)`. This check already exists in `baselineAverages.ts` (line 255) for the same data — apply it here too for consistency.",
+      "fix": "Check the range before calling `bristolToConsistency`: `if (Number.isFinite(code) && code >= 1 && code <= 7)`. This check already exists in `baselineAverages.ts` (line 255) for the same data \u2014 apply it here too for consistency.",
       "implemented": false
     },
     {
@@ -131,7 +135,7 @@
       "category": "simplicity",
       "file": "src/lib/baselineAverages.ts",
       "line": 296,
-      "title": "habitId field reused as a generic key field in fluid deltas — misleading type",
+      "title": "habitId field reused as a generic key field in fluid deltas \u2014 misleading type",
       "description": "`BaselineDelta` uses the field name `habitId` for both habit deltas and fluid deltas (where it holds a fluid name like `\"water\"` or the sentinel `\"__total_fluid__\"`). This is called out with an inline comment (`// use fluidName as the key for fluid deltas`) but the type mismatch will confuse future callers and produces an incorrect schema for the AI analysis that reads these deltas.",
       "fix": "Rename the field to `key` or `entityId` in the `BaselineDelta` type. Update all consumers. If the type is shared with Convex validators, check that the validator name also changes.",
       "implemented": false
@@ -153,7 +157,7 @@
       "category": "quality",
       "file": "src/lib/baselineAverages.ts",
       "line": 97,
-      "title": "Date.now() called at the top of computeBaselineAverages — clock captured before heavy computation",
+      "title": "Date.now() called at the top of computeBaselineAverages \u2014 clock captured before heavy computation",
       "description": "`const now = Date.now()` is captured before the rest of the computation. If the computation is slow (large log history), the `computedAt` timestamp in the returned object may be noticeably earlier than when the result is actually used. This is cosmetic for most uses but worth noting for any time-since-computed display logic.",
       "fix": "Move `const now = Date.now()` to immediately before the `return` statement.",
       "implemented": false
@@ -166,14 +170,15 @@
       "line": 220,
       "title": "toValidatedSyncedLog casts data without runtime shape validation",
       "description": "Each branch of the switch does `data as LogDataMap[K]`, relying entirely on the server-side Convex validator to guarantee data shape. This is architecturally correct, but there is no comment or assertion to guard against future schema changes where the server returns a superset of the client type (e.g. server adds a new field that the client type does not model). If the client type diverges from the server schema, the cast silently succeeds and downstream code may read `undefined` for a field it expects.",
-      "fix": "Not urgent — the Convex type generation (`_generated/dataModel`) mitigates this. Add a comment noting that correctness relies on `dataModel` staying in sync. Consider adding a narrow runtime assertion on at least one discriminating field per case in a dev build.",
+      "fix": "Not urgent \u2014 the Convex type generation (`_generated/dataModel`) mitigates this. Add a comment noting that correctness relies on `dataModel` staying in sync. Consider adding a narrow runtime assertion on at least one discriminating field per case in a dev build.",
       "implemented": false
     }
   ],
   "summary": {
     "critical": 0,
     "high": 4,
-    "moderate": 7,
-    "nice_to_have": 3
+    "moderate": 5,
+    "nice_to_have": 3,
+    "archived": 2
   }
 }

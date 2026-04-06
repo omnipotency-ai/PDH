@@ -18,7 +18,7 @@
       "category": "auth",
       "file": "convex/aggregateQueries.ts",
       "line": 63,
-      "title": "aggregateQueries.ts uses raw ctx.auth.getUserIdentity() throughout — legacy auth pattern",
+      "title": "aggregateQueries.ts uses raw ctx.auth.getUserIdentity() throughout \u2014 legacy auth pattern",
       "description": "Every query handler in `aggregateQueries.ts` (`allFoodTrials`, `foodTrialsByStatus`, `foodTrialByName`, `allWeeklyDigests`, `weeklyDigestByWeek`, `currentWeekDigest`) uses the legacy `ctx.auth.getUserIdentity()` / `identity.subject` pattern instead of `requireAuth(ctx)`. This is flagged in project memory as a HIGH issue: 60+ instances still need migrating.",
       "fix": "Replace all occurrences of:\n```ts\nconst identity = await ctx.auth.getUserIdentity();\nif (identity === null) throw new Error('Not authenticated');\nconst userId = identity.subject;\n```\nWith:\n```ts\nconst { userId } = await requireAuth(ctx);\n```\nAdd `import { requireAuth } from './lib/auth';`.",
       "implemented": false
@@ -29,9 +29,9 @@
       "category": "auth",
       "file": "convex/weeklySummaries.ts",
       "line": 19,
-      "title": "weeklySummaries.ts uses raw ctx.auth.getUserIdentity() — legacy auth pattern",
+      "title": "weeklySummaries.ts uses raw ctx.auth.getUserIdentity() \u2014 legacy auth pattern",
       "description": "All four handlers in `weeklySummaries.ts` (`add`, `getLatest`, `getByWeek`, `listAll`) use the legacy auth pattern. Same issue as F004.",
-      "fix": "Same migration as F004 — use `requireAuth(ctx)` from `./lib/auth`.",
+      "fix": "Same migration as F004 \u2014 use `requireAuth(ctx)` from `./lib/auth`.",
       "implemented": false
     },
     {
@@ -40,7 +40,7 @@
       "category": "auth",
       "file": "convex/conversations.ts",
       "line": 15,
-      "title": "conversations.ts partially migrated — addUserMessage, addAssistantMessage, list, listByReport, listByDateRange, search still use legacy auth",
+      "title": "conversations.ts partially migrated \u2014 addUserMessage, addAssistantMessage, list, listByReport, listByDateRange, search still use legacy auth",
       "description": "`claimPendingReplies` and `pendingReplies` correctly use `requireAuth(ctx)`, but the remaining six handlers use `ctx.auth.getUserIdentity()` directly. Mixed auth patterns in the same file are confusing and error-prone.",
       "fix": "Migrate all remaining handlers in `conversations.ts` to use `requireAuth(ctx)` and remove the legacy pattern from this file.",
       "implemented": false
@@ -63,7 +63,7 @@
       "file": "convex/computeAggregates.ts",
       "line": 605,
       "title": "Date.now() used inside an internalMutation (updateWeeklyDigest)",
-      "description": "`updateWeeklyDigestImpl` uses `Date.now()` on line 605 (`updatedAt: Date.now()`) inside a function called from an `internalMutation`. Convex mutations must be deterministic — they are replayed on failure. `Date.now()` will return a different value on replay, making the `updatedAt` field non-deterministic and potentially incorrect. The same issue exists in `waitlist.ts` lines 49 and 82.",
+      "description": "`updateWeeklyDigestImpl` uses `Date.now()` on line 605 (`updatedAt: Date.now()`) inside a function called from an `internalMutation`. Convex mutations must be deterministic \u2014 they are replayed on failure. `Date.now()` will return a different value on replay, making the `updatedAt` field non-deterministic and potentially incorrect. The same issue exists in `waitlist.ts` lines 49 and 82.",
       "fix": "Pass `recomputeAt` (already computed on line 326 and available in the digest context) as the `updatedAt` value instead of `Date.now()`:\n```ts\nupdatedAt: args.eventTimestamp, // or derive a recomputeAt from loaded data\n```\nFor `waitlist.ts`, accept `subscribedAt`/`unsubscribedAt` as args from the action layer, or use `ctx._creationTime` as a deterministic anchor.",
       "implemented": false
     },
@@ -76,7 +76,9 @@
       "title": "Date.now() used inside mutations in waitlist.ts",
       "description": "`subscribedAt: Date.now()` (line 49 and 66) and `unsubscribedAt: Date.now()` (line 82) are called inside mutations. Mutations are replayed by Convex on failure; `Date.now()` will differ across replays, producing non-deterministic timestamps. This is a Convex correctness violation.",
       "fix": "Pass the timestamp in as an argument from the client and validate it is within a reasonable range, or derive it from `ctx.scheduler` scheduling time. Example:\n```ts\nargs: { ..., subscribedAt: v.number() }\n// client passes Date.now() before calling the mutation\n```",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "F010",
@@ -85,7 +87,7 @@
       "file": "convex/aggregateQueries.ts",
       "line": 158,
       "title": "currentWeekDigest uses new Date() and wall-clock arithmetic inside a query",
-      "description": "`currentWeekDigest` (line 152-173) uses `new Date()` and `now.getDay()` to compute the current Monday inside a Convex `query`. Queries must be deterministic and referentially transparent — the same query with the same DB state must always return the same result. Using wall-clock time in a query means it silently changes behavior at midnight on Monday without any data change triggering a re-evaluation. This also makes the query non-cacheable and non-testable.",
+      "description": "`currentWeekDigest` (line 152-173) uses `new Date()` and `now.getDay()` to compute the current Monday inside a Convex `query`. Queries must be deterministic and referentially transparent \u2014 the same query with the same DB state must always return the same result. Using wall-clock time in a query means it silently changes behavior at midnight on Monday without any data change triggering a re-evaluation. This also makes the query non-cacheable and non-testable.",
       "fix": "Accept the week start timestamp as an arg from the client (the client already knows what week it is):\n```ts\nexport const currentWeekDigest = query({\n  args: { weekStartTimestamp: v.number() },\n  handler: async (ctx, args) => {\n    const { userId } = await requireAuth(ctx);\n    return ctx.db.query('weeklyDigest')\n      .withIndex('by_userId_weekStart', q => q.eq('userId', userId).eq('weekStartTimestamp', args.weekStartTimestamp))\n      .first();\n  }\n});\n```",
       "implemented": false
     },
@@ -96,7 +98,7 @@
       "file": "convex/computeAggregates.ts",
       "line": 316,
       "title": "Date.now() used as fallback anchor in internalMutation (updateFoodTrialSummaryImpl)",
-      "description": "Line 316: `const windowAnchor = aiAnalysis?.timestamp ?? Date.now();`. This is inside `updateFoodTrialSummaryImpl` which is called from an `internalMutation`. If `aiAnalysis` is null (e.g., the ID was just written and the mutation reads before it commits — unlikely but possible in edge cases), the fallback `Date.now()` makes the mutation non-deterministic.",
+      "description": "Line 316: `const windowAnchor = aiAnalysis?.timestamp ?? Date.now();`. This is inside `updateFoodTrialSummaryImpl` which is called from an `internalMutation`. If `aiAnalysis` is null (e.g., the ID was just written and the mutation reads before it commits \u2014 unlikely but possible in edge cases), the fallback `Date.now()` makes the mutation non-deterministic.",
       "fix": "If `aiAnalysis` is null, fail explicitly rather than silently falling back to wall-clock time:\n```ts\nif (!aiAnalysis) {\n  console.warn(`[updateFoodTrialSummary] aiAnalysis ${args.aiAnalysisId} not found, skipping`);\n  return { updated: 0 };\n}\nconst windowAnchor = aiAnalysis.timestamp;\n```",
       "implemented": false
     },
@@ -106,7 +108,7 @@
       "category": "convex",
       "file": "convex/aggregateQueries.ts",
       "line": 146,
-      "title": "suggestionsByDateRange uses .collect() with no limit — potential full-scan",
+      "title": "suggestionsByDateRange uses .collect() with no limit \u2014 potential full-scan",
       "description": "Wait, this function is in `aiAnalyses.ts`. `suggestionsByDateRange` (line 138) calls `.collect()` on `aiAnalyses` filtered by a timestamp range with no cap. For a user with many AI analyses over a broad date range, this could read thousands of documents in a single query. The function is also in a file named `aiAnalyses.ts`, not `aggregateQueries.ts`.",
       "fix": "Add a `.take(limit)` with a reasonable cap (e.g., 500) and document the constraint. Alternatively, store suggestions in their own index-able table if this query becomes a hot path.",
       "implemented": false
@@ -117,7 +119,7 @@
       "category": "convex",
       "file": "convex/aiAnalyses.ts",
       "line": 175,
-      "title": "latestSuccessful does a take(100) then filters in JS — fragile if user has many failed analyses",
+      "title": "latestSuccessful does a take(100) then filters in JS \u2014 fragile if user has many failed analyses",
       "description": "`latestSuccessful` takes the 100 most recent rows then does `rows.find(...)` in memory. If the user's last 100 analyses are all failures, the function returns null even though a successful analysis exists further back. This produces a silent, incorrect result rather than an explicit error.",
       "fix": "Either:\n1. Add a dedicated index on `(userId, error)` or `(userId, hasInsight)` if the table is large enough to warrant it.\n2. Or increase the take limit and document the assumption, with an explicit warning if none is found after scanning N rows:\n```ts\n// If all 100 are failures, log a warning so it surfaces in monitoring\nif (!row) console.warn(`[latestSuccessful] No successful analysis found in last 100 for user ${userId}`);\n```",
       "implemented": false
@@ -163,8 +165,10 @@
       "line": 36,
       "title": "Waitlist join mutation has no rate limiting or email format validation",
       "description": "The `join` mutation accepts any email string up to 254 characters and is callable without authentication (no auth check). There is no email format validation (a Convex validator only checks type, not format) and no rate-limiting mechanism. A script could flood the waitlist table with garbage entries.",
-      "fix": "1. Add basic email format validation with a regex before the upsert.\n2. Consider adding a honeypot or rate-limit field (e.g., track the number of inserts from a given IP — though Convex does not expose IP natively, this may need a Convex HTTP action with Cloudflare rate limiting in front).\n3. At minimum validate the email has an `@` and a dot in the domain:\n```ts\nif (!/^[^@]+@[^@]+\\.[^@]+$/.test(email)) throw new Error('Invalid email address');\n```",
-      "implemented": false
+      "fix": "1. Add basic email format validation with a regex before the upsert.\n2. Consider adding a honeypot or rate-limit field (e.g., track the number of inserts from a given IP \u2014 though Convex does not expose IP natively, this may need a Convex HTTP action with Cloudflare rate limiting in front).\n3. At minimum validate the email has an `@` and a dot in the domain:\n```ts\nif (!/^[^@]+@[^@]+\\.[^@]+$/.test(email)) throw new Error('Invalid email address');\n```",
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "F018",
@@ -172,9 +176,9 @@
       "category": "convex",
       "file": "convex/ai.ts",
       "line": 39,
-      "title": "No server-side AI rate limiting — a user can call chatCompletion unlimited times",
+      "title": "No server-side AI rate limiting \u2014 a user can call chatCompletion unlimited times",
       "description": "The `chatCompletion` action has no rate limiting or per-user call tracking. A user (or compromised session) can call this in a tight loop, consuming their own API key quota or, if the server-stored key path is taken, exhausting a shared key. There is no tracking of usage in this file, and no guard against repeated calls.",
-      "fix": "Consider adding rate-limit metadata to the user's profile or a dedicated `rateLimits` table — check it at the start of the action and increment on success. A simple per-minute or per-hour counter would prevent runaway consumption:\n```ts\n// Pseudocode\nconst usage = await ctx.runQuery(internal.rateLimits.checkAndIncrement, { userId, window: '1h', limit: 50 });\nif (!usage.allowed) throw new Error('[NON_RETRYABLE] [QUOTA_ERROR] Rate limit exceeded');\n```",
+      "fix": "Consider adding rate-limit metadata to the user's profile or a dedicated `rateLimits` table \u2014 check it at the start of the action and increment on success. A simple per-minute or per-hour counter would prevent runaway consumption:\n```ts\n// Pseudocode\nconst usage = await ctx.runQuery(internal.rateLimits.checkAndIncrement, { userId, window: '1h', limit: 50 });\nif (!usage.allowed) throw new Error('[NON_RETRYABLE] [QUOTA_ERROR] Rate limit exceeded');\n```",
       "implemented": false
     },
     {
@@ -183,7 +187,7 @@
       "category": "convex",
       "file": "convex/ai.ts",
       "line": 38,
-      "title": "model arg is unconstrained — client can request any OpenAI model",
+      "title": "model arg is unconstrained \u2014 client can request any OpenAI model",
       "description": "The `model` parameter is a free-form `v.string()` with no allowlist. A client could request expensive models (`gpt-4o`, `o1-preview`, etc.) or invalid model strings. The server has no way to enforce which models users are permitted to use.",
       "fix": "Replace `v.string()` with a `v.union(v.literal(...), ...)` allowlist of permitted model identifiers, or validate against a set at runtime:\n```ts\nconst ALLOWED_MODELS = new Set(['gpt-4.1-nano', 'gpt-4o-mini', 'gpt-4o']);\nif (!ALLOWED_MODELS.has(args.model)) throw new Error('[NON_RETRYABLE] [KEY_ERROR] Model not permitted');\n```",
       "implemented": false
@@ -194,9 +198,9 @@
       "category": "convex",
       "file": "convex/ai.ts",
       "line": 39,
-      "title": "Client-supplied apiKey accepted in args — creates a key-laundering surface",
+      "title": "Client-supplied apiKey accepted in args \u2014 creates a key-laundering surface",
       "description": "The action accepts `apiKey: v.string()` from the client and uses it as the OpenAI key. This means any authenticated user can pass an arbitrary API key (including stolen or shared keys) through the server's OpenAI call path. The design intention appears to be BYOK (bring your own key) where the client sends the key, but this conflates BYOK with a server-relay pattern in a way that could be used to proxy calls through your infrastructure with a third-party's key.",
-      "fix": "If BYOK is intended, document this explicitly and add logging of the key suffix used per call so abuse can be detected. Consider making the `apiKey` arg optional and only usable if the user has no server-stored key — i.e., enforce a priority: server-stored key > client-supplied key, which is the reverse of the current `prefer client-provided` logic. Review `feedback_llm_key_architecture.md` for the original BYOK decision.",
+      "fix": "If BYOK is intended, document this explicitly and add logging of the key suffix used per call so abuse can be detected. Consider making the `apiKey` arg optional and only usable if the user has no server-stored key \u2014 i.e., enforce a priority: server-stored key > client-supplied key, which is the reverse of the current `prefer client-provided` logic. Review `feedback_llm_key_architecture.md` for the original BYOK decision.",
       "implemented": false
     },
     {
@@ -206,8 +210,8 @@
       "file": "convex/computeAggregates.ts",
       "line": 189,
       "title": "upsertFoodTrialSummaries deleteOrphans=true branch has dead-code duplicate",
-      "description": "Lines 189-199: when `deleteOrphans` is true, both branches of the inner `if (expectedCanonicalNames.has(canonicalName))` execute the same `ctx.db.delete(summary._id)` statement. The two branches have different comments but identical effect — the conditional is dead code and the comment about 'stale alias duplicate' vs 'orphan' distinction is meaningless in this path.",
-      "fix": "Remove the inner conditional when `deleteOrphans` is true — just delete unconditionally:\n```ts\nif (deleteOrphans) {\n  await ctx.db.delete(summary._id);\n} else {\n  if (expectedCanonicalNames.has(canonicalName)) {\n    await ctx.db.delete(summary._id);\n  }\n}\n```",
+      "description": "Lines 189-199: when `deleteOrphans` is true, both branches of the inner `if (expectedCanonicalNames.has(canonicalName))` execute the same `ctx.db.delete(summary._id)` statement. The two branches have different comments but identical effect \u2014 the conditional is dead code and the comment about 'stale alias duplicate' vs 'orphan' distinction is meaningless in this path.",
+      "fix": "Remove the inner conditional when `deleteOrphans` is true \u2014 just delete unconditionally:\n```ts\nif (deleteOrphans) {\n  await ctx.db.delete(summary._id);\n} else {\n  if (expectedCanonicalNames.has(canonicalName)) {\n    await ctx.db.delete(summary._id);\n  }\n}\n```",
       "implemented": false
     },
     {
@@ -217,7 +221,7 @@
       "file": "convex/computeAggregates.ts",
       "line": 136,
       "title": "latestAiVerdict ternary is a no-op passthrough for non-avoid/non-trial_next values",
-      "description": "Lines 136-141 compute `latestAiVerdict` using a ternary:\n```ts\nconst latestAiVerdict = summary.latestAiVerdict === 'avoid' ? 'avoid' :\n  summary.latestAiVerdict === 'trial_next' ? 'trial_next' : summary.latestAiVerdict;\n```\nThe else branch returns `summary.latestAiVerdict` unchanged. This is equivalent to just `summary.latestAiVerdict` — the conditional adds no logic and is misleading.",
+      "description": "Lines 136-141 compute `latestAiVerdict` using a ternary:\n```ts\nconst latestAiVerdict = summary.latestAiVerdict === 'avoid' ? 'avoid' :\n  summary.latestAiVerdict === 'trial_next' ? 'trial_next' : summary.latestAiVerdict;\n```\nThe else branch returns `summary.latestAiVerdict` unchanged. This is equivalent to just `summary.latestAiVerdict` \u2014 the conditional adds no logic and is misleading.",
       "fix": "Remove the redundant ternary: `const latestAiVerdict = summary.latestAiVerdict;`",
       "implemented": false
     },
@@ -227,7 +231,7 @@
       "category": "quality",
       "file": "convex/aiAnalyses.ts",
       "line": 67,
-      "title": "list query limit clamps to 1000 — document why 1000 is safe",
+      "title": "list query limit clamps to 1000 \u2014 document why 1000 is safe",
       "description": "The `list` query clamps the limit to `Math.min(Math.max(args.limit ?? 50, 1), 1000)`. 1000 aiAnalysis rows is not inherently dangerous, but it should be documented why this ceiling is acceptable relative to Convex's 32K document read limit. If each row is large, 1000 may still cause performance issues.",
       "fix": "Add a comment explaining the limit justification, similar to the WQ-335 comment pattern used in `computeAggregates.ts`.",
       "implemented": false
@@ -235,8 +239,9 @@
   ],
   "summary": {
     "critical": 0,
-    "high": 11,
+    "high": 7,
     "moderate": 10,
-    "nice_to_have": 2
+    "nice_to_have": 1,
+    "archived": 2
   }
 }

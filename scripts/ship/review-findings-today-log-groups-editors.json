@@ -27,7 +27,7 @@
       "file": "src/components/track/today-log/groups/HabitGroupRows.tsx",
       "line": 158,
       "title": "EventHabitRow bulk delete fires all deletes in a fire-and-forget loop with no error handling",
-      "description": "The 'Uncheck' button iterates entries and calls `void onDelete(entry.id)` for each one inside a plain onClick handler — no try/catch, no toast on failure, and no confirmation. This is particularly risky because EventHabitRow can hold multiple entries. If any delete fails (network blip, Convex error), the UI silently stays inconsistent. Compare this to EditableEntryRow's 'Sure?/Yes/No' confirmation gate and the `await onDelete` in FoodProcessingView — the uncheck path skips both protections.",
+      "description": "The 'Uncheck' button iterates entries and calls `void onDelete(entry.id)` for each one inside a plain onClick handler \u2014 no try/catch, no toast on failure, and no confirmation. This is particularly risky because EventHabitRow can hold multiple entries. If any delete fails (network blip, Convex error), the UI silently stays inconsistent. Compare this to EditableEntryRow's 'Sure?/Yes/No' confirmation gate and the `await onDelete` in FoodProcessingView \u2014 the uncheck path skips both protections.",
       "fix": "Wrap in an async onClick, await each delete in sequence (or Promise.all), catch errors and toast them. Also consider whether bulk-unchecking all entries without a confirmation prompt is appropriate when there is more than one entry in the group.",
       "implemented": false
     },
@@ -38,7 +38,7 @@
       "file": "src/components/track/today-log/editors/FoodSubRow.tsx",
       "line": 176,
       "title": "FoodProcessingView delete has no error handling",
-      "description": "The delete in FoodProcessingView does `await onDelete(entry.id)` inside an async onClick but is not wrapped in try/catch. A rejected promise (Convex mutation error, network failure) will bubble as an unhandled rejection — nothing is shown to the user. The main EditableEntryRow delete path has the same gap: it awaits onDelete at line 259 without a catch block. This means delete failures are silent in all three call sites in the codebase.",
+      "description": "The delete in FoodProcessingView does `await onDelete(entry.id)` inside an async onClick but is not wrapped in try/catch. A rejected promise (Convex mutation error, network failure) will bubble as an unhandled rejection \u2014 nothing is shown to the user. The main EditableEntryRow delete path has the same gap: it awaits onDelete at line 259 without a catch block. This means delete failures are silent in all three call sites in the codebase.",
       "fix": "Wrap `await onDelete(...)` in try/catch and call `toast.error(...)` in the catch, consistent with how handleSave treats errors in EditableEntryRow.",
       "implemented": false
     },
@@ -82,7 +82,7 @@
       "file": "src/components/track/today-log/editors/WeightSubRow.tsx",
       "line": 29,
       "title": "buildSaveData falls back to the original weight on invalid input instead of blocking save",
-      "description": "If the user types a non-numeric or zero value into the weight input, buildSaveData silently falls back to `entry.data.weightKg`. The user sees no error and the save succeeds — but with the original data unchanged while appearing to have saved their edit. This is particularly confusing if the user deliberately cleared the field intending to enter a new value.",
+      "description": "If the user types a non-numeric or zero value into the weight input, buildSaveData silently falls back to `entry.data.weightKg`. The user sees no error and the save succeeds \u2014 but with the original data unchanged while appearing to have saved their edit. This is particularly confusing if the user deliberately cleared the field intending to enter a new value.",
       "fix": "Either block the save and show a validation error when the parsed value is not a finite positive number, or disable the Save button when the draft is invalid. Do not silently fall back to old data.",
       "implemented": false
     },
@@ -95,7 +95,9 @@
       "title": "buildSaveData falls back to the stored periodStartDate when the draft is empty, hiding a user-clear action",
       "description": "If the user clears the period start date field, `draftPeriodStartDate || entry.data.periodStartDate` resolves to the original stored value, silently ignoring the user's intent to clear the field. This makes it impossible to remove an incorrect period start date via the inline editor.",
       "fix": "Either allow the empty string to be saved as-is (if the domain type permits it), show a validation error, or handle the clear intent explicitly. At minimum, do not silently restore the previous value.",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "G008",
@@ -115,7 +117,7 @@
       "file": "src/components/track/today-log/groups/WeightGroupRow.tsx",
       "line": 54,
       "title": "WeightGroupRow wraps a plain timestamp in a Tooltip with identical content in trigger and tooltip",
-      "description": "The tooltip trigger displays `truncatePreviewText(format(latest.timestamp, 'HH:mm'))` which is always short (5 chars), and the tooltip body shows the identical value. The tooltip adds zero information. Contrast with FluidGroupRow where the tooltip reveals the full text that is truncated in the trigger — that use is correct. WeightGroupRow's tooltip is a no-op component add that adds DOM nodes and aria overhead for no benefit.",
+      "description": "The tooltip trigger displays `truncatePreviewText(format(latest.timestamp, 'HH:mm'))` which is always short (5 chars), and the tooltip body shows the identical value. The tooltip adds zero information. Contrast with FluidGroupRow where the tooltip reveals the full text that is truncated in the trigger \u2014 that use is correct. WeightGroupRow's tooltip is a no-op component add that adds DOM nodes and aria overhead for no benefit.",
       "fix": "Remove the Tooltip wrapper from WeightGroupRow's preview and render the timestamp directly as a plain `<p>` like ActivityGroupRow does.",
       "implemented": false
     },
@@ -168,7 +170,8 @@
     "critical": 0,
     "high": 3,
     "moderate": 7,
-    "nice_to_have": 3
+    "nice_to_have": 2,
+    "archived": 1
   },
   "assessment": "CHANGES_REQUIRED"
 }

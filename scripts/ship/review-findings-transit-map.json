@@ -31,8 +31,10 @@
       "line": 67,
       "title": "Pulse animation transformOrigin references parent coordinate space, not the station",
       "description": "The two animated pulse circles use `style={{ transformOrigin: '${x}px ${y}px' }}` where x/y are the SVG parent coordinates passed as props. But the <g> element already has `transform='translate(${x}, ${y})'`, so the station is at (0,0) in its own local coordinate system. The transform-origin is therefore pointing to completely the wrong point in the local coordinate system. The circles will scale from an offset origin rather than from the center of the station, producing visually broken or invisible animations on any station that is not at (0,0) in SVG space.",
-      "fix": "Remove the `transformOrigin` style entirely — SVG transform-origin on child elements is relative to the element's own local coordinate system. Because the parent <g> is already translated to (x, y), the circles are centered at (0, 0) and will scale from their own center by default. No explicit transformOrigin is needed.",
-      "implemented": false
+      "fix": "Remove the `transformOrigin` style entirely \u2014 SVG transform-origin on child elements is relative to the element's own local coordinate system. Because the parent <g> is already translated to (x, y), the circles are centered at (0, 0) and will scale from their own center by default. No explicit transformOrigin is needed.",
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "TM-002",
@@ -41,9 +43,11 @@
       "file": "src/components/patterns/transit-map/TransitMap.tsx",
       "line": 396,
       "title": "Per-station <clipPath> elements created in SVG <defs> on every render",
-      "description": "The <defs> block flatMaps all positionedTracks to create one <clipPath> per station, where every clipPath contains a <circle cx='0.5' cy='0.5' r='0.5'> with clipPathUnits='objectBoundingBox'. These elements are identical for every station — only the id differs. When positionedTracks changes (on every subline switch), React diffs and re-creates all of these. With 147 registered stations across tracks, this is up to 147 identical DOM nodes that could be one shared definition. This also bloats the SVG DOM unnecessarily.",
+      "description": "The <defs> block flatMaps all positionedTracks to create one <clipPath> per station, where every clipPath contains a <circle cx='0.5' cy='0.5' r='0.5'> with clipPathUnits='objectBoundingBox'. These elements are identical for every station \u2014 only the id differs. When positionedTracks changes (on every subline switch), React diffs and re-creates all of these. With 147 registered stations across tracks, this is up to 147 identical DOM nodes that could be one shared definition. This also bloats the SVG DOM unnecessarily.",
       "fix": "Define a single shared clipPath (e.g. id='${svgIdPrefix}-station-clip') with the circle inside it, then reference that single clipPath from every StationMarker instead of generating one per station. The clipPath is identical for all stations.",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "TM-003",
@@ -54,7 +58,9 @@
       "title": "RegistryTransitMap is a near-complete duplicate of TransitMapContainer",
       "description": "RegistryTransitMap.tsx and TransitMapContainer.tsx share almost identical structure: same GROUP_THEME record, same useTransitMapData call, same selectedCanonical state + ref pattern, same firstStation useMemo, same useEffect with selectedCanonicalRef guard, same summary cards, same corridor/line rendering loop, same inspector panel aside. The differences are: (1) RegistryTransitMap inlines StationButton and StationDetail locally rather than importing StationNode/StationInspector, and (2) minor class variations. This creates a maintenance burden: any fix to one component must be mirrored in the other, and it already shows divergence (StationNode has `animate-pulse` on building signal; StationButton in RegistryTransitMap does not).",
       "fix": "Delete RegistryTransitMap.tsx and ensure all callers use TransitMapContainer instead. If the inline StationButton/StationDetail are preferred over the imported StationNode/StationInspector for any reason, document that decision; otherwise consolidate into StationNode and StationInspector.",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "TM-004",
@@ -65,7 +71,9 @@
       "title": "useTransitMapData called twice when network prop is provided",
       "description": "TransitMapCanvas calls `useTransitMapData(foodStats)` unconditionally at line 476, then immediately overrides the result with `networkProp ?? networkFromHook` at line 477. When TransitMapWithLabels renders TransitMapCanvas and passes its own `network` prop (computed from its own `useTransitMapData` call at line 171 of TransitMapWithLabels), TransitMapCanvas still runs a second `useTransitMapData` hook call that is discarded. This means every render of the canvas in the withLabels context performs two identical data derivation passes.",
       "fix": "If network data needs to come from outside, require it via a required prop and remove the internal hook call, or make the component explicitly document that `foodStats` is ignored when `network` is provided. The simplest fix: rename to require `network` as a required prop since both callers already have it available.",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "TM-005",
@@ -74,9 +82,11 @@
       "file": "src/components/patterns/transit-map/useTransitScene.ts",
       "line": 84,
       "title": "distribute() called twice per station in Zone Two tracks",
-      "description": "In the Zone Two top and bottom track sections (lines 84 and 108), `distribute(start, end, count)[index]` is called inside `stations.map(...)`, meaning `distribute()` is called once per station to get one element. For a track with N stations, `distribute()` runs N times, each time rebuilding the full Array.from of length N, just to throw away all entries except index. This is O(N²) work disguised as a single map. This pattern appears in two places. It also differs from the Zone One and Zone Three patterns which compute yPoints/offsets once before the map.",
-      "fix": "Compute `distribute(start, end, count)` once before the .map() call, then index into the result inside the map — matching the pattern already used for Zone One (lines 45-46) and Zone Three (lines 118).",
-      "implemented": false
+      "description": "In the Zone Two top and bottom track sections (lines 84 and 108), `distribute(start, end, count)[index]` is called inside `stations.map(...)`, meaning `distribute()` is called once per station to get one element. For a track with N stations, `distribute()` runs N times, each time rebuilding the full Array.from of length N, just to throw away all entries except index. This is O(N\u00b2) work disguised as a single map. This pattern appears in two places. It also differs from the Zone One and Zone Three patterns which compute yPoints/offsets once before the map.",
+      "fix": "Compute `distribute(start, end, count)` once before the .map() call, then index into the result inside the map \u2014 matching the pattern already used for Zone One (lines 45-46) and Zone Three (lines 118).",
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "TM-006",
@@ -87,7 +97,9 @@
       "title": "ZONE_SURFACES accessed without bounds check on index",
       "description": "ZoneCard receives `index` as a prop and accesses `ZONE_SURFACES[index]` without verifying index is within bounds. ZONE_SURFACES is a `const` tuple of exactly 3 elements. If ZoneCard is ever called with index 3 or higher, `tone` will be `undefined` and the component will throw at runtime when accessing `tone.fill`. The call site in TransitMap.tsx uses hard-coded 0, 1, 2 today, but this is a fragile assumption that's one refactor away from breaking.",
       "fix": "Either narrow the prop to `index: 0 | 1 | 2`, or add a guard: `const tone = ZONE_SURFACES[index] ?? ZONE_SURFACES[0];`.",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "TM-007",
@@ -98,7 +110,9 @@
       "title": "flatMap over positionedTracks called inline during render for station count",
       "description": "Line 316 runs `positionedTracks.flatMap((track) => track.stations).length` inline inside the JSX expression used to populate the 'Stops' stat card. This computes a new intermediate array every render just to get a count. Since positionedTracks is already stable from useMemo, the count should be derived once.",
       "fix": "Add a `totalStations` value derived from the `counts` object (sum all status counts) or compute it in the `useTransitScene` hook alongside the existing `counts` useMemo, then reference that number directly.",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "TM-008",
@@ -107,9 +121,11 @@
       "file": "src/components/patterns/transit-map/StationInspector.tsx",
       "line": 112,
       "title": "avgTransitMinutes converted to hours using integer arithmetic with inconsistent rounding",
-      "description": "Line 112 uses `Math.round(station.avgTransitMinutes / 6) / 10` to convert minutes to hours. This is equivalent to `Math.round(minutes / 6) / 10 = Math.round(minutes * 10 / 60) / 10`, which computes one decimal place of hours. However, it does NOT compute `Math.round(minutes / 60 * 10) / 10` — it computes `Math.round(minutes / 6) / 10`. These are equivalent mathematically, but the intent is completely opaque. The identical pattern also appears in RegistryTransitMap.tsx line 362, and RegistryTransitMap adds an inline comment explaining it, which suggests the original author knew this was confusing. If avgTransitMinutes is not a multiple of 6, rounding artifacts can differ from a direct division approach.",
+      "description": "Line 112 uses `Math.round(station.avgTransitMinutes / 6) / 10` to convert minutes to hours. This is equivalent to `Math.round(minutes / 6) / 10 = Math.round(minutes * 10 / 60) / 10`, which computes one decimal place of hours. However, it does NOT compute `Math.round(minutes / 60 * 10) / 10` \u2014 it computes `Math.round(minutes / 6) / 10`. These are equivalent mathematically, but the intent is completely opaque. The identical pattern also appears in RegistryTransitMap.tsx line 362, and RegistryTransitMap adds an inline comment explaining it, which suggests the original author knew this was confusing. If avgTransitMinutes is not a multiple of 6, rounding artifacts can differ from a direct division approach.",
       "fix": "Extract a shared utility function: `function formatTransitHours(minutes: number): string { return `${Math.round(minutes / 60 * 10) / 10}h`; }`. Use it in both StationInspector and RegistryTransitMap. The direct division is clearer and less likely to confuse future readers.",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "TM-009",
@@ -118,9 +134,11 @@
       "file": "src/components/patterns/transit-map/StationMarker.tsx",
       "line": 41,
       "title": "SVG station group fires onFocus which calls onSelect, selecting a station on tab-focus",
-      "description": "Line 50: `onFocus={onSelect}`. When a keyboard user tabs to a station to review it, the station is immediately selected (pinned) on focus rather than on activation (Enter/Space). This is unexpected for keyboard users — typically focus previews and explicit activation commits. The expected pattern is that focus shows a tooltip/preview, and only Enter or Space commits a selection. The onKeyDown handler on lines 52-56 correctly handles Enter/Space, but onFocus also fires onSelect, so selection happens on mere focus.",
+      "description": "Line 50: `onFocus={onSelect}`. When a keyboard user tabs to a station to review it, the station is immediately selected (pinned) on focus rather than on activation (Enter/Space). This is unexpected for keyboard users \u2014 typically focus previews and explicit activation commits. The expected pattern is that focus shows a tooltip/preview, and only Enter or Space commits a selection. The onKeyDown handler on lines 52-56 correctly handles Enter/Space, but onFocus also fires onSelect, so selection happens on mere focus.",
       "fix": "Remove `onFocus={onSelect}`. If a focus-preview tooltip is desired, wire `onFocus` to the same hover handler used for mouse (e.g., show the tooltip). Selection should only trigger on click or keyboard activation.",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "TM-010",
@@ -131,7 +149,9 @@
       "title": "Inline arrow functions for every event handler on every station marker",
       "description": "In the stations.map() render loop (lines 110-114), four new inline arrow functions are created per station per render: `(event) => onStationHover(...)`, `(event) => onStationMove(...)`, `onStationLeave` (passed through, ok), `() => onStationSelect(...)`. For a track with many stations, this creates many unstable function references on every render. Because StationMarker is not memoized, any state change in TransitMap (e.g., tooltip position update on mouse move) causes all TrackSegments to re-render and all StationMarkers to re-render unnecessarily.",
       "fix": "Wrap StationMarker with React.memo. Inside TrackSegment, use useCallback with station.station.id in the dependency array, or pass stationId + handler separately and let StationMarker construct the bound call itself.",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "TM-011",
@@ -140,9 +160,11 @@
       "file": "src/components/patterns/transit-map/TransitMap.tsx",
       "line": 140,
       "title": "Inline <style> block creates a new style element on every render",
-      "description": "Line 140-146 renders a `<style>` element with a CSS `@keyframes transit-pulse` animation directly inside the JSX. This is inside a React component that re-renders (e.g., on hover/tooltip updates), so React will update the style element's text content on every render. While browsers may cache the animation, injecting a style tag inline inside a rendered component is an anti-pattern. The animation is also not scoped — it uses a global class name `transit-pulse` that could conflict with other components.",
+      "description": "Line 140-146 renders a `<style>` element with a CSS `@keyframes transit-pulse` animation directly inside the JSX. This is inside a React component that re-renders (e.g., on hover/tooltip updates), so React will update the style element's text content on every render. While browsers may cache the animation, injecting a style tag inline inside a rendered component is an anti-pattern. The animation is also not scoped \u2014 it uses a global class name `transit-pulse` that could conflict with other components.",
       "fix": "Move the `@keyframes transit-pulse` definition to a global CSS/Tailwind layer file (e.g., `src/styles/animations.css` or inside a `@layer utilities` block in the Tailwind config). This is defined once, not on every render, and doesn't risk duplication.",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "TM-012",
@@ -150,10 +172,12 @@
       "category": "correctness",
       "file": "src/components/patterns/transit-map/useStationArtwork.ts",
       "line": 155,
-      "title": "stations array identity not stable — useEffect fires on every render of TransitMap",
-      "description": "useStationArtwork receives `stations: Station[]` which is computed inside TransitMap via `useMemo(() => collectSubLineStations(activeSubLine), [activeSubLine])` at line 47 of TransitMap. This is correctly memoized. However, the `stations` array is passed as the dependency of the useEffect at line 199 inside useStationArtwork. React performs reference equality for arrays — if this array reference changes (which it won't on stable activeSubLine, but will on every subLine change), the effect re-fires. The real issue is: collectNeededKeys runs inside the effect every time. If stations is stable, this is fine. But the effect does NOT guard against running when there is nothing new to load (it does — line 162 returns early if keysToLoad.length === 0). This is actually correct. The finding is that the ref-based 'already loaded' tracking at line 157-159 reads `loadedRef.current`, which is the snapshot at effect-run time. If two rapid subline changes happen in quick succession, the second effect sees loadedRef.current from before the first batch completes, and may re-request keys already in flight. This is a minor race condition: worst case is a duplicate fetch that is then discarded by the `cancelled` flag.",
-      "fix": "Low urgency — the cancelled flag prevents applying stale results. Consider using a Set to track in-flight keys to avoid duplicate parallel requests when the subline changes rapidly.",
-      "implemented": false
+      "title": "stations array identity not stable \u2014 useEffect fires on every render of TransitMap",
+      "description": "useStationArtwork receives `stations: Station[]` which is computed inside TransitMap via `useMemo(() => collectSubLineStations(activeSubLine), [activeSubLine])` at line 47 of TransitMap. This is correctly memoized. However, the `stations` array is passed as the dependency of the useEffect at line 199 inside useStationArtwork. React performs reference equality for arrays \u2014 if this array reference changes (which it won't on stable activeSubLine, but will on every subLine change), the effect re-fires. The real issue is: collectNeededKeys runs inside the effect every time. If stations is stable, this is fine. But the effect does NOT guard against running when there is nothing new to load (it does \u2014 line 162 returns early if keysToLoad.length === 0). This is actually correct. The finding is that the ref-based 'already loaded' tracking at line 157-159 reads `loadedRef.current`, which is the snapshot at effect-run time. If two rapid subline changes happen in quick succession, the second effect sees loadedRef.current from before the first batch completes, and may re-request keys already in flight. This is a minor race condition: worst case is a duplicate fetch that is then discarded by the `cancelled` flag.",
+      "fix": "Low urgency \u2014 the cancelled flag prevents applying stale results. Consider using a Set to track in-flight keys to avoid duplicate parallel requests when the subline changes rapidly.",
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "TM-013",
@@ -162,9 +186,11 @@
       "file": "src/components/patterns/transit-map/TransitMapCanvas.tsx",
       "line": 218,
       "title": "Line hit paths use role='button' on SVG <path> which is not a valid ARIA pattern",
-      "description": "Line 218-229: SVG <path> elements in the LineTrackLayer use `role='button'` and `onClick`. SVG path elements with role='button' require `tabIndex={0}` and keyboard handler (onKeyDown with Enter/Space) to be accessible. These are missing. A keyboard user cannot activate the line selection. The same issue exists on the station hitbox circles in StationHitboxLayer (line 440-456) — role='button' circles also lack tabIndex and keyboard handlers.",
+      "description": "Line 218-229: SVG <path> elements in the LineTrackLayer use `role='button'` and `onClick`. SVG path elements with role='button' require `tabIndex={0}` and keyboard handler (onKeyDown with Enter/Space) to be accessible. These are missing. A keyboard user cannot activate the line selection. The same issue exists on the station hitbox circles in StationHitboxLayer (line 440-456) \u2014 role='button' circles also lack tabIndex and keyboard handlers.",
       "fix": "Add `tabIndex={0}` and an `onKeyDown` handler that calls the select handler on Enter/Space, for both line hit paths and station hitbox circles. Alternatively, use SVG `<a>` elements or ensure there's a non-SVG equivalent accessible control.",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "TM-014",
@@ -173,9 +199,11 @@
       "file": "src/components/patterns/transit-map/TransitMapWithLabels.tsx",
       "line": 195,
       "title": "handleLineSelect and handleCorridorSelect assigned without useCallback, breaking memoization",
-      "description": "Lines 195-196: `const handleLineSelect = zoomToLine;` and `const handleCorridorSelect = zoomToCorridor;`. These are direct variable assignments, not useCallback wrappers. The comment on line 194 says they are 'stable useCallback refs from useTransitMapZoom', which may be true — if useTransitMapZoom returns stable refs. But if those refs ever become unstable (e.g. due to a dependency change in that hook), passing them directly without useCallback means TransitMapCanvas will receive unstable prop references and re-render unnecessarily. This is a latent fragility rather than a current bug, but it's inconsistent with how handleStationSelect and handleZoomOut are wrapped.",
+      "description": "Lines 195-196: `const handleLineSelect = zoomToLine;` and `const handleCorridorSelect = zoomToCorridor;`. These are direct variable assignments, not useCallback wrappers. The comment on line 194 says they are 'stable useCallback refs from useTransitMapZoom', which may be true \u2014 if useTransitMapZoom returns stable refs. But if those refs ever become unstable (e.g. due to a dependency change in that hook), passing them directly without useCallback means TransitMapCanvas will receive unstable prop references and re-render unnecessarily. This is a latent fragility rather than a current bug, but it's inconsistent with how handleStationSelect and handleZoomOut are wrapped.",
       "fix": "Either wrap them with `useCallback` for consistency and defensive stability, or add a comment explicitly documenting that zoomToLine and zoomToCorridor are guaranteed stable from useTransitMapZoom and no wrapper is needed.",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "TM-015",
@@ -183,10 +211,12 @@
       "category": "correctness",
       "file": "src/components/patterns/transit-map/TransitMapContainer.tsx",
       "line": 87,
-      "title": "useEffect dependency on network.stationsByCanonical (Map) — referential stability unknown",
-      "description": "Line 93: the useEffect depends on `[firstStation, network.stationsByCanonical]`. If `useTransitMapData` returns a new Map instance on every call (a common mistake in data transformation hooks — the Map is rebuilt from scratch), this effect fires on every render. The consequence is that `setSelectedCanonical` fires unnecessarily, resetting the user's selection to firstStation on every re-render. The ref guard prevents this when the current selection is still valid, but only because `selectedCanonicalRef.current` is checked inside. However, if `network.stationsByCanonical` is always a new Map instance, this effect runs every render and the has() check is the only protection against visible resets. The same pattern exists in RegistryTransitMap.tsx.",
+      "title": "useEffect dependency on network.stationsByCanonical (Map) \u2014 referential stability unknown",
+      "description": "Line 93: the useEffect depends on `[firstStation, network.stationsByCanonical]`. If `useTransitMapData` returns a new Map instance on every call (a common mistake in data transformation hooks \u2014 the Map is rebuilt from scratch), this effect fires on every render. The consequence is that `setSelectedCanonical` fires unnecessarily, resetting the user's selection to firstStation on every re-render. The ref guard prevents this when the current selection is still valid, but only because `selectedCanonicalRef.current` is checked inside. However, if `network.stationsByCanonical` is always a new Map instance, this effect runs every render and the has() check is the only protection against visible resets. The same pattern exists in RegistryTransitMap.tsx.",
       "fix": "Audit `useTransitMapData` to verify it memoizes the returned Map and does not create a new reference on every call. If it does not memoize, this effect fires constantly. The dep array should ideally include a stable primitive (like a serialized station count or a revision counter) rather than the Map reference itself.",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "TM-016",
@@ -195,9 +225,11 @@
       "file": "src/components/patterns/transit-map/TransitMapCanvas.tsx",
       "line": 507,
       "title": "Background click handler derives corridor from hard-coded angle ranges that may not match geometry",
-      "description": "Lines 514-524: the handleBackgroundClick function maps click angles to FoodGroup corridors using hard-coded angle ranges (protein: 145-215, carbs: 215-330, fats: 330/0-50, seasoning: 50-145). These ranges are not derived from the actual geometry data — they are manually matched to the layout assumptions in useTransitMapGeometry. If the geometry ever changes corridor angles (e.g., adding a new corridor, or rotating the layout), this click handler will silently map clicks to wrong corridors with no compile-time or runtime error. The CorridorLabelLayer (lines 377-382) also uses separate hard-coded angles (protein: 180, carbs: 270, fats: 0, seasoning: 90). These three sets of angle data (geometry angles, label angles, click angles) are not colocated or derived from a single source of truth.",
+      "description": "Lines 514-524: the handleBackgroundClick function maps click angles to FoodGroup corridors using hard-coded angle ranges (protein: 145-215, carbs: 215-330, fats: 330/0-50, seasoning: 50-145). These ranges are not derived from the actual geometry data \u2014 they are manually matched to the layout assumptions in useTransitMapGeometry. If the geometry ever changes corridor angles (e.g., adding a new corridor, or rotating the layout), this click handler will silently map clicks to wrong corridors with no compile-time or runtime error. The CorridorLabelLayer (lines 377-382) also uses separate hard-coded angles (protein: 180, carbs: 270, fats: 0, seasoning: 90). These three sets of angle data (geometry angles, label angles, click angles) are not colocated or derived from a single source of truth.",
       "fix": "Derive the click-angle-to-group mapping from the same constants that drive the geometry. Export a `CORRIDOR_ANGLES` record from useTransitMapGeometry and use it in both CorridorLabelLayer and handleBackgroundClick.",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "TM-017",
@@ -208,7 +240,9 @@
       "title": "useId().replace() could produce an empty string if the ID is only colons",
       "description": "Line 38: `useId().replace(/:/g, '')`. React's useId returns strings like ':r0:'. Stripping all colons produces 'r0', which is fine. But this is undocumented behavior depending on React's internal ID format. If React ever changes its useId format, the prefix may collide across components. This is low risk given React's stability guarantees, but worth noting.",
       "fix": "Consider using a `useRef` with a module-level counter as a stable prefix generator, or document the assumption that useId returns ':rN:' format strings.",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "TM-018",
@@ -219,7 +253,9 @@
       "title": "YOU ARE HERE label uses hard-coded color values instead of design tokens",
       "description": "Lines 494-495 use `fill='#86efac'` for the 'YOU ARE HERE' text and `stroke='rgba(74, 222, 128, 0.35)'` for the border. These are the Tailwind `emerald-300/400` colors. The rest of this component consistently uses `var(--...)` design tokens elsewhere in the codebase. This label was likely written quickly without referencing the token system.",
       "fix": "Replace with CSS variable references or the activeSubLine color for consistency. The label currently always renders in emerald regardless of which subLine is active.",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "TM-019",
@@ -227,16 +263,19 @@
       "category": "simplicity",
       "file": "src/components/patterns/transit-map/useStationArtwork.ts",
       "line": 9,
-      "title": "ARTWORK_LOADERS glob includes all PNG assets — no path guard means any stray PNG in that directory is exposed",
+      "title": "ARTWORK_LOADERS glob includes all PNG assets \u2014 no path guard means any stray PNG in that directory is exposed",
       "description": "Line 9: `import.meta.glob('../../../assets/transit-map/*.png', ...)`. This eagerly discovers all PNGs in the transit-map assets directory. If a developer adds an unrelated PNG to that folder (e.g., a placeholder, a debugging image), it becomes part of the LOADER_BY_KEY map and potentially loadable. This is low risk for a private app but worth noting.",
       "fix": "Add a naming convention document for the transit-map assets folder, or consider a manifest file (e.g. `artwork-manifest.ts`) that explicitly lists the valid keys rather than relying on filesystem glob.",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     }
   ],
   "summary": {
     "critical": 0,
-    "high": 4,
-    "moderate": 10,
-    "nice_to_have": 3
+    "high": 0,
+    "moderate": 0,
+    "nice_to_have": 0,
+    "archived": 19
   }
 }
