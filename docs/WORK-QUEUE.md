@@ -93,23 +93,23 @@ Waves 0-3 complete. Wave 4 partially complete (12/18 done). 6 tasks pending rate
 
 ### Wave 4
 
-| Task  | Title                                                               | Depends On | Status  | Commit    |
-| ----- | ------------------------------------------------------------------- | ---------- | ------- | --------- |
-| W4-01 | Make importBackup safe — add caps, chunk inserts, validate          | —          | pending |           |
-| W4-02 | Cap exportBackup parallel table collects                            | W4-01      | pending |           |
-| W4-03 | Optimize buildFoodEvidenceResult — cap inputs, fix O(TxE) loop      | —          | done    | `4aa2254` |
-| W4-04 | Add limit argument to conversations.listByDateRange                 | —          | done    | `5e3b5e5` |
-| W4-05 | Skip FoodMatchingModal query on cold open                           | —          | done    | `1ba90db` |
-| W4-06 | Merge FoodFilterView double frequency scan into single memo         | —          | done    | `1ba90db` |
-| W4-07 | Add .take() caps to unbounded aggregate/exposure/assessment queries | —          | done    | `4aa2254` |
-| W4-08 | Break mergeDuplicates into phased mutations                         | —          | done    | `1797524` |
-| W4-09 | Optimize listFoodEmbeddings staleness check                         | —          | pending |           |
-| W4-10 | Replace per-row setInterval in RelativeTime with global hook        | —          | done    | `0407871` |
-| W4-11 | Optimize ProfileContext — remove JSON.stringify comparison          | —          | pending |           |
-| W4-12 | Reduce client bundle — create ClientFoodRegistryEntry projection    | —          | pending |           |
-| W4-13 | Remove pretty-printed JSON from AI payloads                         | —          | done    | `0407871` |
-| W4-14 | Remove pretty-printed JSON from backup export                       | W4-01      | pending |           |
-| W4-15 | Debounce Patterns.tsx localStorage writes, add runtime validation   | —          | done    | `0407871` |
-| W4-16 | Fix Confetti onComplete re-trigger via useRef                       | —          | done    | `0407871` |
-| W4-17 | Hoist CalendarDayButton getDefaultClassNames to module scope        | —          | done    | `0407871` |
-| W4-18 | Lazy-import TrackPage in routeTree                                  | —          | done    | `0407871` |
+| Task  | Title                                                               | Depends On | Status  | Commit                                                         |
+| ----- | ------------------------------------------------------------------- | ---------- | ------- | -------------------------------------------------------------- |
+| W4-01 | Make importBackup safe — add caps, chunk inserts, validate          | —          | skipped | — deferred: personal-use product, backup safety not a priority |
+| W4-02 | Cap exportBackup parallel table collects                            | W4-01      | skipped | — deferred: personal-use product, depends on W4-01             |
+| W4-03 | Optimize buildFoodEvidenceResult — cap inputs, fix O(TxE) loop      | —          | done    | `4aa2254`                                                      |
+| W4-04 | Add limit argument to conversations.listByDateRange                 | —          | done    | `5e3b5e5`                                                      |
+| W4-05 | Skip FoodMatchingModal query on cold open                           | —          | done    | `1ba90db`                                                      |
+| W4-06 | Merge FoodFilterView double frequency scan into single memo         | —          | done    | `1ba90db`                                                      |
+| W4-07 | Add .take() caps to unbounded aggregate/exposure/assessment queries | —          | done    | `4aa2254`                                                      |
+| W4-08 | Break mergeDuplicates into phased mutations                         | —          | done    | `1797524`                                                      |
+| W4-09 | Optimize listFoodEmbeddings staleness check                         | —          | done    | `c4b22fb`, `8b5096c`                                           |
+| W4-10 | Replace per-row setInterval in RelativeTime with global hook        | —          | done    | `0407871`                                                      |
+| W4-11 | Optimize ProfileContext — remove JSON.stringify comparison          | —          | done    | `825b8f2`, `8dd4b49`                                           |
+| W4-12 | Reduce client bundle — create ClientFoodRegistryEntry projection    | —          | skipped | — deferred: personal-use product, bundle size not a priority   |
+| W4-13 | Remove pretty-printed JSON from AI payloads                         | —          | done    | `0407871`                                                      |
+| W4-14 | Remove pretty-printed JSON from backup export                       | W4-01      | skipped | — deferred: personal-use product, depends on W4-01             |
+| W4-15 | Debounce Patterns.tsx localStorage writes, add runtime validation   | —          | done    | `0407871`                                                      |
+| W4-16 | Fix Confetti onComplete re-trigger via useRef                       | —          | done    | `0407871`                                                      |
+| W4-17 | Hoist CalendarDayButton getDefaultClassNames to module scope        | —          | done    | `0407871`                                                      |
+| W4-18 | Lazy-import TrackPage in routeTree                                  | —          | done    | `0407871`                                                      |

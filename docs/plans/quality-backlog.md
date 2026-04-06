@@ -33,6 +33,17 @@ Sweep this file when planning new initiatives for items that fit.
 - **Simplification** `convex/backup.ts:279-292` — `backupRowTimestamp` chains 9 `??` fallbacks across field names. Add a comment listing which tables use which timestamp field, so the chain can be verified against schema.
 - **Architecture** `convex/backup.ts:39-53` — `USER_DATA_TABLES` and `deleteAllUserData` mix "data portability" and "account deletion" concerns. Consider moving both to `convex/lib/userData.ts` to make account deletion discoverable independently of backup/export logic.
 
+## W4-09 — 2026-04-06
+
+- **Simplification** `convex/foodParsing.ts:449-454` — Conditional spread for `embeddingSourceHash` in `listFoodEmbeddingVersions` is unnecessary since the type already declares it optional. Simplify to direct mapping: `embeddingSourceHash: row.embeddingSourceHash`.
+- **Quality** `convex/foodParsing.ts:412-427` — `listFoodEmbeddings` comment says "only use when callers need full vector data" but doesn't name those callers. Add `// Called by: <actual callers>` to prevent accidental dead-code deletion.
+
+## W4-11 — 2026-04-06
+
+- **Quality** `src/contexts/ProfileContext.tsx:155–171` — Comment says "shallow field-by-field check" but uses per-field `JSON.stringify` (which is deep comparison). Update comment to "deep field-by-field check via per-field JSON.stringify".
+- **Quality** `src/contexts/ProfileContext.tsx:184–186` — `Object.fromEntries` filter cast to `PatchProfileArgs` is wider than necessary. If mutation arg type is importable, tighten the cast. Keep existing comment so assumption is visible.
+- **Quality** `src/contexts/ProfileContext.tsx:101–103` — `resolveProfile` parameter typed via `ReturnType<typeof useQuery<...>>` (hook reflection). Fragile if query is renamed/split. Replace with explicit `Doc<"userProfiles"> | null | undefined`.
+
 ## W3-07 — 2026-04-06
 
 - **Simplification** `src/lib/aiPrompts.ts` (whole file) — At 1585 lines, has 4 distinct responsibilities: (1) sanitization helpers, (2) log context builders, (3) system prompt builder, (4) user message builder. Items 2 and 3 have zero coupling. Viable split targets if the file continues to grow.

@@ -22,6 +22,26 @@
 
 ## Active: Tech-Debt Audit Cleanup
 
+### Wave 4 complete (2026-04-06)
+
+All Wave 4 tasks resolved. 14 done, 4 skipped (W4-01, W4-02, W4-12, W4-14 deferred — personal-use product, not a priority).
+
+Key commits this session: `c4b22fb` (W4-09 impl), `8b5096c` (W4-09 fix: hard-fail on cap truncation), `825b8f2` (W4-11 impl), `8dd4b49` (W4-11 fix: collapse double useMemo).
+
+### QF — foodParsing: replace warn-only cap guard with hard throw (2026-04-06 21:05)
+
+- **Commit:** `8b5096c`
+- **Files:** `convex/foodParsing.ts`
+- **What:** Replaced `console.warn` with `throw new Error(...)` in both `listFoodEmbeddings` and `listFoodEmbeddingVersions` for the `.take(1000)` truncation guard. Silent truncation in a staleness check is a correctness bug — entries beyond the cap would silently miss refresh without any failure signal.
+- **Decisions:** Applied the same fix to `listFoodEmbeddings` for consistency, since it had the identical warn-only pattern.
+
+### QF — ProfileContext: merge double useMemo into single stabilization memo (2026-04-06 21:05)
+
+- **Commit:** `8dd4b49`
+- **Files:** `src/contexts/ProfileContext.tsx`
+- **What:** Removed the redundant intermediate `nextProfile` useMemo (which resolved the profile only to hand it immediately to a second memo). Inlined the `resolveProfile(raw)` call into the stabilization memo and updated the dependency array from `[nextProfile]` to `[raw]`. One memo cell instead of two; one function call per Convex delivery.
+- **Decisions:** None — mechanical merge with no behaviour change.
+
 ### W4-09 — Optimize listFoodEmbeddings staleness check — avoid reading full vectors (2026-04-06 21:00)
 
 - **Commit:** `c4b22fb`
