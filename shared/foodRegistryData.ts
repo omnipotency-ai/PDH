@@ -357,6 +357,7 @@ const ZONE_1A: ReadonlyArray<FoodRegistryEntry> = [
       "lucozade sport",
       "powerade",
       "gatorade",
+      "aquarius",
     ],
     notes:
       "Essential for post-surgical hydration, especially after ileocolic resection. Osmotic effect can be moderate due to sugar/salt concentration.",

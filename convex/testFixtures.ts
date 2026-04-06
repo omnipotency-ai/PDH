@@ -2,45 +2,27 @@
  * Shared test fixtures for AI analysis data.
  * Provides properly typed mock data matching the strict Convex validators.
  */
+import type { Infer } from "convex/values";
+import type { aiInsightValidator, aiRequestValidator } from "./validators";
+
+type TestAiRequest = Exclude<Infer<typeof aiRequestValidator>, null>;
+type TestAiInsight = Exclude<Infer<typeof aiInsightValidator>, null>;
 
 /** A minimal but fully typed AI analysis request for tests */
-export const TEST_AI_REQUEST: {
-  model: string;
-  messages: Array<{ role: string; content: string }>;
-} = {
+const TEST_AI_REQUEST_VALUE: TestAiRequest = {
   model: "gpt-5.4-mini",
   messages: [{ role: "user", content: "Test message" }],
 };
+Object.freeze(TEST_AI_REQUEST_VALUE.messages[0]);
+Object.freeze(TEST_AI_REQUEST_VALUE.messages);
+Object.freeze(TEST_AI_REQUEST_VALUE);
+export const TEST_AI_REQUEST: TestAiRequest = TEST_AI_REQUEST_VALUE;
 
 /** A minimal AI response string for tests */
 export const TEST_AI_RESPONSE = "Test response";
 
 /** A minimal but fully typed AiNutritionistInsight for tests */
-export const TEST_AI_INSIGHT: {
-  directResponseToUser: string | null;
-  summary: string;
-  educationalInsight: { topic: string; fact: string } | null;
-  foodAssessments: Array<{
-    food: string;
-    verdict: "safe" | "watch" | "avoid" | "trial_next";
-    confidence: "high" | "medium" | "low";
-    causalRole: "primary" | "possible" | "unlikely";
-    changeType: "new" | "upgraded" | "downgraded" | "unchanged";
-    modifierSummary: string;
-    reasoning: string;
-  }>;
-  suspectedCulprits: Array<{
-    food: string;
-    confidence: "high" | "medium" | "low";
-    reasoning: string;
-  }>;
-  mealPlan: Array<{
-    meal: string;
-    items: string[];
-    reasoning: string;
-  }>;
-  suggestions: string[];
-} = {
+const TEST_AI_INSIGHT_VALUE: TestAiInsight = {
   directResponseToUser: null,
   summary: "Test summary",
   educationalInsight: null,
@@ -49,9 +31,15 @@ export const TEST_AI_INSIGHT: {
   mealPlan: [],
   suggestions: [],
 };
+Object.freeze(TEST_AI_INSIGHT_VALUE.foodAssessments);
+Object.freeze(TEST_AI_INSIGHT_VALUE.suspectedCulprits);
+Object.freeze(TEST_AI_INSIGHT_VALUE.mealPlan);
+Object.freeze(TEST_AI_INSIGHT_VALUE.suggestions);
+Object.freeze(TEST_AI_INSIGHT_VALUE);
+export const TEST_AI_INSIGHT: TestAiInsight = TEST_AI_INSIGHT_VALUE;
 
 /** An insight with food assessment data for extraction tests */
-export const TEST_AI_INSIGHT_WITH_FOODS: typeof TEST_AI_INSIGHT = {
+const TEST_AI_INSIGHT_WITH_FOODS_VALUE: TestAiInsight = {
   ...TEST_AI_INSIGHT,
   foodAssessments: [
     {
@@ -91,3 +79,14 @@ export const TEST_AI_INSIGHT_WITH_FOODS: typeof TEST_AI_INSIGHT = {
   ],
   suggestions: ["Drink more water", "Try smaller meals"],
 };
+for (const assessment of TEST_AI_INSIGHT_WITH_FOODS_VALUE.foodAssessments ?? []) {
+  Object.freeze(assessment);
+}
+for (const culprit of TEST_AI_INSIGHT_WITH_FOODS_VALUE.suspectedCulprits) {
+  Object.freeze(culprit);
+}
+Object.freeze(TEST_AI_INSIGHT_WITH_FOODS_VALUE.foodAssessments);
+Object.freeze(TEST_AI_INSIGHT_WITH_FOODS_VALUE.suspectedCulprits);
+Object.freeze(TEST_AI_INSIGHT_WITH_FOODS_VALUE.suggestions);
+Object.freeze(TEST_AI_INSIGHT_WITH_FOODS_VALUE);
+export const TEST_AI_INSIGHT_WITH_FOODS: TestAiInsight = TEST_AI_INSIGHT_WITH_FOODS_VALUE;
