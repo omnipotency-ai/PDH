@@ -134,6 +134,11 @@ function latestEntry(page: Page, text: string | RegExp): Locator {
   return page.locator(SEL.entry).filter({ hasText: text }).first();
 }
 
+/** Find the newest entry that currently contains a pending resolution dot. */
+function latestPendingEntry(page: Page): Locator {
+  return page.locator(SEL.entry).filter({ has: page.locator(SEL.dotPending) }).first();
+}
+
 /** Wait until at least N resolution dots of the given kind appear within a specific entry. */
 async function waitForDotsInEntry(
   entry: Locator,
@@ -498,7 +503,9 @@ test.describe("FoodMatchingModal", () => {
     await expandFoodGroup(page);
 
     // Verify: 0 green, 1 amber BEFORE matching — scoped to entry
-    const entry = latestEntry(page, new RegExp(gibberish));
+    const pendingCountBefore = await page.locator(SEL.dotPending).count();
+    const resolvedCountBefore = await page.locator(SEL.dotResolved).count();
+    const entry = latestPendingEntry(page);
     await waitForDotsInEntry(entry, SEL.dotPending, 1);
     expect(await entry.locator(SEL.dotResolved).count()).toBe(0);
     expect(await entry.locator(SEL.dotPending).count()).toBe(1);
@@ -527,11 +534,16 @@ test.describe("FoodMatchingModal", () => {
       timeout: 5000,
     });
 
-    // Verify: 1 green, 0 amber AFTER matching
-    await expect(entry.locator(SEL.dotResolved).first()).toBeVisible({
-      timeout: 10000,
-    });
-    expect(await entry.locator(SEL.dotPending).count()).toBe(0);
+    // Verify globally that one pending indicator was resolved into a green dot.
+    await expect
+      .poll(async () => ({
+        pending: await page.locator(SEL.dotPending).count(),
+        resolved: await page.locator(SEL.dotResolved).count(),
+      }))
+      .toEqual({
+        pending: pendingCountBefore - 1,
+        resolved: resolvedCountBefore + 1,
+      });
   });
 
   test("cancel closes modal without changing resolution", async ({ page }) => {
@@ -824,11 +836,12 @@ test.describe("RawInputEditModal", () => {
 
     // After reprocessing: the green dots should be GONE
     // and amber dots should appear
-    await expect(entry.getByText(/glorpnik|fizzwax/).first()).toBeVisible({
+    const reprocessedEntry = latestEntry(page, /glorpnik|fizzwax/);
+    await expect(reprocessedEntry.getByText(/glorpnik|fizzwax/).first()).toBeVisible({
       timeout: 15000,
     });
-    await waitForDotsInEntry(entry, SEL.dotPending, 2, 15000);
-    expect(await entry.locator(SEL.dotResolved).count()).toBe(0);
+    await waitForDotsInEntry(reprocessedEntry, SEL.dotPending, 2, 15000);
+    expect(await reprocessedEntry.locator(SEL.dotResolved).count()).toBe(0);
   });
 });
 

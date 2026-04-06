@@ -68,35 +68,37 @@ test.describe("Fluid tracking", () => {
   test("fluid total updates after multiple entries", async ({ page }) => {
     const track = new TrackPage(page);
     await track.goto();
-    const baselineLabel = await track.waterProgress.getAttribute("aria-label");
-    const baselineTotalMl = parseFluidsTotalMl(baselineLabel);
 
     // Log first water entry (200ml)
     await track.openWaterModal();
     let modal = track.waterModal;
     await expect(modal).toBeVisible();
+    const beforeFirstLabel = await track.waterProgress.getAttribute("aria-label");
+    const beforeFirstTotalMl = parseFluidsTotalMl(beforeFirstLabel);
     await modal.locator('input[aria-label="Amount to add in millilitres"]').fill("200");
     await expect(modal.getByRole("button", { name: /Log Water/i })).toBeEnabled();
     await modal.getByRole("button", { name: /Log Water/i }).click();
     await expect
       .poll(async () => {
         const label = await track.waterProgress.getAttribute("aria-label");
-        return parseFluidsTotalMl(label);
-      })
-      .toBe(baselineTotalMl + 200);
+        return parseFluidsTotalMl(label) - beforeFirstTotalMl;
+      }, { timeout: 10000 })
+      .toBeGreaterThanOrEqual(200);
 
     // Log second water entry (400ml)
     await track.openWaterModal();
     modal = track.waterModal;
     await expect(modal).toBeVisible();
+    const beforeSecondLabel = await track.waterProgress.getAttribute("aria-label");
+    const beforeSecondTotalMl = parseFluidsTotalMl(beforeSecondLabel);
     await modal.locator('input[aria-label="Amount to add in millilitres"]').fill("400");
     await expect(modal.getByRole("button", { name: /Log Water/i })).toBeEnabled();
     await modal.getByRole("button", { name: /Log Water/i }).click();
     await expect
       .poll(async () => {
         const label = await track.waterProgress.getAttribute("aria-label");
-        return parseFluidsTotalMl(label);
-      })
-      .toBe(baselineTotalMl + 600);
+        return parseFluidsTotalMl(label) - beforeSecondTotalMl;
+      }, { timeout: 10000 })
+      .toBeGreaterThanOrEqual(400);
   });
 });

@@ -17,27 +17,27 @@ test.describe("Weight tracking", () => {
     await expect(quickCapture.weightTile).toBeVisible();
   });
 
-  test.fail("tapping Weight opens weight entry drawer", async ({ page }) => {
+  test("tapping Weight opens weight entry drawer", async ({ page }) => {
     const quickCapture = new QuickCapturePage(page);
     await quickCapture.goto();
 
-    // Should see the weight entry drawer with input
-    // The drawer has "Log Weight" title and a weight input
-    const weightInput = await quickCapture.openWeightDrawer();
-    await expect(weightInput).toBeVisible();
+    await quickCapture.openWeightDrawer();
+    await expect(page.getByText("Type weight, press Enter.")).toBeVisible();
   });
 
-  test.fail("can enter weight and save", async ({ page }) => {
+  test("can enter weight and save", async ({ page }) => {
     const quickCapture = new QuickCapturePage(page);
     await quickCapture.goto();
 
     // Clear and enter a weight value
     const weightInput = await quickCapture.openWeightDrawer();
+    await expect(weightInput).toBeVisible();
     await weightInput.clear();
     await weightInput.fill("75.5");
 
     // Submit via Enter (WeightEntryDrawer saves on Enter, no Save button)
-    await weightInput.press("Enter");
+    await weightInput.focus();
+    await page.keyboard.press("Enter");
 
     // Popover should close — the weight-specific popover description should no longer be visible
     await expect(page.locator('text="Type weight, press Enter."')).not.toBeVisible({
