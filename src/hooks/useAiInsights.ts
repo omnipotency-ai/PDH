@@ -13,7 +13,7 @@ import {
   parseAiInsight,
 } from "@/lib/aiAnalysis";
 import { DEFAULT_INSIGHT_MODEL } from "@/lib/aiModels";
-import { getErrorMessage } from "@/lib/errors";
+import { formatAiError } from "@/lib/aiErrorFormatter";
 import {
   useAddAiAnalysis,
   useAddAssistantMessage,
@@ -353,7 +353,7 @@ export function useAiInsights() {
       } catch (err: unknown) {
         console.error("[AI Nutritionist]", err);
         if (!controller.signal.aborted) {
-          const message = getErrorMessage(err);
+          const message = formatAiError(err);
           setAiAnalysisStatus("error", message);
 
           // Save error record to Convex

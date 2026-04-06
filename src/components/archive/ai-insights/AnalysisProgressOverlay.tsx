@@ -1,5 +1,6 @@
 import { CheckCircle2, Loader2, Send } from "lucide-react";
 import { useState } from "react";
+import { sanitizeAiErrorForDisplay } from "@/lib/aiErrorFormatter";
 import type { AiAnalysisStatus } from "@/types/domain";
 
 const ERROR_TRUNCATE_LENGTH = 300;
@@ -35,9 +36,12 @@ export function AnalysisProgressOverlay({
           : null;
 
   if (status === "error" && error) {
-    const isTruncated = error.length > ERROR_TRUNCATE_LENGTH;
+    const safeError = sanitizeAiErrorForDisplay(error);
+    const isTruncated = safeError.length > ERROR_TRUNCATE_LENGTH;
     const displayedError =
-      isTruncated && !showFullError ? `${error.slice(0, ERROR_TRUNCATE_LENGTH)}...` : error;
+      isTruncated && !showFullError
+        ? `${safeError.slice(0, ERROR_TRUNCATE_LENGTH)}...`
+        : safeError;
 
     return (
       <div
