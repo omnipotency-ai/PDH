@@ -84,7 +84,7 @@ export function AppDataForm() {
     }
   };
 
-  // SET-F003: hooks must be called unconditionally, so the controller receives
+  // Hooks must be called unconditionally, so the controller receives
   // healthProfile (null until loaded). The controller guards its own mutations
   // against null. Form sections are blocked in the JSX below until loaded.
   const {
@@ -165,7 +165,7 @@ export function AppDataForm() {
         </div>
       )}
 
-      {/* SET-F004: state-driven import confirmation replaces window.confirm */}
+      {/* State-driven import confirmation replaces window.confirm */}
       {pendingImportFile && (
         <div
           role="alertdialog"
