@@ -396,9 +396,6 @@ export const FOOD_GROUP_TO_TRANSIT_CATEGORY: Record<
   seasoning: "mixed_meal",
 } as const;
 
-// formatFoodDisplayName is imported from ./foodNormalize
-// resolveCanonicalFoodName is imported from ./foodCanonicalName
-
 function readText(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
