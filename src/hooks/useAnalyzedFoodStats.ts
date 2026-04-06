@@ -20,7 +20,7 @@ export function useAnalyzedFoodStats() {
 
   const analysis = useMemo(
     () =>
-      analyzeLogs(logs, allFoodTrials ?? [], {
+      analyzeLogs(logs, allFoodTrials?.trials ?? [], {
         habits: habits.map((h) => ({ id: h.id, name: h.name })),
         calibration: transitCalibration,
         assessments: mappedAssessments,

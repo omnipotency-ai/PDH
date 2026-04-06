@@ -1,9 +1,6 @@
 import { v } from "convex/values";
 import { resolveCanonicalFoodName } from "../shared/foodCanonicalName";
-import {
-  formatCanonicalFoodDisplayName,
-  prefersSummaryCandidate,
-} from "../shared/foodNormalize";
+import { formatCanonicalFoodDisplayName, prefersSummaryCandidate } from "../shared/foodNormalize";
 import { query } from "./_generated/server";
 import { requireAuth } from "./lib/auth";
 
@@ -40,10 +37,7 @@ function normalizeFoodTrialSummaryRows<
       displayName: formatCanonicalFoodDisplayName(canonicalName),
     };
 
-    if (
-      !existing ||
-      prefersSummaryCandidate(normalizedRow, existing, canonicalName)
-    ) {
+    if (!existing || prefersSummaryCandidate(normalizedRow, existing, canonicalName)) {
       byCanonical.set(canonicalName, normalizedRow);
     }
   }
@@ -58,22 +52,35 @@ function normalizeFoodTrialSummaryRows<
 
 // ─── Food Trial Summary queries ──────────────────────────────────────────────────
 
+/** Safety cap for allFoodTrials. Expected ~50-200 per user; cap prevents runaway growth. */
+const ALL_FOOD_TRIALS_CAP = 500;
+
 export const allFoodTrials = query({
   args: {},
   handler: async (ctx) => {
     const { userId } = await requireAuth(ctx);
-    // Small table (~50-100 docs per user, grows slowly). Full collect is acceptable.
-    // If table grows significantly, consider pagination or status-based queries.
     // Uses by_userId_updatedAt so the DB returns rows pre-sorted by updatedAt desc,
     // reducing work in the in-memory normalization/dedup sort.
     const rows = await ctx.db
       .query("foodTrialSummary")
       .withIndex("by_userId_updatedAt", (q) => q.eq("userId", userId))
       .order("desc")
-      .collect();
-    return normalizeFoodTrialSummaryRows(rows);
+      .take(ALL_FOOD_TRIALS_CAP);
+
+    const isTruncated = rows.length === ALL_FOOD_TRIALS_CAP;
+    if (isTruncated) {
+      console.warn(`allFoodTrials: cap of ${ALL_FOOD_TRIALS_CAP} reached for user ${userId}`);
+    }
+
+    return {
+      trials: normalizeFoodTrialSummaryRows(rows),
+      isTruncated,
+    };
   },
 });
+
+/** Safety cap for status-filtered trials. Narrower than allFoodTrials. */
+const FOOD_TRIALS_BY_STATUS_CAP = 200;
 
 export const foodTrialsByStatus = query({
   args: { status: foodTrialStatusValidator },
@@ -81,10 +88,15 @@ export const foodTrialsByStatus = query({
     const { userId } = await requireAuth(ctx);
     const rows = await ctx.db
       .query("foodTrialSummary")
-      .withIndex("by_userId_status", (q) =>
-        q.eq("userId", userId).eq("currentStatus", args.status),
-      )
-      .collect();
+      .withIndex("by_userId_status", (q) => q.eq("userId", userId).eq("currentStatus", args.status))
+      .take(FOOD_TRIALS_BY_STATUS_CAP);
+
+    if (rows.length === FOOD_TRIALS_BY_STATUS_CAP) {
+      console.warn(
+        `foodTrialsByStatus: cap of ${FOOD_TRIALS_BY_STATUS_CAP} reached for user ${userId}, status=${args.status}`,
+      );
+    }
+
     return normalizeFoodTrialSummaryRows(rows);
   },
 });
@@ -97,9 +109,7 @@ export const foodTrialByName = query({
     // lookup matches the canonical form stored in the DB.
     // The canonicalName migration ensures DB values are already normalized,
     // so runtime re-normalization of stored rows is not needed here.
-    const normalizedCanonicalName = resolveCanonicalFoodName(
-      args.canonicalName,
-    );
+    const normalizedCanonicalName = resolveCanonicalFoodName(args.canonicalName);
     const trial = await ctx.db
       .query("foodTrialSummary")
       .withIndex("by_userId_canonicalName", (q) =>
@@ -132,9 +142,7 @@ export const weeklyDigestByWeek = query({
     return await ctx.db
       .query("weeklyDigest")
       .withIndex("by_userId_weekStart", (q) =>
-        q
-          .eq("userId", userId)
-          .eq("weekStartTimestamp", args.weekStartTimestamp),
+        q.eq("userId", userId).eq("weekStartTimestamp", args.weekStartTimestamp),
       )
       .first();
   },

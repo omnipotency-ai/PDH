@@ -29,16 +29,17 @@ describe("aggregateQueries", () => {
     const trials = await t
       .withIdentity({ subject: "test-user-123" })
       .query(api.aggregateQueries.allFoodTrials, {});
-    expect(trials.length).toBe(1);
-    expect(trials[0].canonicalName).toBe("ripe banana");
-    expect(trials[0].currentStatus).toBe("safe");
+    expect(trials.trials.length).toBe(1);
+    expect(trials.trials[0].canonicalName).toBe("ripe banana");
+    expect(trials.trials[0].currentStatus).toBe("safe");
+    expect(trials.isTruncated).toBe(false);
   });
 
   it("throws when querying without auth identity", async () => {
     const t = convexTest(schema);
-    await expect(
-      t.query(api.aggregateQueries.allFoodTrials, {}),
-    ).rejects.toThrow("Not authenticated");
+    await expect(t.query(api.aggregateQueries.allFoodTrials, {})).rejects.toThrow(
+      "Not authenticated",
+    );
   });
 
   it("filters food trials by status", async () => {
@@ -128,10 +129,11 @@ describe("aggregateQueries", () => {
     const trials = await t
       .withIdentity({ subject: userId })
       .query(api.aggregateQueries.allFoodTrials, {});
-    expect(trials).toHaveLength(1);
-    expect(trials[0]?.canonicalName).toBe("white bread");
-    expect(trials[0]?.displayName).toBe("White Bread");
-    expect(trials[0]?.latestReasoning).toBe("Newer alias row.");
+    expect(trials.trials).toHaveLength(1);
+    expect(trials.trials[0]?.canonicalName).toBe("white bread");
+    expect(trials.trials[0]?.displayName).toBe("White Bread");
+    expect(trials.trials[0]?.latestReasoning).toBe("Newer alias row.");
+    expect(trials.isTruncated).toBe(false);
   });
 
   it("foodTrialByName uses indexed lookup by canonical name", async () => {

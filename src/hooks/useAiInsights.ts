@@ -226,7 +226,7 @@ export function useAiInsights() {
         ? { conversationHistory: conversationHistoryMapped }
         : {
             ...(dataRef.current.foodTrials !== undefined && {
-              foodTrials: dataRef.current.foodTrials,
+              foodTrials: dataRef.current.foodTrials.trials,
             }),
             conversationHistory: conversationHistoryMapped,
             weeklyContext: (dataRef.current.weeklyDigests ?? []).map((wd) => ({

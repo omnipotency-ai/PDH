@@ -45,6 +45,9 @@ export const allIngredients = query({
 
     // If we got exactly `limit` rows back, there may be more rows beyond the cap.
     const isTruncated = rows.length === limit;
+    if (isTruncated) {
+      console.warn(`allIngredients: cap of ${limit} reached for user ${userId}`);
+    }
 
     const byIngredient = new Map<
       string,
