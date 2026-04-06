@@ -1,11 +1,18 @@
 {
-  "plan": "Tech-Debt Audit Cleanup — Waves 4–5",
+  "plan": "Tech-Debt Audit Cleanup \u2014 Waves 4\u20135",
   "prd": "docs/prd/2026-04-06-tech-debt-audit-cleanup.md",
   "auditReport": "docs/2026-04-06/audit/FINAL-AUDIT-REPORT.md",
   "createdAt": "2026-04-06",
   "waveDependencies": {
-    "wave4": ["WAVE_0_COMPLETE", "WAVE_2_COMPLETE"],
-    "wave5": ["WAVE_0_COMPLETE", "WAVE_2_COMPLETE", "WAVE_3_COMPLETE"],
+    "wave4": [
+      "WAVE_0_COMPLETE",
+      "WAVE_2_COMPLETE"
+    ],
+    "wave5": [
+      "WAVE_0_COMPLETE",
+      "WAVE_2_COMPLETE",
+      "WAVE_3_COMPLETE"
+    ],
     "note": "Wave 4 needs security fixes (W0) and consolidated utilities (W2). Wave 5 additionally needs file splits (W3) since many correctness tasks touch split files."
   },
   "verificationGate": {
@@ -17,11 +24,11 @@
     ],
     "policy": "All four must pass after each wave before advancing."
   },
-  "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+  "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
   "tasks": [
     {
       "id": "W4-01",
-      "title": "Make importBackup safe — add caps, chunk inserts, validate payload",
+      "title": "Make importBackup safe \u2014 add caps, chunk inserts, validate payload",
       "wave": 4,
       "dependsOn": [],
       "skill": "vite-react-implementer",
@@ -42,7 +49,7 @@
       "acceptanceCriteria": [
         "importBackup validator has per-table array length caps (max 10,000 for logs)",
         "Import is chunked via ctx.scheduler.runAfter (each chunk its own transaction)",
-        "Partial failure does not lose all user data — delete + insert are separate phases",
+        "Partial failure does not lose all user data \u2014 delete + insert are separate phases",
         "Client-side validateBackupPayload checks type, timestamp, and data fields per log",
         "Import rejected if any log fails basic validation",
         "Typecheck passes",
@@ -50,8 +57,12 @@
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run test"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": false
       }
     },
@@ -59,12 +70,19 @@
       "id": "W4-02",
       "title": "Cap exportBackup parallel table collects",
       "wave": 4,
-      "dependsOn": ["W4-01"],
+      "dependsOn": [
+        "W4-01"
+      ],
       "skill": "vite-react-implementer",
       "description": "exportBackup uses Promise.all to run 13 listRowsByUserId calls simultaneously, each calling .collect() with no row limit. Active users with years of data will hit Convex execution limits. Fix: (1) Add per-table row caps (e.g., 10,000 rows via .take(10000)). (2) For complete backup of large datasets, consider converting to a Convex action with higher execution limits. (3) Add a warning in the export result if any table was truncated. After W3-01, this code lives in convex/backup.ts.",
       "files": {
-        "read": ["convex/backup.ts", "convex/_generated/ai/guidelines.md"],
-        "edit": ["convex/backup.ts"],
+        "read": [
+          "convex/backup.ts",
+          "convex/_generated/ai/guidelines.md"
+        ],
+        "edit": [
+          "convex/backup.ts"
+        ],
         "create": []
       },
       "acceptanceCriteria": [
@@ -75,21 +93,29 @@
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run test"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": false
       }
     },
     {
       "id": "W4-03",
-      "title": "Optimize buildFoodEvidenceResult — cap inputs and fix O(TxE) loop",
+      "title": "Optimize buildFoodEvidenceResult \u2014 cap inputs and fix O(TxE) loop",
       "wave": 4,
       "dependsOn": [],
       "skill": "vite-react-implementer",
-      "description": "buildFoodEvidenceResult in shared/foodEvidence.ts iterates args.logs four times and calls buildFoodTrials twice. findTriggerCorrelations has an O(T x E) inner loop. For a heavy user (1000 trials, 400 events) this runs 400,000 iterations inside a useQuery subscription. Fix: (1) Cap args.logs to the most recent 2,000 entries at the top of the function. (2) Change findTriggerCorrelations from O(T x E) to O(T + E) using a two-pointer approach — both arrays are sorted by timestamp, so scan through both in order.",
+      "description": "buildFoodEvidenceResult in shared/foodEvidence.ts iterates args.logs four times and calls buildFoodTrials twice. findTriggerCorrelations has an O(T x E) inner loop. For a heavy user (1000 trials, 400 events) this runs 400,000 iterations inside a useQuery subscription. Fix: (1) Cap args.logs to the most recent 2,000 entries at the top of the function. (2) Change findTriggerCorrelations from O(T x E) to O(T + E) using a two-pointer approach \u2014 both arrays are sorted by timestamp, so scan through both in order.",
       "files": {
-        "read": ["shared/foodEvidence.ts"],
-        "edit": ["shared/foodEvidence.ts"],
+        "read": [
+          "shared/foodEvidence.ts"
+        ],
+        "edit": [
+          "shared/foodEvidence.ts"
+        ],
         "create": []
       },
       "acceptanceCriteria": [
@@ -99,12 +125,17 @@
         "Typecheck passes",
         "All foodEvidence tests pass"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run test"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": false
-      }
+      },
+      "commit": "4aa2254"
     },
     {
       "id": "W4-04",
@@ -131,12 +162,17 @@
         "Client passes explicit limit (200-500)",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run test"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": false
-      }
+      },
+      "commit": "5e3b5e5"
     },
     {
       "id": "W4-05",
@@ -146,8 +182,12 @@
       "skill": "vite-react-implementer",
       "description": "FoodMatchingModal.tsx (~L95-103) immediately fires a Convex useQuery requesting 160 results when the modal opens with no search query and no bucket. This is a subscription that re-fires on any food table mutation. Fix: Use 'skip' for the initial no-query, no-bucket state: pass 'skip' as the second argument to useQuery when both searchQuery is empty and activeBucket is null. Only fire the query once the user has typed at least 1 character or selected a bucket.",
       "files": {
-        "read": ["src/components/track/FoodMatchingModal.tsx"],
-        "edit": ["src/components/track/FoodMatchingModal.tsx"],
+        "read": [
+          "src/components/track/FoodMatchingModal.tsx"
+        ],
+        "edit": [
+          "src/components/track/FoodMatchingModal.tsx"
+        ],
         "create": []
       },
       "acceptanceCriteria": [
@@ -156,12 +196,17 @@
         "Modal still shows results when user interacts",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": true
-      }
+      },
+      "commit": "1ba90db"
     },
     {
       "id": "W4-06",
@@ -169,10 +214,14 @@
       "wave": 4,
       "dependsOn": [],
       "skill": "vite-react-implementer",
-      "description": "FoodFilterView.tsx has two useMemo blocks — frequentFoods (L95-115) and frequencyCountMap (L118-135) — that both scan the full logs array with identical dependency arrays. Fix: Combine into a single useMemo that returns { sortedFrequentFoods, countMap } from one pass over the logs array. The 14-day window can have thousands of entries; halving the scans helps.",
+      "description": "FoodFilterView.tsx has two useMemo blocks \u2014 frequentFoods (L95-115) and frequencyCountMap (L118-135) \u2014 that both scan the full logs array with identical dependency arrays. Fix: Combine into a single useMemo that returns { sortedFrequentFoods, countMap } from one pass over the logs array. The 14-day window can have thousands of entries; halving the scans helps.",
       "files": {
-        "read": ["src/components/track/nutrition/FoodFilterView.tsx"],
-        "edit": ["src/components/track/nutrition/FoodFilterView.tsx"],
+        "read": [
+          "src/components/track/nutrition/FoodFilterView.tsx"
+        ],
+        "edit": [
+          "src/components/track/nutrition/FoodFilterView.tsx"
+        ],
         "create": []
       },
       "acceptanceCriteria": [
@@ -181,12 +230,17 @@
         "Output values are identical to the two-memo version",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": false
-      }
+      },
+      "commit": "1ba90db"
     },
     {
       "id": "W4-07",
@@ -219,12 +273,17 @@
         "Warning logged when cap is reached",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run test"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": false
-      }
+      },
+      "commit": "4aa2254"
     },
     {
       "id": "W4-08",
@@ -234,8 +293,13 @@
       "skill": "vite-react-implementer",
       "description": "convex/foodLibrary.ts mergeDuplicates (~L299-854) is a public mutation that collects all rows from 7 tables in one transaction and makes N individual ctx.db.patch() calls. Risks exceeding Convex per-mutation limits for active users. Fix: (1) Convert mergeDuplicates to an action that orchestrates multiple internal mutations. (2) Each phase handles one table: collect rows matching the merge criteria, then patch in batches of ~100. (3) Add row-count caps to each collect. Read convex/_generated/ai/guidelines.md first.",
       "files": {
-        "read": ["convex/foodLibrary.ts", "convex/_generated/ai/guidelines.md"],
-        "edit": ["convex/foodLibrary.ts"],
+        "read": [
+          "convex/foodLibrary.ts",
+          "convex/_generated/ai/guidelines.md"
+        ],
+        "edit": [
+          "convex/foodLibrary.ts"
+        ],
         "create": []
       },
       "acceptanceCriteria": [
@@ -245,27 +309,34 @@
         "Typecheck passes",
         "Existing foodLibrary tests pass"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run test"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": false
-      }
+      },
+      "commit": "1797524"
     },
     {
       "id": "W4-09",
-      "title": "Optimize listFoodEmbeddings staleness check — avoid reading full vectors",
+      "title": "Optimize listFoodEmbeddings staleness check \u2014 avoid reading full vectors",
       "wave": 4,
       "dependsOn": [],
       "skill": "vite-react-implementer",
-      "description": "listFoodEmbeddings in convex/foodParsing.ts (~L453-470) fetches up to 1,000 full foodEmbeddings documents (each ~12KB with 1536 floats) just to check canonicalName and embeddingSourceHash for staleness. Fix: OPTION A (preferred, no new table): Add a .withIndex query that returns only the metadata fields needed. Use a Convex query with field selection if available, or restructure the staleness check to use a lightweight metadata query. OPTION B (needs user approval — new table): Create a foodEmbeddingMeta table with only canonicalName and embeddingSourceHash. NOTE: Per PRD FR-04 (no new tables), prefer Option A. If Option A is infeasible, flag for user decision.",
+      "description": "listFoodEmbeddings in convex/foodParsing.ts (~L453-470) fetches up to 1,000 full foodEmbeddings documents (each ~12KB with 1536 floats) just to check canonicalName and embeddingSourceHash for staleness. Fix: OPTION A (preferred, no new table): Add a .withIndex query that returns only the metadata fields needed. Use a Convex query with field selection if available, or restructure the staleness check to use a lightweight metadata query. OPTION B (needs user approval \u2014 new table): Create a foodEmbeddingMeta table with only canonicalName and embeddingSourceHash. NOTE: Per PRD FR-04 (no new tables), prefer Option A. If Option A is infeasible, flag for user decision.",
       "files": {
         "read": [
           "convex/foodParsing.ts",
           "convex/schema.ts",
           "convex/_generated/ai/guidelines.md"
         ],
-        "edit": ["convex/foodParsing.ts"],
+        "edit": [
+          "convex/foodParsing.ts"
+        ],
         "create": []
       },
       "acceptanceCriteria": [
@@ -276,8 +347,12 @@
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run test"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": false
       }
     },
@@ -289,9 +364,15 @@
       "skill": "vite-react-implementer",
       "description": "columns.tsx (~L141-153) creates one setInterval per visible table row (25-100 timers). Fix: (1) Create a useCurrentMinute() hook that returns a timestamp that updates every 60 seconds via a single global interval. Use a module-level listener pattern so all instances share one timer. (2) Replace the per-instance setInterval in RelativeTime with useCurrentMinute(). (3) Move formatRelativeTime to src/lib/dateUtils.ts (it doesn't belong in a column-factory file).",
       "files": {
-        "read": ["src/components/patterns/database/columns.tsx"],
-        "edit": ["src/components/patterns/database/columns.tsx"],
-        "create": ["src/hooks/useCurrentMinute.ts"]
+        "read": [
+          "src/components/patterns/database/columns.tsx"
+        ],
+        "edit": [
+          "src/components/patterns/database/columns.tsx"
+        ],
+        "create": [
+          "src/hooks/useCurrentMinute.ts"
+        ]
       },
       "acceptanceCriteria": [
         "No setInterval inside RelativeTime cell renderer",
@@ -299,23 +380,32 @@
         "formatRelativeTime moved to src/lib/dateUtils.ts",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": false
-      }
+      },
+      "commit": "0407871"
     },
     {
       "id": "W4-11",
-      "title": "Optimize ProfileContext — remove JSON.stringify comparison",
+      "title": "Optimize ProfileContext \u2014 remove JSON.stringify comparison",
       "wave": 4,
       "dependsOn": [],
       "skill": "vite-react-implementer",
       "description": "ProfileContext.tsx (~L138-188) calls JSON.stringify(nextProfile) on every render to detect changes. patchProfile manually wraps 10 fields in conditional spread. Fix: (1) Replace JSON.stringify deep comparison with a shallow field-by-field check (compare each top-level field). (2) Replace the 10-field manual spread with Object.fromEntries(Object.entries(updates).filter(([, v]) => v !== undefined)).",
       "files": {
-        "read": ["src/contexts/ProfileContext.tsx"],
-        "edit": ["src/contexts/ProfileContext.tsx"],
+        "read": [
+          "src/contexts/ProfileContext.tsx"
+        ],
+        "edit": [
+          "src/contexts/ProfileContext.tsx"
+        ],
         "create": []
       },
       "acceptanceCriteria": [
@@ -326,21 +416,29 @@
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": false
       }
     },
     {
       "id": "W4-12",
-      "title": "Reduce client bundle — create ClientFoodRegistryEntry projection",
+      "title": "Reduce client bundle \u2014 create ClientFoodRegistryEntry projection",
       "wave": 4,
       "dependsOn": [],
       "skill": "vite-react-implementer",
       "description": "shared/foodRegistryData.ts (4381 lines) is bundled into the client unconditionally, including clinical digestion metadata only used server-side in AI prompts. Fix: (1) Create a ClientFoodRegistryEntry type projection that omits the digestion metadata (digestion, fiberLevel, osmoticEffect, etc.). (2) Create a client-facing registry export that strips these fields. (3) Ensure the full registry is only imported server-side (in Convex functions and AI prompt builders). (4) Verify the client bundle size decreased.",
       "files": {
-        "read": ["shared/foodRegistryData.ts"],
-        "edit": ["shared/foodRegistryData.ts"],
+        "read": [
+          "shared/foodRegistryData.ts"
+        ],
+        "edit": [
+          "shared/foodRegistryData.ts"
+        ],
         "create": []
       },
       "acceptanceCriteria": [
@@ -352,8 +450,12 @@
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": false
       }
     },
@@ -378,12 +480,17 @@
         "JSON.stringify(payload) used instead (compact)",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": false
-      }
+      },
+      "commit": "0407871"
     },
     {
       "id": "W4-14",
@@ -402,13 +509,17 @@
         "create": []
       },
       "acceptanceCriteria": [
-        "Backup export uses JSON.stringify(backup) — no indentation",
+        "Backup export uses JSON.stringify(backup) \u2014 no indentation",
         "Typecheck passes"
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": false
       }
     },
@@ -420,22 +531,31 @@
       "skill": "vite-react-implementer",
       "description": "Patterns.tsx (~L43-52, L76-116, L156-189) has three useEffect hooks that write to localStorage on every state change (filters, sorting, views). localStorage.setItem is synchronous blocking I/O. Also uses `as` type assertions on JSON.parse output from untrusted data. Fix: (1) Debounce all three localStorage write effects (300ms). Use a simple debounce pattern (setTimeout + clearTimeout in cleanup). (2) Replace `as` casts on JSON.parse output with proper runtime validation (check shape before assignment, fall back to defaults on invalid data).",
       "files": {
-        "read": ["src/pages/Patterns.tsx"],
-        "edit": ["src/pages/Patterns.tsx"],
+        "read": [
+          "src/pages/Patterns.tsx"
+        ],
+        "edit": [
+          "src/pages/Patterns.tsx"
+        ],
         "create": []
       },
       "acceptanceCriteria": [
         "All three localStorage write effects are debounced (300ms)",
-        "No `as` cast on JSON.parse output — runtime validation used instead",
+        "No `as` cast on JSON.parse output \u2014 runtime validation used instead",
         "Invalid localStorage data falls back to defaults",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": false
-      }
+      },
+      "commit": "0407871"
     },
     {
       "id": "W4-16",
@@ -445,8 +565,12 @@
       "skill": "vite-react-implementer",
       "description": "Confetti.tsx (~L94) includes onComplete in useEffect deps. If the parent passes an unstable (non-memoized) onComplete, the effect re-fires every render, potentially restarting confetti animation. Fix: Use a useRef to hold the onComplete callback so it is not a dependency: `const onCompleteRef = useRef(onComplete); onCompleteRef.current = onComplete;` then use onCompleteRef.current in the effect and remove onComplete from deps.",
       "files": {
-        "read": ["src/components/ui/Confetti.tsx"],
-        "edit": ["src/components/ui/Confetti.tsx"],
+        "read": [
+          "src/components/ui/Confetti.tsx"
+        ],
+        "edit": [
+          "src/components/ui/Confetti.tsx"
+        ],
         "create": []
       },
       "acceptanceCriteria": [
@@ -454,12 +578,17 @@
         "Effect does not re-fire when parent re-renders",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": true
-      }
+      },
+      "commit": "0407871"
     },
     {
       "id": "W4-17",
@@ -469,8 +598,12 @@
       "skill": "vite-react-implementer",
       "description": "calendar.tsx (~L145) calls getDefaultClassNames() inside CalendarDayButton which renders per day cell (28-42 times per calendar render). Returns static data. Fix: Hoist to module scope: `const DEFAULT_CLASS_NAMES = getDefaultClassNames();` and reference the constant inside the component.",
       "files": {
-        "read": ["src/components/ui/calendar.tsx"],
-        "edit": ["src/components/ui/calendar.tsx"],
+        "read": [
+          "src/components/ui/calendar.tsx"
+        ],
+        "edit": [
+          "src/components/ui/calendar.tsx"
+        ],
         "create": []
       },
       "acceptanceCriteria": [
@@ -478,12 +611,17 @@
         "Component references the module-level constant",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": false
-      }
+      },
+      "commit": "0407871"
     },
     {
       "id": "W4-18",
@@ -491,10 +629,14 @@
       "wave": 4,
       "dependsOn": [],
       "skill": "vite-react-implementer",
-      "description": "TrackPage is the only page not using lazy() in routeTree.tsx — all other pages use React.lazy for code splitting. After W3-02, routeTree.tsx should be slim. Fix: Change the TrackPage import to use lazy(): `const TrackPage = lazy(() => import('./pages/Track'));` matching the pattern used by all other pages.",
+      "description": "TrackPage is the only page not using lazy() in routeTree.tsx \u2014 all other pages use React.lazy for code splitting. After W3-02, routeTree.tsx should be slim. Fix: Change the TrackPage import to use lazy(): `const TrackPage = lazy(() => import('./pages/Track'));` matching the pattern used by all other pages.",
       "files": {
-        "read": ["src/routeTree.tsx"],
-        "edit": ["src/routeTree.tsx"],
+        "read": [
+          "src/routeTree.tsx"
+        ],
+        "edit": [
+          "src/routeTree.tsx"
+        ],
         "create": []
       },
       "acceptanceCriteria": [
@@ -503,12 +645,17 @@
         "Typecheck passes",
         "Build succeeds"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": false
-      }
+      },
+      "commit": "0407871"
     },
     {
       "id": "W5-01",
@@ -516,7 +663,7 @@
       "wave": 5,
       "dependsOn": [],
       "skill": "test-writer",
-      "description": "60 waitForTimeout calls across 11 E2E spec files use hardcoded ms delays. Under CI load delays are insufficient; locally they waste time. Sleep-tracking spec has a retry loop masking failures. Each spec re-defines navigation/locator helpers. Fix: (1) Replace every page.waitForTimeout(N) with explicit condition waits: `await expect(element).toBeVisible({ timeout: 8000 })` or `await element.waitFor({ state: 'visible', timeout: 5000 })`. (2) Extract shared page objects (navigateAndWait, getNutritionCard, getBowelSection, getQuickCapture) into e2e/fixtures.ts or e2e/pages/. (3) Remove retry loops in sleep-tracking spec — use single attempts with appropriate timeouts. IMPORTANT: Run the full E2E suite after updating each spec file, not as a batch. Files with waitForTimeout (by count): nutrition-water-modal (18), fluid-tracking (10), patterns-food-trials (6), food-pipeline (5), drpoo-cooldown (5), weight-tracking (4), food-tracking (3), destructive-habits (3), bowel-tracking (3), nutrition-full-flow (2), nutrition-calorie-detail (1).",
+      "description": "60 waitForTimeout calls across 11 E2E spec files use hardcoded ms delays. Under CI load delays are insufficient; locally they waste time. Sleep-tracking spec has a retry loop masking failures. Each spec re-defines navigation/locator helpers. Fix: (1) Replace every page.waitForTimeout(N) with explicit condition waits: `await expect(element).toBeVisible({ timeout: 8000 })` or `await element.waitFor({ state: 'visible', timeout: 5000 })`. (2) Extract shared page objects (navigateAndWait, getNutritionCard, getBowelSection, getQuickCapture) into e2e/fixtures.ts or e2e/pages/. (3) Remove retry loops in sleep-tracking spec \u2014 use single attempts with appropriate timeouts. IMPORTANT: Run the full E2E suite after updating each spec file, not as a batch. Files with waitForTimeout (by count): nutrition-water-modal (18), fluid-tracking (10), patterns-food-trials (6), food-pipeline (5), drpoo-cooldown (5), weight-tracking (4), food-tracking (3), destructive-habits (3), bowel-tracking (3), nutrition-full-flow (2), nutrition-calorie-detail (1).",
       "files": {
         "read": [
           "e2e/nutrition-water-modal.spec.ts",
@@ -560,22 +707,32 @@
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run test:e2e"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run test:e2e"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": false
       }
     },
     {
       "id": "W5-02",
-      "title": "Make getWeekStart deterministic — pure epoch arithmetic in shared/",
+      "title": "Make getWeekStart deterministic \u2014 pure epoch arithmetic in shared/",
       "wave": 5,
       "dependsOn": [],
       "skill": "vite-react-implementer",
       "description": "getWeekStart in convex/computeAggregates.ts (~L426-441) uses Date mutation methods with implicit timezone behavior inside an internalMutation. Client and server may compute different week boundaries. Fix: (1) Rewrite getWeekStart as pure epoch arithmetic (no Date constructor, no setHours/setDate). (2) Move to shared/ so both client and server import the same function. (3) Accept a timezone offset parameter or use UTC consistently. (4) Update both convex/computeAggregates.ts and convex/aggregateQueries.ts to use the shared function.",
       "files": {
-        "read": ["convex/computeAggregates.ts", "convex/aggregateQueries.ts"],
-        "edit": ["convex/computeAggregates.ts", "convex/aggregateQueries.ts"],
-        "create": ["shared/weekUtils.ts"]
+        "read": [
+          "convex/computeAggregates.ts",
+          "convex/aggregateQueries.ts"
+        ],
+        "edit": [
+          "convex/computeAggregates.ts",
+          "convex/aggregateQueries.ts"
+        ],
+        "create": [
+          "shared/weekUtils.ts"
+        ]
       },
       "acceptanceCriteria": [
         "getWeekStart is a pure function in shared/ (no Date mutation methods)",
@@ -587,8 +744,12 @@
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run test"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": false
       }
     },
@@ -600,8 +761,12 @@
       "skill": "vite-react-implementer",
       "description": "useWeeklySummaryAutoTrigger.ts (~L18,L147,L163) formats timestamps with toLocaleString('en-GB', ...) and references 'Barcelona CET/CEST' in comments. Fix: (1) Use Intl.DateTimeFormat with navigator.language (or user profile locale) as fallback, or format as ISO 8601. (2) Remove the Barcelona timezone reference from comments. (3) If timezone is needed for AI context, source it from user profile or Intl.DateTimeFormat().resolvedOptions().timeZone.",
       "files": {
-        "read": ["src/hooks/useWeeklySummaryAutoTrigger.ts"],
-        "edit": ["src/hooks/useWeeklySummaryAutoTrigger.ts"],
+        "read": [
+          "src/hooks/useWeeklySummaryAutoTrigger.ts"
+        ],
+        "edit": [
+          "src/hooks/useWeeklySummaryAutoTrigger.ts"
+        ],
         "create": []
       },
       "acceptanceCriteria": [
@@ -612,8 +777,12 @@
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": false
       }
     },
@@ -621,12 +790,18 @@
       "id": "W5-04",
       "title": "Fix stale period bounds in weekly summary auto-trigger",
       "wave": 5,
-      "dependsOn": ["W5-03"],
+      "dependsOn": [
+        "W5-03"
+      ],
       "skill": "vite-react-implementer",
-      "description": "getCompletedPeriodBounds() is called inside useMemo(() => ..., []) with empty deps — computed once and never updated. If the app stays open across a half-week boundary, the hook never triggers for the new period. Fix: Track the boundary using a state variable that updates via setTimeout (schedule next boundary) or visibilitychange listener (recalculate when tab becomes visible).",
+      "description": "getCompletedPeriodBounds() is called inside useMemo(() => ..., []) with empty deps \u2014 computed once and never updated. If the app stays open across a half-week boundary, the hook never triggers for the new period. Fix: Track the boundary using a state variable that updates via setTimeout (schedule next boundary) or visibilitychange listener (recalculate when tab becomes visible).",
       "files": {
-        "read": ["src/hooks/useWeeklySummaryAutoTrigger.ts"],
-        "edit": ["src/hooks/useWeeklySummaryAutoTrigger.ts"],
+        "read": [
+          "src/hooks/useWeeklySummaryAutoTrigger.ts"
+        ],
+        "edit": [
+          "src/hooks/useWeeklySummaryAutoTrigger.ts"
+        ],
         "create": []
       },
       "acceptanceCriteria": [
@@ -637,8 +812,12 @@
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": false
       }
     },
@@ -648,10 +827,15 @@
       "wave": 5,
       "dependsOn": [],
       "skill": "vite-react-implementer",
-      "description": "convex/schema.ts includes promptVersion: v.optional(v.number()) on the weeklySummaries table but the add mutation args don't include it — value can never be written via public API. Fix: Either (A) add promptVersion: v.optional(v.number()) to the add mutation args, or (B) add a comment to the schema explaining it is only populated via backup import. Prefer option A for completeness.",
+      "description": "convex/schema.ts includes promptVersion: v.optional(v.number()) on the weeklySummaries table but the add mutation args don't include it \u2014 value can never be written via public API. Fix: Either (A) add promptVersion: v.optional(v.number()) to the add mutation args, or (B) add a comment to the schema explaining it is only populated via backup import. Prefer option A for completeness.",
       "files": {
-        "read": ["convex/weeklySummaries.ts", "convex/schema.ts"],
-        "edit": ["convex/weeklySummaries.ts"],
+        "read": [
+          "convex/weeklySummaries.ts",
+          "convex/schema.ts"
+        ],
+        "edit": [
+          "convex/weeklySummaries.ts"
+        ],
         "create": []
       },
       "acceptanceCriteria": [
@@ -661,8 +845,12 @@
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run test"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": false
       }
     },
@@ -674,8 +862,13 @@
       "skill": "test-writer",
       "description": "convex/testFixtures.ts (~L19-51) uses a large inline object literal type that manually re-enumerates AI insight fields. Test fixtures are mutable const objects. Fix: (1) Type TEST_AI_INSIGHT using Infer<typeof aiInsightValidator> from validators.ts or domain.ts. (2) Use Object.freeze() on exported fixtures or convert to factory function: export function makeTestAiInsight(overrides?: Partial<...>).",
       "files": {
-        "read": ["convex/testFixtures.ts", "convex/validators.ts"],
-        "edit": ["convex/testFixtures.ts"],
+        "read": [
+          "convex/testFixtures.ts",
+          "convex/validators.ts"
+        ],
+        "edit": [
+          "convex/testFixtures.ts"
+        ],
         "create": []
       },
       "acceptanceCriteria": [
@@ -687,8 +880,12 @@
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run test"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": false
       }
     },
@@ -720,8 +917,12 @@
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": true
       }
     },
@@ -733,8 +934,12 @@
       "skill": "vite-react-implementer",
       "description": "BowelSection.tsx (~L171-186) manages form state across 7 independent useState hooks. Reset after save must manually reset all 7. Adding a field requires updating three places. Fix: (1) Define a BowelFormDraft interface. (2) Replace 7 useState hooks with single useState<BowelFormDraft>. (3) Create a INITIAL_BOWEL_DRAFT constant and a resetDraft helper. Pattern matches useNutritionStore.",
       "files": {
-        "read": ["src/components/track/panels/BowelSection.tsx"],
-        "edit": ["src/components/track/panels/BowelSection.tsx"],
+        "read": [
+          "src/components/track/panels/BowelSection.tsx"
+        ],
+        "edit": [
+          "src/components/track/panels/BowelSection.tsx"
+        ],
         "create": []
       },
       "acceptanceCriteria": [
@@ -746,8 +951,12 @@
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": false
       }
     },
@@ -759,8 +968,12 @@
       "skill": "vite-react-implementer",
       "description": "CalorieDetailView.tsx (~L276,L303) delete button says 'Delete {displayName}' (individual item) but calls onDeleteLog(log.id) which deletes the entire log. For multi-item logs, clicking delete on one item deletes all items. Fix: (1) Add a defensive assertion/check that logs passed to the delete handler contain exactly one item. (2) If multi-item logs are possible, either surface item-level deletion or change the aria-label to 'Delete all items in this log'. (3) Add an explanatory code comment documenting the constraint.",
       "files": {
-        "read": ["src/components/track/nutrition/CalorieDetailView.tsx"],
-        "edit": ["src/components/track/nutrition/CalorieDetailView.tsx"],
+        "read": [
+          "src/components/track/nutrition/CalorieDetailView.tsx"
+        ],
+        "edit": [
+          "src/components/track/nutrition/CalorieDetailView.tsx"
+        ],
         "create": []
       },
       "acceptanceCriteria": [
@@ -771,8 +984,12 @@
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": true
       }
     },
@@ -784,8 +1001,12 @@
       "skill": "vite-react-implementer",
       "description": "grouping.ts (~L56) uses `foodEntries.push(log as unknown as FoodLog)` to force a liquid log into the FoodLog array. If shapes diverge, the cast silently produces garbage. Fix: (1) Define FoodPipelineLog = FoodLog | LiquidLog union type. (2) Change the array type to FoodPipelineLog[]. (3) Use isFoodPipelineType (existing helper) to narrow safely instead of casting.",
       "files": {
-        "read": ["src/components/track/today-log/grouping.ts"],
-        "edit": ["src/components/track/today-log/grouping.ts"],
+        "read": [
+          "src/components/track/today-log/grouping.ts"
+        ],
+        "edit": [
+          "src/components/track/today-log/grouping.ts"
+        ],
         "create": []
       },
       "acceptanceCriteria": [
@@ -797,8 +1018,12 @@
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": false
       }
     },
@@ -810,8 +1035,12 @@
       "skill": "vite-react-implementer",
       "description": "responsive-shell.tsx mobile path uses shrink-0 while tablet/desktop uses flex-1. On mobile, drawer content may not scroll with tall content. Also contains typeof window === 'undefined' SSR guards that are dead code in Vite SPA. Fix: (1) Change mobile shrink-0 to flex-1 (or audit intended layout). (2) Remove all SSR guards (typeof window === 'undefined' checks).",
       "files": {
-        "read": ["src/components/ui/responsive-shell.tsx"],
-        "edit": ["src/components/ui/responsive-shell.tsx"],
+        "read": [
+          "src/components/ui/responsive-shell.tsx"
+        ],
+        "edit": [
+          "src/components/ui/responsive-shell.tsx"
+        ],
         "create": []
       },
       "acceptanceCriteria": [
@@ -821,21 +1050,29 @@
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": true
       }
     },
     {
       "id": "W5-12",
-      "title": "Fix PopoverTitle — change to h2 element for accessibility",
+      "title": "Fix PopoverTitle \u2014 change to h2 element for accessibility",
       "wave": 5,
       "dependsOn": [],
       "skill": "vite-react-implementer",
       "description": "popover.tsx (~L125-127) types PopoverTitle as ComponentProps<'h2'> but renders a <div>. h2-specific attributes are silently ignored. Fix: Change the rendered element from <div> to <h2> for correct semantic HTML and accessibility.",
       "files": {
-        "read": ["src/components/ui/popover.tsx"],
-        "edit": ["src/components/ui/popover.tsx"],
+        "read": [
+          "src/components/ui/popover.tsx"
+        ],
+        "edit": [
+          "src/components/ui/popover.tsx"
+        ],
         "create": []
       },
       "acceptanceCriteria": [
@@ -845,8 +1082,12 @@
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": true
       }
     },
@@ -858,8 +1099,12 @@
       "skill": "vite-react-implementer",
       "description": "SyncedLogsContext.tsx (~L7,L59) coerces undefined (loading) to [] (empty). Consumers can't distinguish loading from no-logs-exist. AI analysis could run prematurely. Fix: Expose an isLoading field alongside logs. Change context value type to include { logs: SyncedLog[]; isLoading: boolean }. When the Convex query returns undefined, set isLoading: true and logs: [].",
       "files": {
-        "read": ["src/contexts/SyncedLogsContext.tsx"],
-        "edit": ["src/contexts/SyncedLogsContext.tsx"],
+        "read": [
+          "src/contexts/SyncedLogsContext.tsx"
+        ],
+        "edit": [
+          "src/contexts/SyncedLogsContext.tsx"
+        ],
         "create": []
       },
       "acceptanceCriteria": [
@@ -870,8 +1115,12 @@
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": false
       }
     },
@@ -883,8 +1132,12 @@
       "skill": "vite-react-implementer",
       "description": "sounds.ts (~L67-73) calls AudioContext.resume() (async) but doesn't await it, then synchronously checks ctx.state which still shows 'suspended'. Sound is silently dropped. Fix: Extract note scheduling into a scheduleNotes(ctx, variant) helper. Chain from the resolved promise: ctx.resume().then(() => scheduleNotes(ctx, variant)).catch(console.error).",
       "files": {
-        "read": ["src/lib/sounds.ts"],
-        "edit": ["src/lib/sounds.ts"],
+        "read": [
+          "src/lib/sounds.ts"
+        ],
+        "edit": [
+          "src/lib/sounds.ts"
+        ],
         "create": []
       },
       "acceptanceCriteria": [
@@ -895,8 +1148,12 @@
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": true
       }
     },
@@ -920,8 +1177,12 @@
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": false
       }
     },
@@ -943,7 +1204,9 @@
           "src/components/settings/CollapsibleSectionHeader.tsx",
           "src/components/settings/AppDataForm.tsx"
         ],
-        "create": ["src/components/settings/InlineConfirmation.tsx"]
+        "create": [
+          "src/components/settings/InlineConfirmation.tsx"
+        ]
       },
       "acceptanceCriteria": [
         "CollapsibleSectionHeader accepts color prop",
@@ -953,8 +1216,12 @@
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": true
       }
     },
@@ -966,7 +1233,10 @@
       "skill": "vite-react-implementer",
       "description": "After W3-07 split, AI code may use toLocaleString with non-deterministic output. Fix: Use a deterministic formatter (ISO 8601 or explicit Intl.DateTimeFormat with fixed options). Check the split AI files (aiPrompts.ts, aiFetchInsights.ts) for any toLocaleString calls without explicit locale.",
       "files": {
-        "read": ["src/lib/aiPrompts.ts", "src/lib/aiFetchInsights.ts"],
+        "read": [
+          "src/lib/aiPrompts.ts",
+          "src/lib/aiFetchInsights.ts"
+        ],
         "edit": [],
         "create": []
       },
@@ -977,8 +1247,12 @@
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": false
       }
     },
@@ -990,7 +1264,10 @@
       "skill": "vite-react-implementer",
       "description": "getDaysPostOp uses new Date() causing drift across renders. Fix: Accept a now: number parameter (timestamp ms). Compute once at the call site and pass through. All callers should pass a stable timestamp.",
       "files": {
-        "read": ["src/lib/aiPrompts.ts", "src/lib/aiAnalysis.ts"],
+        "read": [
+          "src/lib/aiPrompts.ts",
+          "src/lib/aiAnalysis.ts"
+        ],
         "edit": [],
         "create": []
       },
@@ -1002,8 +1279,12 @@
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": false
       }
     },
@@ -1030,8 +1311,12 @@
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": false
       }
     },
@@ -1043,7 +1328,10 @@
       "skill": "vite-react-implementer",
       "description": "fetchWeeklySummary does not validate the model parameter before use. Fix: Call getValidInsightModel(model) before making the API call, consistent with other AI entry points.",
       "files": {
-        "read": ["src/lib/aiFetchInsights.ts", "src/lib/aiAnalysis.ts"],
+        "read": [
+          "src/lib/aiFetchInsights.ts",
+          "src/lib/aiAnalysis.ts"
+        ],
         "edit": [],
         "create": []
       },
@@ -1054,8 +1342,12 @@
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": false
       }
     },
@@ -1065,7 +1357,7 @@
       "wave": 5,
       "dependsOn": [],
       "skill": "vite-react-implementer",
-      "description": "WQ-113 reports BM count data is wrong in the hero section — needs runtime verification. Fix: Read the hero BM count component, trace the data pipeline from Convex query to display, and verify the count logic is correct. Fix any bugs found.",
+      "description": "WQ-113 reports BM count data is wrong in the hero section \u2014 needs runtime verification. Fix: Read the hero BM count component, trace the data pipeline from Convex query to display, and verify the count logic is correct. Fix any bugs found.",
       "files": {
         "read": [],
         "edit": [],
@@ -1078,18 +1370,22 @@
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": true
       }
     },
     {
       "id": "W5-22",
-      "title": "Fix weight target save — accept integer input like '180'",
+      "title": "Fix weight target save \u2014 accept integer input like '180'",
       "wave": 5,
       "dependsOn": [],
       "skill": "vite-react-implementer",
-      "description": "WQ-118: Typing '180' in the weight target field doesn't save — user must type '180.0' or press Enter/Tab. Fix: Find the weight target input handler and ensure integer strings (no decimal) are accepted and saved correctly.",
+      "description": "WQ-118: Typing '180' in the weight target field doesn't save \u2014 user must type '180.0' or press Enter/Tab. Fix: Find the weight target input handler and ensure integer strings (no decimal) are accepted and saved correctly.",
       "files": {
         "read": [],
         "edit": [],
@@ -1102,8 +1398,12 @@
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": true
       }
     },
@@ -1126,8 +1426,12 @@
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": true
       }
     },
@@ -1139,9 +1443,14 @@
       "skill": "test-writer",
       "description": "WQ-428: No E2E test verifies the post-landing-page unauthenticated / flow. Fix: Create a new E2E spec that loads the app at / without authentication and verifies the expected unauthenticated experience (landing page, sign-in prompt, etc.).",
       "files": {
-        "read": ["e2e/app-loads.spec.ts", "e2e/fixtures.ts"],
+        "read": [
+          "e2e/app-loads.spec.ts",
+          "e2e/fixtures.ts"
+        ],
         "edit": [],
-        "create": ["e2e/unauthenticated-flow.spec.ts"]
+        "create": [
+          "e2e/unauthenticated-flow.spec.ts"
+        ]
       },
       "acceptanceCriteria": [
         "E2E test exists for unauthenticated / flow",
@@ -1150,8 +1459,10 @@
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run test:e2e"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run test:e2e"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": false
       }
     },
@@ -1173,8 +1484,12 @@
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": true
       }
     },
@@ -1196,8 +1511,12 @@
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": true
       }
     },
@@ -1219,8 +1538,12 @@
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": true
       }
     },
@@ -1242,8 +1565,12 @@
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": true
       }
     },
@@ -1267,8 +1594,12 @@
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": true
       }
     },
@@ -1280,8 +1611,12 @@
       "skill": "vite-react-implementer",
       "description": "WQ-434: Aquarius matched as 'electrolyte drink' with 240g/60kcal default which is wrong. Actual 100ml serving has different values. Fix: (1) Correct the food registry entry for electrolyte drinks with accurate per-100ml nutrition data. (2) Ensure liquid foods log in ml not grams.",
       "files": {
-        "read": ["shared/foodRegistryData.ts"],
-        "edit": ["shared/foodRegistryData.ts"],
+        "read": [
+          "shared/foodRegistryData.ts"
+        ],
+        "edit": [
+          "shared/foodRegistryData.ts"
+        ],
         "create": []
       },
       "acceptanceCriteria": [
@@ -1291,8 +1626,12 @@
       ],
       "completed": false,
       "verification": {
-        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
-        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "bun run build"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass \u2014 update them to match the new reality.",
         "uiAffected": true
       }
     }

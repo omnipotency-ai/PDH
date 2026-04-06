@@ -54,7 +54,7 @@ All 6 waves complete (W0-W5), 69 commits, 1430 tests, 211 files changed.
 
 ## Active: Tech-Debt Audit Cleanup
 
-> **Status:** IN PROGRESS (2026-04-06) — waves 0-2 complete on `pans-labyrinth`, wave 3 ready
+> **Status:** IN PROGRESS (2026-04-06) — waves 0-4 partially complete on `pans-labyrinth`, W4 has 6 tasks pending rate-limit reset
 > **Plan (waves 0-1):** [`docs/plans/2026-04-06-tech-debt-audit-cleanup-waves-0-1.json`](plans/2026-04-06-tech-debt-audit-cleanup-waves-0-1.json)
 > **Plan (waves 2-3):** [`docs/plans/2026-04-06-tech-debt-audit-cleanup-waves-2-3.json`](plans/2026-04-06-tech-debt-audit-cleanup-waves-2-3.json)
 > **Plan (waves 4-5):** [`docs/plans/2026-04-06-tech-debt-audit-cleanup-waves-4-5.json`](plans/2026-04-06-tech-debt-audit-cleanup-waves-4-5.json)
@@ -62,31 +62,54 @@ All 6 waves complete (W0-W5), 69 commits, 1430 tests, 211 files changed.
 > **PRD:** [`docs/prd/2026-04-06-tech-debt-audit-cleanup.md`](prd/2026-04-06-tech-debt-audit-cleanup.md)
 > **Branch:** `pans-labyrinth`
 
-Waves 0-2 were executed on `pans-labyrinth`. Waves 0-1 are represented in branch history by task commits `W0-01` through `W1-18`. Wave 2 landed in batch commits on the same branch. The next executable task is `W3-01`.
+Waves 0-3 complete. Wave 4 partially complete (12/18 done). 6 tasks pending rate-limit reset (midnight Madrid 2026-04-06).
 
 ### Wave 2
 
-| Task | Title | Depends On | Status | Commit |
-|------|-------|-----------|--------|--------|
-| W2-01 | Consolidate OpenAI utility functions into `convex/lib/openai.ts` | — | done | TBD |
-| W2-02 | Consolidate coerce/normalization utilities into `convex/lib/coerce.ts` | — | done | TBD |
-| W2-03 | Consolidate activity type normalization into `src/lib/activityTypeUtils.ts` | — | done | TBD |
-| W2-04 | Consolidate time constants into `src/lib/timeConstants.ts` | — | done | TBD |
-| W2-05 | Consolidate zone colors into `src/lib/zoneColors.ts` | — | done | TBD |
-| W2-06 | Pre-compile regex patterns in `shared/food*.ts` files | — | done | TBD |
-| W2-07 | Extract `useIsMobile` hook to shared location | — | done | TBD |
-| W2-08 | Consolidate `foodEvidence` test factory functions | — | done | TBD |
-| W2-09 | Fix stale theme storage key and create `storageKeys.ts` | — | done | TBD |
-| W2-10 | Consolidate `customFoodPresets` normalization and fix ID generation | — | done | TBD |
+| Task  | Title                                                                       | Depends On | Status | Commit |
+| ----- | --------------------------------------------------------------------------- | ---------- | ------ | ------ |
+| W2-01 | Consolidate OpenAI utility functions into `convex/lib/openai.ts`            | —          | done   | TBD    |
+| W2-02 | Consolidate coerce/normalization utilities into `convex/lib/coerce.ts`      | —          | done   | TBD    |
+| W2-03 | Consolidate activity type normalization into `src/lib/activityTypeUtils.ts` | —          | done   | TBD    |
+| W2-04 | Consolidate time constants into `src/lib/timeConstants.ts`                  | —          | done   | TBD    |
+| W2-05 | Consolidate zone colors into `src/lib/zoneColors.ts`                        | —          | done   | TBD    |
+| W2-06 | Pre-compile regex patterns in `shared/food*.ts` files                       | —          | done   | TBD    |
+| W2-07 | Extract `useIsMobile` hook to shared location                               | —          | done   | TBD    |
+| W2-08 | Consolidate `foodEvidence` test factory functions                           | —          | done   | TBD    |
+| W2-09 | Fix stale theme storage key and create `storageKeys.ts`                     | —          | done   | TBD    |
+| W2-10 | Consolidate `customFoodPresets` normalization and fix ID generation         | —          | done   | TBD    |
 
 ### Wave 3
 
-| Task | Title | Depends On | Status | Commit |
-|------|-------|-----------|--------|--------|
-| W3-01 | Split `convex/logs.ts` into focused modules | — | pending | |
-| W3-02 | Split `routeTree.tsx`; extract layout components | — | pending | |
-| W3-03 | Split `SmartViews.tsx`; extract utility logic to `smartViewUtils.ts` | — | pending | |
-| W3-04 | Relocate Dr Poo components from `archive/` to `dr-poo/` | — | pending | |
-| W3-05 | Extract store configuration constants from `src/store.ts` | — | pending | |
-| W3-06 | Split `LogEntry.tsx`; delegate to SubRow components | — | pending | |
-| W3-07 | Split `aiAnalysis.ts` into focused modules | — | pending | |
+| Task  | Title                                                                | Depends On | Status | Commit    |
+| ----- | -------------------------------------------------------------------- | ---------- | ------ | --------- |
+| W3-01 | Split `convex/logs.ts` into focused modules                          | —          | done   | `996b0a0` |
+| W3-02 | Split `routeTree.tsx`; extract layout components                     | —          | done   | `a207e76` |
+| W3-03 | Split `SmartViews.tsx`; extract utility logic to `smartViewUtils.ts` | —          | done   | TBD       |
+| W3-04 | Relocate Dr Poo components from `archive/` to `dr-poo/`              | —          | done   | `ec5deb7` |
+| W3-05 | Extract store configuration constants from `src/store.ts`            | —          | done   | `4b71da6` |
+| W3-06 | Split `LogEntry.tsx`; delegate to SubRow components                  | —          | done   | `773d55e` |
+| W3-07 | Split `aiAnalysis.ts` into focused modules                           | —          | done   | `4caf2d7` |
+
+### Wave 4
+
+| Task  | Title                                                               | Depends On | Status  | Commit    |
+| ----- | ------------------------------------------------------------------- | ---------- | ------- | --------- |
+| W4-01 | Make importBackup safe — add caps, chunk inserts, validate          | —          | pending |           |
+| W4-02 | Cap exportBackup parallel table collects                            | W4-01      | pending |           |
+| W4-03 | Optimize buildFoodEvidenceResult — cap inputs, fix O(TxE) loop      | —          | done    | `4aa2254` |
+| W4-04 | Add limit argument to conversations.listByDateRange                 | —          | done    | `5e3b5e5` |
+| W4-05 | Skip FoodMatchingModal query on cold open                           | —          | done    | `1ba90db` |
+| W4-06 | Merge FoodFilterView double frequency scan into single memo         | —          | done    | `1ba90db` |
+| W4-07 | Add .take() caps to unbounded aggregate/exposure/assessment queries | —          | done    | `4aa2254` |
+| W4-08 | Break mergeDuplicates into phased mutations                         | —          | done    | `1797524` |
+| W4-09 | Optimize listFoodEmbeddings staleness check                         | —          | pending |           |
+| W4-10 | Replace per-row setInterval in RelativeTime with global hook        | —          | done    | `0407871` |
+| W4-11 | Optimize ProfileContext — remove JSON.stringify comparison          | —          | pending |           |
+| W4-12 | Reduce client bundle — create ClientFoodRegistryEntry projection    | —          | pending |           |
+| W4-13 | Remove pretty-printed JSON from AI payloads                         | —          | done    | `0407871` |
+| W4-14 | Remove pretty-printed JSON from backup export                       | W4-01      | pending |           |
+| W4-15 | Debounce Patterns.tsx localStorage writes, add runtime validation   | —          | done    | `0407871` |
+| W4-16 | Fix Confetti onComplete re-trigger via useRef                       | —          | done    | `0407871` |
+| W4-17 | Hoist CalendarDayButton getDefaultClassNames to module scope        | —          | done    | `0407871` |
+| W4-18 | Lazy-import TrackPage in routeTree                                  | —          | done    | `0407871` |
