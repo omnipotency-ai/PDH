@@ -22,6 +22,20 @@
 
 ## Active: Tech-Debt Audit Cleanup
 
+### W4-09 — Optimize listFoodEmbeddings staleness check — avoid reading full vectors (2026-04-06 21:00)
+
+- **Commit:** `TBD`
+- **Files:** `convex/foodParsing.ts`
+- **What:** Added `listFoodEmbeddingVersions` internalQuery that maps `foodEmbeddings` documents to `FoodEmbeddingVersionRow` (canonicalName + embeddingSourceHash only) before returning. Updated `ensureFoodEmbeddings` to call `listFoodEmbeddingVersions` instead of `listFoodEmbeddings`. Convex cannot project fields server-side, but stripping the 1536-float vectors from the return value reduces the cross-function response payload from ~12MB to ~50KB for 1000 entries.
+- **Decisions:** Kept `listFoodEmbeddings` unchanged for callers that genuinely need full vector data. `FoodEmbeddingVersionRow` type already existed with exactly the two needed fields. Used conditional spread for `embeddingSourceHash` to satisfy `exactOptionalPropertyTypes`.
+
+### W4-11 — Optimize ProfileContext — remove JSON.stringify comparison (2026-04-06 20:56)
+
+- **Commit:** `825b8f2`
+- **Files:** `src/contexts/ProfileContext.tsx`
+- **What:** Replaced whole-profile `JSON.stringify` hash on every render with a shallow field-by-field comparison (scalar fields use `!==`, object/array fields use per-field `JSON.stringify`). Replaced 10-field manual conditional spread in `patchProfile` with `Object.fromEntries(Object.entries(updates).filter(([, v]) => v !== undefined))` cast to `PatchProfileArgs`.
+- **Decisions:** Per-field `JSON.stringify` is still used for object/array fields (habits, sleepGoal, etc.) since they have no stable reference identity. The scalar `unitSystem` field uses strict equality. The `Object.fromEntries` result is cast to `PatchProfileArgs` — safe because all keys in that type map directly to the mutation args.
+
 ### W4-07 — Add .take() caps to unbounded aggregate/exposure/assessment queries (2026-04-06 20:28)
 
 - **Commit:** `4aa2254`
