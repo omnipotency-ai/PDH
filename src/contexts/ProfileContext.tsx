@@ -1,11 +1,18 @@
 import { useMutation, useQuery } from "convex/react";
-import { createContext, type ReactNode, useCallback, useContext, useMemo, useRef } from "react";
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useMemo,
+  useRef,
+} from "react";
+import { DEFAULT_HEALTH_PROFILE } from "@/lib/defaults";
+import type { SleepGoal } from "@/lib/gamificationDefaults";
+import { DEFAULT_SLEEP_GOAL } from "@/lib/gamificationDefaults";
 import type { HabitConfig } from "@/lib/habitTemplates";
 import { getDefaultHabitTemplates } from "@/lib/habitTemplates";
-import type { SleepGoal } from "@/lib/streaks";
-import { DEFAULT_SLEEP_GOAL } from "@/lib/streaks";
 import type { UnitSystem } from "@/lib/units";
-import { DEFAULT_HEALTH_PROFILE } from "@/store";
 import type {
   AiPreferences,
   FluidPreset,
@@ -99,15 +106,22 @@ function resolveProfile(
   return {
     unitSystem: raw.unitSystem ?? DEFAULT_PROFILE.unitSystem,
     habits: (raw.habits ?? DEFAULT_PROFILE.habits) as HabitConfig[],
-    fluidPresets: (raw.fluidPresets ?? DEFAULT_PROFILE.fluidPresets) as FluidPreset[],
+    fluidPresets: (raw.fluidPresets ??
+      DEFAULT_PROFILE.fluidPresets) as FluidPreset[],
     sleepGoal: raw.sleepGoal ?? DEFAULT_PROFILE.sleepGoal,
     healthProfile: hp ?? DEFAULT_PROFILE.healthProfile,
-    aiPreferences: (raw.aiPreferences ?? DEFAULT_PROFILE.aiPreferences) as AiPreferences,
-    foodPersonalisation: raw.foodPersonalisation ?? DEFAULT_PROFILE.foodPersonalisation,
-    transitCalibration: raw.transitCalibration ?? DEFAULT_PROFILE.transitCalibration,
+    aiPreferences: (raw.aiPreferences ??
+      DEFAULT_PROFILE.aiPreferences) as AiPreferences,
+    foodPersonalisation:
+      raw.foodPersonalisation ?? DEFAULT_PROFILE.foodPersonalisation,
+    transitCalibration:
+      raw.transitCalibration ?? DEFAULT_PROFILE.transitCalibration,
     nutritionGoals:
-      (raw.nutritionGoals as NutritionGoals | undefined) ?? DEFAULT_PROFILE.nutritionGoals,
-    foodFavourites: (raw.foodFavourites as string[] | undefined) ?? DEFAULT_PROFILE.foodFavourites,
+      (raw.nutritionGoals as NutritionGoals | undefined) ??
+      DEFAULT_PROFILE.nutritionGoals,
+    foodFavourites:
+      (raw.foodFavourites as string[] | undefined) ??
+      DEFAULT_PROFILE.foodFavourites,
   };
 }
 
@@ -126,64 +140,50 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   // profile object on every delivery, which in turn triggers re-renders in
   // ALL context consumers — even those that only care about one field.
   //
-  // Fix: Compare the resolved profile against the previous one using
-  // JSON serialization. Only update the reference when data actually changes.
-  // This is safe because ResolvedProfile contains only JSON-serializable
-  // primitives, arrays, and plain objects — no functions, dates, or symbols.
+  // Fix: Compare the resolved profile against the previous one using a
+  // shallow field-by-field check over the known top-level keys. For scalar
+  // fields (unitSystem) we use strict equality. For object/array fields we
+  // compare via JSON.stringify per-field, which is cheaper than serializing
+  // the whole profile on every render.
   // ---------------------------------------------------------------------------
-  const nextProfile = useMemo(() => resolveProfile(raw), [raw]);
   const prevProfileRef = useRef<ResolvedProfile>(DEFAULT_PROFILE);
-  const prevHashRef = useRef<string>("");
 
-  // TODO: JSON.stringify on every render is O(n) — could be optimized with
-  // a shallow comparison of top-level fields (unitSystem, habits.length, etc.)
-  // since ResolvedProfile has a known, flat-ish shape.
   const profile: ResolvedProfile = useMemo(() => {
-    const nextHash = JSON.stringify(nextProfile);
-    if (nextHash === prevHashRef.current) {
-      return prevProfileRef.current;
+    const next = resolveProfile(raw);
+    const prev = prevProfileRef.current;
+    const changed =
+      prev.unitSystem !== next.unitSystem ||
+      JSON.stringify(prev.habits) !== JSON.stringify(next.habits) ||
+      JSON.stringify(prev.fluidPresets) !== JSON.stringify(next.fluidPresets) ||
+      JSON.stringify(prev.sleepGoal) !== JSON.stringify(next.sleepGoal) ||
+      JSON.stringify(prev.healthProfile) !==
+        JSON.stringify(next.healthProfile) ||
+      JSON.stringify(prev.aiPreferences) !==
+        JSON.stringify(next.aiPreferences) ||
+      JSON.stringify(prev.foodPersonalisation) !==
+        JSON.stringify(next.foodPersonalisation) ||
+      JSON.stringify(prev.transitCalibration) !==
+        JSON.stringify(next.transitCalibration) ||
+      JSON.stringify(prev.nutritionGoals) !==
+        JSON.stringify(next.nutritionGoals) ||
+      JSON.stringify(prev.foodFavourites) !==
+        JSON.stringify(next.foodFavourites);
+    if (!changed) {
+      return prev;
     }
-    prevHashRef.current = nextHash;
-    prevProfileRef.current = nextProfile;
-    return nextProfile;
-  }, [nextProfile]);
+    prevProfileRef.current = next;
+    return next;
+  }, [raw]);
 
   const patchProfile = useCallback(
     async (updates: PatchProfileArgs) => {
-      // Build args with conditional spreads so only defined fields are sent.
-      // Every field in PatchProfileArgs is optional and matches the Convex
-      // patchProfile mutation's args, so the spread produces a valid argument.
-      await patchMutation({
-        now: Date.now(),
-        ...(updates.unitSystem !== undefined && {
-          unitSystem: updates.unitSystem,
-        }),
-        ...(updates.habits !== undefined && { habits: updates.habits }),
-        ...(updates.fluidPresets !== undefined && {
-          fluidPresets: updates.fluidPresets,
-        }),
-        ...(updates.sleepGoal !== undefined && {
-          sleepGoal: updates.sleepGoal,
-        }),
-        ...(updates.healthProfile !== undefined && {
-          healthProfile: updates.healthProfile,
-        }),
-        ...(updates.aiPreferences !== undefined && {
-          aiPreferences: updates.aiPreferences,
-        }),
-        ...(updates.foodPersonalisation !== undefined && {
-          foodPersonalisation: updates.foodPersonalisation,
-        }),
-        ...(updates.transitCalibration !== undefined && {
-          transitCalibration: updates.transitCalibration,
-        }),
-        ...(updates.nutritionGoals !== undefined && {
-          nutritionGoals: updates.nutritionGoals,
-        }),
-        ...(updates.foodFavourites !== undefined && {
-          foodFavourites: updates.foodFavourites,
-        }),
-      });
+      // Filter out undefined values so only defined fields are sent to Convex.
+      // PatchProfileArgs keys are a strict subset of patchProfile mutation args,
+      // so the cast to PatchProfileArgs is safe.
+      const definedUpdates = Object.fromEntries(
+        Object.entries(updates).filter(([, v]) => v !== undefined),
+      ) as PatchProfileArgs;
+      await patchMutation({ now: Date.now(), ...definedUpdates });
     },
     [patchMutation],
   );

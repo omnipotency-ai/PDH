@@ -1,7 +1,12 @@
 import { type HabitConfig, isCheckboxHabit } from "@/lib/habitTemplates";
+import { isFoodPipelineType } from "@shared/logTypeUtils";
 import type { SyncedLog } from "@/lib/sync";
-import type { FluidLog, FoodLog, WeightLog } from "@/types/domain";
-import type { DisplayItem } from "./types";
+import type { FluidLog, WeightLog } from "@/types/domain";
+import type { DisplayItem, FoodPipelineLog } from "./types";
+
+function isFoodPipelineLog(log: SyncedLog): log is FoodPipelineLog {
+  return isFoodPipelineType(log.type);
+}
 
 function sumFluidMl(entries: FluidLog[]): number {
   let total = 0;
@@ -24,6 +29,17 @@ function sumFluidMl(entries: FluidLog[]): number {
   return total;
 }
 
+function resolveHabitGroupKey(habits: HabitConfig[], log: Extract<SyncedLog, { type: "habit" }>): string {
+  const habitId = String(log.data?.habitId ?? "").trim();
+  const name = String(log.data?.name ?? "").trim();
+  const matchedHabit =
+    habits.find((h) => h.id === habitId) ??
+    habits.find((h) => name.length > 0 && h.name === name) ??
+    null;
+
+  return matchedHabit?.id || habitId || name || "habit";
+}
+
 /** Find the maximum timestamp in an array of logs. Avoids Math.max(...spread) allocation. */
 function maxTimestamp(entries: ReadonlyArray<{ timestamp: number }>): number {
   let max = -Infinity;
@@ -37,7 +53,7 @@ export function groupLogEntries(sorted: SyncedLog[], habits: HabitConfig[]): Dis
   const items: DisplayItem[] = [];
 
   // Accumulate groups
-  const foodEntries: FoodLog[] = [];
+  const foodEntries: FoodPipelineLog[] = [];
   const fluidEntries: FluidLog[] = [];
   const weightEntries: WeightLog[] = [];
   const sleepActivityEntries: SyncedLog[] = [];
@@ -46,14 +62,9 @@ export function groupLogEntries(sorted: SyncedLog[], habits: HabitConfig[]): Dis
   const habitGroups: Record<string, SyncedLog[]> = Object.create(null);
 
   for (const log of sorted) {
-    if (log.type === "food") {
+    if (isFoodPipelineLog(log)) {
+      // Liquid logs use the same item shape as food logs and belong in the food group.
       foodEntries.push(log);
-      continue;
-    }
-
-    if (log.type === "liquid") {
-      // Liquid logs use FoodLogData shape and display with food entries
-      foodEntries.push(log as unknown as FoodLog);
       continue;
     }
 
@@ -73,7 +84,7 @@ export function groupLogEntries(sorted: SyncedLog[], habits: HabitConfig[]): Dis
     }
 
     if (log.type === "habit") {
-      const key = String(log.data?.habitId ?? log.data?.name ?? "habit");
+      const key = resolveHabitGroupKey(habits, log);
       const group = habitGroups[key];
       if (group) {
         group.push(log);

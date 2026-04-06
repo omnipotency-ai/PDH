@@ -10,10 +10,12 @@ import {
   createBlankCustomFoodPreset,
   formatIngredientsInput,
   loadCustomFoodPresets,
+  MAX_PRESET_NAME_LENGTH,
+  MAX_PRESETS,
   parseIngredientsInput,
   saveCustomFoodPresets,
 } from "@/lib/customFoodPresets";
-import { BLOCKED_FLUID_PRESET_NAMES, MAX_FLUID_PRESETS } from "@/store";
+import { BLOCKED_FLUID_PRESET_NAMES, MAX_FLUID_PRESETS } from "@/lib/fluidPresets";
 import type { FluidPreset, FluidPresetDraft } from "@/types/domain";
 import { FoodPersonalisationSection } from "./FoodPersonalisationSection";
 import { CustomDrinksSection, DrPooSection } from "./tracking-form";
@@ -36,7 +38,7 @@ function makeDrafts(presets: (FluidPreset | string)[]): FluidPresetDraft[] {
 //
 // Keeps a local raw string for the ingredients field so typing "pasta, cheese"
 // doesn't get clobbered by the parse→format round-trip on every keystroke
-// (Bug #46). An explicit Save button commits changes and shows a toast (Bug #47).
+// An explicit Save button commits changes and shows a toast.
 
 interface CustomFoodCardProps {
   preset: CustomFoodPreset;
@@ -63,7 +65,7 @@ function CustomFoodCard({ preset, onSave, onRemove }: CustomFoodCardProps) {
       toast.error("Food title is required.");
       return;
     }
-    // SET-F008: validate that at least one ingredient was parsed. An empty
+    // Validate that at least one ingredient was parsed. An empty
     // result after parsing means the input had no meaningful content.
     const ingredients = parseIngredientsInput(ingredientsRaw);
     if (ingredientsRaw.trim() && ingredients.length === 0) {
@@ -83,7 +85,7 @@ function CustomFoodCard({ preset, onSave, onRemove }: CustomFoodCardProps) {
               <Label className="text-[10px] text-[var(--text-faint)]">Food title</Label>
               <Input
                 value={name}
-                maxLength={80}
+                maxLength={MAX_PRESET_NAME_LENGTH}
                 onChange={(event) => setName(event.target.value)}
                 placeholder="e.g. Lasagna"
                 className="h-8"
@@ -204,10 +206,7 @@ export function PersonalisationForm() {
   };
 
   const addCustomFoodCard = () => {
-    const MAX_CUSTOM_FOOD_PRESETS = 12;
-    setCustomFoodPresets((prev) =>
-      [...prev, createBlankCustomFoodPreset()].slice(0, MAX_CUSTOM_FOOD_PRESETS),
-    );
+    setCustomFoodPresets((prev) => [...prev, createBlankCustomFoodPreset()].slice(0, MAX_PRESETS));
   };
 
   const saveCustomFoodCard = (id: string, name: string, ingredients: string[]) => {

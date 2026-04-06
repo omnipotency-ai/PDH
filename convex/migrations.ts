@@ -4,6 +4,12 @@ import { resolveCanonicalFoodName } from "../shared/foodCanonicalName";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { internalMutation } from "./_generated/server";
+import {
+  asNumber,
+  asTrimmedString,
+  inferHabitTypeFromName,
+  slugifyName,
+} from "./lib/coerce";
 import type {
   aiInsightValidator,
   aiRequestValidator,
@@ -55,34 +61,12 @@ function normalizeKey(value: unknown): string {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
-function slugify(value: string): string {
-  const slug = value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-  return slug || "custom";
-}
-
-function inferHabitType(value: string): string {
-  const key = normalizeKey(value).replace(/\s+/g, "_");
-  if (/sleep|nap/.test(key)) return "sleep";
-  if (/walk|movement|steps|run|breathe|stretch|yoga/.test(key))
-    return "activity";
-  if (/water|hydrat|tea|coffee|electrolyte|juice/.test(key)) return "fluid";
-  if (/cig|smok|nicotine|alcohol|beer|wine|spirit|sweet|candy|drug/.test(key))
-    return "destructive";
-  if (/med|pill|tablet|medicine|dressing|wound/.test(key)) return "checkbox";
-  if (/weight|weigh/.test(key)) return "weight";
-  return "count";
-}
-
 function normalizeHabitType(
   value: string | undefined,
   fallbackName: string,
 ): string {
   const raw = normalizeKey(value);
-  if (!raw) return inferHabitType(fallbackName);
+  if (!raw) return inferHabitTypeFromName(fallbackName);
   switch (raw) {
     case "sleep":
     case "count":
@@ -110,24 +94,8 @@ function normalizeHabitType(
     case "custom":
       return "count";
     default:
-      return inferHabitType(fallbackName);
+      return inferHabitTypeFromName(fallbackName);
   }
-}
-
-function asString(value: unknown): string | undefined {
-  return typeof value === "string" ? value : undefined;
-}
-
-function asTrimmedString(value: unknown): string | undefined {
-  if (typeof value !== "string") return undefined;
-  const trimmed = value.trim();
-  return trimmed ? trimmed : undefined;
-}
-
-function asNumber(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value)
-    ? value
-    : undefined;
 }
 
 function asNullableNumber(value: unknown): number | null {
@@ -272,15 +240,15 @@ function normalizeDigestionData(
     bristolCode: asNumber(data.bristolCode) ?? 4,
   };
 
-  const urgencyTag = asString(data.urgencyTag);
+  const urgencyTag = asTrimmedString(data.urgencyTag);
   if (urgencyTag !== undefined) next.urgencyTag = urgencyTag;
-  const effortTag = asString(data.effortTag);
+  const effortTag = asTrimmedString(data.effortTag);
   if (effortTag !== undefined) next.effortTag = effortTag;
-  const consistencyTag = asString(data.consistencyTag);
+  const consistencyTag = asTrimmedString(data.consistencyTag);
   if (consistencyTag !== undefined) next.consistencyTag = consistencyTag;
 
-  const volumeTag = asString(data.volumeTag);
-  const sizeTag = asString(data.sizeTag);
+  const volumeTag = asTrimmedString(data.volumeTag);
+  const sizeTag = asTrimmedString(data.sizeTag);
   if (volumeTag !== undefined) {
     next.volumeTag = volumeTag;
   } else if (sizeTag !== undefined) {
@@ -292,7 +260,7 @@ function normalizeDigestionData(
   }
 
   if (typeof data.accident === "boolean") next.accident = data.accident;
-  const notes = asString(data.notes);
+  const notes = asTrimmedString(data.notes);
   if (notes !== undefined) next.notes = notes;
   const episodesCount = data.episodesCount;
   if (typeof episodesCount === "number" && Number.isFinite(episodesCount)) {
@@ -321,7 +289,7 @@ function normalizeHabitData(
 
   const nextName =
     match?.name ?? rawName ?? (rawId ? rawId.replace(/^habit_/, "") : "Habit");
-  const nextHabitId = rawId ?? match?.id ?? `habit_${slugify(nextName)}`;
+  const nextHabitId = rawId ?? match?.id ?? `habit_${slugifyName(nextName)}`;
   const nextHabitType = normalizeHabitType(
     rawType ?? match?.habitType,
     nextName,
@@ -347,7 +315,7 @@ function normalizeHabitData(
 
   const quantity = asNumber(data.quantity);
   if (quantity !== undefined) next.quantity = quantity;
-  const action = asString(data.action);
+  const action = asTrimmedString(data.action);
   if (action !== undefined) next.action = action;
 
   return next;
@@ -369,7 +337,7 @@ function normalizeActivityData(
 
   const durationMinutes = asNumber(data.durationMinutes);
   if (durationMinutes !== undefined) next.durationMinutes = durationMinutes;
-  const feelTag = asString(data.feelTag);
+  const feelTag = asTrimmedString(data.feelTag);
   if (feelTag !== undefined) next.feelTag = feelTag;
 
   if (
@@ -973,8 +941,8 @@ function midpointClock(start: string, end: string, fallback: string): string {
 // - healthProfile legacy keys renamed to canonical v1 keys
 // - removed profile metadata fields dropped from stored objects
 export const normalizeProfileDomainV1 = internalMutation({
-  args: {},
-  handler: async (ctx) => {
+  args: { now: v.number() },
+  handler: async (ctx, args) => {
     // Safety cap to prevent Convex memory limit hits in large deployments.
     const profiles = await ctx.db.query("profiles").take(1000);
     let fixed = 0;
@@ -1143,7 +1111,7 @@ export const normalizeProfileDomainV1 = internalMutation({
         ...(nextAiPreferences !== undefined && {
           aiPreferences: nextAiPreferences,
         }),
-        updatedAt: Date.now(),
+        updatedAt: args.now,
       });
       fixed++;
     }

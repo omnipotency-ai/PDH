@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { useApiKeyContext } from "@/contexts/ApiKeyContext";
 import { useSyncedLogsContext } from "@/contexts/SyncedLogsContext";
 import { asConvexId, type SyncedLog } from "@/lib/sync";
+import { SIX_HOURS_MS } from "@/lib/timeConstants";
 import type { FoodItem, FoodLog, LiquidLog } from "@/types/domain";
 import { api } from "../../convex/_generated/api";
 
@@ -44,7 +45,6 @@ function isItemUnresolvedForLlm(item: FoodItem): boolean {
  * Only considers logs from the last 6 hours (the processing window).
  */
 function findLogsNeedingLlmMatching(logs: SyncedLog[], nowMs: number): (FoodLog | LiquidLog)[] {
-  const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
   const result: (FoodLog | LiquidLog)[] = [];
 
   for (const log of logs) {
@@ -76,7 +76,7 @@ function findLogsNeedingLlmMatching(logs: SyncedLog[], nowMs: number): (FoodLog 
  * Each log is only sent once per component mount.
  */
 export function useFoodLlmMatching(): void {
-  const logs = useSyncedLogsContext();
+  const { logs } = useSyncedLogsContext();
   const { hasApiKey } = useApiKeyContext();
   const matchItems = useAction(api.foodLlmMatching.matchUnresolvedItems);
 

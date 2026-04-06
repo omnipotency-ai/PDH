@@ -15,13 +15,7 @@
 
 import { Dialog } from "@base-ui/react/dialog";
 import { Droplets, Minus, Plus, X } from "lucide-react";
-import {
-  type ChangeEvent,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { type ChangeEvent, useCallback, useEffect, useRef, useState } from "react";
 import { CircularProgressRing } from "./CircularProgressRing";
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -128,14 +122,8 @@ export function WaterModal({
   const projectedFluids = totalFluidsMl + amount;
   const remainingMl = Math.max(0, goalMl - totalFluidsMl);
   const safeGoal = goalMl > 0 ? goalMl : 1;
-  const fluidPercent = Math.min(
-    Math.round((totalFluidsMl / safeGoal) * 100),
-    100,
-  );
-  const waterPercent = Math.min(
-    Math.round((waterOnlyMl / safeGoal) * 100),
-    100,
-  );
+  const fluidPercent = Math.min(Math.round((totalFluidsMl / safeGoal) * 100), 100);
+  const waterPercent = Math.min(Math.round((waterOnlyMl / safeGoal) * 100), 100);
   const goalReached = totalFluidsMl >= goalMl;
 
   return (
@@ -162,11 +150,7 @@ export function WaterModal({
             className="mb-6 flex w-full items-center justify-between"
           >
             <div className="flex items-center gap-2">
-              <Droplets
-                className="h-5 w-5"
-                style={{ color: WATER_COLOR }}
-                aria-hidden="true"
-              />
+              <Droplets className="h-5 w-5" style={{ color: WATER_COLOR }} aria-hidden="true" />
               <Dialog.Title
                 className="font-display text-lg font-semibold"
                 style={{ color: "var(--text)" }}
@@ -217,10 +201,7 @@ export function WaterModal({
           </Dialog.Description>
 
           {/* Amount selector — editable input with +/- buttons */}
-          <div
-            data-slot="water-modal-amount"
-            className="mb-6 flex items-center gap-4"
-          >
+          <div data-slot="water-modal-amount" className="mb-6 flex items-center gap-4">
             <button
               type="button"
               onClick={handleDecrement}
@@ -251,10 +232,7 @@ export function WaterModal({
                 aria-atomic="true"
                 aria-label="Amount to add in millilitres"
               />
-              <span
-                className="text-sm font-normal"
-                style={{ color: "var(--text-muted)" }}
-              >
+              <span className="text-sm font-normal" style={{ color: "var(--text-muted)" }}>
                 ml
               </span>
             </div>
@@ -276,10 +254,7 @@ export function WaterModal({
           </div>
 
           {/* Log Water button — centered, no cancel */}
-          <div
-            data-slot="water-modal-actions"
-            className="flex w-full items-center justify-center"
-          >
+          <div data-slot="water-modal-actions" className="flex w-full items-center justify-center">
             <button
               type="button"
               onClick={handleLogWater}

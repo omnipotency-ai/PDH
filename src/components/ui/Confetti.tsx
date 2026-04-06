@@ -32,7 +32,11 @@ function randomBetween(min: number, max: number): number {
   return Math.random() * (max - min) + min;
 }
 
-function createParticles(count: number, originX: number, originY: number): Particle[] {
+function createParticles(
+  count: number,
+  originX: number,
+  originY: number,
+): Particle[] {
   return Array.from({ length: count }, (_, i) => ({
     id: i,
     emoji: CONFETTI_EMOJIS[Math.floor(Math.random() * CONFETTI_EMOJIS.length)],
@@ -62,6 +66,8 @@ export function ConfettiBurst({
 }) {
   const [particles, setParticles] = useState<Particle[]>([]);
   const mountedRef = useRef(true);
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
   useEffect(() => {
     mountedRef.current = true;
@@ -72,11 +78,13 @@ export function ConfettiBurst({
 
   useEffect(() => {
     if (active) {
-      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const prefersReducedMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
 
       // Skip particle generation entirely for reduced motion
       if (prefersReducedMotion) {
-        onComplete();
+        onCompleteRef.current();
         return;
       }
 
@@ -86,12 +94,12 @@ export function ConfettiBurst({
       const timer = setTimeout(() => {
         if (!mountedRef.current) return;
         setParticles([]);
-        onComplete();
+        onCompleteRef.current();
       }, 2000);
       return () => clearTimeout(timer);
     }
     setParticles([]);
-  }, [active, originX, originY, count, onComplete]);
+  }, [active, originX, originY, count]);
 
   if (particles.length === 0) return null;
 

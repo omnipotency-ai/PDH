@@ -1,11 +1,6 @@
-import { BRAT_FOOD_KEYS } from "@shared/foodProjection";
 import { parseAiInsight } from "@/lib/aiAnalysis";
 import type { useAiAnalysisHistory } from "@/lib/sync";
 import type { FoodPrimaryStatus, FoodTendency } from "@/types/domain";
-
-// ─── Constants ───────────────────────────────────────────────────────────────
-
-export const BRAT_KEYS = BRAT_FOOD_KEYS;
 
 export function formatStatusLabel(
   primaryStatus: FoodPrimaryStatus,
@@ -16,18 +11,6 @@ export function formatStatusLabel(
   if (tendency === "hard") return "safe (hard)";
   return "safe";
 }
-
-export type FilterStatus = "all" | FoodPrimaryStatus;
-export type SortKey = "name" | "status" | "transits" | "lastEaten";
-export type SortDir = "asc" | "desc";
-
-export const FILTER_OPTIONS: Array<{ value: FilterStatus; label: string }> = [
-  { value: "all", label: "All" },
-  { value: "safe", label: "Safe" },
-  { value: "building", label: "Building" },
-  { value: "watch", label: "Watch" },
-  { value: "avoid", label: "Avoid" },
-];
 
 // ─── Bristol color helpers ────────────────────────────────────────────────────
 

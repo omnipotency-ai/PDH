@@ -4,6 +4,7 @@ import type { DisplayWeightUnit } from "@/lib/units";
 import type {
   FluidLog,
   FoodLog,
+  LiquidLog,
   HabitLogData,
   LogDataMap,
   LogType,
@@ -16,6 +17,9 @@ export type { HabitLogData };
 // ── Shared callback types ─────────────────────────────────────────────
 /** Union of all typed log data shapes. Editors produce one of these variants. */
 export type LogUpdateData = LogDataMap[LogType];
+
+/** Food-pipeline logs share the same item shape for food and liquid entries. */
+export type FoodPipelineLog = FoodLog | LiquidLog;
 
 // ── Display-item types ────────────────────────────────────────────────
 export type IndividualItem = {
@@ -43,7 +47,7 @@ export type FluidGroup = {
 };
 export type FoodLogGroup = {
   kind: "food";
-  entries: FoodLog[];
+  entries: FoodPipelineLog[];
   sortKey: number;
 };
 export type ActivityGroup = {
@@ -85,7 +89,11 @@ export interface TodayLogProps {
   onNextDay: () => void;
   onJumpToToday: () => void;
   onDelete: (id: string) => Promise<void>;
-  onSave: (id: string, data: LogUpdateData, timestamp?: number) => Promise<void>;
+  onSave: (
+    id: string,
+    data: LogUpdateData,
+    timestamp?: number,
+  ) => Promise<void>;
   /** When set, the LogEntry with this ID will auto-open in edit mode. */
   autoEditId?: string | null;
   /** Called after auto-edit is activated so the parent can clear the ID. */
@@ -95,8 +103,6 @@ export interface TodayLogProps {
 export interface LogEntryProps {
   log: SyncedLog;
   habits: HabitConfig[];
-  onDelete: (id: string) => Promise<void>;
-  onSave: (id: string, data: LogUpdateData, timestamp?: number) => Promise<void>;
 }
 
 export interface DraftItem {

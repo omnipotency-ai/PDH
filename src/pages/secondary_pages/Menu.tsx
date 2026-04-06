@@ -1,4 +1,4 @@
-import { getFoodGroup, getFoodZone, getGroupDisplayName } from "@shared/foodCanonicalization";
+import { getFoodGroup, getFoodZone, getGroupDisplayName } from "@shared/foodRegistry";
 import { Link } from "@tanstack/react-router";
 import {
   AlertTriangle,

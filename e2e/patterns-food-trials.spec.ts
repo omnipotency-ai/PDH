@@ -139,7 +139,8 @@ test.describe("Patterns page structure", () => {
   test("search filters the food list", async ({ page }) => {
     await navigateToPatterns(page);
 
-    const allRowsCount = await page.locator(SEL.databaseRow).count();
+    const rows = page.locator(SEL.databaseRow);
+    await expect(rows.first()).toBeVisible();
 
     // Search for something specific
     const searchInput = page.locator(SEL.searchInput).first();
@@ -148,11 +149,10 @@ test.describe("Patterns page structure", () => {
     // Wait for filtering
     await page.waitForTimeout(500);
 
-    const filteredCount = await page.locator(SEL.databaseRow).count();
-
-    // If "toast" exists, should have fewer rows (or same if only one food)
-    // If "toast" doesn't exist, should have 0 rows
-    expect(filteredCount).toBeLessThanOrEqual(allRowsCount);
+    const filteredCount = await rows.count();
+    for (let index = 0; index < filteredCount; index += 1) {
+      await expect(rows.nth(index)).toContainText(/toast/i);
+    }
   });
 });
 

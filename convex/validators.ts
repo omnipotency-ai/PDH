@@ -231,6 +231,15 @@ export const nutritionGoalsValidator = v.object({
   dailyWaterGoalMl: v.number(),
 });
 
+/**
+ * Per-user, per-feature AI rate limit state.
+ * Stored on the profile document so it survives page reloads.
+ */
+export const aiRateLimitsValidator = v.object({
+  lastDrPooCallAt: v.optional(v.number()),
+  lastCoachingCallAt: v.optional(v.number()),
+});
+
 export const sleepGoalValidator = v.object({
   targetHours: v.number(),
   nudgeTime: v.string(),
@@ -248,7 +257,7 @@ export const aiPreferencesValidator = v.object({
     dinner: v.string(),
     lateEveningSnack: v.string(),
   }),
-  aiModel: v.union(v.literal("gpt-5-mini"), v.literal("gpt-5.4")),
+  aiModel: v.union(v.literal("gpt-5.4-mini"), v.literal("gpt-5.4")),
   approach: v.union(
     v.literal("supportive"),
     v.literal("personal"),
@@ -342,7 +351,7 @@ const foodMatchBucketValidator = v.object({
   bestConfidence: v.number(),
 });
 
-const foodItemValidator = v.object({
+export const foodItemValidator = v.object({
   // New field names
   userSegment: v.optional(v.string()),
   parsedName: v.optional(v.string()),
@@ -351,6 +360,7 @@ const foodItemValidator = v.object({
       v.literal("registry"),
       v.literal("llm"),
       v.literal("heuristic"),
+      v.literal("fuzzy"),
       v.literal("user"),
       v.literal("expired"),
     ),

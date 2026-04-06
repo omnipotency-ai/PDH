@@ -268,12 +268,28 @@ const MealSlotAccordion = React.memo(function MealSlotAccordion({
         <div className="overflow-hidden">
           <div className="space-y-1 pb-2 pl-14 pr-2">
             {logs.flatMap((log) =>
-              getFoodItems(log).map((item) => {
+              getFoodItems(log).map((item, itemIndex, itemsInLog) => {
                 const macros = getItemMacros(item);
                 const displayName = capitalize(getDisplayName(item));
+                const itemCount = itemsInLog.length;
                 // #41: stable key uses canonicalName or parsedName; falls back to
                 // name, then userSegment. log.id scopes it to this log entry.
                 const itemKey = `${log.id}-${item.canonicalName ?? item.parsedName ?? item.name ?? item.userSegment ?? displayName}`;
+                const deleteLabel =
+                  itemCount === 1
+                    ? `Delete ${displayName}`
+                    : `Delete all ${itemCount} items in this log`;
+                const handleDelete = () => {
+                  // This row-level delete button still removes the whole log. Keep
+                  // the label honest if a multi-item log reaches this view.
+                  if (itemCount !== 1) {
+                    console.error(
+                      "[CalorieDetailView] Row delete requested for multi-item log; deleting the full log instead.",
+                      { logId: log.id, itemIndex, itemCount },
+                    );
+                  }
+                  onDeleteLog(log.id);
+                };
                 return (
                   <div
                     key={itemKey}
@@ -299,8 +315,8 @@ const MealSlotAccordion = React.memo(function MealSlotAccordion({
                       <button
                         type="button"
                         className="rounded-md p-1 text-[var(--text-faint)] transition-colors hover:bg-[var(--surface-3)] hover:text-[var(--red)]"
-                        aria-label={`Delete ${displayName}`}
-                        onClick={() => onDeleteLog(log.id)}
+                        aria-label={deleteLabel}
+                        onClick={handleDelete}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>

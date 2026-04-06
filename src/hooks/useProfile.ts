@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { useProfileContext } from "@/contexts/ProfileContext";
+import type { SleepGoal } from "@/lib/gamificationDefaults";
 import type { HabitConfig, HabitConfigPatch } from "@/lib/habitTemplates";
-import type { SleepGoal } from "@/lib/streaks";
 import type { UnitSystem } from "@/lib/units";
 import type {
   AiPreferences,

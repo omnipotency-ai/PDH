@@ -1,5 +1,5 @@
 import { Soup } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,8 @@ export function FoodSection({ onLogFood, captureTimestamp }: FoodSectionProps) {
   // Track the active preset so we can bypass AI parsing when submitting a badge
   const [activePreset, setActivePreset] = useState<CustomFoodPreset | null>(null);
 
+  const submittingRef = useRef(false);
+
   const { timeValue, setTimeValue, dateValue, setDateValue, isEdited, getTimestampMs, reset } =
     usePanelTime(captureTimestamp);
 
@@ -30,6 +32,10 @@ export function FoodSection({ onLogFood, captureTimestamp }: FoodSectionProps) {
   }, []);
 
   const submitFood = () => {
+    // useRef guard prevents double-submit under React 18 concurrent rendering,
+    // where two rapid invocations can both pass a useState check before either
+    // state update commits.
+    if (submittingRef.current) return;
     if (saving) return;
 
     const name = foodName.trim();
@@ -46,6 +52,8 @@ export function FoodSection({ onLogFood, captureTimestamp }: FoodSectionProps) {
     const savedDateValue = dateValue;
     const savedActivePreset = activePreset;
     const savedTimestampMs = getTimestampMs();
+
+    submittingRef.current = true;
 
     // Optimistic: clear input immediately so the UI stays responsive
     setFoodName("");
@@ -64,6 +72,7 @@ export function FoodSection({ onLogFood, captureTimestamp }: FoodSectionProps) {
         toast.error(getErrorMessage(err, "Failed to log food."));
       })
       .finally(() => {
+        submittingRef.current = false;
         setSaving(false);
       });
   };

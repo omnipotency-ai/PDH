@@ -27,7 +27,7 @@ function isValidGender(value: string): value is Gender {
   return VALID_GENDERS.has(value);
 }
 
-// SET-F005: inline field error state for out-of-range numeric inputs.
+// Inline field error state for out-of-range numeric inputs.
 type FieldErrors = {
   age?: string;
   height?: string;

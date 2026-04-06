@@ -1,5 +1,3 @@
-"use client";
-
 import { Toggle as TogglePrimitive } from "@base-ui/react/toggle";
 import { ToggleGroup as ToggleGroupPrimitive } from "@base-ui/react/toggle-group";
 import type { VariantProps } from "class-variance-authority";
@@ -17,6 +15,19 @@ const ToggleGroupContext = React.createContext<
   variant: "default",
   spacing: 0,
 });
+
+function normalizeToggleGroupValue(
+  value: string | string[] | undefined,
+  multiple: boolean,
+): string[] | undefined {
+  if (value === undefined) return undefined;
+  if (multiple) return Array.isArray(value) ? value : [value];
+  return Array.isArray(value) ? value : [value];
+}
+
+function getSingleToggleGroupValue(nextValue: string[]): string {
+  return nextValue[0] ?? "";
+}
 
 function ToggleGroup({
   type = "multiple",
@@ -43,18 +54,8 @@ function ToggleGroup({
     }
 >) {
   const multiple = type === "multiple";
-  const groupValue =
-    value === undefined
-      ? undefined
-      : ((multiple ? (Array.isArray(value) ? value : [value]) : [value]) as string[]);
-  const groupDefaultValue =
-    defaultValue === undefined
-      ? undefined
-      : ((multiple
-          ? Array.isArray(defaultValue)
-            ? defaultValue
-            : [defaultValue]
-          : [defaultValue]) as string[]);
+  const groupValue = normalizeToggleGroupValue(value, multiple);
+  const groupDefaultValue = normalizeToggleGroupValue(defaultValue, multiple);
 
   return (
     <ToggleGroupPrimitive
@@ -64,10 +65,12 @@ function ToggleGroup({
       data-spacing={spacing}
       multiple={multiple}
       {...(groupValue !== undefined && { value: groupValue })}
-      {...(groupDefaultValue !== undefined && { defaultValue: groupDefaultValue })}
+      {...(groupDefaultValue !== undefined && {
+        defaultValue: groupDefaultValue,
+      })}
       {...(onValueChange && {
         onValueChange: (nextValue: string[]) =>
-          onValueChange(multiple ? nextValue : (nextValue[0] ?? "")),
+          onValueChange(multiple ? nextValue : getSingleToggleGroupValue(nextValue)),
       })}
       style={{ "--gap": spacing } as React.CSSProperties}
       className={cn(

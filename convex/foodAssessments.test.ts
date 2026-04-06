@@ -3,11 +3,7 @@ import { describe, expect, it } from "vitest";
 import { api } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import schema from "./schema";
-import {
-  TEST_AI_INSIGHT,
-  TEST_AI_REQUEST,
-  TEST_AI_RESPONSE,
-} from "./testFixtures";
+import { TEST_AI_INSIGHT, TEST_AI_REQUEST, TEST_AI_RESPONSE } from "./testFixtures";
 
 describe("foodAssessments", () => {
   it("queries assessments by userId", async () => {
@@ -43,17 +39,16 @@ describe("foodAssessments", () => {
     const foods = await t
       .withIdentity({ subject: "test-user-123" })
       .query(api.foodAssessments.allFoods, {});
-    expect(foods.length).toBe(1);
-    expect(foods[0].canonicalName).toBe("ripe banana");
-    expect(foods[0].originalFoodName).toBe("Banana");
-    expect(foods[0].latestVerdict).toBe("safe");
+    expect(foods.foods.length).toBe(1);
+    expect(foods.foods[0].canonicalName).toBe("ripe banana");
+    expect(foods.foods[0].originalFoodName).toBe("Banana");
+    expect(foods.foods[0].latestVerdict).toBe("safe");
+    expect(foods.isTruncated).toBe(false);
   });
 
   it("throws when querying without auth identity", async () => {
     const t = convexTest(schema);
-    await expect(t.query(api.foodAssessments.allFoods, {})).rejects.toThrow(
-      "Not authenticated",
-    );
+    await expect(t.query(api.foodAssessments.allFoods, {})).rejects.toThrow("Not authenticated");
   });
 
   it("deduplicates assessments by canonical name in allFoods", async () => {
@@ -97,14 +92,13 @@ describe("foodAssessments", () => {
       });
     });
 
-    const foods = await t
-      .withIdentity({ subject: userId })
-      .query(api.foodAssessments.allFoods, {});
-    expect(foods).toHaveLength(1);
-    expect(foods[0]?.canonicalName).toBe("white bread");
-    expect(foods[0]?.foodName).toBe("White Bread");
-    expect(foods[0]?.originalFoodName).toBe("White Bread");
-    expect(foods[0]?.latestVerdict).toBe("safe");
+    const foods = await t.withIdentity({ subject: userId }).query(api.foodAssessments.allFoods, {});
+    expect(foods.foods).toHaveLength(1);
+    expect(foods.foods[0]?.canonicalName).toBe("white bread");
+    expect(foods.foods[0]?.foodName).toBe("White Bread");
+    expect(foods.foods[0]?.originalFoodName).toBe("White Bread");
+    expect(foods.foods[0]?.latestVerdict).toBe("safe");
+    expect(foods.isTruncated).toBe(false);
 
     // historyByFood should return both rows for the same canonical name
     const history = await t
@@ -113,9 +107,9 @@ describe("foodAssessments", () => {
         canonicalName: "white bread",
       });
     expect(history).toHaveLength(2);
-    expect(history.every((row: Doc<"foodAssessments">) => row.canonicalName === "white bread")).toBe(
-      true,
-    );
+    expect(
+      history.every((row: Doc<"foodAssessments">) => row.canonicalName === "white bread"),
+    ).toBe(true);
     expect(history[0]?.foodName).toBe("White Bread");
     expect(history[1]?.foodName).toBe("Fresh Baked Baguette");
   });

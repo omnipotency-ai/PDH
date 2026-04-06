@@ -18,17 +18,17 @@ interface WeightGroupRowProps {
   onToggle: () => void;
 }
 
+function formatDisplayWeight(kg: number, weightUnit: DisplayWeightUnit): string | null {
+  if (!Number.isFinite(kg) || kg <= 0) return null;
+  if (weightUnit === "lbs") return `${kgToLbs(kg).toFixed(1)} lbs`;
+  if (weightUnit === "stones") return `${kgToStones(kg).toFixed(1)} st`;
+  return `${kg.toFixed(1)} kg`;
+}
+
 export function WeightGroupRow({ group, weightUnit, expanded, onToggle }: WeightGroupRowProps) {
   const latest = group.entries[0];
   const kg = Number(latest?.data?.weightKg);
-  const displayWeight =
-    Number.isFinite(kg) && kg > 0
-      ? weightUnit === "lbs"
-        ? `${kgToLbs(kg).toFixed(1)} lbs`
-        : weightUnit === "stones"
-          ? `${kgToStones(kg).toFixed(1)} st`
-          : `${kg.toFixed(1)} kg`
-      : null;
+  const displayWeight = formatDisplayWeight(kg, weightUnit);
 
   return (
     <div className="group rounded-xl transition-colors hover:bg-[var(--section-log-muted)]">

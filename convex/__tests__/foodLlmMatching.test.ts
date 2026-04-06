@@ -965,6 +965,7 @@ describe("matchUnresolvedItems action", () => {
     // Store a server key so the action can proceed past key resolution
     await t.withIdentity({ subject: userId }).mutation(api.profiles.setApiKey, {
       apiKey: "sk-test1234567890abcdefghij",
+      now: Date.now(),
     });
 
     const logId = await t
@@ -995,6 +996,7 @@ describe("matchUnresolvedItems action", () => {
 
     await t.withIdentity({ subject: userId }).mutation(api.profiles.setApiKey, {
       apiKey: "sk-test1234567890abcdefghij",
+      now: Date.now(),
     });
 
     const logId = await t
@@ -1031,11 +1033,13 @@ describe("matchUnresolvedItems action", () => {
       .withIdentity({ subject: ownerUserId })
       .mutation(api.profiles.setApiKey, {
         apiKey: "sk-test1234567890abcdefghij",
+        now: Date.now(),
       });
     await t
       .withIdentity({ subject: attackerUserId })
       .mutation(api.profiles.setApiKey, {
         apiKey: "sk-test1234567890abcdefghij",
+        now: Date.now(),
       });
 
     const logId = await t

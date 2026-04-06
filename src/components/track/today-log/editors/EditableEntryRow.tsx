@@ -74,6 +74,12 @@ export interface EditableEntryRowProps {
   showDateInput?: boolean;
 }
 
+function getDisplayPaddingClass(displayPadding: "compact" | "normal" | "spacious"): string {
+  if (displayPadding === "spacious") return "py-2";
+  if (displayPadding === "normal") return "py-1.5";
+  return "py-1";
+}
+
 // ── Component ─────────────────────────────────────────────────────────
 
 export function EditableEntryRow({
@@ -232,8 +238,7 @@ export function EditableEntryRow({
 
   // ── Display mode ────────────────────────────────────────────────────
 
-  const paddingClass =
-    displayPadding === "spacious" ? "py-2" : displayPadding === "normal" ? "py-1.5" : "py-1";
+  const paddingClass = getDisplayPaddingClass(displayPadding);
 
   return (
     <div

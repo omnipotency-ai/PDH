@@ -6,7 +6,7 @@ import type {
   FoodLog,
   FoodTrialSummaryInput,
   RecentEventsResult,
-  WeeklyDigestInput,
+  WeeklyContext,
 } from "../aiAnalysis";
 import {
   buildDeltaSignals,
@@ -756,10 +756,10 @@ function makeFoodTrial(
   };
 }
 
-/** Create a WeeklyDigestInput for testing. */
+/** Create a WeeklyContext for testing. */
 function makeWeeklyDigest(
-  overrides: Partial<WeeklyDigestInput> & { weekStart: string },
-): WeeklyDigestInput {
+  overrides: Partial<WeeklyContext> & { weekStart: string },
+): WeeklyContext {
   return {
     avgBristolScore: 4.0,
     totalBowelEvents: 10,
@@ -860,7 +860,7 @@ describe("buildPatientSnapshot", () => {
   });
 
   it("includes Bristol trend from weekly digests", () => {
-    const digests: WeeklyDigestInput[] = [
+    const digests: WeeklyContext[] = [
       makeWeeklyDigest({ weekStart: "2026-03-03", avgBristolScore: 6.0 }),
       makeWeeklyDigest({ weekStart: "2026-03-10", avgBristolScore: 4.5 }),
     ];

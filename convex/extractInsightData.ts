@@ -38,25 +38,6 @@ function isValidFoodName(name: string): boolean {
   return true;
 }
 
-function verdictToStoredVerdict(
-  verdict: StructuredFoodAssessment["verdict"],
-): "safe" | "watch" | "avoid" | "trial_next" {
-  switch (verdict) {
-    case "safe":
-      return "safe";
-    case "watch":
-      return "watch";
-    case "avoid":
-      return "avoid";
-    case "trial_next":
-      return "trial_next";
-    default: {
-      const _exhaustive: never = verdict;
-      throw new Error(`Unknown verdict: ${_exhaustive}`);
-    }
-  }
-}
-
 function culpritVerdictFromConfidence(
   confidence: "high" | "medium" | "low",
 ): StructuredFoodAssessment["verdict"] {
@@ -276,7 +257,7 @@ export const extractFromReport = internalMutation({
         reportTimestamp,
         foodName,
         canonicalName,
-        verdict: verdictToStoredVerdict(assessment.verdict),
+        verdict: assessment.verdict,
         confidence: assessment.confidence,
         causalRole: assessment.causalRole,
         changeType: assessment.changeType,
@@ -304,6 +285,7 @@ export const extractFromReport = internalMutation({
         {
           userId,
           eventTimestamp: reportTimestamp,
+          now: reportTimestamp,
         },
       );
     }

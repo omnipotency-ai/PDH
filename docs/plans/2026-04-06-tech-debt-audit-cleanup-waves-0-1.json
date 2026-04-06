@@ -1,0 +1,1026 @@
+{
+  "plan": "Tech-Debt Audit Cleanup — Waves 0–1",
+  "prd": "docs/prd/2026-04-06-tech-debt-audit-cleanup.md",
+  "auditReport": "docs/2026-04-06/audit/FINAL-AUDIT-REPORT.md",
+  "createdAt": "2026-04-06",
+  "waveDependencies": {
+    "wave0": [],
+    "wave1": [],
+    "note": "Waves 0 and 1 can run in parallel. No inter-wave dependencies."
+  },
+  "verificationGate": {
+    "commands": [
+      "bun run typecheck",
+      "bun run lint:fix",
+      "bun run build",
+      "bun run test"
+    ],
+    "policy": "All four must pass before advancing to Waves 2-3."
+  },
+  "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+  "tasks": [
+    {
+      "id": "W0-01",
+      "title": "Convex mutation determinism — eliminate Date.now() inside mutations",
+      "wave": 0,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "Convex mutations must be deterministic because they replay on retry. Multiple mutations call Date.now() directly or via optional fallback (args.now ?? Date.now()). Fix: (1) In convex/foodParsing.ts (processEvidence, ~L1551,L1570): make `now` a required arg, remove ?? Date.now() fallback. Update all callers (processLogInternal scheduler call) to pass `now: Date.now()`. (2) In convex/migrations.ts (normalizeProfilesV2, ~L1146): replace Date.now() with a required `now` arg. (3) In convex/foodRequests.ts (submitRequest, ~L42): make `now` required, remove ?? fallback. (4) In shared/foodEvidence.ts (buildFoodEvidenceResult, ~L1213): make `args.now` required so callers must supply timestamp. (5) For client-supplied timestamps in src/contexts/ProfileContext.tsx, src/hooks/usePendingReplies.ts, src/hooks/useAiInsights.ts: remove `now`/`timestamp` from mutation arg schemas; generate authoritative timestamp server-side in the mutation handler. Search for all Date.now() in convex/ non-test files to ensure none remain in mutation handlers.",
+      "files": {
+        "read": [
+          "convex/foodParsing.ts",
+          "convex/migrations.ts",
+          "convex/foodRequests.ts",
+          "shared/foodEvidence.ts",
+          "src/contexts/ProfileContext.tsx",
+          "src/hooks/usePendingReplies.ts",
+          "src/hooks/useAiInsights.ts",
+          "convex/_generated/ai/guidelines.md"
+        ],
+        "edit": [
+          "convex/foodParsing.ts",
+          "convex/migrations.ts",
+          "convex/foodRequests.ts",
+          "shared/foodEvidence.ts",
+          "src/contexts/ProfileContext.tsx",
+          "src/hooks/usePendingReplies.ts",
+          "src/hooks/useAiInsights.ts"
+        ],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "grep -r 'Date.now()' convex/ --include='*.ts' | grep -v test | grep -v node_modules | grep -v _generated returns zero matches inside mutation/internalMutation handlers",
+        "All `now` args in mutation validators are v.number() (not v.optional)",
+        "All scheduler calls (ctx.scheduler.runAfter) pass now: Date.now() as an argument",
+        "No client-side code passes `timestamp` or `now` to mutation args (removed from schemas)",
+        "Typecheck passes",
+        "All existing tests pass (update test fixtures to pass required `now` arg)"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W0-02",
+      "title": "Cross-tenant conversation query — add compound index",
+      "wave": 0,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "conversations.listByReport fetches all messages for a given aiAnalysisId without userId scoping at the DB layer, then filters in-memory. Fix: (1) In convex/schema.ts, add a compound index to the conversations table: `by_userId_aiAnalysisId: ['userId', 'aiAnalysisId']`. (2) In convex/conversations.ts (~L90-L103), replace the by_aiAnalysisId index query with the compound index: `.withIndex('by_userId_aiAnalysisId', q => q.eq('userId', userId).eq('aiAnalysisId', args.aiAnalysisId)).collect()`. Remove the in-memory userId filter since the index now enforces it. Read convex/_generated/ai/guidelines.md first for Convex patterns.",
+      "files": {
+        "read": [
+          "convex/conversations.ts",
+          "convex/schema.ts",
+          "convex/_generated/ai/guidelines.md"
+        ],
+        "edit": ["convex/conversations.ts", "convex/schema.ts"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "convex/schema.ts conversations table has by_userId_aiAnalysisId compound index",
+        "listByReport uses the compound index with both userId and aiAnalysisId",
+        "No in-memory userId filter remains in listByReport",
+        "Typecheck passes",
+        "All existing conversation tests pass"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W0-03",
+      "title": "Remove hardcoded patient name 'Peter' from AI prompts",
+      "wave": 0,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "src/lib/aiAnalysis.ts (~L1316,L1320) contains hardcoded references to 'Peter' including personal ADHD/eating details in the LLM system prompt. This is a PII violation and breaks the 'No Hard-Coding Personalization' rule. Fix: Replace all 'Peter' references with the existing `preferredName` field from AiPreferences (already inserted via sanitizeNameForPrompt) or the generic 'the patient'. Search the entire codebase for any other hardcoded 'Peter' references in prompt-building code. Note: W0-04 and W0-05 also edit this file — those tasks depend on this one completing first.",
+      "files": {
+        "read": ["src/lib/aiAnalysis.ts"],
+        "edit": ["src/lib/aiAnalysis.ts"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "grep -rn '\"Peter\"' src/lib/aiAnalysis.ts returns zero matches",
+        "grep -rn 'Peter' src/ --include='*.ts' | grep -v test | grep -v node_modules shows no prompt-building references to 'Peter'",
+        "All name references in prompt use preferredName variable or 'the patient'",
+        "Typecheck passes",
+        "Build succeeds"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W0-04",
+      "title": "Add per-field length caps for health profile fields in AI prompts",
+      "wave": 0,
+      "dependsOn": ["W0-03"],
+      "skill": "vite-react-implementer",
+      "description": "Free-text health profile fields (medications, supplements, allergies, intolerances, lifestyleNotes, dietaryHistory, otherConditions) are embedded in the LLM system prompt with only a 50,000-char global limit — far too high per field and vulnerable to prompt injection. Fix: In src/lib/aiAnalysis.ts (~L1009-L1058), add per-field length caps at the prompt-building layer: medications/supplements/allergies 500 chars each, lifestyleNotes/dietaryHistory 1000 chars each, otherConditions 200 chars. Apply the same sanitizeNameForPrompt-style treatment (strip BiDi characters, HTML tags) to all free-text fields, not just preferredName. Create a helper like `sanitizeProfileField(value: string, maxLen: number): string` that truncates and sanitizes.",
+      "files": {
+        "read": ["src/lib/aiAnalysis.ts"],
+        "edit": ["src/lib/aiAnalysis.ts"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "Each health profile field has an explicit maxLength cap (medications: 500, supplements: 500, allergies: 500, lifestyleNotes: 1000, dietaryHistory: 1000, otherConditions: 200)",
+        "All free-text fields are sanitized (BiDi chars, HTML tags stripped) before prompt embedding",
+        "A field exceeding its cap is truncated, not rejected",
+        "Typecheck passes",
+        "Build succeeds"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W0-05",
+      "title": "Strip XML delimiters from sanitizeNameForPrompt",
+      "wave": 0,
+      "dependsOn": ["W0-04"],
+      "skill": "vite-react-implementer",
+      "description": "sanitizeNameForPrompt in src/lib/aiAnalysis.ts (~L51-L59) does not strip < and > characters. A name like 'Pete</patient_name>INJECTED<patient_name>' would close the XML tag early and inject into the prompt. Fix: Add .replace(/[<>]/g, '') to sanitizeNameForPrompt alongside the existing sanitization. This is a one-line addition.",
+      "files": {
+        "read": ["src/lib/aiAnalysis.ts"],
+        "edit": ["src/lib/aiAnalysis.ts"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "sanitizeNameForPrompt strips < and > characters from input",
+        "A name containing '<script>' or '</tag>' has those characters removed",
+        "Typecheck passes"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W0-06",
+      "title": "Sanitize AI error messages before rendering in UI",
+      "wave": 0,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "AI pipeline errors are rendered verbatim in AnalysisProgressOverlay.tsx (~L40-L57) and surfaced from useAiInsights.ts (~L354-L357). These can contain API keys, request IDs, model names, rate-limit quotas. Fix: (1) Create a formatAiError(err: unknown): string helper (in src/lib/aiErrorFormatter.ts or near useApiKey.ts which already has sanitizeApiKeyError). Map known OpenAI error classes: rate limit → 'Too many requests, try again later', auth → 'API key problem', timeout → 'Request timed out', generic → 'Analysis failed'. Strip anything matching sk-... pattern. (2) In useAiInsights.ts, replace raw getErrorMessage(err) with formatAiError(err). (3) In AnalysisProgressOverlay.tsx, ensure the 'Show more' toggle also renders sanitized output.",
+      "files": {
+        "read": [
+          "src/components/archive/ai-insights/AnalysisProgressOverlay.tsx",
+          "src/hooks/useAiInsights.ts",
+          "src/hooks/useApiKey.ts"
+        ],
+        "edit": [
+          "src/components/archive/ai-insights/AnalysisProgressOverlay.tsx",
+          "src/hooks/useAiInsights.ts"
+        ],
+        "create": ["src/lib/aiErrorFormatter.ts"]
+      },
+      "acceptanceCriteria": [
+        "formatAiError helper exists and maps known error types to user-friendly strings",
+        "Strings matching sk-... pattern are stripped from error output",
+        "useAiInsights uses formatAiError instead of raw getErrorMessage",
+        "AnalysisProgressOverlay renders only sanitized error text",
+        "Typecheck passes",
+        "Build succeeds"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": true
+      }
+    },
+    {
+      "id": "W0-07",
+      "title": "Add rehype-sanitize to AI markdown rendering",
+      "wave": 0,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "react-markdown renders AI-generated content in ConversationPanel.tsx (~L133,L182) and DrPooReport.tsx (~L93,L129,L169,L183) without rehype-sanitize. A prompt injection attack could emit malicious markdown/HTML. Fix: (1) Install rehype-sanitize: `bun add rehype-sanitize`. (2) Add rehypePlugins={[rehypeSanitize]} to all react-markdown instances rendering AI content. (3) Add a MAX_AI_CONTENT_CHARS = 4000 constant and slice AI strings before passing to <Markdown>. Log a warning when content is truncated.",
+      "files": {
+        "read": [
+          "src/components/track/dr-poo/ConversationPanel.tsx",
+          "src/components/archive/DrPooReport.tsx",
+          "package.json"
+        ],
+        "edit": [
+          "src/components/track/dr-poo/ConversationPanel.tsx",
+          "src/components/archive/DrPooReport.tsx"
+        ],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "rehype-sanitize is in package.json dependencies",
+        "All react-markdown instances rendering AI content include rehypePlugins={[rehypeSanitize]}",
+        "AI content strings are sliced to MAX_AI_CONTENT_CHARS (4000) before rendering",
+        "Content exceeding the limit logs a console.warn",
+        "Typecheck passes",
+        "Build succeeds"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": true
+      }
+    },
+    {
+      "id": "W0-08",
+      "title": "Clamp ADD_TO_STAGING portion to MAX_PORTION_G",
+      "wave": 0,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "In useNutritionStore.ts (~L243-L244), the ADD_TO_STAGING reducer case increments portionG without clamping to MAX_PORTION_G (500g). Rapid (+) tapping can push above 500g, corrupting calorie/macro data. The ADJUST_STAGING_PORTION case already clamps correctly. Fix: One-line change in ADD_TO_STAGING case: `const newPortionG = Math.min(existing.portionG + increment, MAX_PORTION_G);` then use newPortionG in the updated item.",
+      "files": {
+        "read": ["src/components/track/nutrition/useNutritionStore.ts"],
+        "edit": ["src/components/track/nutrition/useNutritionStore.ts"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "ADD_TO_STAGING case clamps result to MAX_PORTION_G",
+        "Rapid (+) tapping on a staged item cannot exceed 500g",
+        "Typecheck passes",
+        "Existing nutrition store tests pass"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W0-09",
+      "title": "Fix double-submit vulnerability in FoodSection & BowelSection",
+      "wave": 0,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "FoodSection.tsx (~L32-L54) and BowelSection.tsx (~L206) guard with `if (saving) return` then setSaving(true), but React 18 concurrent rendering can allow two rapid invocations to both pass the guard before either state update commits. Fix: (1) In both components, add a useRef as immediate non-reactive guard: `const submittingRef = useRef(false); if (submittingRef.current) return; submittingRef.current = true;`. Reset in finally block. (2) In BowelSection, also wrap handleSave in useCallback to prevent stale closures.",
+      "files": {
+        "read": [
+          "src/components/track/panels/FoodSection.tsx",
+          "src/components/track/panels/BowelSection.tsx"
+        ],
+        "edit": [
+          "src/components/track/panels/FoodSection.tsx",
+          "src/components/track/panels/BowelSection.tsx"
+        ],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "Both FoodSection and BowelSection use useRef as submit guard",
+        "submittingRef.current is reset in a finally block after async operation",
+        "BowelSection handleSave is wrapped in useCallback",
+        "Double-rapid-click cannot create duplicate log entries",
+        "Typecheck passes"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W0-10",
+      "title": "Add input length cap to matchUnresolvedItems",
+      "wave": 0,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "convex/foodLlmMatching.ts matchUnresolvedItems action accepts unresolvedSegments: v.array(v.string()) with no length limit. Each segment triggers OpenAI API calls. Fix: Add early validation at the top of the action handler: `if (args.unresolvedSegments.length > 20) throw new Error('Maximum 20 unresolved segments per request')`. Read convex/_generated/ai/guidelines.md first.",
+      "files": {
+        "read": [
+          "convex/foodLlmMatching.ts",
+          "convex/_generated/ai/guidelines.md"
+        ],
+        "edit": ["convex/foodLlmMatching.ts"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "matchUnresolvedItems throws if unresolvedSegments.length > 20",
+        "Error message is descriptive",
+        "Typecheck passes"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W0-11",
+      "title": "Validate timestamp range in usePanelTime",
+      "wave": 0,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "usePanelTime (~L17-L35) accepts user-entered date strings with no range validation. Far-future or epoch-0 timestamps break queries and transit calculations. Fix: In getTimestampMs(), after parsing the date string, clamp the result: no earlier than 5 years ago (Date.now() - 5 * 365.25 * 86400000), no later than tomorrow (Date.now() + 86400000). If out of range, return the current timestamp and optionally log a warning.",
+      "files": {
+        "read": ["src/hooks/usePanelTime.ts"],
+        "edit": ["src/hooks/usePanelTime.ts"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "Timestamps earlier than 5 years ago are clamped",
+        "Timestamps later than tomorrow are clamped",
+        "Valid timestamps within range pass through unchanged",
+        "Typecheck passes"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W0-12",
+      "title": "Add Bristol code integer validation",
+      "wave": 0,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "Bristol Stool Scale codes are 1-7 integers only, but the pipeline accepts non-integer floats (7.9), negative numbers (-5), and out-of-range values (8, 99). Fix: (1) In shared/foodEvidence.ts buildDigestiveEvents (~L416-L418): add guard `if (bristolCode !== undefined && (!Number.isInteger(bristolCode) || bristolCode < 1 || bristolCode > 7)) continue;`. (2) In shared/logDataParsers.ts (~L58-L62): add the same integer+range check after safeNumber coercion for bristolCode. (3) In normalizeDigestiveCategory (~L446-L449): ensure bristol >= 7 means exactly 7, not 8+.",
+      "files": {
+        "read": ["shared/foodEvidence.ts", "shared/logDataParsers.ts"],
+        "edit": ["shared/foodEvidence.ts", "shared/logDataParsers.ts"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "Bristol code 0, -1, -5, 8, 99, 7.5, 7.9 are all rejected/skipped",
+        "Bristol codes 1-7 (integers only) pass validation",
+        "normalizeDigestiveCategory does not categorize bristol > 7",
+        "Typecheck passes",
+        "Existing foodEvidence tests pass (update test data if needed)"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W0-13",
+      "title": "Make sanitizeUnknownStringsDeep truncate instead of throw",
+      "wave": 0,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "sanitizeUnknownStringsDeep in src/lib/inputSafety.ts (~L55-L81) throws an Error when a string exceeds maxStringLength (50,000 chars). This crashes the entire AI call at sanitization. Fix: Instead of throwing, truncate the string at the limit and append '...[truncated]'. Log a console.warn with the field path and original length.",
+      "files": {
+        "read": ["src/lib/inputSafety.ts"],
+        "edit": ["src/lib/inputSafety.ts"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "Strings exceeding maxStringLength are truncated with '...[truncated]' suffix",
+        "No throw/Error on oversized strings",
+        "A console.warn is logged when truncation occurs",
+        "Typecheck passes"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W0-14",
+      "title": "Tighten CSP in vercel.json",
+      "wave": 0,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "vercel.json CSP (~L13) allows https://*.vercel.app in script-src (any Vercel app can execute scripts) and includes https://api.openai.com in connect-src (all AI calls go through Convex, not direct). Fix: (1) Replace https://*.vercel.app with specific Clerk domains (check Clerk CSP docs: typically https://clerk.your-domain.com or the specific Clerk frontend API domain used by the app). (2) Remove https://api.openai.com from connect-src. (3) Keep other existing CSP directives unchanged.",
+      "files": {
+        "read": ["vercel.json"],
+        "edit": ["vercel.json"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "vercel.json CSP does not contain https://*.vercel.app wildcard",
+        "vercel.json CSP does not contain https://api.openai.com",
+        "Clerk-specific domains are listed instead of wildcard",
+        "Build succeeds"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": ["bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W0-15",
+      "title": "Make foodCanonicalization gracefully handle duplicate aliases",
+      "wave": 0,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "buildExampleMap() in shared/foodCanonicalization.ts (~L81-87,L92) throws at module load time if the FOOD_REGISTRY has duplicate normalized aliases. This crashes the entire app or Convex worker. Fix: (1) At runtime in buildExampleMap, replace throw with console.error warning and skip the duplicate entry. (2) Add a Vitest unit test that fails if duplicates exist, catching them at build time instead of runtime.",
+      "files": {
+        "read": ["shared/foodCanonicalization.ts"],
+        "edit": ["shared/foodCanonicalization.ts"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "buildExampleMap does not throw on duplicate aliases",
+        "Duplicate aliases log console.error and skip",
+        "A vitest test exists that fails if registry contains duplicate normalized aliases",
+        "Typecheck passes",
+        "All tests pass"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W0-16",
+      "title": "Move AI rate limiting server-side",
+      "wave": 0,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "The client-side rate limiter in src/lib/aiRateLimiter.ts resets on page reload and is shared across unrelated AI features. Fix: (1) In the relevant Convex actions (ai.ts and habitCoaching Convex action), enforce per-user cooldowns server-side. Store lastCallAt per user per feature type (e.g., 'drpoo' vs 'coaching') in a Convex document or check existing timestamp fields. Reject calls that violate the 5-minute interval. (2) Use separate rate limit keys for different AI call types so coaching doesn't block Dr. Poo. (3) Remove the dead `if (MIN_CALL_INTERVAL_MS <= 0) return;` branch from aiRateLimiter.ts. (4) Keep the client-side check as a UX guard only (not security-critical). Read convex/_generated/ai/guidelines.md first.",
+      "files": {
+        "read": [
+          "src/lib/aiRateLimiter.ts",
+          "src/lib/habitCoaching.ts",
+          "convex/ai.ts",
+          "convex/_generated/ai/guidelines.md"
+        ],
+        "edit": ["src/lib/aiRateLimiter.ts", "convex/ai.ts"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "Server-side rate limiting enforced in Convex action (per user, per feature type)",
+        "Dr. Poo analysis and habit coaching have separate rate limit keys",
+        "Client-side dead branch (MIN_CALL_INTERVAL_MS <= 0) removed",
+        "Rate limit survives page reload",
+        "Typecheck passes"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W0-17",
+      "title": "Add error handling to SubRow inline delete calls",
+      "wave": 0,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "Inline onDelete calls in SubRow components have no try/catch — a failed delete silently swallows the error. Fix: Find all SubRow components with inline onDelete handlers. Wrap each in try/catch and show toast.error with a user-friendly message on failure. Use the existing toast import pattern from the codebase.",
+      "files": {
+        "read": [],
+        "edit": [],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "All SubRow onDelete handlers are wrapped in try/catch",
+        "Failed deletes show toast.error with descriptive message",
+        "Typecheck passes"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": true
+      }
+    },
+    {
+      "id": "W0-18",
+      "title": "Parameterize hardcoded 'post-surgery anastomosis' in habitCoaching",
+      "wave": 0,
+      "dependsOn": ["W0-16"],
+      "skill": "vite-react-implementer",
+      "description": "src/lib/habitCoaching.ts contains 'post-surgery anastomosis' hardcoded 3 times. This violates 'No Hard-Coding Personalization'. Fix: Replace hardcoded strings with a parameter sourced from the user's health profile surgeryType field (or a sensible default like 'digestive condition'). The function should accept surgeryType as a parameter and interpolate it into the prompt strings.",
+      "files": {
+        "read": ["src/lib/habitCoaching.ts"],
+        "edit": ["src/lib/habitCoaching.ts"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "grep 'post-surgery anastomosis' src/lib/habitCoaching.ts returns zero matches",
+        "Surgery type is parameterized from health profile or uses sensible default",
+        "Typecheck passes"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W1-01",
+      "title": "Delete inlined getCelebration duplicate — import from celebrations.ts",
+      "wave": 1,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "useCelebrationTrigger.ts (~L34-73) contains a hand-inlined copy of getCelebration that has diverged from the canonical celebrations.ts (fires only at streak === 7 vs the canonical streak >= 7 && streak % 7 === 0). Fix: (1) Delete the private getCelebration function from useCelebrationTrigger.ts. (2) Add `import { getCelebration } from '@/lib/celebrations';`. (3) Update the consumer comment in celebrations.ts from useQuickCapture.ts to useCelebrationTrigger.ts.",
+      "files": {
+        "read": [
+          "src/hooks/useCelebrationTrigger.ts",
+          "src/lib/celebrations.ts"
+        ],
+        "edit": [
+          "src/hooks/useCelebrationTrigger.ts",
+          "src/lib/celebrations.ts"
+        ],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "Only one getCelebration function exists in codebase (in celebrations.ts)",
+        "useCelebrationTrigger imports from @/lib/celebrations",
+        "Consumer comment in celebrations.ts updated to reference useCelebrationTrigger.ts",
+        "Streak celebration fires at 7, 14, 21 etc. (canonical behavior)",
+        "Typecheck passes"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": true
+      }
+    },
+    {
+      "id": "W1-02",
+      "title": "Deduplicate tile color constants into constants.ts",
+      "wave": 1,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "TINT_BY_PROGRESS_COLOR and TINT_CLASSES are copy-pasted into QuickCaptureTile.tsx (~L16-37), DurationEntryPopover.tsx (~L27-48), and constants.ts (~L1-26). constants.ts was created to hold them but the components still have local copies. Fix: (1) Remove the local definitions from QuickCaptureTile.tsx and DurationEntryPopover.tsx. (2) Import from ./constants: `import { TINT_BY_PROGRESS_COLOR, TINT_CLASSES } from './constants';`. (3) Export the TileColorTint type from constants.ts so both components use the canonical type.",
+      "files": {
+        "read": [
+          "src/components/track/quick-capture/constants.ts",
+          "src/components/track/quick-capture/QuickCaptureTile.tsx",
+          "src/components/track/quick-capture/DurationEntryPopover.tsx"
+        ],
+        "edit": [
+          "src/components/track/quick-capture/QuickCaptureTile.tsx",
+          "src/components/track/quick-capture/DurationEntryPopover.tsx",
+          "src/components/track/quick-capture/constants.ts"
+        ],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "TINT_BY_PROGRESS_COLOR defined in exactly one file (constants.ts)",
+        "TINT_CLASSES defined in exactly one file (constants.ts)",
+        "Both components import from constants.ts",
+        "TileColorTint type exported from constants.ts",
+        "Typecheck passes"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W1-03",
+      "title": "Fix review-findings.json summary block",
+      "wave": 1,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "scripts/ship/review-findings.json (~L169-175) has a summary block reading all zeros despite 14 real findings. Any automated gate checking the summary sees a clean bill of health. Fix: Read the file, count findings by severity, and update the summary block to match actual counts.",
+      "files": {
+        "read": ["scripts/ship/review-findings.json"],
+        "edit": ["scripts/ship/review-findings.json"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "Summary block critical/high/moderate/nice_to_have counts match actual findings in the file",
+        "No manual counting errors (verify by re-reading after edit)"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": [],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W1-04",
+      "title": "Fix DrPooReport section numbering",
+      "wave": 1,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "DrPooReport.tsx has a JSDoc comment documenting sections 0-5 but the inline JSX comments jump from 4 to 6, with section 4 missing from rendered output. Fix: Align all inline JSX section comments to match the doc comment numbering (0-5 sequential). Remove the gap.",
+      "files": {
+        "read": ["src/components/archive/DrPooReport.tsx"],
+        "edit": ["src/components/archive/DrPooReport.tsx"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "Section comments in JSX are sequential 0-5 with no gaps",
+        "Doc comment and inline comments use same numbering",
+        "Typecheck passes"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W1-05",
+      "title": "Remove dead exports and unreachable code branches",
+      "wave": 1,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "Multiple dead code patterns: (1) foodSafetyUtils.ts exports FILTER_OPTIONS, FilterStatus, SortKey, SortDir, BRAT_KEYS with zero import sites. Delete them and their database/index.ts barrel entries. (2) useQuickCapture returns detailDaySummaries: [] permanently — remove from QuickCaptureResult interface and return value. (3) useCelebration declares SOUND_ENABLED = true and CONFETTI_ENABLED = true as constants, making else branches (toast.success fallbacks) permanently dead — remove constants and dead branches.",
+      "files": {
+        "read": [
+          "src/components/patterns/database/foodSafetyUtils.ts",
+          "src/components/patterns/database/index.ts",
+          "src/hooks/useQuickCapture.ts",
+          "src/hooks/useCelebration.ts"
+        ],
+        "edit": [
+          "src/components/patterns/database/foodSafetyUtils.ts",
+          "src/components/patterns/database/index.ts",
+          "src/hooks/useQuickCapture.ts",
+          "src/hooks/useCelebration.ts"
+        ],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "FILTER_OPTIONS, FilterStatus, SortKey, SortDir, BRAT_KEYS not exported anywhere",
+        "detailDaySummaries removed from QuickCaptureResult interface and return",
+        "SOUND_ENABLED/CONFETTI_ENABLED constants removed, dead branches removed",
+        "Typecheck passes",
+        "No import-site breakage"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W1-06",
+      "title": "Remove 'use client' directives from Vite SPA",
+      "wave": 1,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "Six UI component files have Next.js 'use client' directives that do nothing in a Vite SPA: date-picker.tsx, drawer.tsx, switch.tsx, tabs.tsx, toggle-group.tsx, toggle.tsx. Fix: Delete the 'use client' string from line 1 of each file.",
+      "files": {
+        "read": [],
+        "edit": [
+          "src/components/ui/date-picker.tsx",
+          "src/components/ui/drawer.tsx",
+          "src/components/ui/switch.tsx",
+          "src/components/ui/tabs.tsx",
+          "src/components/ui/toggle-group.tsx",
+          "src/components/ui/toggle.tsx"
+        ],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "grep -r '\"use client\"' src/ returns zero matches",
+        "Typecheck passes",
+        "Build succeeds"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W1-07",
+      "title": "Remove identity-map verdictToStoredVerdict function",
+      "wave": 1,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "verdictToStoredVerdict in convex/extractInsightData.ts (~L41-58) is a 17-line switch that maps every case to an identical string (safe→safe, watch→watch, etc.). Fix: Check if the input and output types are assignable. If so, delete the function and use assessment.verdict directly at all call sites.",
+      "files": {
+        "read": ["convex/extractInsightData.ts"],
+        "edit": ["convex/extractInsightData.ts"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "verdictToStoredVerdict function does not exist",
+        "Call sites use assessment.verdict directly",
+        "Typecheck passes"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W1-08",
+      "title": "Delete pass-through ingredientProfileProjection.ts",
+      "wave": 1,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "convex/ingredientProfileProjection.ts is a one-function file that just forwards to getCanonicalFoodProjection. Fix: (1) Move any unique normalization functions into ingredientProfiles.ts. (2) Replace all calls to getIngredientProfileProjection with direct calls to getCanonicalFoodProjection. (3) Delete the file.",
+      "files": {
+        "read": [
+          "convex/ingredientProfileProjection.ts",
+          "convex/ingredientProfiles.ts"
+        ],
+        "edit": ["convex/ingredientProfiles.ts"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "ingredientProfileProjection.ts file does not exist",
+        "All import sites updated to use the canonical function",
+        "Typecheck passes"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W1-09",
+      "title": "Update stale AI model name constants",
+      "wave": 1,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "Multiple files use stale model names: foodLlmMatching.ts uses DEFAULT_MODEL = 'gpt-4.1-nano', foodParsing.ts uses OPENAI_FALLBACK_MODEL = 'gpt-4o-mini'. The user-facing validator in validators.ts only allows gpt-5-mini and gpt-5.4. UI copy hardcodes 'GPT-5 Mini'. Fix: (1) Update all model constants to current names matching validators.ts. (2) Narrow the args.model validator in foodLlmMatching.ts to match validators.ts. (3) Derive UI model name copy from constants, not hardcoded strings.",
+      "files": {
+        "read": [
+          "convex/foodLlmMatching.ts",
+          "convex/foodParsing.ts",
+          "src/lib/aiModels.ts",
+          "src/components/settings/app-data-form/ArtificialIntelligenceSection.tsx"
+        ],
+        "edit": [
+          "convex/foodLlmMatching.ts",
+          "convex/foodParsing.ts",
+          "src/lib/aiModels.ts",
+          "src/components/settings/app-data-form/ArtificialIntelligenceSection.tsx"
+        ],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "No references to gpt-4.1-nano or gpt-4o-mini in non-test code",
+        "Model constants match validators.ts allowed values",
+        "UI model name derived from constant, not hardcoded",
+        "Typecheck passes"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": true
+      }
+    },
+    {
+      "id": "W1-10",
+      "title": "Replace manual WriteProcessedFoodItem type with Infer<>",
+      "wave": 1,
+      "dependsOn": ["W1-09"],
+      "skill": "vite-react-implementer",
+      "description": "convex/foodParsing.ts (~L104-149) manually re-enumerates all food group literals, resolver strings, and match candidate shapes already in validators.ts. A TODO comment says 'derive from validator using Infer<> to keep in sync'. Fix: Replace WriteProcessedFoodItem type with Infer<typeof foodItemValidator> from validators.ts. Delete the manual type definition.",
+      "files": {
+        "read": ["convex/foodParsing.ts", "convex/validators.ts"],
+        "edit": ["convex/foodParsing.ts"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "WriteProcessedFoodItem uses Infer<typeof foodItemValidator> or equivalent",
+        "Manual type enumeration deleted",
+        "Typecheck passes"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W1-11",
+      "title": "Rename ParsedFoodItem collision in logDataParsers.ts",
+      "wave": 1,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "Both shared/logDataParsers.ts and shared/foodParsing.ts export a type called ParsedFoodItem with structurally different shapes. Fix: Rename logDataParsers.ts's type to ParsedLogFoodItem. Update all import sites.",
+      "files": {
+        "read": ["shared/logDataParsers.ts"],
+        "edit": ["shared/logDataParsers.ts"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "logDataParsers.ts exports ParsedLogFoodItem (not ParsedFoodItem)",
+        "All import sites updated",
+        "foodParsing.ts ParsedFoodItem unchanged",
+        "Typecheck passes"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W1-12",
+      "title": "Standardize review-findings severity taxonomy across all files",
+      "wave": 1,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "30 review-findings JSON files use four different severity taxonomies. Fix: (1) Standardize all files to CRITICAL/HIGH/MODERATE/NICE-TO-HAVE. Map LOW→NICE-TO-HAVE. (2) Move findings referencing deleted files to a closed/archived status. (3) Delete transit-map findings that reference code no longer in the codebase. This is a mechanical find-and-replace across 30 JSON files.",
+      "files": {
+        "read": ["scripts/ship/review-findings.json"],
+        "edit": [],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "All review-findings files use CRITICAL/HIGH/MODERATE/NICE-TO-HAVE severity",
+        "No LOW severity values remain",
+        "Transit-map findings for deleted code are removed or archived",
+        "JSON files are valid JSON after changes"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": [],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W1-13",
+      "title": "Rename streaks.ts to gamificationDefaults.ts",
+      "wave": 1,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "src/lib/streaks.ts contains no streak logic — it holds gamification defaults. The name is misleading. Fix: Rename file to gamificationDefaults.ts. Update all import paths. Run typecheck to verify no broken imports.",
+      "files": {
+        "read": ["src/lib/streaks.ts"],
+        "edit": [],
+        "create": ["src/lib/gamificationDefaults.ts"]
+      },
+      "acceptanceCriteria": [
+        "src/lib/streaks.ts no longer exists",
+        "src/lib/gamificationDefaults.ts exists with same content",
+        "All import sites updated",
+        "Typecheck passes"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W1-14",
+      "title": "Remove work-ticket marker comments",
+      "wave": 1,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "Various files contain leftover work-ticket markers: // F001:, // SET-F003:, // Bug #46, etc. These are stale references to completed or invalid tickets. Fix: grep for patterns like `// F\\d+:`, `// SET-F\\d+:`, `// Bug #\\d+` and remove the marker comments. Keep the code, just remove the marker portion of the comment.",
+      "files": {
+        "read": [],
+        "edit": [],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "No // F001:, // SET-F003:, // Bug #46 style markers in non-test code",
+        "Code logic is unchanged (only comments removed/cleaned)",
+        "Typecheck passes"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W1-15",
+      "title": "Remove or replace 'New entry.' placeholder notes in registry",
+      "wave": 1,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "Food registry data contains 'New entry.' placeholder strings that should either have clinical rationale or be removed. Fix: Search shared/foodRegistryData.ts for 'New entry.' strings. Remove them (set notes to empty string or undefined if the field is optional).",
+      "files": {
+        "read": ["shared/foodRegistryData.ts"],
+        "edit": ["shared/foodRegistryData.ts"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "No 'New entry.' placeholder strings remain in food registry data",
+        "Typecheck passes"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W1-16",
+      "title": "Fix stale comment in foodEvidence.ts",
+      "wave": 1,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "shared/foodEvidence.ts:L180 has a comment referencing a wrong import path. Fix: Read the comment, verify the correct current import path, and fix or remove the stale comment.",
+      "files": {
+        "read": ["shared/foodEvidence.ts"],
+        "edit": ["shared/foodEvidence.ts"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "Comment at or near foodEvidence.ts:L180 references correct import path or is removed",
+        "Typecheck passes"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": ["bun run typecheck"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W1-17",
+      "title": "Verify and remove dead FILTER_OPTIONS/SortKey/SortDir exports",
+      "wave": 1,
+      "dependsOn": ["W1-05"],
+      "skill": "vite-react-implementer",
+      "description": "foodSafetyUtils.ts exports FILTER_OPTIONS, SortKey, SortDir — TanStack Table uses its own types. Fix: (1) grep for import sites to verify zero usage. (2) Delete the exports. (3) Remove corresponding barrel entries from database/index.ts. Note: W1-05 already removes some dead exports from this file — this task handles the remaining ones that need verification first.",
+      "files": {
+        "read": [
+          "src/components/patterns/database/foodSafetyUtils.ts",
+          "src/components/patterns/database/index.ts"
+        ],
+        "edit": [
+          "src/components/patterns/database/foodSafetyUtils.ts",
+          "src/components/patterns/database/index.ts"
+        ],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "FILTER_OPTIONS, SortKey, SortDir not exported from any file",
+        "No import-site breakage (grep verified zero imports)",
+        "Typecheck passes"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W1-18",
+      "title": "Remove barrel re-export indirection in food modules",
+      "wave": 1,
+      "dependsOn": [],
+      "skill": "vite-react-implementer",
+      "description": "shared/foodCanonicalization.ts re-exports functions that belong to other modules, creating 3-level import indirection. shared/foodProjection.ts also re-exports resolveCanonicalFoodName. Fix: (1) Remove re-exports from foodCanonicalization.ts — keep only canonicalizeKnownFoodName and its direct helpers. (2) Remove resolveCanonicalFoodName re-export from foodProjection.ts. (3) Update all consumers to import from the owning module directly. (4) Ensure PortionData is importable from exactly one canonical location.",
+      "files": {
+        "read": [
+          "shared/foodCanonicalization.ts",
+          "shared/foodRegistry.ts",
+          "shared/foodProjection.ts"
+        ],
+        "edit": ["shared/foodCanonicalization.ts", "shared/foodProjection.ts"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "foodCanonicalization.ts exports only its own functions (canonicalizeKnownFoodName etc.)",
+        "foodProjection.ts does not re-export resolveCanonicalFoodName",
+        "PortionData importable from exactly one location",
+        "All consumers import from the owning module",
+        "Typecheck passes"
+      ],
+      "completed": true,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    }
+  ]
+}

@@ -3,6 +3,7 @@ import type { ColumnFiltersState, OnChangeFn, SortingState } from "@tanstack/rea
 import { useCallback, useRef, useState } from "react";
 import { ResponsiveShell } from "@/components/ui/responsive-shell";
 import { getColumnFilterValues } from "./filterUtils";
+import { SORT_OPTIONS } from "./smartViewUtils";
 
 // ── Status filter value type ──────────────────────────────────────────────────
 //
@@ -47,14 +48,6 @@ const ZONE_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
   { value: "2", label: "Zone 2 (Moderate)" },
   { value: "3", label: "Zone 3 (Variety)" },
 ];
-
-const SORT_OPTIONS = [
-  { value: "lastTested", label: "Last Tested" },
-  { value: "bristolAvg", label: "Bristol Avg" },
-  { value: "transitAvg", label: "Transit Avg" },
-  { value: "trials", label: "Trials" },
-  { value: "stage", label: "Zone" },
-] as const;
 
 type FilterChipOption<T extends string> = {
   value: T;

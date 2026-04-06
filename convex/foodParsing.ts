@@ -15,7 +15,7 @@
  * downstream contract.
  */
 
-import { ConvexError, v } from "convex/values";
+import { ConvexError, type Infer, v } from "convex/values";
 import {
   createFoodMatcherContext,
   type FoodMatchBucketOption,
@@ -46,6 +46,7 @@ import {
 } from "./_generated/server";
 import { requireAuth } from "./lib/auth";
 import { addToKnownFoods } from "./lib/knownFoods";
+import { foodItemValidator } from "./validators";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -53,7 +54,7 @@ import { addToKnownFoods } from "./lib/knownFoods";
 
 const EVIDENCE_WINDOW_MS = 6 * 60 * 60 * 1000;
 const OPENAI_EMBEDDING_MODEL = "text-embedding-3-small";
-const OPENAI_FALLBACK_MODEL = "gpt-4o-mini";
+const OPENAI_FALLBACK_MODEL = "gpt-5.4-mini";
 const OPENAI_API_URL = "https://api.openai.com/v1";
 const EMBEDDING_DIMENSIONS = 1536;
 
@@ -94,58 +95,16 @@ interface ProcessedFoodItem {
 }
 
 /**
- * Write-side variant of ProcessedFoodItem. Derived from ProcessedFoodItem but
- * with matchCandidates and bucketOptions expanded to plain object literals
- * (required by the Convex validator — it cannot accept class instances or
- * branded types from FoodMatchCandidate/FoodMatchBucketOption). Legacy-only
- * fields (name, rawName, defaultPortionDisplay, preparation, spiceLevel) are
- * omitted because they are never written by the pipeline.
+ * Write-side representation of a food item accepted by writeProcessedItems.
+ * userSegment and parsedName are required on write even though the shared
+ * log validator keeps them optional for backward compatibility with old data.
  */
-// TODO: derive from validator using Infer<> to keep in sync
-type WriteProcessedFoodItem = Omit<
-  ProcessedFoodItem,
-  | "matchCandidates"
-  | "bucketOptions"
-  | "quantityText"
-  | "name"
-  | "rawName"
-  | "defaultPortionDisplay"
-  | "preparation"
-  | "spiceLevel"
+type StoredFoodItem = Omit<
+  Infer<typeof foodItemValidator>,
+  "userSegment" | "parsedName"
 > & {
-  // Narrowed from ProcessedFoodItem's `string | null | undefined` to match
-  // the Convex validator which only accepts `string | null` (not undefined).
-  quantityText?: string | null;
-  matchCandidates?: Array<{
-    canonicalName: string;
-    zone: 1 | 2 | 3;
-    group: "protein" | "carbs" | "fats" | "seasoning";
-    line:
-      | "meat_fish"
-      | "eggs_dairy"
-      | "vegetable_protein"
-      | "grains"
-      | "vegetables"
-      | "fruit"
-      | "oils"
-      | "dairy_fats"
-      | "nuts_seeds"
-      | "sauces_condiments"
-      | "herbs_spices";
-    bucketKey: string;
-    bucketLabel: string;
-    resolver: "alias" | "fuzzy" | "embedding" | "combined" | "llm";
-    combinedConfidence: number;
-    fuzzyScore: number | null;
-    embeddingScore: number | null;
-    examples: string[];
-  }>;
-  bucketOptions?: Array<{
-    bucketKey: string;
-    bucketLabel: string;
-    canonicalOptions: string[];
-    bestConfidence: number;
-  }>;
+  userSegment: string;
+  parsedName: string;
 };
 
 interface FoodLogData {
@@ -453,19 +412,44 @@ export const listFoodAliasesForUser = internalQuery({
 export const listFoodEmbeddings = internalQuery({
   args: {},
   handler: async (ctx): Promise<Doc<"foodEmbeddings">[]> => {
-    // Known performance concern: Convex does not support field projection on
-    // queries, so this pulls full documents including 1536-dim embedding vectors
-    // even though ensureFoodEmbeddings() only needs canonicalName and
-    // embeddingSourceHash for the staleness check. A .take(1000) safety bound
-    // prevents unbounded growth if the registry expands unexpectedly.
+    // Returns full documents including 1536-dim embedding vectors.
+    // Only use this when callers need the full vector data.
+    // For staleness checks, use listFoodEmbeddingVersions instead.
     const results = await ctx.db.query("foodEmbeddings").take(1000);
     if (results.length === 1000) {
-      console.warn(
-        "listFoodEmbeddings: result count equals 1000 — results may be truncated. " +
-          "Consider increasing the limit or paginating.",
+      throw new Error(
+        "listFoodEmbeddings: hit 1000-row cap — results are truncated. Implement pagination.",
       );
     }
     return results;
+  },
+});
+
+/**
+ * Lightweight staleness-check query — returns only the two metadata fields
+ * needed to determine whether an embedding is current.
+ *
+ * Convex does not support field projection: queries always read full documents
+ * server-side. However, by mapping to FoodEmbeddingVersionRow before returning,
+ * the serialized response payload is ~50KB for 1000 entries instead of ~12MB
+ * (1536 float64 vectors are stripped from the data transferred back to the
+ * calling action). Use this instead of listFoodEmbeddings for staleness checks.
+ */
+export const listFoodEmbeddingVersions = internalQuery({
+  args: {},
+  handler: async (ctx): Promise<FoodEmbeddingVersionRow[]> => {
+    const results = await ctx.db.query("foodEmbeddings").take(1000);
+    if (results.length === 1000) {
+      throw new Error(
+        "listFoodEmbeddingVersions: hit 1000-row cap — staleness check is incomplete. Implement pagination.",
+      );
+    }
+    return results.map((row) => ({
+      canonicalName: row.canonicalName,
+      ...(row.embeddingSourceHash !== undefined && {
+        embeddingSourceHash: row.embeddingSourceHash,
+      }),
+    }));
   },
 });
 
@@ -646,6 +630,7 @@ export const writeProcessedItems = internalMutation({
                 v.literal("embedding"),
                 v.literal("combined"),
                 v.literal("llm"),
+                v.literal("user"),
               ),
               combinedConfidence: v.number(),
               fuzzyScore: v.union(v.number(), v.null()),
@@ -924,9 +909,7 @@ function toPendingItem(
   };
 }
 
-function serializeProcessedItem(
-  item: ProcessedFoodItem,
-): WriteProcessedFoodItem {
+function serializeProcessedItem(item: ProcessedFoodItem): StoredFoodItem {
   return {
     userSegment: item.userSegment,
     parsedName: item.parsedName,
@@ -984,7 +967,7 @@ async function ensureFoodEmbeddings(ctx: ActionCtx): Promise<boolean> {
   if (!apiKey) return false;
 
   const existingRows = await ctx.runQuery(
-    internal.foodParsing.listFoodEmbeddings,
+    internal.foodParsing.listFoodEmbeddingVersions,
     {},
   );
   const documentsNeedingRefresh = getFoodDocumentsNeedingEmbeddingRefresh(
@@ -1183,7 +1166,7 @@ async function upsertLearnedAlias(
   aliasText: string,
   canonicalName: string,
   source: "user" | "bucket",
-  now?: number,
+  timestamp: number,
 ): Promise<void> {
   const normalizedAlias = normalizeFoodMatchText(aliasText);
   if (!normalizedAlias) return;
@@ -1195,7 +1178,6 @@ async function upsertLearnedAlias(
     )
     .unique();
 
-  const timestamp = now ?? Date.now();
   if (existing) {
     await ctx.db.patch(existing._id, {
       aliasText,
@@ -1355,6 +1337,7 @@ export const processLogInternal = internalAction({
       internal.foodParsing.processEvidence,
       {
         logId: snapshot.logId,
+        now: Date.now(),
       },
     );
   },
@@ -1519,6 +1502,8 @@ export const applyLlmResults = internalMutation({
       return;
     }
 
+    const appliedAt = args.now ?? data.evidenceProcessedAt ?? log.timestamp;
+
     // Create exposures for items that were just resolved by LLM.
     // resolvedIndices tracks exactly which item positions were updated above.
     for (const itemIndex of resolvedIndices) {
@@ -1548,7 +1533,7 @@ export const applyLlmResults = internalMutation({
           recoveryStage: item.recoveryStage,
         }),
         ...(item.spiceLevel !== undefined && { spiceLevel: item.spiceLevel }),
-        createdAt: args.now ?? Date.now(),
+        createdAt: appliedAt,
       });
     }
   },
@@ -1559,7 +1544,7 @@ export const applyLlmResults = internalMutation({
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const processEvidence = internalMutation({
-  args: { logId: v.id("logs"), now: v.optional(v.number()) },
+  args: { logId: v.id("logs"), now: v.number() },
   handler: async (ctx, args) => {
     const log = await ctx.db.get(args.logId);
     if (!log || !isFoodPipelineType(log.type)) return;
@@ -1567,7 +1552,7 @@ export const processEvidence = internalMutation({
     const data = log.data as FoodLogData;
     if (data.evidenceProcessedAt != null) return;
 
-    const evidenceProcessedAt = args.now ?? Date.now();
+    const evidenceProcessedAt = args.now;
 
     if (!data.items || data.items.length === 0) {
       // No items to process — just mark the evidence window as closed.
@@ -1656,7 +1641,7 @@ export const resolveItem = mutation({
     logId: v.id("logs"),
     itemIndex: v.number(),
     canonicalName: v.string(),
-    now: v.optional(v.number()),
+    now: v.number(),
   },
   handler: async (ctx, args) => {
     const { userId } = await requireAuth(ctx);
@@ -1756,6 +1741,7 @@ export const resolveItem = mutation({
       aliasText,
       args.canonicalName,
       aliasSource,
+      args.now,
     );
 
     // Embed the alias text so future misspellings resolve via vector
@@ -1790,7 +1776,7 @@ export const resolveItem = mutation({
         ...(updatedItem.spiceLevel !== undefined && {
           spiceLevel: updatedItem.spiceLevel,
         }),
-        createdAt: args.now ?? Date.now(),
+        createdAt: args.now,
       });
     }
   },

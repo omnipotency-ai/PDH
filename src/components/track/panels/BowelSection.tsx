@@ -1,19 +1,12 @@
 import { AlertTriangle, HeartPulse, Minus, Plus } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useCallback, useId, useState } from "react";
+import { useCallback, useId, useRef, useState } from "react";
 import { toast } from "sonner";
-import {
-  BRISTOL_SCALE,
-  BristolIllustration,
-} from "@/components/track/panels/BristolScale";
+import { BRISTOL_SCALE, BristolIllustration } from "@/components/track/panels/BristolScale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePanelTime } from "@/hooks/usePanelTime";
 
 import { getErrorMessage } from "@/lib/errors";
@@ -42,6 +35,26 @@ export interface BowelFormState {
   volumeTag: "small" | "medium" | "large" | "juices";
   timestampMs?: number;
 }
+
+interface BowelFormDraft {
+  bristolCode: 1 | 2 | 3 | 4 | 5 | 6 | 7 | null;
+  urgencyTag: BowelFormState["urgencyTag"];
+  effortTag: BowelFormState["effortTag"];
+  accident: boolean;
+  notes: string;
+  episodesCount: number;
+  volumeTag: BowelFormState["volumeTag"];
+}
+
+const INITIAL_BOWEL_DRAFT: BowelFormDraft = {
+  bristolCode: null,
+  urgencyTag: "medium",
+  effortTag: "some",
+  accident: false,
+  notes: "",
+  episodesCount: 1,
+  volumeTag: "medium",
+};
 
 interface BowelSectionProps {
   onSave: (state: BowelFormState) => Promise<void>;
@@ -119,13 +132,7 @@ function SeverityScale<T extends string>({
   );
 }
 
-function TripStepper({
-  value,
-  onChange,
-}: {
-  value: number;
-  onChange: (v: number) => void;
-}) {
+function TripStepper({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   return (
     <div className="flex items-center justify-center gap-3 rounded-xl bg-(--surface-3) min-h-[44px] px-3">
       <button
@@ -168,69 +175,63 @@ function TripStepper({
 
 export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
   const bristolGroupName = useId();
-  const [bristolCode, setBristolCode] = useState<
-    1 | 2 | 3 | 4 | 5 | 6 | 7 | null
-  >(null);
-  const [urgencyTag, setUrgencyTag] = useState<
-    "low" | "medium" | "high" | "immediate"
-  >("medium");
-  const [effortTag, setEffortTag] = useState<
-    "none" | "some" | "hard" | "urgent-release"
-  >("some");
-  const [accident, setAccident] = useState(false);
-  const [notes, setNotes] = useState("");
-  const [trips, setTrips] = useState(1);
-  const [volumeTag, setVolumeTag] = useState<
-    "small" | "medium" | "large" | "juices"
-  >("medium");
+  const [draft, setDraft] = useState<BowelFormDraft>({ ...INITIAL_BOWEL_DRAFT });
   const [saving, setSaving] = useState(false);
+  // useRef guard prevents double-submit under React 18 concurrent rendering,
+  // where two rapid invocations can both pass a useState check before either
+  // state update commits.
+  const submittingRef = useRef(false);
 
-  const {
-    timeValue,
-    setTimeValue,
-    dateValue,
-    setDateValue,
-    isEdited,
-    getTimestampMs,
-    reset,
-  } = usePanelTime(captureTimestamp);
+  const { timeValue, setTimeValue, dateValue, setDateValue, isEdited, getTimestampMs, reset } =
+    usePanelTime(captureTimestamp);
 
   const prefersReducedMotion = useReducedMotion();
 
   const selectedBristol =
-    bristolCode !== null
-      ? BRISTOL_SCALE.find((b) => b.value === bristolCode)
-      : null;
-  const accent = bristolCode !== null ? BRISTOL_ACCENT[bristolCode] : null;
+    draft.bristolCode !== null ? BRISTOL_SCALE.find((b) => b.value === draft.bristolCode) : null;
+  const accent = draft.bristolCode !== null ? BRISTOL_ACCENT[draft.bristolCode] : null;
 
-  const handleSave = async () => {
-    if (bristolCode === null) return;
+  const resetDraft = useCallback(() => {
+    setDraft({ ...INITIAL_BOWEL_DRAFT });
+  }, []);
+
+  const handleSave = useCallback(async () => {
+    if (submittingRef.current) return;
+    if (draft.bristolCode === null) return;
+    submittingRef.current = true;
     try {
       setSaving(true);
       await onSave({
-        bristolCode,
-        urgencyTag,
-        effortTag,
-        accident,
-        notes,
-        episodesCount: String(trips),
-        volumeTag,
+        bristolCode: draft.bristolCode,
+        urgencyTag: draft.urgencyTag,
+        effortTag: draft.effortTag,
+        accident: draft.accident,
+        notes: draft.notes,
+        episodesCount: String(draft.episodesCount),
+        volumeTag: draft.volumeTag,
         timestampMs: getTimestampMs(),
       });
-      setBristolCode(null);
-      setUrgencyTag("medium");
-      setEffortTag("some");
-      setAccident(false);
-      setNotes("");
-      setTrips(1);
-      setVolumeTag("medium");
+      resetDraft();
       reset();
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, "Failed to save bowel movement."));
     } finally {
+      submittingRef.current = false;
       setSaving(false);
     }
-  };
+  }, [
+    draft.bristolCode,
+    draft.urgencyTag,
+    draft.effortTag,
+    draft.accident,
+    draft.notes,
+    draft.episodesCount,
+    draft.volumeTag,
+    onSave,
+    getTimestampMs,
+    reset,
+    resetDraft,
+  ]);
 
   const handleBristolKeyDown = useCallback(
     (event: React.KeyboardEvent, currentValue: 1 | 2 | 3 | 4 | 5 | 6 | 7) => {
@@ -238,12 +239,11 @@ export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
       if (event.key === "ArrowRight" || event.key === "ArrowDown") {
         event.preventDefault();
         const nextIndex = (currentIndex + 1) % bristolValues.length;
-        setBristolCode(bristolValues[nextIndex]);
+        setDraft((prev) => ({ ...prev, bristolCode: bristolValues[nextIndex] }));
       } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
         event.preventDefault();
-        const prevIndex =
-          (currentIndex - 1 + bristolValues.length) % bristolValues.length;
-        setBristolCode(bristolValues[prevIndex]);
+        const prevIndex = (currentIndex - 1 + bristolValues.length) % bristolValues.length;
+        setDraft((prev) => ({ ...prev, bristolCode: bristolValues[prevIndex] }));
       }
     },
     [],
@@ -268,7 +268,7 @@ export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
           style={{ border: "1px solid var(--section-bowel-border)" }}
         >
           {BRISTOL_SCALE.map((option) => {
-            const isSelected = bristolCode === option.value;
+            const isSelected = draft.bristolCode === option.value;
             const typeAccent = BRISTOL_ACCENT[option.value];
             return (
               <Tooltip key={option.value}>
@@ -293,16 +293,13 @@ export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
                       type="radio"
                       name={bristolGroupName}
                       checked={isSelected}
-                      onChange={() => setBristolCode(option.value)}
+                      onChange={() => setDraft((prev) => ({ ...prev, bristolCode: option.value }))}
                       onKeyDown={(e) => handleBristolKeyDown(e, option.value)}
                       aria-label={`Bristol type ${option.value}: ${option.description}`}
                       className="sr-only"
                     />
                     <span aria-hidden="true">
-                      <BristolIllustration
-                        type={option.value}
-                        size={isSelected ? 36 : 26}
-                      />
+                      <BristolIllustration type={option.value} size={isSelected ? 36 : 26} />
                     </span>
                     <span
                       className={cn(
@@ -348,8 +345,7 @@ export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
               className="text-center text-sm font-semibold transition-colors duration-300"
               style={{ color: accent.hex }}
             >
-              Type {selectedBristol.value} &middot;{" "}
-              {selectedBristol.description}
+              Type {selectedBristol.value} &middot; {selectedBristol.description}
             </p>
           </>
         )}
@@ -357,7 +353,7 @@ export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
 
       {/* ── Detail fields (revealed after Bristol type selection) ── */}
       <AnimatePresence>
-        {bristolCode !== null && (
+        {draft.bristolCode !== null && (
           <motion.div
             initial={{ opacity: 0, height: prefersReducedMotion ? "auto" : 0 }}
             animate={{ opacity: 1, height: "auto" }}
@@ -378,14 +374,14 @@ export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
                 <SeverityScale
                   label="Urgency"
                   options={URGENCY}
-                  value={urgencyTag}
-                  onChange={setUrgencyTag}
+                  value={draft.urgencyTag}
+                  onChange={(value) => setDraft((prev) => ({ ...prev, urgencyTag: value }))}
                 />
                 <SeverityScale
                   label="Effort"
                   options={EFFORT}
-                  value={effortTag}
-                  onChange={setEffortTag}
+                  value={draft.effortTag}
+                  onChange={(value) => setDraft((prev) => ({ ...prev, effortTag: value }))}
                 />
               </div>
 
@@ -401,38 +397,33 @@ export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
                   </p>
                   <div className="flex gap-1">
                     {VOLUME.map((opt) => {
-                      const isSelected = volumeTag === opt.value;
+                      const isSelected = draft.volumeTag === opt.value;
                       return (
                         <button
                           key={opt.value}
                           type="button"
-                          onClick={() => setVolumeTag(opt.value)}
+                          onClick={() => setDraft((prev) => ({ ...prev, volumeTag: opt.value }))}
                           aria-label={`Volume: ${opt.label}`}
                           aria-pressed={isSelected}
                           className={cn(
                             "flex-1 flex flex-col items-center gap-0.5 rounded-xl min-h-[44px] justify-center transition-all duration-200",
-                            !isSelected &&
-                              "bg-(--surface-3) hover:bg-(--surface-0)",
+                            !isSelected && "bg-(--surface-3) hover:bg-(--surface-0)",
                           )}
                           style={
                             isSelected
                               ? {
                                   backgroundColor: "var(--section-bowel-muted)",
-                                  boxShadow:
-                                    "inset 0 0 0 1.5px var(--section-bowel)",
+                                  boxShadow: "inset 0 0 0 1.5px var(--section-bowel)",
                                 }
                               : {
-                                  border:
-                                    "1px solid var(--section-bowel-border)",
+                                  border: "1px solid var(--section-bowel-border)",
                                 }
                           }
                         >
                           <span
                             className="text-sm font-black leading-none tracking-[0.2em]"
                             style={{
-                              color: isSelected
-                                ? "var(--section-bowel)"
-                                : "var(--text-faint)",
+                              color: isSelected ? "var(--section-bowel)" : "var(--text-faint)",
                             }}
                           >
                             {opt.visual}
@@ -440,9 +431,7 @@ export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
                           <span
                             className="text-[10px] font-bold leading-none"
                             style={{
-                              color: isSelected
-                                ? "var(--section-bowel)"
-                                : "var(--text-faint)",
+                              color: isSelected ? "var(--section-bowel)" : "var(--text-faint)",
                             }}
                           >
                             {opt.label}
@@ -472,17 +461,17 @@ export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
                     {/* Accident toggle */}
                     <button
                       type="button"
-                      onClick={() => setAccident((prev) => !prev)}
-                      aria-pressed={accident}
-                      aria-label={accident ? "Accident: yes" : "Accident: no"}
+                      onClick={() => setDraft((prev) => ({ ...prev, accident: !prev.accident }))}
+                      aria-pressed={draft.accident}
+                      aria-label={draft.accident ? "Accident: yes" : "Accident: no"}
                       className={cn(
                         "flex h-11 items-center justify-center rounded-xl transition-all duration-200",
-                        accident
+                        draft.accident
                           ? "bg-red-500/15 text-red-400"
                           : "bg-(--surface-3) text-(--text-faint) hover:text-(--text-muted)",
                       )}
                       style={
-                        accident
+                        draft.accident
                           ? {
                               boxShadow:
                                 "inset 0 0 0 1.5px color-mix(in srgb, var(--red) 40%, transparent)",
@@ -496,13 +485,16 @@ export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
                       <AlertTriangle
                         className={cn(
                           "h-4 w-4",
-                          accident ? "text-red-500" : "text-(--text-faint)",
+                          draft.accident ? "text-red-500" : "text-(--text-faint)",
                         )}
                         aria-hidden="true"
                       />
                     </button>
                     {/* Trips stepper */}
-                    <TripStepper value={trips} onChange={setTrips} />
+                    <TripStepper
+                      value={draft.episodesCount}
+                      onChange={(value) => setDraft((prev) => ({ ...prev, episodesCount: value }))}
+                    />
                   </div>
                 </div>
               </div>
@@ -520,9 +512,14 @@ export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
                   />
                   <Input
                     placeholder="Notes..."
-                    value={notes}
+                    value={draft.notes}
                     maxLength={400}
-                    onChange={(e) => setNotes(e.target.value)}
+                    onChange={(e) =>
+                      setDraft((prev) => ({
+                        ...prev,
+                        notes: e.target.value,
+                      }))
+                    }
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault();

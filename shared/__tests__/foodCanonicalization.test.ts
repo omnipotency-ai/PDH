@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { canonicalizeKnownFoodName } from "../foodCanonicalization";
 import {
-  canonicalizeKnownFoodName,
   FOOD_REGISTRY,
   getFoodDigestionMetadata,
   getFoodEntry,
   getLinesByGroup,
-} from "../foodCanonicalization";
+} from "../foodRegistry";
 import { normalizeFoodName } from "../foodNormalize";
 
 describe("canonicalizeKnownFoodName", () => {

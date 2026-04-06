@@ -23,9 +23,9 @@
       "category": "correctness",
       "file": "src/components/track/today-log/rows/LogEntry.tsx",
       "line": 244,
-      "title": "JSON.stringify used for change detection — unreliable for object equality",
+      "title": "JSON.stringify used for change detection \u2014 unreliable for object equality",
       "description": "saveEditing() uses `JSON.stringify(nextData) === JSON.stringify(log.data ?? {})` as a short-circuit to skip saves when nothing changed. JSON.stringify is order-sensitive for object keys and does not handle undefined fields consistently. If the server returns data with different key ordering than the client-constructed nextData, the comparison will falsely fire a save (or vice versa). For digestion logs the risk is particularly high because nextData is fully reconstructed from scratch, not derived from log.data, so the key order may differ even when values are identical.",
-      "fix": "Remove the JSON.stringify comparison entirely, or replace it with a field-by-field check specific to each log type. The safest default is to always call onSave when the user explicitly clicks Save — the mutation is idempotent and the UX cost of a redundant write is negligible.",
+      "fix": "Remove the JSON.stringify comparison entirely, or replace it with a field-by-field check specific to each log type. The safest default is to always call onSave when the user explicitly clicks Save \u2014 the mutation is idempotent and the UX cost of a redundant write is negligible.",
       "implemented": false
     },
     {
@@ -34,8 +34,8 @@
       "category": "correctness",
       "file": "src/components/track/today-log/rows/LogEntry.tsx",
       "line": 255,
-      "title": "Save error silently swallowed — no user feedback on failure",
-      "description": "The catch block in saveEditing() is empty: `catch { // Keep editor open so the user can adjust and retry. }`. The editor stays open, which is correct, but the user receives no indication that the save failed. On a clinical app tracking health data, a silent failure is dangerous — the user may believe data was saved when it was not.",
+      "title": "Save error silently swallowed \u2014 no user feedback on failure",
+      "description": "The catch block in saveEditing() is empty: `catch { // Keep editor open so the user can adjust and retry. }`. The editor stays open, which is correct, but the user receives no indication that the save failed. On a clinical app tracking health data, a silent failure is dangerous \u2014 the user may believe data was saved when it was not.",
       "fix": "Add error state: `const [saveError, setSaveError] = useState<string | null>(null)`. In the catch, set a message. Render it beneath the Save button. Clear it on successful save or when editing is cancelled.",
       "implemented": false
     },
@@ -69,7 +69,7 @@
       "line": 214,
       "title": "LogEntry receives onDelete/onSave props even though TodayLogActionsContext also provides them",
       "description": "TodayLogActionsContext exists specifically to avoid prop-drilling onDelete/onSave through every group row. However, the `individual` case in TodayLog's switch still passes onDelete and onSave as explicit props to <LogEntry>. LogEntry's LogEntryProps type declares these as required props. Meanwhile, child sub-rows inside group rows (FoodSubRow, HabitSubRow, etc.) presumably read from context. This is inconsistent: individual entries use props, grouped sub-rows use context. If the context value and the prop value ever diverge, individual LogEntry items will silently use the stale prop.",
-      "fix": "Either (a) have LogEntry always consume from context and remove onDelete/onSave from LogEntryProps, or (b) remove TodayLogActionsContext and pass props everywhere. Currently the codebase does both — that is the contradiction. Option (a) is the cleaner direction since the context already exists.",
+      "fix": "Either (a) have LogEntry always consume from context and remove onDelete/onSave from LogEntryProps, or (b) remove TodayLogActionsContext and pass props everywhere. Currently the codebase does both \u2014 that is the contradiction. Option (a) is the cleaner direction since the context already exists.",
       "implemented": false
     },
     {
@@ -79,7 +79,7 @@
       "file": "src/components/track/today-log/TodayLogContext.tsx",
       "line": 31,
       "title": "TodayLogDataContext is defined but never provided in TodayLog",
-      "description": "TodayLogContext.tsx defines TodayLogDataProvider and useTodayLogData for sharing habits and weightUnit via context. However, TodayLog.tsx never mounts a <TodayLogDataProvider>. Any component that calls useTodayLogData() will throw 'useTodayLogData must be used within TodayLogDataProvider'. This context is dead infrastructure — either it is not yet wired up (unfinished work) or it was abandoned in favour of prop-drilling, but the context definition was not cleaned up.",
+      "description": "TodayLogContext.tsx defines TodayLogDataProvider and useTodayLogData for sharing habits and weightUnit via context. However, TodayLog.tsx never mounts a <TodayLogDataProvider>. Any component that calls useTodayLogData() will throw 'useTodayLogData must be used within TodayLogDataProvider'. This context is dead infrastructure \u2014 either it is not yet wired up (unfinished work) or it was abandoned in favour of prop-drilling, but the context definition was not cleaned up.",
       "fix": "Either (a) mount <TodayLogDataProvider value={{ habits, weightUnit }}> in TodayLog and migrate group rows to use useTodayLogData() rather than receiving habits as a prop, or (b) delete TodayLogDataContext and useTodayLogData from the file.",
       "implemented": false
     },
@@ -102,7 +102,7 @@
       "line": 602,
       "title": "Food item list uses unstable key derived from draft name",
       "description": "The food item editor list uses `key={\\`draft-${draft.name || i}\\`}`. When draft.name is empty (new blank item, or the user just cleared a field), the key falls back to the index `i`. Mixing name-based and index-based keys within the same render cycle causes React to remount inputs unexpectedly when items are reordered or deleted, losing focus and draft state mid-edit.",
-      "fix": "Assign a stable, immutable ID when draft items are initialised — e.g., use the original item index or a UUID: `const [draftItems, setDraftItems] = useState(() => initFoodDraftItems().map((item, i) => ({ ...item, _key: i })))`. Use `_key` as the React key. Never derive keys from mutable draft content.",
+      "fix": "Assign a stable, immutable ID when draft items are initialised \u2014 e.g., use the original item index or a UUID: `const [draftItems, setDraftItems] = useState(() => initFoodDraftItems().map((item, i) => ({ ...item, _key: i })))`. Use `_key` as the React key. Never derive keys from mutable draft content.",
       "implemented": false
     },
     {
@@ -111,9 +111,9 @@
       "category": "correctness",
       "file": "src/components/track/today-log/rows/LogEntry.tsx",
       "line": 208,
-      "title": "Bristol code derivation in saveEditing is inconsistent with the 1–7 spec",
-      "description": "When saving a digestion log, consistencyTag is derived: `if (draftBristol >= 7) 'diarrhea'; else if (draftBristol >= 6) 'loose'; else if (draftBristol > 0) 'firm'`. Bristol codes 1–5 are all tagged 'firm', which loses clinical nuance. Codes 1–2 are typically 'hard/constipated', 3–4 are normal, 5 is 'soft but formed'. Lumping all into 'firm' is factually wrong and will corrupt downstream analysis.",
-      "fix": "Align with the Bristol Stool Scale: 1–2 → 'hard', 3–4 → 'normal', 5 → 'soft', 6 → 'loose', 7 → 'diarrhea'. Check the domain types for accepted consistencyTag values and ensure the mapping matches.",
+      "title": "Bristol code derivation in saveEditing is inconsistent with the 1\u20137 spec",
+      "description": "When saving a digestion log, consistencyTag is derived: `if (draftBristol >= 7) 'diarrhea'; else if (draftBristol >= 6) 'loose'; else if (draftBristol > 0) 'firm'`. Bristol codes 1\u20135 are all tagged 'firm', which loses clinical nuance. Codes 1\u20132 are typically 'hard/constipated', 3\u20134 are normal, 5 is 'soft but formed'. Lumping all into 'firm' is factually wrong and will corrupt downstream analysis.",
+      "fix": "Align with the Bristol Stool Scale: 1\u20132 \u2192 'hard', 3\u20134 \u2192 'normal', 5 \u2192 'soft', 6 \u2192 'loose', 7 \u2192 'diarrhea'. Check the domain types for accepted consistencyTag values and ensure the mapping matches.",
       "implemented": false
     },
     {
@@ -123,7 +123,7 @@
       "file": "src/components/track/today-log/rows/LogEntry.tsx",
       "line": 75,
       "title": "getHabitIcon called twice per render for habit logs",
-      "description": "For habit-type logs, the component calls `getHabitIcon(habitConfig)` twice in the same render: once to destructure Icon and once to get toneClassName (lines 77–78). If getHabitIcon is non-trivial, this is wasted computation every render.",
+      "description": "For habit-type logs, the component calls `getHabitIcon(habitConfig)` twice in the same render: once to destructure Icon and once to get toneClassName (lines 77\u201378). If getHabitIcon is non-trivial, this is wasted computation every render.",
       "fix": "Call it once and destructure both values: `const { Icon, toneClassName: color } = habitConfig ? getHabitIcon(habitConfig) : { Icon: getLogIcon(log), toneClassName: getLogColor(log) };`",
       "implemented": false
     },
@@ -133,7 +133,7 @@
       "category": "correctness",
       "file": "src/components/track/today-log/rows/LogEntry.tsx",
       "line": 651,
-      "title": "Fluid name editing limited to 10 characters — likely too short",
+      "title": "Fluid name editing limited to 10 characters \u2014 likely too short",
       "description": "The fluid name input has `maxLength={10}`. Common fluid names like 'sports drink', 'coconut water', or 'herbal tea' exceed this. The food item name input has `maxLength={60}`. The 10-character limit appears to be an accidental placeholder, not a deliberate UX decision.",
       "fix": "Raise maxLength to at least 40 to match common fluid names. If there is a deliberate constraint (e.g., display truncation), document it in a comment.",
       "implemented": false
@@ -146,7 +146,7 @@
       "line": 363,
       "title": "Motion chevron in digestion row is missing aria-hidden",
       "description": "The ChevronDown inside the motion.div at line 363 is a purely decorative rotation indicator. It has no aria-label or aria-hidden attribute. The parent button already has aria-expanded, so the chevron is redundant for screen readers but will be announced as an unlabelled interactive element in some AT configurations.",
-      "fix": "The motion.div already has `aria-hidden='true'` — verify this is being serialised to the DOM correctly by motion. If motion strips aria attributes, add it to the ChevronDown instead: `<ChevronDown aria-hidden='true' />`",
+      "fix": "The motion.div already has `aria-hidden='true'` \u2014 verify this is being serialised to the DOM correctly by motion. If motion strips aria attributes, add it to the ChevronDown instead: `<ChevronDown aria-hidden='true' />`",
       "implemented": false
     },
     {
@@ -166,8 +166,8 @@
       "category": "simplicity",
       "file": "src/components/track/today-log/TodayLog.tsx",
       "line": 260,
-      "title": "activity and sleep cases in switch are identical — can be collapsed",
-      "description": "The 'activity' and 'sleep' cases (lines 260–277) render the same <ActivityGroupRow> component with identical props. The duplicated block is noise that will diverge if ActivityGroupRow's interface changes.",
+      "title": "activity and sleep cases in switch are identical \u2014 can be collapsed",
+      "description": "The 'activity' and 'sleep' cases (lines 260\u2013277) render the same <ActivityGroupRow> component with identical props. The duplicated block is noise that will diverge if ActivityGroupRow's interface changes.",
       "fix": "Collapse both cases: `case 'activity': case 'sleep': return <ActivityGroupRow ... />;`",
       "implemented": false
     },
@@ -178,7 +178,7 @@
       "file": "src/components/track/today-log/rows/LogEntry.tsx",
       "line": 154,
       "title": "cancelEditing duplicates startEditing state resets",
-      "description": "cancelEditing() manually resets draftPrimary, draftNotes, draftDate, and draftTimestamp — but startEditing() already sets all of these. The cancel path does not reset draftItems, draftBristol, draftEpisodes, etc. If a user edits a digestion entry and cancels, the abandoned draft bristol/urgency/effort values remain in state. On the next expand, handleToggleExpand will re-initialise them from log.data, so the visible behaviour is correct, but the stale state is a latent risk.",
+      "description": "cancelEditing() manually resets draftPrimary, draftNotes, draftDate, and draftTimestamp \u2014 but startEditing() already sets all of these. The cancel path does not reset draftItems, draftBristol, draftEpisodes, etc. If a user edits a digestion entry and cancels, the abandoned draft bristol/urgency/effort values remain in state. On the next expand, handleToggleExpand will re-initialise them from log.data, so the visible behaviour is correct, but the stale state is a latent risk.",
       "fix": "Extract draft initialisation into a single resetDraft() function. Call it from both startEditing and cancelEditing. This ensures cancellation is always complete.",
       "implemented": false
     },
@@ -188,8 +188,8 @@
       "category": "simplicity",
       "file": "src/components/track/today-log/rows/LogEntry.tsx",
       "line": 42,
-      "title": "LogEntry carries 14 pieces of useState — too many responsibilities in one component",
-      "description": "LogEntry handles display, inline editing for food, fluid, digestion, reproductive, and habit/activity log types — each with their own draft fields — plus delete confirmation, saving state, and auto-edit triggering. It has at least 14 useState calls. This component is doing too much. Editing logic for each log type should be extracted into type-specific edit components (FoodEditor, DigestivEditor, etc.) that are conditionally rendered.",
+      "title": "LogEntry carries 14 pieces of useState \u2014 too many responsibilities in one component",
+      "description": "LogEntry handles display, inline editing for food, fluid, digestion, reproductive, and habit/activity log types \u2014 each with their own draft fields \u2014 plus delete confirmation, saving state, and auto-edit triggering. It has at least 14 useState calls. This component is doing too much. Editing logic for each log type should be extracted into type-specific edit components (FoodEditor, DigestivEditor, etc.) that are conditionally rendered.",
       "fix": "Refactor: extract DigestiveEditor, FoodEditor, FluidEditor, ReproductiveEditor as separate components. LogEntry becomes a thin dispatcher. This is a significant refactor, not a one-liner, so treat as a tracked debt item.",
       "implemented": false
     }

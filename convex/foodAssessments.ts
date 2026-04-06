@@ -36,6 +36,9 @@ export const historyByFood = query({
 //
 // NOTE: This query must collect all user assessments to deduplicate by canonical
 // name (Convex has no "distinct" index operation). Safety cap at 2000 rows.
+/** Safety cap for allFoods dedup scan. */
+const ALL_FOODS_CAP = 2000;
+
 export const allFoods = query({
   args: {},
   handler: async (ctx) => {
@@ -43,12 +46,16 @@ export const allFoods = query({
 
     // Stored canonicalName is normalized by the canonical migration script.
     // No runtime re-normalization needed.
-    // Safety cap: 2000 rows to prevent unbounded collect.
     const allAssessments = await ctx.db
       .query("foodAssessments")
       .withIndex("by_userId_timestamp", (q) => q.eq("userId", userId))
       .order("desc")
-      .take(2000);
+      .take(ALL_FOODS_CAP);
+
+    const isTruncated = allAssessments.length === ALL_FOODS_CAP;
+    if (isTruncated) {
+      console.warn(`allFoods: cap of ${ALL_FOODS_CAP} reached for user ${userId}`);
+    }
 
     const latestByFood = new Map<
       string,
@@ -79,7 +86,10 @@ export const allFoods = query({
       });
     }
 
-    return Array.from(latestByFood.values());
+    return {
+      foods: Array.from(latestByFood.values()),
+      isTruncated,
+    };
   },
 });
 
@@ -107,6 +117,9 @@ export const allAssessmentRecords = query({
 //
 // Uses two indexed queries (one per verdict) then merges and deduplicates,
 // rather than scanning all assessments.
+/** Safety cap per verdict bucket in the culprits query. */
+const CULPRITS_PER_VERDICT_CAP = 500;
+
 export const culprits = query({
   args: {
     limit: v.optional(v.number()),
@@ -120,19 +133,24 @@ export const culprits = query({
     const [culpritRows, avoidRows] = await Promise.all([
       ctx.db
         .query("foodAssessments")
-        .withIndex("by_userId_verdict", (q) =>
-          q.eq("userId", userId).eq("verdict", "culprit"),
-        )
+        .withIndex("by_userId_verdict", (q) => q.eq("userId", userId).eq("verdict", "culprit"))
         .order("desc")
-        .collect(),
+        .take(CULPRITS_PER_VERDICT_CAP),
       ctx.db
         .query("foodAssessments")
-        .withIndex("by_userId_verdict", (q) =>
-          q.eq("userId", userId).eq("verdict", "avoid"),
-        )
+        .withIndex("by_userId_verdict", (q) => q.eq("userId", userId).eq("verdict", "avoid"))
         .order("desc")
-        .collect(),
+        .take(CULPRITS_PER_VERDICT_CAP),
     ]);
+
+    if (
+      culpritRows.length === CULPRITS_PER_VERDICT_CAP ||
+      avoidRows.length === CULPRITS_PER_VERDICT_CAP
+    ) {
+      console.warn(
+        `culprits: per-verdict cap of ${CULPRITS_PER_VERDICT_CAP} reached for user ${userId}`,
+      );
+    }
 
     // Merge both result sets, sort by timestamp descending, deduplicate by
     // canonical name (keeping only the latest assessment per food).
@@ -165,13 +183,14 @@ export const safeFoods = query({
     const limit = Math.min(Math.max(args.limit ?? 100, 1), 500);
     return await ctx.db
       .query("foodAssessments")
-      .withIndex("by_userId_verdict", (q) =>
-        q.eq("userId", userId).eq("verdict", "safe"),
-      )
+      .withIndex("by_userId_verdict", (q) => q.eq("userId", userId).eq("verdict", "safe"))
       .order("desc")
       .take(limit);
   },
 });
+
+/** Safety cap for assessments per report. Reports typically have <50 assessments. */
+const BY_REPORT_CAP = 200;
 
 // Get assessments for a specific report.
 // Uses composite by_userId_aiAnalysisId index so the database only returns
@@ -184,11 +203,19 @@ export const byReport = query({
     const { userId } = await requireAuth(ctx);
     // Stored canonicalName is normalized by the canonical migration script.
     // No runtime re-normalization needed.
-    return await ctx.db
+    const rows = await ctx.db
       .query("foodAssessments")
       .withIndex("by_userId_aiAnalysisId", (q) =>
         q.eq("userId", userId).eq("aiAnalysisId", args.aiAnalysisId),
       )
-      .collect();
+      .take(BY_REPORT_CAP);
+
+    if (rows.length === BY_REPORT_CAP) {
+      console.warn(
+        `byReport: cap of ${BY_REPORT_CAP} reached for user ${userId}, aiAnalysisId=${args.aiAnalysisId}`,
+      );
+    }
+
+    return rows;
   },
 });

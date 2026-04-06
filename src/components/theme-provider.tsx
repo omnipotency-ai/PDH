@@ -1,5 +1,6 @@
 import type React from "react";
 import { createContext, useContext, useEffect, useState } from "react";
+import { LEGACY_THEME_STORAGE_KEY, THEME_STORAGE_KEY } from "@/lib/storageKeys";
 
 type Theme = "dark" | "light" | "system";
 
@@ -31,15 +32,33 @@ function resolveSystemTheme(): "dark" | "light" {
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
+function readStoredTheme(storageKey: string, defaultTheme: Theme): Theme {
+  try {
+    const stored = localStorage.getItem(storageKey);
+    if (isTheme(stored)) return stored;
+
+    const legacyStored = localStorage.getItem(LEGACY_THEME_STORAGE_KEY);
+    if (isTheme(legacyStored)) {
+      localStorage.setItem(storageKey, legacyStored);
+      localStorage.removeItem(LEGACY_THEME_STORAGE_KEY);
+      return legacyStored;
+    }
+  } catch {
+    // Ignore storage failures and fall back to the default theme.
+  }
+
+  return defaultTheme;
+}
+
 export function ThemeProvider({
   children,
   defaultTheme = "system",
-  storageKey = "kaka-tracker-theme",
+  storageKey = THEME_STORAGE_KEY,
   ...props
 }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(() => {
-    const stored = localStorage.getItem(storageKey);
-    return isTheme(stored) ? stored : defaultTheme;
+    if (typeof window === "undefined") return defaultTheme;
+    return readStoredTheme(storageKey, defaultTheme);
   });
 
   useEffect(() => {
@@ -63,7 +82,13 @@ export function ThemeProvider({
   const value = {
     theme,
     setTheme: (theme: Theme) => {
-      localStorage.setItem(storageKey, theme);
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem(storageKey, theme);
+        } catch {
+          // Ignore storage failures and keep the in-memory theme state.
+        }
+      }
       setTheme(theme);
     },
   };

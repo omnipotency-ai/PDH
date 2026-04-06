@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useRef, useState } from "react";
-import { CopyReportButton, DrPooReportDetails } from "@/components/archive/DrPooReport";
+import { CopyReportButton, DrPooReportDetails } from "@/components/dr-poo/DrPooReport";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import type { AiNutritionistInsight } from "@/types/domain";
 

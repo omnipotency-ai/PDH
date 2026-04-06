@@ -6,8 +6,8 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { usePanelTime } from "@/hooks/usePanelTime";
 import { useFluidPresets, useUnitSystem } from "@/hooks/useProfile";
 import { getErrorMessage } from "@/lib/errors";
+import { DEFAULT_FLUID_PRESETS } from "@/lib/fluidPresets";
 import { flOzToMl, formatFluidDisplay, getDisplayFluidUnit } from "@/lib/units";
-import { DEFAULT_FLUID_PRESETS } from "@/store";
 import type { FluidPreset } from "@/types/domain";
 import { PanelTimePicker } from "./PanelTimePicker";
 

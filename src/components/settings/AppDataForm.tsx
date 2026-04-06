@@ -5,10 +5,10 @@ import { useApiKeyContext } from "@/contexts/ApiKeyContext";
 import { useProfileContext } from "@/contexts/ProfileContext";
 import { useAiPreferences, useHealthProfile, useUnitSystem } from "@/hooks/useProfile";
 import { getErrorMessage } from "@/lib/errors";
+import { THEME_STORAGE_KEY } from "@/lib/storageKeys";
 import {
   useDeleteAllSyncedData,
   useExportBackup,
-  useImportBackup,
   useSyncedLogCount,
 } from "@/lib/sync";
 import type { HealthProfile } from "@/types/domain";
@@ -26,6 +26,7 @@ const LOCAL_APP_STORAGE_KEYS = [
   "patterns-filter-state-v1",
   "track.pending-food-draft",
   "caca-custom-food-presets-v1",
+  THEME_STORAGE_KEY,
 ] as const;
 const LOCAL_APP_STORAGE_PREFIXES = ["quick-capture-destructive-rollover:"] as const;
 
@@ -39,7 +40,6 @@ export function AppDataForm() {
   const { aiPreferences, setAiPreferences } = useAiPreferences();
   const deleteAllSyncedData = useDeleteAllSyncedData();
   const exportBackup = useExportBackup();
-  const importBackup = useImportBackup();
 
   // The controller expects a partial-update setter matching the old store API.
   // useHealthProfile().setHealthProfile takes a full HealthProfile, so we wrap it.
@@ -84,31 +84,25 @@ export function AppDataForm() {
     }
   };
 
-  // SET-F003: hooks must be called unconditionally, so the controller receives
+  // Hooks must be called unconditionally, so the controller receives
   // healthProfile (null until loaded). The controller guards its own mutations
   // against null. Form sections are blocked in the JSX below until loaded.
   const {
     profileStatus,
     isDeletingData,
     deleteError,
-    isImportingBackup,
     isDeleteDrawerOpen,
     setIsDeleteDrawerOpen,
-    pendingImportFile,
-    setPendingImportFile,
-    confirmImport,
     showFactoryResetConfirm,
     setShowFactoryResetConfirm,
     confirmFactoryReset,
     handleExport,
-    handleImportBackup,
     handleResetFactorySettings,
     handleDeleteAccountData,
   } = useAppDataFormController({
     deleteAllSyncedData,
     clearLocalData,
     exportBackup,
-    importBackup,
     healthProfile,
     setHealthProfile: patchHealthProfile,
     patchProfile,
@@ -126,10 +120,8 @@ export function AppDataForm() {
 
       <DataManagementSection
         logsCount={logsCount ?? 0}
-        isImportingBackup={isImportingBackup}
-        onExportBackup={() => handleExport("backup-json")}
+        onExportBackup={() => handleExport("export-json")}
         onExportLogsCsv={() => handleExport("logs-csv")}
-        onImportBackup={handleImportBackup}
         onResetFactorySettings={handleResetFactorySettings}
         onOpenDeleteDrawer={() => setIsDeleteDrawerOpen(true)}
       />
@@ -158,40 +150,6 @@ export function AppDataForm() {
               type="button"
               className="rounded-md border border-[var(--section-appdata-border)] px-3 py-1 text-[var(--text-muted)] hover:bg-[var(--surface-2)]"
               onClick={() => setShowFactoryResetConfirm(false)}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* SET-F004: state-driven import confirmation replaces window.confirm */}
-      {pendingImportFile && (
-        <div
-          role="alertdialog"
-          aria-live="assertive"
-          className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-[var(--text)]"
-        >
-          <p className="mb-2 font-medium text-amber-300">
-            Import &quot;{pendingImportFile.name}&quot;?
-          </p>
-          <p className="mb-3 text-[var(--text-muted)]">
-            This will replace the current cloud data for your account with the backup.
-          </p>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              className="rounded-md border border-amber-500/40 bg-amber-500/15 px-3 py-1 font-medium text-amber-300 hover:bg-amber-500/25"
-              onClick={() => void confirmImport()}
-              disabled={isImportingBackup}
-            >
-              {isImportingBackup ? "Importing…" : "Yes, import"}
-            </button>
-            <button
-              type="button"
-              className="rounded-md border border-[var(--section-appdata-border)] px-3 py-1 text-[var(--text-muted)] hover:bg-[var(--surface-2)]"
-              onClick={() => setPendingImportFile(null)}
-              disabled={isImportingBackup}
             >
               Cancel
             </button>

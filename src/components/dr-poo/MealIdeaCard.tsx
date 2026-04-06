@@ -6,7 +6,19 @@ type MealPlanEntry = AiNutritionistInsight["mealPlan"][number];
 
 /**
  * Meal-slot color scheme: maps common slot keywords to gradient + accent colors.
- * Falls back to a neutral slate for unrecognized slot names.
+ * Uses design-system CSS variable tokens so colors adapt to dark/light themes.
+ * Falls back to muted surface colors for unrecognized slot names.
+ *
+ * Tokens used (defined in src/index.css for both dark and light themes):
+ *   --section-quick / --section-quick-muted    → amber   (breakfast)
+ *   --section-observe / --section-observe-muted → emerald (lunch)
+ *   --section-log / --section-log-muted         → indigo  (dinner)
+ *   --section-summary / --section-summary-muted → rose    (snack)
+ *   --text-muted / --text-faint / --surface-3   → neutral fallback
+ *
+ * gradient: CSS linear-gradient string — use in style={{ background }}
+ * accent:   CSS color value string — use in style={{ color }}
+ * label:    CSS color value string for sub-label — use in style={{ color }}
  */
 function getMealSlotStyle(meal: string): {
   gradient: string;
@@ -17,41 +29,46 @@ function getMealSlotStyle(meal: string): {
 
   if (lower.includes("breakfast") || lower.includes("morning")) {
     return {
-      gradient: "from-amber-500/20 via-orange-500/10 to-transparent",
-      accent: "text-amber-400",
-      label: "text-amber-300/80",
+      gradient:
+        "linear-gradient(to right, var(--section-quick-muted), color-mix(in srgb, var(--section-quick-muted) 50%, transparent), transparent)",
+      accent: "var(--section-quick)",
+      label: "var(--section-quick)",
     };
   }
 
   if (lower.includes("lunch") || lower.includes("midday")) {
     return {
-      gradient: "from-emerald-500/20 via-green-500/10 to-transparent",
-      accent: "text-emerald-400",
-      label: "text-emerald-300/80",
+      gradient:
+        "linear-gradient(to right, var(--section-observe-muted), color-mix(in srgb, var(--section-observe-muted) 50%, transparent), transparent)",
+      accent: "var(--section-observe)",
+      label: "var(--section-observe)",
     };
   }
 
   if (lower.includes("dinner") || lower.includes("evening")) {
     return {
-      gradient: "from-indigo-500/20 via-violet-500/10 to-transparent",
-      accent: "text-indigo-400",
-      label: "text-indigo-300/80",
+      gradient:
+        "linear-gradient(to right, var(--section-log-muted), color-mix(in srgb, var(--section-log-muted) 50%, transparent), transparent)",
+      accent: "var(--section-log)",
+      label: "var(--section-log)",
     };
   }
 
   if (lower.includes("snack")) {
     return {
-      gradient: "from-rose-500/20 via-pink-500/10 to-transparent",
-      accent: "text-rose-400",
-      label: "text-rose-300/80",
+      gradient:
+        "linear-gradient(to right, var(--section-summary-muted), color-mix(in srgb, var(--section-summary-muted) 50%, transparent), transparent)",
+      accent: "var(--section-summary)",
+      label: "var(--section-summary)",
     };
   }
 
   // Fallback for unrecognized meal slots
   return {
-    gradient: "from-slate-500/20 via-slate-400/10 to-transparent",
-    accent: "text-slate-400",
-    label: "text-slate-300/80",
+    gradient:
+      "linear-gradient(to right, color-mix(in srgb, var(--surface-3) 60%, transparent), transparent)",
+    accent: "var(--text-muted)",
+    label: "var(--text-faint)",
   };
 }
 
@@ -66,11 +83,31 @@ function extractFoodTags(items: string[]): string[] {
 
   const tagRules: Array<{ keywords: string[]; tag: string }> = [
     {
-      keywords: ["chicken", "fish", "salmon", "tuna", "egg", "turkey", "beef", "tofu", "protein"],
+      keywords: [
+        "chicken",
+        "fish",
+        "salmon",
+        "tuna",
+        "egg",
+        "turkey",
+        "beef",
+        "tofu",
+        "protein",
+      ],
       tag: "protein",
     },
     {
-      keywords: ["rice", "bread", "pasta", "oat", "potato", "noodle", "toast", "cereal", "grain"],
+      keywords: [
+        "rice",
+        "bread",
+        "pasta",
+        "oat",
+        "potato",
+        "noodle",
+        "toast",
+        "cereal",
+        "grain",
+      ],
       tag: "carbs",
     },
     {
@@ -87,12 +124,29 @@ function extractFoodTags(items: string[]): string[] {
       tag: "vegetables",
     },
     {
-      keywords: ["banana", "apple", "berry", "fruit", "mango", "melon", "peach", "pear"],
+      keywords: [
+        "banana",
+        "apple",
+        "berry",
+        "fruit",
+        "mango",
+        "melon",
+        "peach",
+        "pear",
+      ],
       tag: "fruit",
     },
     { keywords: ["yogurt", "cheese", "milk", "dairy", "cream"], tag: "dairy" },
     {
-      keywords: ["fibre", "fiber", "whole grain", "oat", "bran", "lentil", "bean"],
+      keywords: [
+        "fibre",
+        "fiber",
+        "whole grain",
+        "oat",
+        "bran",
+        "lentil",
+        "bean",
+      ],
       tag: "fibre",
     },
     {
@@ -128,26 +182,41 @@ interface MealIdeaCardProps {
  * - Footer: food-type badges as small rounded pills
  */
 export function MealIdeaCard({ meal }: MealIdeaCardProps) {
-  const style = getMealSlotStyle(meal.meal);
+  const slotStyle = getMealSlotStyle(meal.meal);
   const tags = extractFoodTags(meal.items);
 
   return (
-    <div data-slot="meal-idea-card" className="glass-card overflow-hidden rounded-2xl">
+    <div
+      data-slot="meal-idea-card"
+      className="glass-card overflow-hidden rounded-2xl"
+    >
       {/* Header — gradient banner with meal slot name */}
-      <div className={`bg-gradient-to-r ${style.gradient} px-4 py-3`}>
-        <p className={`text-[10px] font-semibold uppercase tracking-widest ${style.label}`}>
+      <div className="px-4 py-3" style={{ background: slotStyle.gradient }}>
+        <p
+          className="text-[10px] font-semibold uppercase tracking-widest opacity-70"
+          style={{ color: slotStyle.label }}
+        >
           Meal Idea
         </p>
-        <p className={`font-display text-base font-bold ${style.accent}`}>{meal.meal}</p>
+        <p
+          className="font-display text-base font-bold"
+          style={{ color: slotStyle.accent }}
+        >
+          {meal.meal}
+        </p>
       </div>
 
       {/* Body — menu items */}
       <div className="px-4 py-3">
         <ul className="space-y-1.5">
           {meal.items.map((item) => (
-            <li key={item} className="flex items-start gap-2 text-sm text-[var(--text)]">
+            <li
+              key={item}
+              className="flex items-start gap-2 text-sm text-[var(--text)]"
+            >
               <span
-                className={`mt-1.5 block h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-40 ${style.accent}`}
+                className="mt-1.5 block h-1.5 w-1.5 shrink-0 rounded-full opacity-40"
+                style={{ backgroundColor: slotStyle.accent }}
               />
               <span>{item}</span>
             </li>
@@ -156,7 +225,9 @@ export function MealIdeaCard({ meal }: MealIdeaCardProps) {
 
         {/* Reasoning — subtle italic explanation */}
         <div className="prose-sm mt-3 border-t border-[var(--border)] pt-2.5 text-xs text-[var(--text-muted)] [&_em]:text-[var(--text-faint)] [&_strong]:text-[var(--text)]">
-          <Markdown components={AI_MARKDOWN_COMPONENTS}>{meal.reasoning}</Markdown>
+          <Markdown components={AI_MARKDOWN_COMPONENTS}>
+            {meal.reasoning}
+          </Markdown>
         </div>
       </div>
 

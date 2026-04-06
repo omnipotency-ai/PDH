@@ -1,14 +1,32 @@
 import { format } from "date-fns";
 import type { LucideIcon } from "lucide-react";
-import { Activity, Droplets, Footprints, HeartPulse, Moon, Soup, Weight } from "lucide-react";
+import {
+  Activity,
+  Droplets,
+  Footprints,
+  HeartPulse,
+  Moon,
+  Soup,
+  Weight,
+} from "lucide-react";
 import type { HabitConfig } from "@/lib/habitTemplates";
 import type { SyncedLog } from "@/lib/sync";
-import type { FoodItem, FoodLog } from "@/types/domain";
+import {
+  isDigestionLog,
+  isFoodLog,
+  isFluidLog,
+  isLiquidLog,
+} from "@/lib/logTypeGuards";
+import type { FoodItem, FoodLog, LiquidLog } from "@/types/domain";
 import type { HabitLogData } from "./types";
 
 // ── Food item resolution status ─────────────────────────────────────────────
 
-export type FoodItemResolutionStatus = "resolved" | "pending" | "expired" | "processing";
+export type FoodItemResolutionStatus =
+  | "resolved"
+  | "pending"
+  | "expired"
+  | "processing";
 
 /**
  * Derive the resolution status of a single food item.
@@ -17,14 +35,18 @@ export type FoodItemResolutionStatus = "resolved" | "pending" | "expired" | "pro
  * - "pending": no canonicalName (or undefined), not expired — waiting for match
  * - "processing": not used per-item but included for type completeness
  */
-export function getFoodItemResolutionStatus(item: FoodItem): FoodItemResolutionStatus {
+export function getFoodItemResolutionStatus(
+  item: FoodItem,
+): FoodItemResolutionStatus {
   if (item.canonicalName === "unknown_food" || item.resolvedBy === "expired") {
     return "expired";
   }
   if (
     item.canonicalName != null &&
     item.canonicalName.length > 0 &&
-    (item.resolvedBy === "registry" || item.resolvedBy === "llm" || item.resolvedBy === "user")
+    (item.resolvedBy === "registry" ||
+      item.resolvedBy === "llm" ||
+      item.resolvedBy === "user")
   ) {
     return "resolved";
   }
@@ -34,14 +56,14 @@ export function getFoodItemResolutionStatus(item: FoodItem): FoodItemResolutionS
 /**
  * Check whether a food log is still processing (has rawInput but empty items array).
  */
-export function isFoodLogProcessing(log: FoodLog): boolean {
+export function isFoodLogProcessing(log: FoodLog | LiquidLog): boolean {
   return log.data.items.length === 0 && Boolean(log.data.rawInput);
 }
 
 /**
  * Count unresolved (pending or expired) items in a food log.
  */
-export function countUnresolvedItems(log: FoodLog): number {
+export function countUnresolvedItems(log: FoodLog | LiquidLog): number {
   return log.data.items.filter((item) => {
     const status = getFoodItemResolutionStatus(item);
     return status === "pending" || status === "expired";
@@ -84,16 +106,18 @@ export function getDefaultPortionHint(item: FoodItem): string | null {
   return `~${item.defaultPortionDisplay}`;
 }
 
-/** Type guard for logs that have notes */
-export function hasNotes(log: SyncedLog): log is SyncedLog & { data: { notes?: string } } {
-  return log.type === "digestion";
+/** Type guard for logs that have notes — delegates to canonical isDigestionLog */
+export function hasNotes(
+  log: SyncedLog,
+): log is SyncedLog & { data: { notes?: string } } {
+  return isDigestionLog(log);
 }
 
-/** Type guard for logs that have items array */
+/** Type guard for logs that have an items array — delegates to canonical food/liquid/fluid guards */
 export function hasItems(log: SyncedLog): log is SyncedLog & {
   data: { items: Array<{ name?: string; quantity?: number; unit?: string }> };
 } {
-  return log.type === "food" || log.type === "liquid" || log.type === "fluid";
+  return isFoodLog(log) || isLiquidLog(log) || isFluidLog(log);
 }
 
 export function getLogIcon(log: SyncedLog): LucideIcon {
@@ -111,7 +135,8 @@ export function getLogIcon(log: SyncedLog): LucideIcon {
 }
 
 export function getLogColor(log: SyncedLog): string {
-  if (log.type === "food" || log.type === "liquid") return "text-[var(--section-food)]";
+  if (log.type === "food" || log.type === "liquid")
+    return "text-[var(--section-food)]";
   if (log.type === "fluid") return "text-sky-600 dark:text-sky-400";
   if (log.type === "digestion") return "text-[var(--section-bowel)]";
   if (log.type === "weight") return "text-indigo-600 dark:text-indigo-400";
@@ -135,7 +160,9 @@ export function formatItemDisplay(item: {
   quantity?: number | null;
   unit?: string | null;
 }): string {
-  return getFoodItemDisplayName(item as Parameters<typeof getFoodItemDisplayName>[0]);
+  return getFoodItemDisplayName(
+    item as Parameters<typeof getFoodItemDisplayName>[0],
+  );
 }
 
 /**
@@ -218,7 +245,13 @@ export function getLogDetail(log: SyncedLog): string | null {
     const items = log.data.items;
     const rawLabels = items
       .map((item) =>
-        String(item?.parsedName ?? item?.name ?? item?.rawName ?? item?.userSegment ?? "").trim(),
+        String(
+          item?.parsedName ??
+            item?.name ??
+            item?.rawName ??
+            item?.userSegment ??
+            "",
+        ).trim(),
       )
       .filter(Boolean);
     if (rawLabels.length > 0) {
@@ -306,7 +339,9 @@ export function formatDuration(minutes: number, type: string): string {
   return `${minutes}m`;
 }
 
-export function getActivityEntryDurationMinutes(entry: SyncedLog): number | null {
+export function getActivityEntryDurationMinutes(
+  entry: SyncedLog,
+): number | null {
   if (entry.type !== "activity") return null;
   const d = Number(entry.data?.durationMinutes);
   return Number.isFinite(d) && d > 0 ? d : null;

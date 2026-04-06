@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { format, isSameDay } from "date-fns";
 import { Brain, ChevronLeft, ChevronRight, Star, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { DrPooFullReport } from "@/components/archive/DrPooReport";
+import { DrPooFullReport } from "@/components/dr-poo/DrPooReport";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { parseAiInsight } from "@/lib/aiAnalysis";

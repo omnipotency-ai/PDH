@@ -147,6 +147,15 @@ const FILLER_WORDS = new Set([
  */
 const FILLER_PHRASES = ["lactose free", "gluten free", "sugar free", "fat free", "dairy free"];
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+const FILLER_PHRASE_PATTERN = new RegExp(
+  `\\b(?:${FILLER_PHRASES.map(escapeRegExp).join("|")})\\b`,
+  "gi",
+);
+
 /** Word-form numbers that appear as quantities ("six crackers", "two eggs"). */
 const WORD_NUMBERS = new Set([
   "one",
@@ -226,9 +235,7 @@ export function normalizeFoodName(value: string): string {
   // Strip percentage patterns ("85% cocoa" → "", "50% fat" → "")
   cleaned = cleaned.replace(/\d+%\s*\w*/g, "").trim();
   // Strip multi-word filler phrases ("lactose free cheese" → "cheese")
-  for (const phrase of FILLER_PHRASES) {
-    cleaned = cleaned.replace(new RegExp(`\\b${phrase}\\b`, "gi"), "").trim();
-  }
+  cleaned = cleaned.replace(FILLER_PHRASE_PATTERN, "").trim();
 
   cleaned = stripFillerWords(cleaned).trim();
   cleaned = cleaned.replace(/\s+/g, " ");

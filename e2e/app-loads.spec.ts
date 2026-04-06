@@ -21,3 +21,23 @@ test.describe("App loads authenticated", () => {
     await expect(page.getByRole("link", { name: "Settings" }).first()).toBeVisible();
   });
 });
+
+test.describe("App loads unauthenticated", () => {
+  test.use({
+    storageState: {
+      cookies: [],
+      origins: [],
+    },
+  });
+
+  test("unauthenticated user sees the sign-in prompt instead of app chrome", async ({ page }) => {
+    await page.goto("/");
+
+    await expect(page.getByRole("img", { name: "PDH" })).toBeVisible();
+    await expect(page.getByText("Sign in to access the app")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Track" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Patterns" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Settings" })).toHaveCount(0);
+  });
+});

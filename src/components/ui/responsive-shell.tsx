@@ -31,19 +31,27 @@ function getResponsiveShellMode(width: number): ResponsiveShellMode {
   return "mobile";
 }
 
+function getResponsiveShellModeFromQueries(
+  desktopMatches: boolean,
+  tabletMatches: boolean,
+): ResponsiveShellMode {
+  if (desktopMatches) return "desktop";
+  if (tabletMatches) return "tablet";
+  return "mobile";
+}
+
 export function useResponsiveShellMode(): ResponsiveShellMode {
-  const [mode, setMode] = useState<ResponsiveShellMode>(() => {
-    if (typeof window === "undefined") return "mobile";
-    return getResponsiveShellMode(window.innerWidth);
-  });
+  const [mode, setMode] = useState<ResponsiveShellMode>(() =>
+    typeof window === "undefined"
+      ? "mobile"
+      : getResponsiveShellMode(window.innerWidth),
+  );
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
     const mqlMd = window.matchMedia(`(min-width: ${RESPONSIVE_SHELL_MD_BREAKPOINT_PX}px)`);
     const mqlXl = window.matchMedia(`(min-width: ${RESPONSIVE_SHELL_XL_BREAKPOINT_PX}px)`);
     const handler = () => {
-      setMode(mqlXl.matches ? "desktop" : mqlMd.matches ? "tablet" : "mobile");
+      setMode(getResponsiveShellModeFromQueries(mqlXl.matches, mqlMd.matches));
     };
     handler();
     mqlMd.addEventListener("change", handler);
@@ -83,9 +91,6 @@ export function ResponsiveShell({
   const mode = useResponsiveShellMode();
 
   if (mode === "mobile") {
-    const drawerBody = (
-      <div className={cn("min-h-0 shrink-0 overflow-y-auto", bodyClassName)}>{children}</div>
-    );
     return (
       <Drawer open={open} onOpenChange={onOpenChange} modal>
         <DrawerContent className={drawerContentClassName}>
@@ -97,7 +102,7 @@ export function ResponsiveShell({
               <span className="sr-only">Close</span>
             </DrawerClose>
           </DrawerHeader>
-          {drawerBody}
+          <div className={cn("min-h-0 flex-1 overflow-y-auto", bodyClassName)}>{children}</div>
         </DrawerContent>
       </Drawer>
     );

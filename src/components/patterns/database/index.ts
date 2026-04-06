@@ -9,15 +9,10 @@ export {
 export { DatabaseTable } from "@/components/patterns/database/DatabaseTable";
 export {
   type AiFlags,
-  BRAT_KEYS,
   bristolColor,
   buildAiFlags,
   computeTrend,
-  FILTER_OPTIONS,
-  type FilterStatus,
   formatStatusLabel,
-  type SortDir,
-  type SortKey,
   type Trend,
 } from "@/components/patterns/database/foodSafetyUtils";
 export {
@@ -27,9 +22,11 @@ export {
   normalizeSorting,
   rowMatchesFilters,
   type SmartViewPreset,
+  sortingEqual,
+} from "@/components/patterns/database/smartViewUtils";
+export {
   SmartViews,
   type SmartViewsProps,
-  sortingEqual,
 } from "@/components/patterns/database/SmartViews";
 export { StatusBadge } from "@/components/patterns/database/StatusBadge";
 export { TrendIndicator } from "@/components/patterns/database/TrendIndicator";

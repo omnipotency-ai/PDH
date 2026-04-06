@@ -3,7 +3,7 @@
  *
  * The sync module has been decomposed into focused sub-modules:
  *   - syncCore.ts   — types, validators, sanitization (pure logic, no hooks)
- *   - syncLogs.ts   — log CRUD hooks + backup/export/delete
+ *   - syncLogs.ts   — log CRUD hooks + export/delete
  *   - syncAi.ts     — AI analysis + conversation hooks
  *   - syncFood.ts   — food library, assessments, trials, ingredients
  *   - syncWeekly.ts — weekly digests + summaries
@@ -67,13 +67,11 @@ export {
 } from "./syncFood";
 // Log CRUD + data management
 export {
-  type AppBackupImportResult,
   type AppBackupPayload,
   useAddSyncedLog,
   useAllSyncedLogs,
   useDeleteAllSyncedData,
   useExportBackup,
-  useImportBackup,
   useRemoveSyncedLog,
   useSyncedLogCount,
   useSyncedLogs,

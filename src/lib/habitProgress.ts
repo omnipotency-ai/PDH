@@ -31,6 +31,12 @@ export function formatHabitNumber(value: number): string {
   return Number.isInteger(value) ? `${value}` : value.toFixed(1);
 }
 
+function getTileDisplayUnit(unit: HabitConfig["unit"]): string {
+  if (unit === "minutes") return "min";
+  if (unit === "hours") return "hrs";
+  return unit;
+}
+
 export function getProgressText(
   habit: HabitConfig,
   count: number,
@@ -70,14 +76,7 @@ export function getProgressText(
       return `${fluidDisplay} / ${targetDisplay}`;
     }
 
-    const displayUnit =
-      mode === "tile"
-        ? habit.unit === "minutes"
-          ? "min"
-          : habit.unit === "hours"
-            ? "hrs"
-            : habit.unit
-        : habit.unit;
+    const displayUnit = mode === "tile" ? getTileDisplayUnit(habit.unit) : habit.unit;
     return `${value} / ${target} ${displayUnit}`;
   }
 

@@ -1,3 +1,4 @@
+import { normalizeActivityTypeKey } from "@/lib/activityTypeUtils";
 import type { HabitConfig, HabitLog } from "@/lib/habitTemplates";
 import { isCapHabit, isHabitType } from "@/lib/habitTemplates";
 import { normalizeFluidItemName } from "@/lib/normalizeFluidName";
@@ -6,36 +7,25 @@ import type { SyncedLog } from "@/lib/sync";
 const REC_DRUG_ALIASES = ["rec drugs", "rec_drugs", "recreational drugs", "tina"];
 const WALKING_ALIASES = ["walk", "walking"];
 
-function normalizeKey(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function normalizeActivityType(value: string): string {
-  const normalized = normalizeKey(value);
-  if (normalized === "walk") return "walking";
-  return normalized;
-}
-
 function buildHabitAliases(habit: HabitConfig): string[] {
   const aliases = new Set<string>();
-  aliases.add(normalizeKey(habit.id));
-  aliases.add(normalizeKey(habit.name));
-  if (habit.templateKey) aliases.add(normalizeKey(habit.templateKey));
+  aliases.add(normalizeActivityTypeKey(habit.id));
+  aliases.add(normalizeActivityTypeKey(habit.name));
+  if (habit.templateKey) aliases.add(normalizeActivityTypeKey(habit.templateKey));
 
   if (habit.templateKey === "rec_drugs") {
-    for (const alias of REC_DRUG_ALIASES) aliases.add(normalizeKey(alias));
+    for (const alias of REC_DRUG_ALIASES) {
+      aliases.add(normalizeActivityTypeKey(alias));
+    }
   }
   if (habit.templateKey === "walking") {
-    for (const alias of WALKING_ALIASES) aliases.add(normalizeKey(alias));
+    for (const alias of WALKING_ALIASES) {
+      aliases.add(normalizeActivityTypeKey(alias));
+    }
   }
   if (habit.templateKey === "confectionery") {
-    aliases.add("sweets");
-    aliases.add("sweet");
+    aliases.add(normalizeActivityTypeKey("sweets"));
+    aliases.add(normalizeActivityTypeKey("sweet"));
   }
 
   return Array.from(aliases);
@@ -48,7 +38,7 @@ function resolveHabitFromKey(
   fallbackType?: HabitConfig["habitType"],
 ): HabitConfig | null {
   if (rawKey) {
-    const direct = aliasMap.get(normalizeKey(rawKey));
+    const direct = aliasMap.get(normalizeActivityTypeKey(rawKey));
     if (direct) return direct;
   }
   if (!fallbackType) return null;
@@ -75,7 +65,7 @@ export function rebuildHabitLogsFromSyncedLogs(
       fluidHabitMap.set(normalizeFluidItemName(habit.name), habit);
     }
     if (habit.habitType === "activity") {
-      const activityKey = normalizeActivityType(habit.name);
+      const activityKey = normalizeActivityTypeKey(habit.name);
       const existing = activityHabitMap.get(activityKey) ?? [];
       existing.push(habit);
       activityHabitMap.set(activityKey, existing);
@@ -128,7 +118,7 @@ export function rebuildHabitLogsFromSyncedLogs(
     }
 
     if (log.type === "activity") {
-      const activityType = normalizeActivityType(
+      const activityType = normalizeActivityTypeKey(
         typeof log.data.activityType === "string" ? log.data.activityType : "",
       );
       const durationMinutes = Number(log.data.durationMinutes ?? 0);

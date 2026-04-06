@@ -237,10 +237,10 @@ export function nutritionReducer(state: NutritionState, action: NutritionAction)
       );
 
       if (existingIndex !== -1) {
-        // Aggregate: increment portion by unitWeightG or defaultPortionG
+        // Aggregate: increment portion by unitWeightG or defaultPortionG, clamped to MAX_PORTION_G.
         const existing = base.stagingItems[existingIndex];
         const increment = portionData.unitWeightG ?? portionData.defaultPortionG;
-        const newPortionG = existing.portionG + increment;
+        const newPortionG = Math.min(existing.portionG + increment, MAX_PORTION_G);
         const updated = recalculateMacros(existing, newPortionG);
 
         const newItems = [...base.stagingItems];

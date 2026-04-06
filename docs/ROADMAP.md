@@ -58,6 +58,17 @@ Rebuild the food registry data model (composite keys, new enums, zones, FODMAP, 
 
 ---
 
+### Tech-Debt Audit Cleanup
+
+> **Status:** In Work Queue
+> **PRD:** `docs/prd/2026-04-06-tech-debt-audit-cleanup.md`
+> **Plans:** `docs/plans/2026-04-06-tech-debt-audit-cleanup-waves-0-1.json`, `docs/plans/2026-04-06-tech-debt-audit-cleanup-waves-2-3.json`, `docs/plans/2026-04-06-tech-debt-audit-cleanup-waves-4-5.json`, `docs/plans/2026-04-06-tech-debt-audit-cleanup-wave-6.json`
+> **Branch:** `pans-labyrinth`
+
+Cross-cutting cleanup initiative driven by the 2026-04-06 audit report. Waves 0-1 landed on `pans-labyrinth`; waves 2-6 remain as follow-on refactor, consolidation, and hardening work.
+
+---
+
 ### Voice / Conversational Food Logging
 
 > **Status:** Not planned

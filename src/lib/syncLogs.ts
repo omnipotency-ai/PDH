@@ -1,11 +1,10 @@
 /**
- * Log CRUD hooks and data management (backup, export, delete).
+ * Log CRUD hooks and data management (export, delete).
  */
 
 import { useConvex, useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useCallback, useMemo } from "react";
-import { INPUT_SAFETY_LIMITS, sanitizeUnknownStringsDeep } from "@/lib/inputSafety";
 import type { LogType } from "@/types/domain";
 import { api } from "../../convex/_generated/api";
 import {
@@ -74,23 +73,7 @@ export function useDeleteAllSyncedData() {
 
 export type AppBackupPayload = NonNullable<FunctionReturnType<typeof api.logs.exportBackup>>;
 
-export type AppBackupImportResult = FunctionReturnType<typeof api.logs.importBackup>;
-
 export function useExportBackup() {
   const convex = useConvex();
   return useCallback(() => convex.query(api.logs.exportBackup, {}), [convex]);
-}
-
-export function useImportBackup() {
-  const importBackup = useMutation(api.logs.importBackup);
-  return useCallback(
-    (payload: AppBackupPayload) =>
-      importBackup({
-        payload: sanitizeUnknownStringsDeep(payload, {
-          maxStringLength: INPUT_SAFETY_LIMITS.aiPayloadString,
-          path: "backup",
-        }),
-      }),
-    [importBackup],
-  );
 }

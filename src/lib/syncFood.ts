@@ -58,6 +58,7 @@ export function useAddFoodLibraryEntries() {
     }>,
   ) =>
     addBatch({
+      now: Date.now(),
       entries: sanitizeUnknownStringsDeep(entries),
     });
 }
@@ -70,14 +71,16 @@ export function useUpdateFoodLibraryEntry() {
     ingredients: string[];
   }) =>
     update({
+      now: Date.now(),
       ...sanitizeUnknownStringsDeep(entry),
     });
 }
 
 export function useMergeFoodLibraryDuplicates() {
-  const merge = useMutation(api.foodLibrary.mergeDuplicates);
+  const merge = useAction(api.foodLibrary.mergeDuplicates);
   return (merges: Array<{ source: string; target: string }>, updateFoodLogs?: boolean) =>
     merge({
+      now: Date.now(),
       merges: sanitizeUnknownStringsDeep(merges),
       ...(updateFoodLogs !== undefined && { updateFoodLogs }),
     });
@@ -143,6 +146,7 @@ export function useSetIngredientOverride() {
   const upsert = useMutation(api.ingredientOverrides.upsert);
   return (canonicalName: string, status: IngredientOverrideStatus, note?: string) =>
     upsert({
+      now: Date.now(),
       canonicalName,
       status,
       ...(note !== undefined ? { note } : {}),
@@ -164,8 +168,11 @@ export function useIngredientProfiles() {
 
 export function useUpsertIngredientProfile() {
   const upsert = useMutation(api.ingredientProfiles.upsert);
-  return (payload: FunctionArgs<typeof api.ingredientProfiles.upsert>) =>
-    upsert(sanitizeUnknownStringsDeep(payload));
+  return (payload: Omit<FunctionArgs<typeof api.ingredientProfiles.upsert>, "now">) =>
+    upsert({
+      now: Date.now(),
+      ...sanitizeUnknownStringsDeep(payload),
+    });
 }
 
 export type ExternalNutritionSearchRow = NonNullable<

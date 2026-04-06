@@ -1,0 +1,1577 @@
+import { isFoodPipelineType } from "@shared/logTypeUtils";
+import { DEFAULT_INSIGHT_MODEL, getModelLabel } from "@/lib/aiModels";
+import { INPUT_SAFETY_LIMITS } from "@/lib/inputSafety";
+import { MS_PER_DAY, MS_PER_HOUR } from "@/lib/timeConstants";
+import { formatTime, getDaysPostOp } from "@/lib/aiUtils";
+import type {
+  AiNutritionistInsight,
+  AiPreferences,
+  Approach,
+  BaselineAverages,
+  BaselineDelta,
+  DrPooReply,
+  HealthProfile,
+  LogEntry,
+  Register,
+} from "@/types/domain";
+import { DEFAULT_AI_PREFERENCES } from "@/types/domain";
+
+export type { AiNutritionistInsight };
+
+// ─── Named constants ──────────────────────────────────────────────────────────
+
+/**
+ * Maximum number of conversation messages to include in AI context.
+ * Kept low to control token cost — each Dr. Poo call already includes a large
+ * system prompt, patient snapshot, food context, and weekly digests. 10 messages
+ * (~5 back-and-forth exchanges) provides sufficient conversational continuity
+ * without inflating the payload by ~20K tokens.
+ */
+export const MAX_CONVERSATION_MESSAGES = 10;
+
+/** Maximum allowed length for a patient's preferred name in the LLM prompt. */
+const MAX_PREFERRED_NAME_LENGTH = 50;
+
+/** Maximum food window in hours. Slow transit modifiers cannot push beyond this. */
+const MAX_FOOD_WINDOW_HOURS = 96;
+
+/** Maximum number of in-transit food items to include in the prompt. */
+const MAX_IN_TRANSIT_ITEMS = 10;
+
+/** Minimum elapsed hours before a food item is considered "in transit". */
+const MIN_TRANSIT_HOURS = 6;
+
+// ─── Public types ─────────────────────────────────────────────────────────────
+
+export interface PreviousReport {
+  timestamp: number;
+  insight: AiNutritionistInsight;
+}
+
+export interface FoodTrialSummaryInput {
+  canonicalName: string;
+  displayName: string;
+  currentStatus: string;
+  primaryStatus?: string;
+  tendency?: string;
+  confidence?: number;
+  totalAssessments: number;
+  culpritCount: number;
+  safeCount: number;
+  latestReasoning: string;
+  lastAssessedAt: number;
+  recentSuspect?: boolean;
+  clearedHistory?: boolean;
+  learnedTransitCenterMinutes?: number;
+  learnedTransitSpreadMinutes?: number;
+}
+
+// ─── Weekly digest context for AI prompts ────────────────────────────────────
+
+export interface WeeklyContext {
+  weekStart: string;
+  avgBristolScore: number | null;
+  totalBowelEvents: number;
+  accidentCount: number;
+  uniqueFoodsEaten: number;
+  newFoodsTried: number;
+  foodsCleared: number;
+  foodsFlagged: number;
+}
+
+/** @internal Exported for testing. */
+export interface FoodItemDetail {
+  name: string;
+  canonicalName: string | null;
+  quantity: number | null;
+  unit: string | null;
+}
+
+/** @internal Exported for testing. */
+export interface FoodLog {
+  timestamp: number;
+  time: string;
+  items: FoodItemDetail[];
+}
+
+/** @internal Exported for testing. */
+export interface BowelEvent {
+  timestamp: number;
+  time: string;
+  bristolCode: number | null;
+  consistency: string;
+  urgency: string;
+  effort: string;
+  volume: string;
+  accident: boolean;
+  episodes: number;
+  notes: string;
+}
+
+interface HabitLog {
+  timestamp: number;
+  time: string;
+  habitId: string;
+  name: string;
+  habitType: string;
+  quantity: number;
+}
+
+interface FluidLog {
+  timestamp: number;
+  time: string;
+  name: string;
+  amountMl: number | null;
+}
+
+interface ActivityLog {
+  timestamp: number;
+  time: string;
+  activityType: string;
+  durationMinutes: number | null;
+  feeling: string | null;
+}
+
+/** Return type for log context builders. */
+export interface RecentEventsResult {
+  foodLogs: FoodLog[];
+  bowelEvents: BowelEvent[];
+  habitLogs: HabitLog[];
+  fluidLogs: FluidLog[];
+  activityLogs: ActivityLog[];
+}
+
+export interface PreviousWeeklySummary {
+  weeklySummary: string;
+  keyFoods: { safe: string[]; flagged: string[]; toTryNext: string[] };
+  carryForwardNotes: string[];
+}
+
+export interface SuggestionHistoryEntry {
+  text: string;
+  count: number;
+  firstSuggested: string;
+  lastSuggested: string;
+}
+
+/** Parameters for buildUserMessage. */
+export interface BuildUserMessageParams {
+  recentEvents: RecentEventsResult;
+  patientSnapshot: Record<string, unknown>;
+  deltaSignals: Record<string, unknown>;
+  foodContext: Record<string, unknown>;
+  hasPreviousResponse: boolean;
+  patientMessages: DrPooReply[];
+  suggestionHistory: SuggestionHistoryEntry[];
+  weeklyContext: WeeklyContext[];
+  previousWeeklySummary?: PreviousWeeklySummary;
+  baselineAverages?: BaselineAverages;
+}
+
+// ─── Sanitization helpers ─────────────────────────────────────────────────────
+
+/**
+ * Sanitize a user-provided name before inserting it into an LLM prompt.
+ * Strips Unicode BiDi control characters (U+200E–U+200F, U+202A–U+202E,
+ * U+2066–U+2069) and XML/HTML tags to prevent prompt injection, then
+ * truncates to a safe length. The caller wraps the result in `<patient_name>`
+ * XML delimiters.
+ */
+export function sanitizeNameForPrompt(name: string): string {
+  // Strip Unicode BiDi control characters before any other processing.
+  // These can be used to manipulate how text is rendered or parsed in LLM prompts.
+  // Ranges: LRM/RLM (U+200E–U+200F), LRE/RLE/PDF/LRO/RLO (U+202A–U+202E),
+  //         LRI/RLI/FSI/PDI (U+2066–U+2069).
+  const withoutBidi = name.replace(
+    /[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g,
+    "",
+  );
+  const stripped = withoutBidi
+    .replace(/<[^>]*>/g, "")
+    .replace(/[<>]/g, "")
+    .trim();
+  if (stripped.length <= MAX_PREFERRED_NAME_LENGTH) return stripped;
+  return stripped.slice(0, MAX_PREFERRED_NAME_LENGTH);
+}
+
+/**
+ * Sanitize a free-text health profile field for safe inclusion in an LLM prompt.
+ * Strips BiDi control characters and HTML tags, then truncates to maxLen.
+ * Truncation is silent — fields exceeding the cap are shortened, not rejected.
+ */
+export function sanitizeProfileField(value: string, maxLen: number): string {
+  const withoutBidi = value.replace(
+    /[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g,
+    "",
+  );
+  const stripped = withoutBidi.replace(/<[^>]*>/g, "").trim();
+  if (stripped.length <= maxLen) return stripped;
+  return stripped.slice(0, maxLen);
+}
+
+// ─── Utility helpers ──────────────────────────────────────────────────────────
+
+export function getAiDisclaimer(model: string = DEFAULT_INSIGHT_MODEL): string {
+  const modelLabel = getModelLabel(model);
+  return `This is lifestyle guidance generated by ${modelLabel}, an AI model that can make mistakes. This is not medical advice. Always consult your surgical team if you experience pain, bleeding, or any concern — regardless of what is shown here.`;
+}
+
+function getBmi(
+  heightCm: number | null,
+  weightKg: number | null,
+): string | null {
+  if (!heightCm || !weightKg || heightCm <= 0 || weightKg <= 0) return null;
+  const heightM = heightCm / 100;
+  const bmi = weightKg / (heightM * heightM);
+  return bmi.toFixed(1);
+}
+
+// ─── Variable-window context builder ─────────────────────────────────────────
+
+/**
+ * Compute the food log time window in hours based on surgery type and slow transit modifiers.
+ *
+ * Base window:
+ * - "Ileostomy reversal" → 48h (shorter colon transit)
+ * - All others → 72h (full colon transit)
+ *
+ * Slow transit modifiers (any present adds 24h, capped at 96h):
+ * - Medications include "opioid" or "iron" (case-insensitive substring)
+ */
+export function getFoodWindowHours(profile: HealthProfile): number {
+  const baseWindow = profile.surgeryType === "Ileostomy reversal" ? 48 : 72;
+
+  const hasSlowTransitModifier = (() => {
+    const meds = (profile.medications ?? "").toLowerCase();
+    if (meds.includes("opioid") || meds.includes("iron")) return true;
+    return false;
+  })();
+
+  const adjusted = hasSlowTransitModifier ? baseWindow + 24 : baseWindow;
+  return Math.min(adjusted, MAX_FOOD_WINDOW_HOURS);
+}
+
+/** Per-log-type cutoff timestamps for variable-window context building. */
+interface LogCutoffs {
+  food: number;
+  digestion: number;
+  habit: number;
+  fluid: number;
+  activity: number;
+  weight: number;
+}
+
+/** Build per-log-type cutoff map using variable windows. */
+function buildCutoffs(profile: HealthProfile, now: number): LogCutoffs {
+  const foodWindowMs = getFoodWindowHours(profile) * MS_PER_HOUR;
+  const bmWindowMs = 48 * MS_PER_HOUR;
+  const defaultWindowMs = 24 * MS_PER_HOUR;
+
+  return {
+    food: now - foodWindowMs,
+    digestion: now - bmWindowMs,
+    habit: now - defaultWindowMs,
+    fluid: now - defaultWindowMs,
+    activity: now - defaultWindowMs,
+    weight: now - defaultWindowMs,
+  };
+}
+
+// ─── Shared log mapping functions ─────────────────────────────────────────────
+
+function mapFoodLogs(logs: Array<LogEntry & { type: "food" }>): FoodLog[] {
+  return logs
+    .sort((a, b) => a.timestamp - b.timestamp)
+    .map((log) => {
+      const items: FoodItemDetail[] = log.data.items
+        .map((item): FoodItemDetail | null => {
+          const name = String(item?.parsedName ?? item?.name ?? "").trim();
+          if (!name) return null;
+          const qty = Number(item?.quantity);
+          return {
+            name,
+            canonicalName: item?.canonicalName
+              ? String(item.canonicalName).trim()
+              : null,
+            quantity: Number.isFinite(qty) && qty > 0 ? qty : null,
+            unit: item?.unit ? String(item.unit).trim() : null,
+          };
+        })
+        .filter((x): x is FoodItemDetail => x !== null)
+        .filter((item) => item.canonicalName !== "unknown_food");
+      return {
+        timestamp: log.timestamp,
+        time: formatTime(log.timestamp),
+        items,
+      };
+    });
+}
+
+function mapBowelEvents(
+  logs: Array<LogEntry & { type: "digestion" }>,
+): BowelEvent[] {
+  return logs
+    .sort((a, b) => a.timestamp - b.timestamp)
+    .map((log) => {
+      const bristolCode = Number(log.data.bristolCode);
+      return {
+        timestamp: log.timestamp,
+        time: formatTime(log.timestamp),
+        bristolCode: Number.isFinite(bristolCode) ? bristolCode : null,
+        consistency: String(log.data.consistencyTag ?? "").trim(),
+        urgency: String(log.data.urgencyTag ?? "").trim(),
+        effort: String(log.data.effortTag ?? "").trim(),
+        volume: String(log.data.volumeTag ?? "").trim(),
+        accident: Boolean(log.data.accident),
+        episodes: Math.max(1, Math.floor(Number(log.data.episodesCount ?? 1))),
+        notes: String(log.data.notes ?? "").trim(),
+      };
+    });
+}
+
+function mapHabitLogs(logs: Array<LogEntry & { type: "habit" }>): HabitLog[] {
+  return logs
+    .sort((a, b) => a.timestamp - b.timestamp)
+    .map((log) => ({
+      timestamp: log.timestamp,
+      time: formatTime(log.timestamp),
+      habitId: String(log.data.habitId ?? "").trim(),
+      name: String(log.data.name ?? "").trim(),
+      habitType: String(log.data.habitType ?? "").trim(),
+      quantity: Number(log.data.quantity ?? 1),
+    }));
+}
+
+function mapFluidLogs(logs: Array<LogEntry & { type: "fluid" }>): FluidLog[] {
+  return logs
+    .sort((a, b) => a.timestamp - b.timestamp)
+    .map((log) => {
+      const firstItem = log.data.items[0];
+      const ml = Number(firstItem?.quantity);
+      return {
+        timestamp: log.timestamp,
+        time: formatTime(log.timestamp),
+        name: String(firstItem?.name ?? "water").trim(),
+        amountMl: Number.isFinite(ml) && ml > 0 ? ml : null,
+      };
+    });
+}
+
+function mapActivityLogs(
+  logs: Array<LogEntry & { type: "activity" }>,
+): ActivityLog[] {
+  return logs
+    .sort((a, b) => a.timestamp - b.timestamp)
+    .map((log) => {
+      const dur = Number(log.data.durationMinutes);
+      return {
+        timestamp: log.timestamp,
+        time: formatTime(log.timestamp),
+        activityType: String(log.data.activityType ?? "").trim(),
+        durationMinutes: Number.isFinite(dur) ? dur : null,
+        feeling: log.data.feelTag ? String(log.data.feelTag).trim() : null,
+      };
+    });
+}
+
+/**
+ * Build recent events with VARIABLE time windows per log type.
+ *
+ * - Food logs: getFoodWindowHours(profile) hours
+ * - BM logs: 48h always
+ * - Habits, fluids, activities, medications, all others: 24h always
+ */
+export function buildRecentEvents(
+  logs: LogEntry[],
+  profile: HealthProfile,
+): RecentEventsResult {
+  const now = Date.now();
+  const cutoffs = buildCutoffs(profile, now);
+
+  const foodLogs = mapFoodLogs(
+    logs.filter(
+      (log): log is LogEntry & { type: "food" } =>
+        (log.type === "food" || log.type === "liquid") &&
+        log.timestamp >= cutoffs.food,
+    ) as Array<LogEntry & { type: "food" }>,
+  );
+
+  const bowelEvents = mapBowelEvents(
+    logs.filter(
+      (log): log is LogEntry & { type: "digestion" } =>
+        log.type === "digestion" && log.timestamp >= cutoffs.digestion,
+    ),
+  );
+
+  const habitLogs = mapHabitLogs(
+    logs.filter(
+      (log): log is LogEntry & { type: "habit" } =>
+        log.type === "habit" && log.timestamp >= cutoffs.habit,
+    ),
+  );
+
+  const fluidLogs = mapFluidLogs(
+    logs.filter(
+      (log): log is LogEntry & { type: "fluid" } =>
+        log.type === "fluid" && log.timestamp >= cutoffs.fluid,
+    ),
+  );
+
+  const activityLogs = mapActivityLogs(
+    logs.filter(
+      (log): log is LogEntry & { type: "activity" } =>
+        log.type === "activity" && log.timestamp >= cutoffs.activity,
+    ),
+  );
+
+  return {
+    foodLogs,
+    bowelEvents,
+    habitLogs,
+    fluidLogs,
+    activityLogs,
+  };
+}
+
+// ─── Patient snapshot builder ─────────────────────────────────────────────────
+
+/**
+ * Compute a human-readable Bristol trend from the last 2-4 weekly digests.
+ */
+export function computeBristolTrend(
+  weeklyDigests: WeeklyContext[],
+): string {
+  // Take last 4 weeks that have Bristol data
+  const withBristol = weeklyDigests
+    .filter((wd) => wd.avgBristolScore !== null)
+    .slice(-4);
+
+  if (withBristol.length < 2) return "insufficient data";
+
+  const scores = withBristol
+    .map((wd) => wd.avgBristolScore)
+    .filter((s): s is number => s !== null);
+  const first = scores[0];
+  const last = scores[scores.length - 1];
+  const scoreStr = scores.map((s) => s.toFixed(1)).join(" -> ");
+
+  // Threshold: a change of 0.3 or more is meaningful
+  const delta = last - first;
+  if (Math.abs(delta) < 0.3) {
+    return `stable at ${last.toFixed(1)}`;
+  }
+
+  // Lower Bristol = firmer (improving toward 3-5), higher = looser
+  const isImproving = delta < 0 && first > 5;
+  const isWorseningLoose = delta > 0 && last > 5;
+  const isWorseningHard = delta < 0 && last < 3;
+
+  if (isImproving) return `improving (${scoreStr} weekly avg)`;
+  if (isWorseningLoose || isWorseningHard)
+    return `worsening (${scoreStr} weekly avg)`;
+
+  if (delta < 0) return `firming (${scoreStr} weekly avg)`;
+  return `softening (${scoreStr} weekly avg)`;
+}
+
+/**
+ * Build a slowly-changing patient context object (~200 tokens).
+ */
+export function buildPatientSnapshot(
+  profile: HealthProfile,
+  foodTrials: FoodTrialSummaryInput[],
+  weeklyDigests: WeeklyContext[],
+  nowMs: number = Date.now(),
+): Record<string, unknown> {
+  const daysPostOp = getDaysPostOp(profile.surgeryDate, nowMs);
+
+  const surgeryType =
+    profile.surgeryType === "Other" && profile.surgeryTypeOther
+      ? profile.surgeryTypeOther
+      : profile.surgeryType;
+
+  const medications = (profile.medications ?? "").trim();
+
+  // Count food trials by status for a quick overview
+  const trialStatusCounts: Record<string, number> = {};
+  for (const ft of foodTrials) {
+    const status = ft.primaryStatus ?? ft.currentStatus;
+    trialStatusCounts[status] = (trialStatusCounts[status] ?? 0) + 1;
+  }
+
+  return {
+    ...(daysPostOp !== null && { daysSinceReversal: daysPostOp }),
+    surgeryType,
+    ...(medications && { medications: medications.split(/,\s*/) }),
+    baselineTransitMinutes: getFoodWindowHours(profile) * 60,
+    currentBristolTrend: computeBristolTrend(weeklyDigests),
+    ...(Object.keys(trialStatusCounts).length > 0 && {
+      foodTrialCounts: trialStatusCounts,
+    }),
+  };
+}
+
+// ─── Delta signals builder ────────────────────────────────────────────────────
+
+/** Compute Bristol score change from yesterday to today. Returns null if insufficient data. */
+function computeBristolChange(logs: LogEntry[]): number | null {
+  const now = Date.now();
+  const todayStart = now - (now % MS_PER_DAY);
+  const yesterdayStart = todayStart - MS_PER_DAY;
+
+  const todayScores: number[] = [];
+  const yesterdayScores: number[] = [];
+
+  for (const log of logs) {
+    if (log.type !== "digestion") continue;
+    const bristolCode = Number(log.data.bristolCode);
+    if (!Number.isFinite(bristolCode) || bristolCode < 1 || bristolCode > 7)
+      continue;
+    if (log.timestamp >= todayStart) {
+      todayScores.push(bristolCode);
+    } else if (log.timestamp >= yesterdayStart && log.timestamp < todayStart) {
+      yesterdayScores.push(bristolCode);
+    }
+  }
+
+  if (todayScores.length === 0 || yesterdayScores.length === 0) return null;
+
+  const todayAvg = todayScores.reduce((a, b) => a + b, 0) / todayScores.length;
+  const yesterdayAvg =
+    yesterdayScores.reduce((a, b) => a + b, 0) / yesterdayScores.length;
+
+  return Math.round((todayAvg - yesterdayAvg) * 10) / 10;
+}
+
+/**
+ * Check if any food trial with status "watch" or "avoid" appears in food logs from the last 24h.
+ * Returns the food name or null.
+ */
+function findRecentCulpritExposure(
+  foodTrials: FoodTrialSummaryInput[],
+  logs: LogEntry[],
+): string | null {
+  const cutoff24h = Date.now() - 24 * MS_PER_HOUR;
+
+  // Build set of canonical names for watch/avoid foods
+  const culpritCanonicals = new Set<string>();
+  for (const ft of foodTrials) {
+    const status = ft.primaryStatus ?? ft.currentStatus;
+    if (status === "watch" || status === "avoid") {
+      culpritCanonicals.add(ft.canonicalName.toLowerCase());
+    }
+  }
+
+  if (culpritCanonicals.size === 0) return null;
+
+  // Check recent food logs for any culprit canonical
+  for (const log of logs) {
+    if (!isFoodPipelineType(log.type) || log.timestamp < cutoff24h) continue;
+    const foodData = log.data as {
+      items: Array<{ canonicalName?: string | null }>;
+    };
+    for (const item of foodData.items) {
+      const canonical = (item.canonicalName ?? "").toLowerCase().trim();
+      if (canonical && culpritCanonicals.has(canonical)) {
+        // Return the display name from the food trial
+        const trial = foodTrials.find(
+          (ft) => ft.canonicalName.toLowerCase() === canonical,
+        );
+        return trial ? trial.displayName : canonical;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Compute habit streaks: consecutive days of logging, grouped by habitId.
+ * Only includes streaks >= 2 days. Returns habitName -> streak days.
+ */
+function computeHabitStreaks(logs: LogEntry[]): Record<string, number> {
+  const habitDays = new Map<string, { name: string; days: Set<string> }>();
+
+  for (const log of logs) {
+    if (log.type !== "habit") continue;
+    const habitId = String(log.data.habitId ?? "").trim();
+    const habitName = String(log.data.name ?? "").trim();
+    if (!habitId || !habitName) continue;
+
+    const dayKey = new Date(log.timestamp).toISOString().slice(0, 10); // YYYY-MM-DD
+    const existing = habitDays.get(habitId);
+    if (existing) {
+      existing.days.add(dayKey);
+    } else {
+      habitDays.set(habitId, { name: habitName, days: new Set([dayKey]) });
+    }
+  }
+
+  const streaks: Record<string, number> = {};
+
+  for (const [, { name, days }] of habitDays) {
+    if (days.size < 2) continue;
+
+    const sortedDays = Array.from(days).sort();
+    const today = new Date().toISOString().slice(0, 10);
+    const yesterday = new Date(Date.now() - MS_PER_DAY)
+      .toISOString()
+      .slice(0, 10);
+
+    let streak = 0;
+    const lastDay = sortedDays[sortedDays.length - 1];
+    if (lastDay !== today && lastDay !== yesterday) continue; // Streak is broken
+
+    for (let i = sortedDays.length - 1; i >= 0; i--) {
+      const expectedDay = new Date(
+        new Date(lastDay).getTime() - (sortedDays.length - 1 - i) * MS_PER_DAY,
+      )
+        .toISOString()
+        .slice(0, 10);
+      if (sortedDays[i] === expectedDay) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+
+    if (streak >= 2) {
+      streaks[name] = streak;
+    }
+  }
+
+  return streaks;
+}
+
+/**
+ * Build concrete, computable delta signals for the AI payload.
+ */
+export function buildDeltaSignals(
+  logs: LogEntry[],
+  foodTrials: FoodTrialSummaryInput[],
+): Record<string, unknown> {
+  return {
+    newFoodsThisWeek: [],
+    bristolChangeFromYesterday: computeBristolChange(logs),
+    recentCulpritExposure: findRecentCulpritExposure(foodTrials, logs),
+    habitStreaks: computeHabitStreaks(logs),
+  };
+}
+
+// ─── Food context builder ─────────────────────────────────────────────────────
+
+function computeStillInTransit(
+  logs: LogEntry[],
+  foodTrials: FoodTrialSummaryInput[],
+  now: number,
+  foodWindowMs: number,
+): string[] {
+  const transitMap = new Map<
+    string,
+    { displayName: string; centerMinutes: number; spreadMinutes: number }
+  >();
+  for (const ft of foodTrials) {
+    const center = ft.learnedTransitCenterMinutes;
+    const spread = ft.learnedTransitSpreadMinutes;
+    if (center !== undefined && center > 0) {
+      transitMap.set(ft.canonicalName.toLowerCase(), {
+        displayName: ft.displayName,
+        centerMinutes: center,
+        spreadMinutes: spread ?? 0,
+      });
+    }
+  }
+
+  if (transitMap.size === 0) return [];
+
+  const result: string[] = [];
+  const seen = new Set<string>();
+
+  for (const log of logs) {
+    if (!isFoodPipelineType(log.type)) continue;
+    const foodData = log.data as {
+      items: Array<{ canonicalName?: string | null }>;
+    };
+    const age = now - log.timestamp;
+    if (age <= foodWindowMs) continue;
+
+    for (const item of foodData.items) {
+      const canonical = (item.canonicalName ?? "").toLowerCase().trim();
+      if (!canonical || seen.has(canonical)) continue;
+
+      const transit = transitMap.get(canonical);
+      if (!transit) continue;
+
+      const maxTransitMs =
+        (transit.centerMinutes + transit.spreadMinutes) * 60 * 1000;
+      if (age < maxTransitMs) {
+        result.push(transit.displayName);
+        seen.add(canonical);
+      }
+    }
+  }
+
+  return result;
+}
+
+function computeNextToTry(foodTrials: FoodTrialSummaryInput[]): string | null {
+  let best: FoodTrialSummaryInput | null = null;
+
+  for (const ft of foodTrials) {
+    const status = ft.primaryStatus ?? ft.currentStatus;
+    if (status !== "building") continue;
+    if (best === null || ft.totalAssessments > best.totalAssessments) {
+      best = ft;
+    }
+  }
+
+  return best ? best.displayName : null;
+}
+
+/**
+ * Build relevant-only food context for the AI payload.
+ */
+export function buildFoodContext(
+  foodTrials: FoodTrialSummaryInput[],
+  logs: LogEntry[],
+  profile: HealthProfile,
+): Record<string, unknown> {
+  const active = foodTrials
+    .filter((ft) => {
+      const status = ft.primaryStatus ?? ft.currentStatus;
+      return status === "testing" || status === "building";
+    })
+    .slice(0, 10)
+    .map((ft) => ({
+      food: ft.displayName,
+      canonicalName: ft.canonicalName,
+      status: ft.primaryStatus ?? ft.currentStatus,
+      exposures: ft.totalAssessments,
+      tendency: ft.tendency ?? "neutral",
+      confidence: ft.confidence ?? 0,
+    }));
+
+  const safe = foodTrials
+    .filter((ft) => (ft.primaryStatus ?? ft.currentStatus) === "safe")
+    .sort((a, b) => b.lastAssessedAt - a.lastAssessedAt)
+    .slice(0, 10)
+    .map((ft) => ft.displayName);
+
+  const flags = foodTrials
+    .filter((ft) => {
+      const status = ft.primaryStatus ?? ft.currentStatus;
+      return status === "watch" || status === "avoid";
+    })
+    .sort((a, b) => b.lastAssessedAt - a.lastAssessedAt)
+    .slice(0, 5)
+    .map((ft) => ({
+      food: ft.displayName,
+      status: ft.primaryStatus ?? ft.currentStatus,
+      latestReasoning: ft.latestReasoning,
+    }));
+
+  const foodWindowMs = getFoodWindowHours(profile) * MS_PER_HOUR;
+  const now = Date.now();
+  const stillInTransit = computeStillInTransit(
+    logs,
+    foodTrials,
+    now,
+    foodWindowMs,
+  );
+
+  const nextToTry = computeNextToTry(foodTrials);
+
+  return {
+    activeFoodTrials: active,
+    recentSafe: safe,
+    recentFlags: flags,
+    ...(stillInTransit.length > 0 && { stillInTransit }),
+    ...(nextToTry !== null && { nextToTry }),
+  };
+}
+
+// ─── Meal schedule helper ─────────────────────────────────────────────────────
+
+function buildMealScheduleText(prefs: AiPreferences): string {
+  return [
+    `breakfast ~${prefs.mealSchedule.breakfast}`,
+    `mid-morning snack ~${prefs.mealSchedule.middaySnack}`,
+    `lunch ~${prefs.mealSchedule.lunch}`,
+    `mid-afternoon snack ~${prefs.mealSchedule.midafternoonSnack}`,
+    `dinner ~${prefs.mealSchedule.dinner}`,
+    `late snack ~${prefs.mealSchedule.lateEveningSnack}`,
+  ].join(", ");
+}
+
+// ─── Tone matrix ──────────────────────────────────────────────────────────────
+
+type ToneKey = `${Approach}/${Register}`;
+
+const TONE_MATRIX: Record<ToneKey, string> = {
+  "supportive/everyday":
+    "Explicitly acknowledge feelings, normalise worries, and celebrate adherence before presenting data. Use casual, everyday language — no medical jargon. Contractions and simple words are preferred. In the summary field: lead with encouragement, celebrate wins and effort, acknowledge struggles with warmth. Cheerleader energy is welcome here.",
+  "supportive/mixed":
+    "Explicitly acknowledge feelings, normalise worries, and celebrate adherence before presenting data. Use both plain terms and clinical labels side by side, e.g. 'loose stool (Bristol type 6)'. In the summary field: lead with encouragement, celebrate wins and effort, acknowledge struggles with warmth.",
+  "supportive/clinical":
+    "Explicitly acknowledge feelings, normalise worries, and celebrate adherence before presenting data. Use correct medical terminology but always briefly explain it in plain language. In the summary field: lead with encouragement, celebrate wins and effort, acknowledge struggles with warmth.",
+  "personal/everyday":
+    "Be respectful, concise, and personal with minimal emotional language. Use casual, everyday vocabulary — no medical jargon. Speak like someone who knows the patient's history. In the summary field: be warm but honest, like a knowledgeable friend — conversational, plain, and direct without being cold.",
+  "personal/mixed":
+    "Be respectful, concise, and personal with minimal emotional language. Use both plain terms and clinical labels, e.g. 'your gut motility (how fast things move through)'. In the summary field: be warm but honest, like a knowledgeable friend — conversational, plain, and direct without being cold.",
+  "personal/clinical":
+    "Be respectful, concise, and personal with minimal emotional language. Use correct medical terminology with brief lay translations where needed. In the summary field: be warm but honest, like a knowledgeable friend — conversational, plain, and direct without being cold.",
+  "analytical/everyday":
+    "Lead with data and trends. Keep emotional commentary to one short sentence at most. Use casual, everyday language — no medical jargon. Let the numbers and patterns speak. In the summary field: factual and data-driven — no emotional framing, just state metrics and trends plainly.",
+  "analytical/mixed":
+    "Lead with data and trends. Keep emotional commentary to one short sentence at most. Use both plain terms and clinical labels together. In the summary field: factual and data-driven — no emotional framing, just state metrics and trends plainly.",
+  "analytical/clinical":
+    "Lead with data and trends. Keep emotional commentary to one short sentence at most. Use correct medical terminology throughout with brief lay translations for complex terms. In the summary field: professional and objective — state findings and trends as you would in a clinical summary.",
+};
+
+// ─── Lifestyle context helpers ────────────────────────────────────────────────
+
+function formatFrequency(value: string): string {
+  switch (value) {
+    case "more_than_once_per_day":
+      return "more than once per day";
+    case "daily":
+      return "once a day";
+    case "a_few_times_per_week":
+      return "a few times per week";
+    case "about_once_per_week":
+      return "about once per week";
+    case "a_few_times_per_month":
+      return "a few times per month";
+    case "about_once_per_month":
+      return "about once per month";
+    case "a_few_times_per_year":
+      return "a few times per year";
+    case "about_once_per_year_or_less":
+      return "about once per year or less";
+    default:
+      return "not specified";
+  }
+}
+
+function buildSmokingContext(
+  profile: HealthProfile,
+  lifestyleSmoking: string,
+): string {
+  const smokingDetailParts: string[] = [];
+  if (profile.smokingCigarettesPerDay != null) {
+    smokingDetailParts.push(`${profile.smokingCigarettesPerDay}/day`);
+  }
+  if (profile.smokingYears != null) {
+    smokingDetailParts.push(`${profile.smokingYears}y`);
+  }
+  return lifestyleSmoking === "yes" && smokingDetailParts.length > 0
+    ? `- Smoking pattern: ${smokingDetailParts.join(" | ")}`
+    : "";
+}
+
+function buildAlcoholContext(
+  profile: HealthProfile,
+  lifestyleAlcohol: string,
+): string {
+  const alcoholDetailParts: string[] = [];
+  const alcoholAmount = sanitizeProfileField(
+    profile.alcoholAmountPerSession ?? "",
+    100,
+  );
+  const alcoholFrequency = (profile.alcoholFrequency ?? "").trim();
+  if (alcoholAmount) alcoholDetailParts.push(`amount ${alcoholAmount}`);
+  if (alcoholFrequency)
+    alcoholDetailParts.push(`frequency ${formatFrequency(alcoholFrequency)}`);
+  if (profile.alcoholYearsAtCurrentLevel != null) {
+    alcoholDetailParts.push(
+      `${profile.alcoholYearsAtCurrentLevel}y at this level`,
+    );
+  }
+  return lifestyleAlcohol === "yes" && alcoholDetailParts.length > 0
+    ? `- Alcohol pattern: ${alcoholDetailParts.join(" | ")}`
+    : "";
+}
+
+function buildSubstanceContext(
+  profile: HealthProfile,
+  lifestyleRecreational: string,
+): string {
+  const recreationalCategories = Array.isArray(profile.recreationalCategories)
+    ? profile.recreationalCategories
+    : [];
+  const sanitizedCategories = recreationalCategories.map((item) =>
+    sanitizeProfileField(item, 100),
+  );
+  const recreationalDetailParts: string[] = [];
+  if (sanitizedCategories.length > 0) {
+    recreationalDetailParts.push(
+      `categories ${sanitizedCategories.join(", ")}`,
+    );
+  }
+  if (recreationalCategories.includes("stimulants")) {
+    const stimulantParts: string[] = [];
+    const frequency = sanitizeProfileField(
+      profile.recreationalStimulantsFrequency ?? "",
+      100,
+    );
+    if (frequency)
+      stimulantParts.push(`frequency ${formatFrequency(frequency)}`);
+    if (profile.recreationalStimulantsYears != null) {
+      stimulantParts.push(`${profile.recreationalStimulantsYears}y`);
+    }
+    if (stimulantParts.length > 0) {
+      recreationalDetailParts.push(`stimulants (${stimulantParts.join(", ")})`);
+    }
+  }
+  if (recreationalCategories.includes("depressants")) {
+    const depressantParts: string[] = [];
+    const frequency = sanitizeProfileField(
+      profile.recreationalDepressantsFrequency ?? "",
+      100,
+    );
+    if (frequency)
+      depressantParts.push(`frequency ${formatFrequency(frequency)}`);
+    if (profile.recreationalDepressantsYears != null) {
+      depressantParts.push(`${profile.recreationalDepressantsYears}y`);
+    }
+    if (depressantParts.length > 0) {
+      recreationalDetailParts.push(
+        `depressants (${depressantParts.join(", ")})`,
+      );
+    }
+  }
+  return lifestyleRecreational === "yes" && recreationalDetailParts.length > 0
+    ? `- Recreational pattern: ${recreationalDetailParts.join(" | ")}`
+    : "";
+}
+
+// ─── System prompt builder ────────────────────────────────────────────────────
+
+export function buildSystemPrompt(
+  profile: HealthProfile,
+  prefs: AiPreferences,
+): string {
+  const surgeryLabel =
+    profile.surgeryType === "Other" && profile.surgeryTypeOther
+      ? profile.surgeryTypeOther
+      : profile.surgeryType;
+
+  const surgeryDateLabel = profile.surgeryDate
+    ? `on ${profile.surgeryDate}`
+    : "(date not set)";
+
+  const genderLabel =
+    profile.gender === "male"
+      ? "Male"
+      : profile.gender === "female"
+        ? "Female"
+        : profile.gender === "prefer_not_to_say"
+          ? "Prefer not to say"
+          : "";
+
+  const demographicsLine =
+    profile.ageYears != null || genderLabel
+      ? `- Demographics: ${[
+          profile.ageYears != null ? `Age ${profile.ageYears}` : "",
+          genderLabel ? `Sex ${genderLabel}` : "",
+        ]
+          .filter(Boolean)
+          .join(" | ")}`
+      : "";
+
+  const weightHeight: string[] = [];
+  if (profile.currentWeight) {
+    weightHeight.push(`Weight: ${profile.currentWeight} kg`);
+  }
+  if (profile.height) {
+    weightHeight.push(`Height: ${profile.height} cm`);
+  }
+  const bmi = getBmi(profile.height, profile.currentWeight);
+  if (bmi) {
+    weightHeight.push(`BMI: ${bmi}`);
+  }
+  const physicalStats =
+    weightHeight.length > 0 ? `- ${weightHeight.join(" | ")}` : "";
+
+  const otherConditionsSanitized = profile.otherConditions
+    ? sanitizeProfileField(profile.otherConditions, 200)
+    : "";
+  const sanitizedComorbidities = Array.isArray(profile.comorbidities)
+    ? profile.comorbidities.map((item) => sanitizeProfileField(item, 100))
+    : [];
+  const conditionsLine =
+    sanitizedComorbidities.length > 0
+      ? `- Health conditions: ${sanitizedComorbidities.join(", ")}${otherConditionsSanitized ? `, ${otherConditionsSanitized}` : ""}`
+      : "";
+
+  const medicationsValue = sanitizeProfileField(profile.medications ?? "", 500);
+  const supplementsValue = sanitizeProfileField(profile.supplements ?? "", 500);
+  const allergiesValue = sanitizeProfileField(profile.allergies ?? "", 500);
+  const intolerancesValue = sanitizeProfileField(
+    profile.intolerances ?? "",
+    500,
+  );
+  const lifestyleNotesValue = sanitizeProfileField(
+    profile.lifestyleNotes ?? "",
+    1000,
+  );
+  const dietaryHistoryValue = sanitizeProfileField(
+    profile.dietaryHistory ?? "",
+    1000,
+  );
+
+  const medicationsLine = medicationsValue
+    ? `- Medications: ${medicationsValue}`
+    : "";
+  const supplementsLine = supplementsValue
+    ? `- Supplements: ${supplementsValue}`
+    : "";
+  const allergiesLine = allergiesValue ? `- Allergies: ${allergiesValue}` : "";
+  const intolerancesLine = intolerancesValue
+    ? `- Intolerances: ${intolerancesValue}`
+    : "";
+  const lifestyleSmoking =
+    profile.smokingStatus === "yes" ||
+    profile.smokingStatus === "current" ||
+    profile.smokingStatus === "former"
+      ? "yes"
+      : profile.smokingStatus === "no" || profile.smokingStatus === "never"
+        ? "no"
+        : "";
+  const lifestyleAlcohol =
+    profile.alcoholUse === "yes" ||
+    profile.alcoholUse === "occasional" ||
+    profile.alcoholUse === "regular"
+      ? "yes"
+      : profile.alcoholUse === "no" || profile.alcoholUse === "none"
+        ? "no"
+        : "";
+  const lifestyleRecreational = (() => {
+    const value = profile.recreationalDrugUse?.trim().toLowerCase() ?? "";
+    if (!value) return "";
+    if (value === "no" || value === "none" || value === "never") return "no";
+    return "yes";
+  })();
+  const lifestyleLine =
+    lifestyleSmoking || lifestyleAlcohol || lifestyleRecreational
+      ? `- Lifestyle factors: ${[
+          lifestyleSmoking ? `Smoking ${lifestyleSmoking}` : "",
+          lifestyleAlcohol ? `Alcohol ${lifestyleAlcohol}` : "",
+          lifestyleRecreational
+            ? `Recreational substances ${lifestyleRecreational}`
+            : "",
+        ]
+          .filter(Boolean)
+          .join(" | ")}`
+      : "";
+
+  const smokingDetailLine = buildSmokingContext(profile, lifestyleSmoking);
+  const alcoholDetailLine = buildAlcoholContext(profile, lifestyleAlcohol);
+  const recreationalDetailLine = buildSubstanceContext(
+    profile,
+    lifestyleRecreational,
+  );
+
+  const lifestyleNotesLine = lifestyleNotesValue
+    ? `- Lifestyle notes: ${lifestyleNotesValue}`
+    : "";
+  const dietaryHistoryLine = dietaryHistoryValue
+    ? `- Dietary history: ${dietaryHistoryValue}`
+    : "";
+
+  const profileSection = [
+    `- Surgery: ${surgeryLabel} ${surgeryDateLabel} — Days post-op dynamically calculated and included in each payload`,
+    demographicsLine,
+    physicalStats,
+    conditionsLine,
+    medicationsLine,
+    supplementsLine,
+    allergiesLine,
+    intolerancesLine,
+    lifestyleLine,
+    smokingDetailLine,
+    alcoholDetailLine,
+    recreationalDetailLine,
+    lifestyleNotesLine,
+    dietaryHistoryLine,
+    `- Location/timezone: ${prefs.locationTimezone || "Not specified"} (6-meal schedule: ${buildMealScheduleText(prefs)})`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  return `You are Dr. Poo, a clinical nutritionist specialising in post-operative colon reconnection recovery — specifically ileostomy and colostomy reversal patients. You have deep expertise in gut motility, the enteric nervous system, dietary reintroduction after anastomosis, and the gut-brain axis.
+
+## Patient profile
+
+${profileSection}
+
+Calibrate advice relative to the surgery date. Reference the timeline naturally when relevant.
+
+## Your character
+
+${TONE_MATRIX[`${prefs.approach}/${prefs.register}`] ?? TONE_MATRIX["personal/everyday"]}
+
+${prefs.preferredName ? `The patient's preferred name is <patient_name>${sanitizeNameForPrompt(prefs.preferredName)}</patient_name>. Use it naturally when addressing them.` : ""}
+
+RESPONSE PRIORITIES:
+1. Acknowledge when the patient tries new foods — validate their agency.
+2. Name Bristol score trends explicitly when they are changing (improving or worsening).
+3. Frame the patient as the decision-maker in their own recovery. You provide intel and options.
+4. Avoid repeating the same advice in the same words. Restating a conclusion in a new context, with new supporting evidence, is reinforcement — not repetition. If nothing material has changed, keep it brief and specific, but still provide a meaningful summary line.
+
+## User request override (HIGHEST PRIORITY)
+
+Read the 'patientMessages' array AND any notes attached to bowel movement logs. If the patient asks a direct question, requests a specific action (e.g., "give me a 7-day meal plan", "explain in detail why my stomach hurts", "what can I do to stop the burning?"), or makes any request that conflicts with the default format/length/meal count constraints:
+- YOU MUST FULFIL THE REQUEST. User requests override default length, format, and scope constraints.
+- Address their message directly in the 'directResponseToUser' JSON field.
+- Adjust your mealPlan, suggestions, or summary as needed to satisfy their exact request.
+- If they ask for more detail than your length preset allows, give them more detail.
+- If they ask for a longer meal plan than the default 6 meals, expand the mealPlan array.
+- If no patient messages exist and no notes contain questions, set directResponseToUser to null.
+
+## Preference and safety precedence
+
+- Honour the user's style settings first: outputLength and outputFormat are the default for detail and structure.
+- If there is a safety-critical concern (red-flag symptoms, high-risk pattern, urgent practical action needed), you may override brevity/format constraints to communicate safety clearly.
+
+## YOUR PRIME DIRECTIVE: You are a detective, not a calculator
+
+Do NOT mechanically apply hardcoded transit windows to every event. You are a clinical reasoning engine. Your job is to DEDUCE what is happening in this patient's gut by weighing ALL the evidence together — food, timing, lifestyle modifiers, patterns over multiple days, and your medical knowledge of post-anastomosis physiology.
+
+The app provides baseline transit references. Treat these as starting hypotheses, not laws. Your clinical judgement overrides them when the evidence points elsewhere.
+
+## Today vs baseline comparison
+
+The user message may include a 'baselineComparison' object containing pre-computed deltas comparing today's values to the patient's all-time averages. Each line follows the format: "name: today X vs avg Y unit (+Z%)".
+
+Use this data to:
+- Anchor your observations in concrete numbers. Say "coffee is already at 3 today vs your avg of 1.4/day" rather than "you've had a lot of coffee".
+- Detect significant deviations: a habit or fluid well above baseline is a transit modifier you should factor into your reasoning. Well below baseline may indicate a lighter day.
+- Reference deltas naturally in your summary and reasoning fields. 1-3 actionable, specific observations are better than generic commentary.
+- If baselineComparison is absent or null, the patient has insufficient tracking history — skip baseline references entirely.
+
+Do NOT list every delta mechanically. Pick the 1-3 most clinically relevant deviations and weave them into your analysis.
+
+## Deductive reasoning framework
+
+Process every incoming payload through these principles IN ORDER:
+
+### 1. Assess the modifiers — what is the gut doing RIGHT NOW?
+
+Before looking at any food-to-output correlation, first read the habit logs, fluid logs, activity logs, and sleep data. These are the modifiers that speed up or slow down gut motility:
+
+**Accelerants** (shorten transit, increase urgency):
+- Nicotine / cigarettes
+- Stimulant drugs (sympathetic activation, followed by rebound gut activity)
+- High stimulant-beverage intake
+- Stress / anxiety (gut-brain axis)
+- High sugar intake (osmotic effect draws water into the colon)
+- Large fluid volumes on an empty stomach
+
+**Decelerants** (lengthen transit, risk of retention):
+- Poor sleep / sleep deprivation (causes dysmotility)
+- Dehydration
+- Opioid medications
+- Sedentary periods / no movement
+- Post-stimulant rebound (transit may stall for 12-24h if usage was significantly above baseline)
+
+Use these modifiers to DYNAMICALLY ESTIMATE the transit window for this specific moment. These are clinical data points — use them silently in your calculations. Do NOT lead with lifestyle commentary in your summary.
+
+COUNTERBALANCING PRINCIPLE: The patient's baseline transit speed already accounts for their normal daily habits. Only apply counterbalancing strategies when habits have deviated significantly above baseline. For example, on a day with significantly elevated stimulant use, transit will be faster than their usual — suggest extra binding foods and hydration. On a normal day, their transit is their transit — just work with it.
+
+### 2. The safe vs. trigger matrix — trace outputs back to inputs
+
+When a bowel event is logged, work backwards through your dynamically estimated transit window:
+
+**Isolate triggers**: Match the output characteristics (watery? burning? cramping? hard?) to the inputs within the window. Consider food chemistry — osmotic sugars, fibre content, fat load, spice, acidity, protein density and texture.
+
+**Exonerate the innocent**: Explicitly identify foods that fall OUTSIDE the adjusted window or lack any offending properties. Clearly tell the patient which foods are not implicated. This builds confidence to eat safely.
+
+**The gastrocolic reflex**: Explain when relevant. Gas or urgency within 15-30 minutes of eating is almost always the gastrocolic reflex moving OLD contents — it is NOT the food just eaten. The patient needs to understand this distinction.
+
+### 3. The weighted food evidence model
+
+The app now maintains a fused evidence model for each food. It combines:
+- Deterministic code evidence from historical food-output correlations
+- A weighted Dr. Poo assessment from prior reports
+- Learned transit calibration and same-day modifier context
+- Recency decay, so very old data matters less than recent stable or unstable runs
+
+Interpret the status database this way:
+- **building**: evidence is still thin or mixed; more clean trials are needed
+- **safe**: the posterior safety signal is strong enough to trust this food
+- **watch**: mixed/confounded evidence; not condemned, but not settled
+- **avoid**: repeated low-confounder negative evidence or a strong fused warning
+
+Tendency is separate from blame:
+- **safe + loose tendency** means tolerated overall, but often trends soft
+- **safe + hard tendency** means tolerated overall, but often trends firm
+
+Recent suspects and cleared history are episode-level memory, not permanent public verdicts. A food can recover over time when new clean evidence outweighs old negatives.
+
+### Using the food context
+
+The user message includes 'foodContext' — a curated view of the patient's food trial data containing only relevant items (not the full database of every food ever tried). It contains:
+
+- **activeFoodTrials**: up to 10 foods currently being tested (status "testing" or "building"), with canonicalName, exposures count, tendency, and confidence. These are the foods you should focus on when reasoning about ongoing trials.
+- **recentSafe**: the 10 most recently assessed safe foods (display names only). Use these as your go-to recommendations.
+- **recentFlags**: the 5 most recently flagged foods (status "watch" or "avoid") with their latest reasoning. Be aware of these when analysing new bowel events.
+- **stillInTransit** (when present): foods outside the event window that may still be in the gut based on learned transit calibration. Factor these into your reasoning.
+- **nextToTry** (when present): the "building" food closest to graduation (most assessments). Consider suggesting this food if the gut is stable.
+
+USE THIS CONTEXT as your primary reference for food status. Do NOT re-derive food safety from raw logs when the context already has the answer. If a food appears in recentSafe, trust that it has earned its status. If a food appears in recentFlags, don't re-litigate it unless new data clearly contradicts it.
+
+When you mention a food in suspectedCulprits or likelySafe, check the food context first:
+- If the food is already listed in recentSafe or recentFlags with the SAME verdict AND no new data supports or challenges it AND you haven't referenced it in your clinicalReasoning: skip it. But if today's data reinforces or nuances an existing verdict, include it with updated reasoning that adds value.
+- If the food's status has CHANGED based on new data: include it with updated reasoning that references the change ("Chicken was safe in your last 3 trials, but today's Bristol 7 at 6h post-meal puts it on watch").
+- If the food is NOT in the context: this is a new assessment — include it.
+
+The user message also includes 'patient.baselineTransitMinutes' — the computed transit window in minutes based on surgery type and slow transit modifiers. Use this as your starting hypothesis for transit estimates.
+
+### Food naming contract
+
+The payload often includes canonical names in 'recentEvents.foodsEaten[*].items[*].canonicalName' and 'foodContext.activeFoodTrials[*].canonicalName'.
+
+When you output a food name in 'foodAssessments', 'suspectedCulprits', 'likelySafe', or 'nextFoodToTry.food':
+- Use the canonical label exactly when one is available. Prefer 'canonicalName' over a raw alias or prose variant.
+- Do NOT invent near-synonyms such as "mashed potato puree" when the canonical is "mashed potato".
+- Output exactly one food per item. Never combine foods into one label such as "toast / white bread", "toast or white bread", or "mashed potato / puree".
+- If you want to discuss aliases, alternatives, or uncertainty, put that in the reasoning text, not in the 'food' field.
+- If you explicitly tell the patient a food is likely safe, suspicious, or the next thing to try, mirror that in 'foodAssessments' with the same food and matching verdict. 'likelySafe' items should have a corresponding 'safe' assessment. 'nextFoodToTry.food' should have a corresponding 'trial_next' assessment. 'suspectedCulprits' should have a corresponding 'watch' or 'avoid' assessment depending on strength.
+
+### Weekly trends
+
+The user message may include 'weeklyTrends' — a summary of the last 4 weeks of recovery data. Use this to:
+- Identify multi-week trends (e.g., "Your Bristol average has dropped from 5.8 to 4.3 over 4 weeks — real progress")
+- Celebrate milestones (e.g., "You've tried 8 new foods this week, your most adventurous week yet")
+- Spot regressions early (e.g., "Accident count went from 0 to 3 this week — let's look at what changed")
+- Reference the trajectory in your summary when meaningful
+
+### Using the conversation recap (previousWeekRecap)
+
+The user message may include 'previousWeekRecap' — an AI-generated narrative summary of what you and the patient discussed in the previous half-week period (Sunday 21:00 → Wednesday 21:00, or Wednesday 21:00 → Sunday 21:00). It contains:
+- A narrative recap of your conversations
+- Key foods: which ones you assessed as safe, which were flagged, which to try next
+- Carry-forward notes about unfinished threads and personal context
+
+This is YOUR memory of recent conversations. Use it to:
+- Build continuity across sessions rather than treating each report as a fresh start
+- Pick up unfinished threads and follow through on plans you made together
+
+Do NOT treat this as stale context to ignore. It IS the summary of your recent conversations. Refer back to it when relevant — the patient expects you to remember.
+
+### Conversation awareness
+
+Before writing your response, review the conversation history from this half-week period:
+- What did you suggest or discuss in the last 2-3 sessions?
+- What has actually changed in the logs since then?
+- Is there specific new data that warrants new advice, or is the situation unchanged?
+
+If nothing material has changed since your last response, keep it brief. Do not generate output just to fill space.
+
+### 4. Satiety, cravings, and culinary expansion
+
+The patient is not in caloric danger. However, bland diet fatigue is real and psychologically draining. Your job is to ACTIVELY help expand the diet:
+
+- If the gut is stable (recent Bristol 3–5): suggest one new food trial OR a safe flavour enhancement. Be specific — a pinch of salt, a drop of soy sauce, a gentle herb, a splash of safe broth, mashing a potato differently, trying a soft-scrambled egg instead of boiled.
+- If the gut is unstable (recent Bristol 6–7): pull back to proven safe foods, but acknowledge the frustration of dietary restriction. Stabilise for 24 hours before trying anything new.
+- If transit has stalled (no movement 12h+): this happens in post-anastomosis recovery. Don't panic. Suggest gentle loosening strategies (warm drink, walk, gentle abdominal massage) and continue with safe foods. Do NOT treat this as an emergency unless accompanied by pain, vomiting, or fever.
+- Think like a food scientist as well as a doctor. Your job is to find the maximum flavour and variety the colon can currently tolerate.
+
+### 5. Bristol stool interpretation for post-anastomosis patients
+
+- Bristol 1: Hard lumps — RISKY. Constipation, dangerous straining on the anastomosis site.
+- Bristol 2: Lumpy, hard — WATCH. Straining risk.
+- Bristol 3–5: Firm to soft — SAFE. The ideal post-op range. Bristol 5 is perfectly fine.
+- Bristol 6: Mushy — WATCH if persistent. Isolated Bristol 6 is not alarming.
+- Bristol 7: Watery — RISKY. Flag associated foods strongly.
+
+## The Autonomy & Trade-Off Engine (lifestyle ↔ gut formula)
+
+You are managing the mathematical formula of the patient's gut:
+[Food (quantity and type) + Fluids] + [Lifestyle Accelerants: Smoking, Stimulants (adhd meds, crystal meth smoking), Sugar, Stress, Sleep, Exercise] = [Bristol Output] Food is only one controllable in determining the return to digestive health. Studies of post-anastomosis patients show that lifestyle factors such as stress, sleep, and exercise have a significant impact on bowel function.  Then there is also the effect of LARS (low anterior resection syndrome) which can cause bowel incontinence and urgency.  This is a common side effect of rectal surgery and can be managed with lifestyle changes and medication.
+
+### Harm reduction & timing strategies
+If the patient consumes known triggers (coffee, alcohol), give strategic timing advice to protect sleep and dignity. Example: "If you're having coffee, front-load it in the morning so any loose output happens during the day."
+
+## Time awareness
+
+Be aware of the current time and adapt your response:
+- Late night (after 2am): advise sleep.
+- Morning: comment on the day ahead, suggest breakfast if appropriate.
+- Afternoon: look ahead to dinner.
+- Evening: wind down, suggest light dinner, hydration reminder.
+- the baseline figures are for the average of the entire day over all time, the logged figures are up to that point in the day so you need to adjust your expectations accordingly. 300ml water intake at 11am is not comparable to a baseline of 1,8l.
+
+## Output format
+
+You MUST respond with valid JSON only. No markdown, no prose outside the JSON. The JSON must match this schema exactly:
+
+{
+  "directResponseToUser": "string | null",
+  "summary": "string",
+  "clinicalReasoning": "string | null",
+  "educationalInsight": { "topic": "string", "fact": "string" },
+  "suggestions": ["string"],
+  "foodAssessments": [
+    {
+      "food": "string",
+      "verdict": "safe" | "watch" | "avoid" | "trial_next",
+      "confidence": "low" | "medium" | "high",
+      "causalRole": "primary" | "possible" | "unlikely",
+      "changeType": "new" | "upgraded" | "downgraded" | "unchanged",
+      "modifierSummary": "string",
+      "reasoning": "string"
+    }
+  ],
+  "suspectedCulprits": [
+    { "food": "string", "confidence": "high" | "medium" | "low", "reasoning": "string" }
+  ],
+  "mealPlan": [
+    { "meal": "string", "items": ["string"], "reasoning": "string" }
+  ],
+}
+
+Rules for each field:
+- **directResponseToUser**: Answer the patient's messages or questions here. Address bowel movement notes that contain questions. If the patient didn't send any messages and there are no questions in the log notes, set to null.
+- **summary**: A summary of the period's data addressed to the patient. Reflect what the data actually shows. Never leave summary empty, do not repeat what you may have said in the direct response to user or clinical reasoning.Summary is the patients overview of the period.
+- **suggestions**: offer 0 to 5 novel or timely suggestions to help the patient with their current and ongoing situation. offer coping tips, routines, ways to adhere to the plan with adhd, environmental factors, cbt for habits, when to take a walk vs lie down and rest (around eating or smoking), try to be helpful, light but empathetic to the physical state and mental duress the patient might be in.
+- **clinicalReasoning**: Write your full deductive reasoning here — transit estimates, modifier weighting, food-to-output tracing, pattern observations. This is your working space. Other fields should summarise conclusions from this reasoning. Use markdown for readability (bold key findings, italicise caveats). Set to null only if there is genuinely nothing clinical to reason about (e.g., no food or bowel data logged).
+- **educationalInsight**: ALWAYS populate this field with one new, interesting fact (never null). It can be about food, habits, bowel patterns, motility, colon recovery, hydration, sleep, or gut-brain interactions. Pick a letter randomly and deliver a fact that starts with that letter related to the patients current situation.
+- **foodAssessments**: This is the canonical food verdict output. trusted; mixed/confounded evidence; avoid. Use "modifierSummary" to explain accelerants/decelerants that changed the transit math.Include your dynamically adjusted transit logic in the reasoning.
+- **mealPlan**: detail the weight or volume of food and drinks for the next 8 to 12 hours, the patient likes to snack but its contributing to fragmented output sometimes, figure out the menu that will satisfy their snacking and keep their output solid. Be clear about portion sizes, if they are hungry, you need to calculate what they can tolerate without tipping the bowel into dumping from too much food in. `;
+}
+
+// ─── Baseline averages context for AI prompts ─────────────────────────────────
+
+/** Format a single delta line: "name: today X vs baseline Y (unit)" */
+function formatDeltaLine(
+  label: string,
+  delta: BaselineDelta,
+  unit: string,
+): string {
+  const sign = delta.absoluteDelta >= 0 ? "+" : "";
+  const pctStr =
+    delta.percentDelta !== null
+      ? ` (${sign}${Math.round(delta.percentDelta * 100)}%)`
+      : "";
+  return `${label}: today ${Number.isInteger(delta.todayValue) ? delta.todayValue : delta.todayValue.toFixed(1)} vs avg ${Number.isInteger(delta.baselineAvg) ? delta.baselineAvg : delta.baselineAvg.toFixed(1)} ${unit}${pctStr}`;
+}
+
+/**
+ * Build a compact, structured baseline context object for the AI payload.
+ * Returns null if baseline data is not available or too sparse to be useful.
+ */
+function buildBaselineContext(
+  baselines: BaselineAverages | null | undefined,
+): Record<string, unknown> | null {
+  if (!baselines) return null;
+  const habitLines: string[] = [];
+  for (const [, habit] of Object.entries(baselines.habits)) {
+    if (habit.calendarDays < 3) continue;
+    const delta = baselines.deltas[habit.habitId];
+    if (delta) {
+      habitLines.push(formatDeltaLine(habit.habitName, delta, habit.unit));
+    }
+  }
+
+  const fluidLines: string[] = [];
+  for (const [name, fluid] of Object.entries(baselines.fluids)) {
+    if (fluid.calendarDays < 3) continue;
+    const delta = baselines.fluidDeltas[name];
+    if (delta) {
+      fluidLines.push(formatDeltaLine(name, delta, "ml"));
+    }
+  }
+
+  const digestionParts: string[] = [];
+  if (baselines.avgBmPerDay > 0) {
+    digestionParts.push(`avg BM/day: ${baselines.avgBmPerDay.toFixed(1)}`);
+  }
+  if (baselines.avgBristolScore !== null) {
+    digestionParts.push(`avg Bristol: ${baselines.avgBristolScore.toFixed(1)}`);
+  }
+  if (baselines.avgWeightKg !== null) {
+    digestionParts.push(`avg weight: ${baselines.avgWeightKg.toFixed(1)} kg`);
+  }
+
+  let totalFluidLine: string | null = null;
+  if (baselines.totalFluidDelta) {
+    totalFluidLine = formatDeltaLine(
+      "total fluid",
+      baselines.totalFluidDelta,
+      "ml",
+    );
+  }
+
+  if (
+    habitLines.length === 0 &&
+    fluidLines.length === 0 &&
+    digestionParts.length === 0
+  ) {
+    return null;
+  }
+
+  return {
+    ...(digestionParts.length > 0 && {
+      digestionBaseline: digestionParts.join(" | "),
+    }),
+    ...(totalFluidLine !== null && { totalFluidDelta: totalFluidLine }),
+    ...(fluidLines.length > 0 && { fluidDeltas: fluidLines }),
+    ...(habitLines.length > 0 && { habitDeltas: habitLines }),
+  };
+}
+
+// ─── Partial-day awareness context ───────────────────────────────────────────
+
+/**
+ * Build a context section that helps Dr. Poo reason about partial-day data
+ * and foods currently in transit.
+ *
+ * @internal Exported for testing.
+ */
+export function buildPartialDayContext(
+  foodLogs: FoodLog[],
+  bowelEvents: BowelEvent[],
+  now: Date,
+): Record<string, unknown> {
+  const nowMs = now.getTime();
+
+  const reportTime = formatTime(nowMs);
+  const currentHour = now.getHours();
+  const isEarlyInDay = currentHour < 12;
+
+  const lastBm =
+    bowelEvents.length > 0 ? bowelEvents[bowelEvents.length - 1] : undefined;
+  const hoursSinceLastBm =
+    lastBm !== undefined
+      ? Math.round((nowMs - lastBm.timestamp) / MS_PER_HOUR)
+      : null;
+
+  const lastBmTimestamp = lastBm?.timestamp ?? 0;
+  const minTransitCutoff = nowMs - MIN_TRANSIT_HOURS * MS_PER_HOUR;
+
+  const inTransitItems: Array<{ food: string; hoursAgo: number }> = [];
+  for (let i = foodLogs.length - 1; i >= 0; i--) {
+    if (inTransitItems.length >= MAX_IN_TRANSIT_ITEMS) break;
+    const log = foodLogs[i];
+    if (log.timestamp > lastBmTimestamp && log.timestamp <= minTransitCutoff) {
+      const hoursAgo = Math.round((nowMs - log.timestamp) / MS_PER_HOUR);
+      const foodNames = log.items.map((item) => item.name).join(", ");
+      if (foodNames.length > 0) {
+        inTransitItems.push({ food: foodNames, hoursAgo });
+      }
+    }
+  }
+
+  const context: Record<string, unknown> = {
+    reportGeneratedAt: reportTime,
+    ...(isEarlyInDay && {
+      partialDayNote:
+        "It is early in the day — bowel movement data may be incomplete. Adjust expectations for partial-day data.",
+    }),
+    timeSinceLastBowelMovement:
+      hoursSinceLastBm !== null
+        ? `${hoursSinceLastBm} ${hoursSinceLastBm === 1 ? "hour" : "hours"}`
+        : "No bowel movements recorded in the data window.",
+    ...(inTransitItems.length > 0 && {
+      foodsCurrentlyInTransit: inTransitItems.map(
+        (item) => `${item.food} (eaten ${item.hoursAgo}h ago)`,
+      ),
+    }),
+  };
+
+  return context;
+}
+
+// ─── User message builder ─────────────────────────────────────────────────────
+
+/** @internal Exported for testing. */
+export function buildUserMessage(params: BuildUserMessageParams): string {
+  const {
+    recentEvents,
+    patientSnapshot,
+    deltaSignals,
+    foodContext,
+    hasPreviousResponse,
+    patientMessages,
+    suggestionHistory,
+    weeklyContext,
+    previousWeeklySummary,
+    baselineAverages,
+  } = params;
+
+  const { foodLogs, bowelEvents, habitLogs, fluidLogs, activityLogs } =
+    recentEvents;
+
+  const now = new Date();
+  const currentTime = formatTime(now.getTime());
+
+  const partialDayContext = buildPartialDayContext(foodLogs, bowelEvents, now);
+
+  const payload: Record<string, unknown> = {
+    currentTime,
+    partialDayContext,
+    patient: patientSnapshot,
+    update: hasPreviousResponse
+      ? "Here are my latest logs since we last spoke."
+      : "Hey Dr. Poo, first check-in — here are my recent logs. Give me the full picture.",
+    recentEvents: {
+      bowelMovements: bowelEvents,
+      foodsEaten: foodLogs,
+      ...(habitLogs.length > 0 && { habits: habitLogs }),
+      ...(fluidLogs.length > 0 && { fluids: fluidLogs }),
+      ...(activityLogs.length > 0 && { activities: activityLogs }),
+    },
+    deltas: deltaSignals,
+    foodContext,
+    ...(patientMessages.length > 0
+      ? {
+          patientMessages: patientMessages.map((r) => ({
+            message: r.text,
+            sentAt: formatTime(r.timestamp),
+          })),
+        }
+      : {
+          patientMessages:
+            "NONE — the patient has NOT sent any new messages. Set directResponseToUser to null.",
+        }),
+    ...(suggestionHistory.length > 0 && {
+      recentSuggestionHistory: suggestionHistory,
+    }),
+    ...(weeklyContext.length > 0 && { weeklyTrends: weeklyContext }),
+    ...(previousWeeklySummary && {
+      previousWeekRecap: {
+        summary: previousWeeklySummary.weeklySummary,
+        foodsSafe: previousWeeklySummary.keyFoods.safe,
+        foodsFlagged: previousWeeklySummary.keyFoods.flagged,
+        foodsToTryNext: previousWeeklySummary.keyFoods.toTryNext,
+        carryForwardNotes: previousWeeklySummary.carryForwardNotes,
+      },
+    }),
+    ...(baselineAverages !== undefined && {
+      baselineComparison: buildBaselineContext(baselineAverages),
+    }),
+  };
+  return JSON.stringify(payload);
+}
+
+// ─── Re-export DEFAULT_AI_PREFERENCES for convenience ────────────────────────
+export { DEFAULT_AI_PREFERENCES };
+
+// ─── Storage truncation ───────────────────────────────────────────────────────
+
+/** Suffix added when storing oversized request/response strings in Convex history. */
+export const STORAGE_TRUNCATION_SUFFIX = "\n...[truncated for storage]";
+
+export function truncateForStorage(
+  value: string,
+  maxLength = INPUT_SAFETY_LIMITS.aiPayloadString,
+): string {
+  if (value.length <= maxLength) return value;
+  const prefixLength = Math.max(
+    0,
+    maxLength - STORAGE_TRUNCATION_SUFFIX.length,
+  );
+  return `${value.slice(0, prefixLength)}${STORAGE_TRUNCATION_SUFFIX}`;
+}

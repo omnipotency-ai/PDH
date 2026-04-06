@@ -2,7 +2,7 @@ import { BookOpen, BrainCircuit, Check, Copy, TriangleAlert, UtensilsCrossed } f
 import { type RefObject, useCallback, useRef, useState } from "react";
 import Markdown from "react-markdown";
 import { toast } from "sonner";
-import { MealIdeaCard } from "@/components/archive/ai-insights/MealIdeaCard";
+import { MealIdeaCard } from "@/components/dr-poo/MealIdeaCard";
 import {
   Accordion,
   AccordionContent,
@@ -174,7 +174,7 @@ export function DrPooReportDetails({ insights }: { insights: AiNutritionistInsig
         </div>
       )}
 
-      {/* 5. Suggestions */}
+      {/* 4. Suggestions */}
       {insights.suggestions.length > 0 && (
         <div>
           <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--section-habits)]">
@@ -190,7 +190,7 @@ export function DrPooReportDetails({ insights }: { insights: AiNutritionistInsig
         </div>
       )}
 
-      {/* 6. Disclaimer */}
+      {/* 5. Disclaimer */}
       <p className="border-t border-[var(--border)] pt-3 text-[10px] leading-relaxed text-[var(--text-faint)] italic">
         {getAiDisclaimer()}
       </p>

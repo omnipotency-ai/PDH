@@ -12,7 +12,7 @@ import { useAllFoodTrials } from "@/lib/sync";
  * Used by both PatternsPage (database + transit map) and MenuPage (food library).
  */
 export function useAnalyzedFoodStats() {
-  const logs = useSyncedLogsContext();
+  const { logs } = useSyncedLogsContext();
   const allFoodTrials = useAllFoodTrials();
   const { habits } = useHabits();
   const { transitCalibration } = useTransitCalibration();
@@ -20,7 +20,7 @@ export function useAnalyzedFoodStats() {
 
   const analysis = useMemo(
     () =>
-      analyzeLogs(logs, allFoodTrials ?? [], {
+      analyzeLogs(logs, allFoodTrials?.trials ?? [], {
         habits: habits.map((h) => ({ id: h.id, name: h.name })),
         calibration: transitCalibration,
         assessments: mappedAssessments,

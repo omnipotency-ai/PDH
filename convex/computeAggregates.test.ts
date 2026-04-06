@@ -2,6 +2,7 @@ import { convexTest } from "convex-test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
+import { getWeekStart } from "../shared/weekUtils";
 import {
   TEST_AI_INSIGHT,
   TEST_AI_REQUEST,
@@ -123,7 +124,7 @@ describe("computeAggregates", () => {
 
     const result = await t
       .withIdentity({ subject: "test-user-123" })
-      .mutation(api.computeAggregates.backfillWeeklyDigests, {});
+      .mutation(api.computeAggregates.backfillWeeklyDigests, { now });
 
     // Drain all scheduled backfill mutations before the test ends.
     await t.finishAllScheduledFunctions(() => vi.runAllTimers());
@@ -179,19 +180,15 @@ describe("computeAggregates", () => {
     await t.mutation(internal.computeAggregates.updateWeeklyDigest, {
       userId,
       eventTimestamp: now,
+      now,
     });
 
-    // Compute Monday 00:00:00 for the week containing `now`
-    const nowDate = new Date(now);
-    const day = nowDate.getDay();
-    const diff = day === 0 ? -6 : 1 - day;
-    const monday = new Date(nowDate);
-    monday.setDate(nowDate.getDate() + diff);
-    monday.setHours(0, 0, 0, 0);
+    // Compute Monday 00:00:00 UTC for the week containing `now`.
+    const monday = getWeekStart(now);
 
     const digest = await t
       .withIdentity({ subject: userId })
-      .query(api.aggregateQueries.currentWeekDigest, { weekStartMs: monday.getTime() });
+      .query(api.aggregateQueries.currentWeekDigest, { weekStartMs: monday.weekStartTimestamp });
 
     expect(digest).toBeDefined();
     expect(digest?.foodsFlagged).toBe(1);
@@ -261,6 +258,7 @@ describe("computeAggregates", () => {
     await t.mutation(internal.computeAggregates.updateWeeklyDigest, {
       userId,
       eventTimestamp: currentWeek,
+      now: currentWeek,
     });
 
     const digest = await t.run(async (ctx) => {
@@ -320,6 +318,7 @@ describe("computeAggregates", () => {
     await t.mutation(internal.computeAggregates.updateWeeklyDigest, {
       userId,
       eventTimestamp: currentWeek,
+      now: currentWeek,
     });
 
     const digest = await t.run(async (ctx) => {
@@ -394,6 +393,7 @@ describe("computeAggregates", () => {
     await t.mutation(internal.computeAggregates.updateWeeklyDigest, {
       userId,
       eventTimestamp: currentWeek,
+      now: currentWeek,
     });
 
     const digest = await t.run(async (ctx) => {
@@ -508,7 +508,9 @@ describe("computeAggregates", () => {
   it("throws backfillWeeklyDigests without auth", async () => {
     const t = convexTest(schema);
     await expect(
-      t.mutation(api.computeAggregates.backfillWeeklyDigests, {}),
+      t.mutation(api.computeAggregates.backfillWeeklyDigests, {
+        now: Date.now(),
+      }),
     ).rejects.toThrow("Not authenticated");
   });
 
@@ -517,7 +519,9 @@ describe("computeAggregates", () => {
 
     const result = await t
       .withIdentity({ subject: "test-user-123" })
-      .mutation(api.computeAggregates.backfillWeeklyDigests, {});
+      .mutation(api.computeAggregates.backfillWeeklyDigests, {
+        now: Date.now(),
+      });
 
     // Drain all scheduled backfill mutations before the test ends.
     await t.finishAllScheduledFunctions(() => vi.runAllTimers());

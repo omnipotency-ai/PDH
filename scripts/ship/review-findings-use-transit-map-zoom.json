@@ -1,7 +1,9 @@
 {
   "branch": "feat/sprint-2.5+",
   "reviewed_at": "2026-03-21T00:00:00Z",
-  "files_reviewed": ["src/hooks/useTransitMapZoom.ts"],
+  "files_reviewed": [
+    "src/hooks/useTransitMapZoom.ts"
+  ],
   "findings": [
     {
       "id": "F001",
@@ -10,9 +12,11 @@
       "file": "src/hooks/useTransitMapZoom.ts",
       "line": 91,
       "title": "CSS transform order is wrong: scale then translate produces incorrect pan",
-      "description": "buildTransformStyle returns `scale(...) translate(...)`. CSS transforms are applied right-to-left (innermost first), so this translates in the original coordinate space, then scales — meaning the translation distances are NOT scaled. The intended behaviour is almost certainly to scale around a focal point, which requires the opposite order: `translate(...) scale(...)`, so the translation happens in the already-scaled space. With the current order, zooming into a station will pan by the raw translateX/Y values without accounting for scale, putting the viewport in the wrong place at every non-overview zoom level.",
-      "fix": "Swap the order: `return \\`translate(${zoom.translateX}px, ${zoom.translateY}px) scale(${zoom.scale})\\`;`\n\nAlternatively, if the geometry pipeline pre-compensates for this, document it explicitly with a comment — but the conventional approach for zoom-to-point is translate-then-scale.",
-      "implemented": false
+      "description": "buildTransformStyle returns `scale(...) translate(...)`. CSS transforms are applied right-to-left (innermost first), so this translates in the original coordinate space, then scales \u2014 meaning the translation distances are NOT scaled. The intended behaviour is almost certainly to scale around a focal point, which requires the opposite order: `translate(...) scale(...)`, so the translation happens in the already-scaled space. With the current order, zooming into a station will pan by the raw translateX/Y values without accounting for scale, putting the viewport in the wrong place at every non-overview zoom level.",
+      "fix": "Swap the order: `return \\`translate(${zoom.translateX}px, ${zoom.translateY}px) scale(${zoom.scale})\\`;`\n\nAlternatively, if the geometry pipeline pre-compensates for this, document it explicitly with a comment \u2014 but the conventional approach for zoom-to-point is translate-then-scale.",
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "F002",
@@ -20,10 +24,12 @@
       "category": "correctness",
       "file": "src/hooks/useTransitMapZoom.ts",
       "line": 54,
-      "title": "lineToGroup does not cover sauces_condiments or herbs_spices — falls through to \"seasoning\" silently",
-      "description": "The function uses a chain of if/if/if with a bare `return \"seasoning\"` fallback. This works today because the only remaining FoodLine values are sauces_condiments and herbs_spices, both of which belong to the seasoning group. However the function is not exhaustive — any future addition of a FoodLine that is NOT seasoning will silently return \"seasoning\" instead of causing a compile-time error. TypeScript cannot catch this because the return type is just `FoodGroup`, not a discriminated union that forces exhaustion. The risk is a silent mis-grouping that corrupts zoom breadcrumb context.",
-      "fix": "Make the fallback an explicit error branch so future registry changes surface immediately:\n\n```ts\nfunction lineToGroup(line: FoodLine): FoodGroup {\n  if (line === \"meat_fish\" || line === \"eggs_dairy\" || line === \"vegetable_protein\") return \"protein\";\n  if (line === \"grains\" || line === \"vegetables\" || line === \"fruit\") return \"carbs\";\n  if (line === \"oils\" || line === \"dairy_fats\" || line === \"nuts_seeds\") return \"fats\";\n  if (line === \"sauces_condiments\" || line === \"herbs_spices\") return \"seasoning\";\n  // exhaustive check — TypeScript should never reach here\n  const _exhaustive: never = line;\n  throw new Error(`lineToGroup: unhandled FoodLine \"${String(_exhaustive)}\");\n}\n```\n\nWith the `never` assertion TypeScript will emit an error the moment a new FoodLine is added without being handled here.",
-      "implemented": false
+      "title": "lineToGroup does not cover sauces_condiments or herbs_spices \u2014 falls through to \"seasoning\" silently",
+      "description": "The function uses a chain of if/if/if with a bare `return \"seasoning\"` fallback. This works today because the only remaining FoodLine values are sauces_condiments and herbs_spices, both of which belong to the seasoning group. However the function is not exhaustive \u2014 any future addition of a FoodLine that is NOT seasoning will silently return \"seasoning\" instead of causing a compile-time error. TypeScript cannot catch this because the return type is just `FoodGroup`, not a discriminated union that forces exhaustion. The risk is a silent mis-grouping that corrupts zoom breadcrumb context.",
+      "fix": "Make the fallback an explicit error branch so future registry changes surface immediately:\n\n```ts\nfunction lineToGroup(line: FoodLine): FoodGroup {\n  if (line === \"meat_fish\" || line === \"eggs_dairy\" || line === \"vegetable_protein\") return \"protein\";\n  if (line === \"grains\" || line === \"vegetables\" || line === \"fruit\") return \"carbs\";\n  if (line === \"oils\" || line === \"dairy_fats\" || line === \"nuts_seeds\") return \"fats\";\n  if (line === \"sauces_condiments\" || line === \"herbs_spices\") return \"seasoning\";\n  // exhaustive check \u2014 TypeScript should never reach here\n  const _exhaustive: never = line;\n  throw new Error(`lineToGroup: unhandled FoodLine \"${String(_exhaustive)}\");\n}\n```\n\nWith the `never` assertion TypeScript will emit an error the moment a new FoodLine is added without being handled here.",
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "F003",
@@ -32,9 +38,11 @@
       "file": "src/hooks/useTransitMapZoom.ts",
       "line": 139,
       "title": "zoomOut closure captures stale context via dependency array",
-      "description": "The `zoomOut` callback declares `[currentZoom.level, context.line, context.corridor, geometry]` as its dependencies. This reads the primitive values at the time `useCallback` runs, so the closure should be fresh — this is not a classic stale-closure bug. However, the pattern of listing destructured primitives from state objects (rather than the whole state objects) is fragile: if a future maintainer adds `context.station` to the switch without updating the dep array, the closure will silently read stale station data. The dependency list is also slightly misaligned — `context.line` and `context.corridor` are already covered by listing `context` directly, and listing the whole `context` object would be safer and no more expensive.",
+      "description": "The `zoomOut` callback declares `[currentZoom.level, context.line, context.corridor, geometry]` as its dependencies. This reads the primitive values at the time `useCallback` runs, so the closure should be fresh \u2014 this is not a classic stale-closure bug. However, the pattern of listing destructured primitives from state objects (rather than the whole state objects) is fragile: if a future maintainer adds `context.station` to the switch without updating the dep array, the closure will silently read stale station data. The dependency list is also slightly misaligned \u2014 `context.line` and `context.corridor` are already covered by listing `context` directly, and listing the whole `context` object would be safer and no more expensive.",
       "fix": "Use the full state objects as dependencies:\n\n```ts\n}, [currentZoom, context, geometry]);\n```\n\nThis is slightly broader but eliminates the fragility and is the idiomatic React pattern. The memoisation value is identical because the objects change by reference when state changes.",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "F004",
@@ -43,9 +51,11 @@
       "file": "src/hooks/useTransitMapZoom.ts",
       "line": 98,
       "title": "Initial zoom state is not reset when geometry prop changes identity",
-      "description": "The hook initialises `currentZoom` from `geometry.zoomLevels.overview` via `useState`. If the parent component ever passes a new `geometry` object (e.g. after a data reload or React StrictMode double-render in development), the state is not re-synchronised — the hook will continue using the stale initial zoom while calling `geometry.zoomLevels.corridor(...)` on the new geometry object. This is a latent inconsistency. In practice `geometry` is auto-generated static data that never changes, but the hook provides no safety net.",
+      "description": "The hook initialises `currentZoom` from `geometry.zoomLevels.overview` via `useState`. If the parent component ever passes a new `geometry` object (e.g. after a data reload or React StrictMode double-render in development), the state is not re-synchronised \u2014 the hook will continue using the stale initial zoom while calling `geometry.zoomLevels.corridor(...)` on the new geometry object. This is a latent inconsistency. In practice `geometry` is auto-generated static data that never changes, but the hook provides no safety net.",
       "fix": "Either document explicitly that `geometry` must be a stable reference (e.g. a module-level constant), or add a `useEffect` that resets zoom to overview when geometry identity changes:\n\n```ts\nuseEffect(() => {\n  setCurrentZoom(geometry.zoomLevels.overview);\n  setContext({});\n}, [geometry]);\n```",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "F005",
@@ -56,7 +66,9 @@
       "title": "transformStyle and target are recomputed every render, unstable references returned",
       "description": "`target` and `transformStyle` are plain string derivations computed inline on every render. This is not a bug, but both values are returned in the hook's return object, which is itself a new object reference every render. Any consumer that spreads or destructures the return value and passes sub-values to memoised children will not be protected from re-renders triggered by unrelated state. The `transformStyle` string is the value most likely to be passed directly to a style prop on an SVG element, where referential stability matters for paint-optimisation.",
       "fix": "Wrap both derivations in `useMemo`:\n\n```ts\nconst target = useMemo(\n  () => deriveTarget(context, currentZoom.level),\n  [context, currentZoom.level],\n);\nconst transformStyle = useMemo(\n  () => buildTransformStyle(currentZoom),\n  [currentZoom],\n);\n```\n\nThis is a low-effort improvement that prevents spurious SVG repaints when unrelated state changes.",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "F006",
@@ -67,13 +79,16 @@
       "title": "zoomToStation silently accepts unknown canonicals without error feedback",
       "description": "If `findStationLine` returns `undefined` (canonical not found in geometry), `zoomToStation` still calls `geometry.zoomLevels.station(canonical)` with an unknown key. Whether this throws, returns a default, or silently renders an incorrect transform depends entirely on the geometry implementation. The hook itself gives no feedback to the caller. For a debug/development scenario this is silent misbehaviour.",
       "fix": "Consider logging a warning or returning early if the station is not found in geometry:\n\n```ts\nconst stationLine = findStationLine(geometry, canonical);\nif (stationLine === undefined) {\n  console.warn(`useTransitMapZoom: station \"${canonical}\" not found in geometry`);\n}\n```",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     }
   ],
   "summary": {
     "critical": 0,
-    "high": 2,
-    "moderate": 3,
-    "nice_to_have": 1
+    "high": 0,
+    "moderate": 0,
+    "nice_to_have": 0,
+    "archived": 6
   }
 }

@@ -13,27 +13,27 @@ type NumericHealthProfileKey =
   | "recreationalStimulantsYears"
   | "recreationalDepressantsYears";
 
+function resolveSmokingChoice(status: SmokingStatus | undefined): YesNoChoice {
+  if (status === "yes") return "yes";
+  if (status === "no" || status === "never") return "no";
+  if (status === "former" || status === "current") return "yes";
+  return "";
+}
+
+function resolveAlcoholChoice(alcoholUse: AlcoholUse | undefined): YesNoChoice {
+  if (alcoholUse === "yes") return "yes";
+  if (alcoholUse === "no" || alcoholUse === "none") return "no";
+  if (alcoholUse === "occasional" || alcoholUse === "regular") return "yes";
+  return "";
+}
+
 export function LifestyleSection({
   healthProfile,
   setHealthProfile,
 }: Omit<HealthSectionProps, "unitSystem">) {
-  const smokingChoice: YesNoChoice =
-    healthProfile.smokingStatus === "yes"
-      ? "yes"
-      : healthProfile.smokingStatus === "no" || healthProfile.smokingStatus === "never"
-        ? "no"
-        : healthProfile.smokingStatus === "former" || healthProfile.smokingStatus === "current"
-          ? "yes"
-          : "";
+  const smokingChoice = resolveSmokingChoice(healthProfile.smokingStatus);
 
-  const alcoholChoice: YesNoChoice =
-    healthProfile.alcoholUse === "yes"
-      ? "yes"
-      : healthProfile.alcoholUse === "no" || healthProfile.alcoholUse === "none"
-        ? "no"
-        : healthProfile.alcoholUse === "occasional" || healthProfile.alcoholUse === "regular"
-          ? "yes"
-          : "";
+  const alcoholChoice = resolveAlcoholChoice(healthProfile.alcoholUse);
 
   const recreationalChoice: YesNoChoice = (() => {
     const value = (healthProfile.recreationalDrugUse ?? "").trim().toLowerCase();

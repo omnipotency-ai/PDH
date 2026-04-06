@@ -36,6 +36,7 @@ export async function generateCoachingSnippet(
     timeOfDay: string; // "morning" | "afternoon" | "evening"
     hadGapYesterday: boolean;
   },
+  surgeryType = "digestive condition",
 ): Promise<string> {
   checkRateLimit();
 
@@ -62,7 +63,7 @@ export async function generateCoachingSnippet(
   const systemPrompt = [
     "Given today's habit totals and recent streak data, respond in 180 characters or fewer",
     "with one piece of practical advice, encouragement, or contextual reward",
-    "for a post-surgery anastomosis recovery patient.",
+    `for a ${surgeryType} recovery patient.`,
     "Rules:",
     "- If user exceeded a target for 7+ days, suggest raising it slightly",
     "- If user consistently misses, suggest lowering it",
@@ -233,6 +234,7 @@ export async function generateHabitSnippet(
     daySummaries: HabitDaySummary[];
     streakSummary: HabitStreakSummary;
   },
+  surgeryType = "digestive condition",
 ): Promise<string> {
   checkRateLimit();
 
@@ -256,7 +258,7 @@ export async function generateHabitSnippet(
 
   const systemPrompt = [
     "Given this habit's 7-day history, provide one short, specific insight or suggestion",
-    "in 100 characters or fewer for a post-surgery anastomosis recovery patient.",
+    `in 100 characters or fewer for a ${surgeryType} recovery patient.`,
     "Reply with ONLY the insight text, nothing else.",
   ].join("\n");
 

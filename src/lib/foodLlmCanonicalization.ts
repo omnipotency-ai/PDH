@@ -9,14 +9,10 @@
  * truly unknown foods.
  */
 
-import {
-  canonicalizeKnownFoodName,
-  FOOD_REGISTRY,
-  getFoodEntry,
-  getFoodZone,
-} from "@shared/foodCanonicalization";
+import { canonicalizeKnownFoodName } from "@shared/foodCanonicalization";
 import { normalizeFoodName } from "@shared/foodNormalize";
 import type { FoodZone } from "@shared/foodRegistry";
+import { FOOD_REGISTRY, getFoodEntry, getFoodZone } from "@shared/foodRegistry";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Registry vocabulary prompt

@@ -1,6 +1,6 @@
 import { Loader2, Stethoscope } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AnalysisProgressOverlay } from "@/components/archive/ai-insights/AnalysisProgressOverlay";
+import { AnalysisProgressOverlay } from "@/components/dr-poo/AnalysisProgressOverlay";
 import { AiInsightsBody } from "@/components/track/dr-poo/AiInsightsBody";
 import { ConversationPanel } from "@/components/track/dr-poo/ConversationPanel";
 import { SectionHeader } from "@/components/ui/SectionHeader";

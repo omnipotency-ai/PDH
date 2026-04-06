@@ -14,6 +14,19 @@ function kgToDisplayString(kg: number, weightUnit: string): string {
   return String(kg);
 }
 
+function toWeightKg(rawVal: number, weightUnit: string): number {
+  if (weightUnit === "lbs") return Math.round(lbsToKg(rawVal) * 10) / 10;
+  if (weightUnit === "stones") return Math.round(stonesToKg(rawVal) * 10) / 10;
+  return rawVal;
+}
+
+function formatDisplayWeight(kg: number, weightUnit: string): string {
+  if (!Number.isFinite(kg) || kg <= 0) return "";
+  if (weightUnit === "lbs") return `${kgToLbs(kg).toFixed(1)} lbs`;
+  if (weightUnit === "stones") return `${kgToStones(kg).toFixed(1)} st`;
+  return `${kg.toFixed(1)} kg`;
+}
+
 export function WeightSubRow({ entry }: { key?: string | number; entry: WeightLog }) {
   const { unitSystem } = useUnitSystem();
   const weightUnit = getDisplayWeightUnit(unitSystem);
@@ -28,13 +41,7 @@ export function WeightSubRow({ entry }: { key?: string | number; entry: WeightLo
   const buildSaveData = useCallback((): LogUpdateData => {
     const rawVal = Number(draftWeight);
     const weightKg =
-      Number.isFinite(rawVal) && rawVal > 0
-        ? weightUnit === "lbs"
-          ? Math.round(lbsToKg(rawVal) * 10) / 10
-          : weightUnit === "stones"
-            ? Math.round(stonesToKg(rawVal) * 10) / 10
-            : rawVal
-        : entry.data.weightKg;
+      Number.isFinite(rawVal) && rawVal > 0 ? toWeightKg(rawVal, weightUnit) : entry.data.weightKg;
     const nextData: WeightLogData = { weightKg };
     return nextData;
   }, [draftWeight, weightUnit, entry.data.weightKg]);
@@ -65,14 +72,7 @@ export function WeightSubRow({ entry }: { key?: string | number; entry: WeightLo
     [draftWeight, weightUnit, draftIsValid],
   );
 
-  const displayVal =
-    Number.isFinite(kg) && kg > 0
-      ? weightUnit === "lbs"
-        ? `${kgToLbs(kg).toFixed(1)} lbs`
-        : weightUnit === "stones"
-          ? `${kgToStones(kg).toFixed(1)} st`
-          : `${kg.toFixed(1)} kg`
-      : "";
+  const displayVal = formatDisplayWeight(kg, weightUnit);
 
   const renderDisplay = useCallback(
     () => (

@@ -58,10 +58,12 @@
       "category": "convex",
       "file": "convex/waitlist.ts",
       "line": 49,
-      "title": "Date.now() used in mutations — non-deterministic",
+      "title": "Date.now() used in mutations \u2014 non-deterministic",
       "description": "The waitlist `join` and `unsubscribe` mutations call `Date.now()` directly (lines 49, 65, 82). Convex mutations must be deterministic because the system may replay them on retry. `Date.now()` returns a different value on each replay, corrupting timestamp fields like `subscribedAt` and `unsubscribedAt` in unpredictable ways. This is a documented Convex anti-pattern.",
       "fix": "Accept the timestamp as a parameter passed from the caller (e.g. `timestamp: v.number()` with default from the client), or use `ctx.db.system.now()` if available. The most common pattern for Convex is to pass `Date.now()` as a mutation argument from the React component so the value is stable across replays.",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "F002",
@@ -69,10 +71,12 @@
       "category": "security",
       "file": "convex/waitlist.ts",
       "line": 5,
-      "title": "Public mutation with no rate-limiting or CAPTCHA — open to spam/bot abuse",
+      "title": "Public mutation with no rate-limiting or CAPTCHA \u2014 open to spam/bot abuse",
       "description": "The `waitlist.join` mutation is completely unauthenticated (intentionally, since it targets pre-signup users), meaning anyone can call it at arbitrary volume. There is no rate-limit, email validation beyond string length, or bot protection. An adversary can flood the waitlist table with garbage data, exhaust Convex storage, and inflate marketing metrics. The `sanitizeRequiredText` guard prevents injection but does nothing against high-volume spam.",
       "fix": "Add a Cloudflare Turnstile or hCaptcha token to the form and verify it server-side in the mutation (via an action). Alternatively, enforce a per-IP or per-email cooldown using a `convex/rateLimits` table. At minimum, add a basic email-format check (regex) in the mutation handler before writing to the DB.",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "F005",
@@ -114,7 +118,7 @@
       "file": "src/components/ui/responsive-shell.tsx",
       "line": 90,
       "title": "Tablet mode uses a Base UI Dialog but the Drawer's close button has no visible focus ring on all browsers",
-      "description": "The `DrawerClose` button at line 95 includes `focus:outline-none` and a custom `focus:ring-2` chain. This is correct if the design system token `--ring` is set. However, the `DialogPrimitive.Close` at line 141 uses the exact same class string — if `--ring` resolves to a very low-contrast value (e.g. near transparent in a low-contrast system theme), the focus indicator disappears visually. This is a reliability concern, not a definite bug, but worth confirming that `--ring` always meets WCAG 3:1 contrast ratio against the dialog background.",
+      "description": "The `DrawerClose` button at line 95 includes `focus:outline-none` and a custom `focus:ring-2` chain. This is correct if the design system token `--ring` is set. However, the `DialogPrimitive.Close` at line 141 uses the exact same class string \u2014 if `--ring` resolves to a very low-contrast value (e.g. near transparent in a low-contrast system theme), the focus indicator disappears visually. This is a reliability concern, not a definite bug, but worth confirming that `--ring` always meets WCAG 3:1 contrast ratio against the dialog background.",
       "fix": "Audit the `--ring` token's contrast against `--background` in both light and dark themes. If it falls below 3:1, increase its opacity or choose a more opaque accent. Use a browser-native focus indicator (`focus-visible:outline`) as a fallback for browsers that do not support custom ring styles.",
       "implemented": false
     },
@@ -124,7 +128,7 @@
       "category": "accessibility",
       "file": "src/components/settings/health/LifestyleSection.tsx",
       "line": 278,
-      "title": "Raw <input type='checkbox'> used for stimulants/depressants toggles — inconsistent with design system",
+      "title": "Raw <input type='checkbox'> used for stimulants/depressants toggles \u2014 inconsistent with design system",
       "description": "Lines 278-283 and 314-320 use a bare native `<input type='checkbox'>` element with only `accent-[var(--section-health)]` styling. Every other checkbox in the codebase (e.g. `CelebrationsSection`, `WaitlistForm`) uses the `<Checkbox>` component from `@/components/ui/checkbox`, which applies consistent cross-browser focus rings, sizing, and design system tokens. Native checkboxes have highly variable appearance across browsers and OSes, and `accent-color` has no effect in older Safari versions.",
       "fix": "Replace the two native checkbox elements with `<Checkbox>` from `@/components/ui/checkbox`, matching the pattern used in `CelebrationsSection.tsx`.",
       "implemented": false
@@ -135,10 +139,12 @@
       "category": "correctness",
       "file": "src/components/settings/repro/PregnancySection.tsx",
       "line": 189,
-      "title": "postpartum section writes to pregnancyMedicationNotes — same field as pregnant section",
-      "description": "In the `postpartum` conditional block (line 160+), the medication notes Input at line 189 reads from and writes to `reproductiveHealth.pregnancyMedicationNotes` — the same field used by the `pregnant` section at line 146. This means if a user switches from 'pregnant' to 'postpartum', their pregnancy medication notes carry over silently, and the postpartum notes label says 'Postpartum medications' but the data is stored in a pregnancy-named field. This is a data modelling bug: postpartum medication notes should be a separate field.",
+      "title": "postpartum section writes to pregnancyMedicationNotes \u2014 same field as pregnant section",
+      "description": "In the `postpartum` conditional block (line 160+), the medication notes Input at line 189 reads from and writes to `reproductiveHealth.pregnancyMedicationNotes` \u2014 the same field used by the `pregnant` section at line 146. This means if a user switches from 'pregnant' to 'postpartum', their pregnancy medication notes carry over silently, and the postpartum notes label says 'Postpartum medications' but the data is stored in a pregnancy-named field. This is a data modelling bug: postpartum medication notes should be a separate field.",
       "fix": "Add a `postpartumMedicationNotes` field to the `ReproductiveHealthSettings` type and Convex schema, and wire the postpartum Input to that field. Alternatively, clear `pregnancyMedicationNotes` when switching to postpartum, with a clear UI note about why.",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "F011",
@@ -146,7 +152,7 @@
       "category": "accessibility",
       "file": "src/components/settings/tracking-form/DrPooPreviewComponents.tsx",
       "line": 61,
-      "title": "List items keyed by content string — collision risk on duplicate bullet text",
+      "title": "List items keyed by content string \u2014 collision risk on duplicate bullet text",
       "description": "In `PreviewTextField`, the list items at line 61 are keyed by `trimmed` (the cleaned line text). If two bullet points in a preview happen to have identical text (e.g., two items that both say 'Eat slowly'), React will generate a key collision, causing silent rendering bugs. This is low probability but real given long, repeated advice-style text.",
       "fix": "Use `_index` (already available in the map destructuring) as the key instead of the string content: `key={_index}`. Since this is a purely static display list that never reorders, index keys are correct here.",
       "implemented": false
@@ -157,7 +163,7 @@
       "category": "accessibility",
       "file": "src/components/settings/tracking-form/DrPooSection.tsx",
       "line": 86,
-      "title": "Input with icon has Label rendered as icon container — label text is missing",
+      "title": "Input with icon has Label rendered as icon container \u2014 label text is missing",
       "description": "At lines 87-89, a `<Label htmlFor='dr-poo-preferred-name'>` contains only the `<UserRound>` icon component, with no text inside the label. The `htmlFor` association is present, which is good, but screen readers will announce the label as empty (or read the SVG title if it has one). The input has a placeholder 'Your preferred name' which is not accessible as a label substitute. The location input at line 101 has no `<Label>` at all.",
       "fix": "Give each Label a visible or visually-hidden text description. For the name field: `<Label htmlFor='dr-poo-preferred-name' className='sr-only'>Preferred name</Label>`. For the location input, add `<Label htmlFor='dr-poo-location' className='sr-only'>Your location</Label>`.",
       "implemented": false
@@ -168,10 +174,12 @@
       "category": "simplicity",
       "file": "src/components/landing/LandingFooter.tsx",
       "line": 11,
-      "title": "new Date().getFullYear() computed on every render — not a runtime issue but worth a note",
+      "title": "new Date().getFullYear() computed on every render \u2014 not a runtime issue but worth a note",
       "description": "Line 11 calls `new Date().getFullYear()` directly in the component body, which re-computes on every render. This is harmless for a footer that rarely re-renders but is slightly imprecise: if the page is open across midnight on New Year's Day, the year shown in the footer will not update until the next render. More importantly, `new Date()` is a non-deterministic side effect in a React component body, which is a code pattern worth avoiding for clarity even when consequence-free.",
       "fix": "Compute the year as a module-level constant: `const CURRENT_YEAR = new Date().getFullYear();`. This removes the per-render allocation and makes the intent clearer.",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "F014",
@@ -180,9 +188,11 @@
       "file": "src/components/landing/LandingFooter.tsx",
       "line": 53,
       "title": "Copyright notice missing copyright symbol",
-      "description": "Line 53 renders `{year} PDH. All rights reserved.` without a copyright symbol (©). This is a legal/presentation issue: the standard copyright notice format is `© 2026 PDH. All rights reserved.`",
-      "fix": "Change the text to `© {year} PDH. All rights reserved.` (HTML entity `&copy;` or Unicode `\\u00A9`).",
-      "implemented": false
+      "description": "Line 53 renders `{year} PDH. All rights reserved.` without a copyright symbol (\u00a9). This is a legal/presentation issue: the standard copyright notice format is `\u00a9 2026 PDH. All rights reserved.`",
+      "fix": "Change the text to `\u00a9 {year} PDH. All rights reserved.` (HTML entity `&copy;` or Unicode `\\u00A9`).",
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "F015",
@@ -190,10 +200,12 @@
       "category": "accessibility",
       "file": "src/components/landing/HeroSection.tsx",
       "line": 85,
-      "title": "Launch App link points to '/' — ambiguous route for the landing page context",
+      "title": "Launch App link points to '/' \u2014 ambiguous route for the landing page context",
       "description": "The 'Launch App' link at line 85-89 uses `to='/'` as the destination. If the root route renders the landing page itself, this is a no-op link that confuses screen reader users: clicking 'Launch App' appears to do nothing if they are already on the root. If the app and landing page share a root route, this should instead point to `/home` (or the authenticated app route), consistent with `LandingNav.tsx` line 56 which also links to `/` with the same label.",
       "fix": "Confirm the intended authenticated entry route (likely `/home` based on the rest of the codebase) and update both landing page 'Launch App' links to point there. Ensure the route is protected at the router level.",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "F016",
@@ -201,8 +213,8 @@
       "category": "correctness",
       "file": "src/components/settings/health/ConditionsSection.tsx",
       "line": 75,
-      "title": "Both ChipGroup instances share the same comorbidities array — GI conditions and comorbidities are not separated",
-      "description": "Lines 72-83 render two `ChipGroup` components — one for 'GI medical conditions' and one for 'Comorbidities affecting digestion'. Both have `selectedValues={healthProfile.comorbidities}` and `onToggle={toggleCondition}`, which writes to the same `comorbidities` field. This means GI conditions and general comorbidities are co-mingled in a single array with no way to distinguish them. If the AI pipeline or reporting layer needs to treat GI conditions separately from general comorbidities, this design is broken by construction.",
+      "title": "Both ChipGroup instances share the same comorbidities array \u2014 GI conditions and comorbidities are not separated",
+      "description": "Lines 72-83 render two `ChipGroup` components \u2014 one for 'GI medical conditions' and one for 'Comorbidities affecting digestion'. Both have `selectedValues={healthProfile.comorbidities}` and `onToggle={toggleCondition}`, which writes to the same `comorbidities` field. This means GI conditions and general comorbidities are co-mingled in a single array with no way to distinguish them. If the AI pipeline or reporting layer needs to treat GI conditions separately from general comorbidities, this design is broken by construction.",
       "fix": "Add a separate `giConditions` field to `HealthProfile` and Convex schema. Wire the first ChipGroup to `giConditions` and its own toggle handler. Update the Convex mutation to persist both fields independently.",
       "implemented": false
     },
@@ -212,10 +224,12 @@
       "category": "accessibility",
       "file": "src/components/landing/WaitlistForm.tsx",
       "line": 195,
-      "title": "Select elements for surgery type and recovery stage have no aria-label — rely on visual label only",
+      "title": "Select elements for surgery type and recovery stage have no aria-label \u2014 rely on visual label only",
       "description": "The `<select>` elements at lines 195-207 and 215-228 are associated with their `<Label>` via the `htmlFor`/`id` pairing, which is correct. However, neither select has a `title` attribute or `aria-label` as fallback for screen readers in contexts where the label association is broken (e.g. when the label is absolutely positioned or the select is rendered in a shadow DOM context). Additionally, the select has an empty-string first option (line 11: `\"\"`) which renders as a blank option. Screen readers may announce this as an empty item.",
       "fix": "Change the blank first option to `<option value=\"\" disabled>Select (optional)</option>` to make the empty state explicit to screen readers. This is already done correctly in the render (line 203: `{opt || 'Select (optional)'}`) but the value `\"\"` will still be readable by screen readers as empty. Consider giving the option explicit text as the display value.",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "F018",
@@ -247,7 +261,7 @@
       "line": 23,
       "title": "Array index used as key for drink items",
       "description": "Line 23 uses `key={\\`drink-${index}\\`}`. Since the fluid drafts array is fixed-length and items are edited in-place (not sorted or spliced), index keys are technically safe here. However, if the array ever becomes reorderable (drag-to-reorder drink slots), index keys will cause React to incorrectly reuse DOM nodes, resulting in input value mixups. The pattern is borderline given the current fixed-length assumption.",
-      "fix": "If the `FluidPresetDraft` type has a stable `id` field, use that. If not, this is acceptable as-is — add a comment confirming the fixed-length assumption so future developers understand the constraint.",
+      "fix": "If the `FluidPresetDraft` type has a stable `id` field, use that. If not, this is acceptable as-is \u2014 add a comment confirming the fixed-length assumption so future developers understand the constraint.",
       "implemented": false
     },
     {
@@ -256,7 +270,7 @@
       "category": "simplicity",
       "file": "src/components/settings/health/DemographicsSection.tsx",
       "line": 145,
-      "title": "Inline IIFE for feetInches computation — would be cleaner as a named helper",
+      "title": "Inline IIFE for feetInches computation \u2014 would be cleaner as a named helper",
       "description": "There are four separate `const x = (() => { ... })()` IIFE patterns (lines 145-177) for converting health profile values to display values. These are readable enough in isolation but add nesting. The component is already long (400+ lines), and these could be extracted into small pure functions in a `healthProfileDisplay.ts` utility file to make the component body cleaner.",
       "fix": "Extract `computeFeetInches(heightCm)`, `computeStartingWeightDisplay(weightKg, unitSystem)`, etc. as pure functions. This also makes them independently testable.",
       "implemented": false
@@ -270,13 +284,16 @@
       "title": "motion.section does not have an accessible name for landmark navigation",
       "description": "The `<motion.section>` elements rendered by `SectionShell` (and direct `<section>` elements in `FeaturesSection` and `HowItWorksSection`) do not have `aria-label` or `aria-labelledby` attributes. Screen reader users navigating by landmarks will hear 'section' repeated for every snap section with no differentiation. The `id` prop is present (for anchor links) but not used as the accessible name.",
       "fix": "Add `aria-labelledby` pointing to the heading element inside each section, or `aria-label` with a short descriptor. For example, in `SectionShell`: `aria-labelledby={id ? `${id}-heading` : undefined}` and then add `id={`${id}-heading`}` to the `<h2>` inside.",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     }
   ],
   "summary": {
     "critical": 0,
-    "high": 4,
-    "moderate": 13,
-    "nice_to_have": 4
+    "high": 0,
+    "moderate": 9,
+    "nice_to_have": 3,
+    "archived": 8
   }
 }

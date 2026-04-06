@@ -9,7 +9,7 @@
  * @exports getCelebration — sole export, returns CelebrationConfig for a completed habit
  *
  * @consumers
- *   - src/hooks/useQuickCapture.ts (sole consumer)
+ *   - src/hooks/useCelebrationTrigger.ts (sole consumer)
  */
 import type { HabitStreakSummary } from "./habitAggregates";
 import type { HabitConfig } from "./habitTemplates";

@@ -1,6 +1,7 @@
 import type { FoodDigestionMetadata, FoodGroup } from "@shared/foodRegistry";
 import type { ColumnDef } from "@tanstack/react-table";
-import { useEffect, useState } from "react";
+import { useCurrentMinute } from "@/hooks/useCurrentMinute";
+import { formatRelativeTime } from "@/lib/dateUtils";
 import { AiBadge } from "@/components/patterns/database/AiBadge";
 import { BristolBreakdown } from "@/components/patterns/database/BristolBreakdown";
 import type { StatusFilterValue } from "@/components/patterns/database/FilterSheet";
@@ -96,60 +97,13 @@ export interface FoodDatabaseRow {
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
-const MS_PER_MINUTE = 60_000;
-const MS_PER_HOUR = 3_600_000;
-const MS_PER_DAY = 86_400_000;
-
-/**
- * Format a timestamp as a relative time string (e.g., "2 days ago").
- * Returns "Never" when the timestamp is 0 or missing.
- */
-function formatRelativeTime(timestamp: number): string {
-  if (timestamp <= 0) return "Never";
-
-  const now = Date.now();
-  const diff = now - timestamp;
-
-  if (diff < 0) return "Just now";
-  if (diff < MS_PER_MINUTE) return "Just now";
-  if (diff < MS_PER_HOUR) {
-    const mins = Math.floor(diff / MS_PER_MINUTE);
-    return `${mins}m ago`;
-  }
-  if (diff < MS_PER_DAY) {
-    const hours = Math.floor(diff / MS_PER_HOUR);
-    return `${hours}h ago`;
-  }
-  if (diff < 30 * MS_PER_DAY) {
-    const days = Math.floor(diff / MS_PER_DAY);
-    return `${days}d ago`;
-  }
-  if (diff < 365 * MS_PER_DAY) {
-    const months = Math.floor(diff / (30 * MS_PER_DAY));
-    return `${months}mo ago`;
-  }
-  const years = Math.floor(diff / (365 * MS_PER_DAY));
-  return `${years}y ago`;
-}
-
-const RELATIVE_TIME_REFRESH_MS = 60_000;
-
 /**
  * Renders a relative time string that auto-refreshes every 60 seconds
- * so the display stays current without a full page reload.
+ * via a single shared global interval (useCurrentMinute).
  */
 function RelativeTime({ timestamp }: { timestamp: number }) {
-  const [label, setLabel] = useState(() => formatRelativeTime(timestamp));
-
-  useEffect(() => {
-    setLabel(formatRelativeTime(timestamp));
-    const id = setInterval(() => {
-      setLabel(formatRelativeTime(timestamp));
-    }, RELATIVE_TIME_REFRESH_MS);
-    return () => clearInterval(id);
-  }, [timestamp]);
-
-  return <>{label}</>;
+  const nowMs = useCurrentMinute();
+  return <>{formatRelativeTime(timestamp, nowMs)}</>;
 }
 
 /**
@@ -189,7 +143,9 @@ export function buildColumns(): ColumnDef<FoodDatabaseRow>[] {
         const { name, overrideStatus } = row.original;
         return (
           <div data-slot="food-cell" className="flex items-center gap-1.5">
-            <span className="font-display text-sm font-semibold text-[var(--text)]">{name}</span>
+            <span className="font-display text-sm font-semibold text-[var(--text)]">
+              {name}
+            </span>
             {overrideStatus !== undefined && (
               <span className="inline-flex shrink-0 items-center rounded border border-slate-600 bg-slate-800 px-1 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wide text-slate-300">
                 Manual
@@ -209,14 +165,19 @@ export function buildColumns(): ColumnDef<FoodDatabaseRow>[] {
       cell: ({ row }) => {
         const { stage } = row.original;
         if (stage === undefined) {
-          return <span className="font-mono text-xs text-[var(--text-faint)]">&mdash;</span>;
+          return (
+            <span className="font-mono text-xs text-[var(--text-faint)]">
+              &mdash;
+            </span>
+          );
         }
         return (
           <span
             data-slot="stage-cell"
             className="inline-flex h-6 w-6 items-center justify-center rounded-full font-mono text-xs font-bold"
             style={{
-              background: "color-mix(in srgb, var(--text-muted) 15%, transparent)",
+              background:
+                "color-mix(in srgb, var(--text-muted) 15%, transparent)",
               color: "var(--text-muted)",
             }}
           >
@@ -252,8 +213,10 @@ export function buildColumns(): ColumnDef<FoodDatabaseRow>[] {
         if (selected.length === 0) return true;
         const { primaryStatus, tendency } = row.original;
         return selected.some((value) => {
-          if (value === "safe-loose") return primaryStatus === "safe" && tendency === "loose";
-          if (value === "safe-hard") return primaryStatus === "safe" && tendency === "hard";
+          if (value === "safe-loose")
+            return primaryStatus === "safe" && tendency === "loose";
+          if (value === "safe-hard")
+            return primaryStatus === "safe" && tendency === "hard";
           return value === primaryStatus;
         });
       },
@@ -268,7 +231,11 @@ export function buildColumns(): ColumnDef<FoodDatabaseRow>[] {
       cell: ({ row }) => {
         const { foodGroup } = row.original;
         if (foodGroup === undefined) {
-          return <span className="font-mono text-xs text-[var(--text-faint)]">&mdash;</span>;
+          return (
+            <span className="font-mono text-xs text-[var(--text-faint)]">
+              &mdash;
+            </span>
+          );
         }
         const colors = GROUP_COLORS[foodGroup];
         return (
@@ -288,7 +255,10 @@ export function buildColumns(): ColumnDef<FoodDatabaseRow>[] {
       filterFn: (row, _columnId, filterValue) => {
         const selected = coerceFilterValues<FoodGroup>(filterValue);
         if (selected.length === 0) return true;
-        return row.original.foodGroup !== undefined && selected.includes(row.original.foodGroup);
+        return (
+          row.original.foodGroup !== undefined &&
+          selected.includes(row.original.foodGroup)
+        );
       },
     },
 
@@ -302,7 +272,11 @@ export function buildColumns(): ColumnDef<FoodDatabaseRow>[] {
         const raw = getValue();
         const avg = typeof raw === "number" ? raw : null;
         if (avg === null) {
-          return <span className="font-mono text-xs text-[var(--text-faint)]">&mdash;</span>;
+          return (
+            <span className="font-mono text-xs text-[var(--text-faint)]">
+              &mdash;
+            </span>
+          );
         }
         return (
           <span
@@ -326,11 +300,18 @@ export function buildColumns(): ColumnDef<FoodDatabaseRow>[] {
       cell: ({ row }) => {
         const { avgTransitMinutes } = row.original;
         if (avgTransitMinutes === null) {
-          return <span className="font-mono text-xs text-[var(--text-faint)]">&mdash;</span>;
+          return (
+            <span className="font-mono text-xs text-[var(--text-faint)]">
+              &mdash;
+            </span>
+          );
         }
         const hours = Math.round(avgTransitMinutes / 6) / 10;
         return (
-          <span data-slot="transit-avg-cell" className="font-mono text-sm text-[var(--text-muted)]">
+          <span
+            data-slot="transit-avg-cell"
+            className="font-mono text-sm text-[var(--text-muted)]"
+          >
             {hours}h
           </span>
         );
@@ -347,7 +328,10 @@ export function buildColumns(): ColumnDef<FoodDatabaseRow>[] {
       cell: ({ row }) => {
         const { resolvedTransits, totalTrials } = row.original;
         return (
-          <span data-slot="trials-cell" className="font-mono text-sm text-[var(--text-muted)]">
+          <span
+            data-slot="trials-cell"
+            className="font-mono text-sm text-[var(--text-muted)]"
+          >
             {resolvedTransits}
             <span className="text-[var(--text-faint)]">/{totalTrials}</span>
           </span>
@@ -365,7 +349,10 @@ export function buildColumns(): ColumnDef<FoodDatabaseRow>[] {
       cell: ({ row }) => {
         const { lastTrialAt } = row.original;
         return (
-          <span data-slot="last-tested-cell" className="font-mono text-xs text-[var(--text-muted)]">
+          <span
+            data-slot="last-tested-cell"
+            className="font-mono text-xs text-[var(--text-muted)]"
+          >
             <RelativeTime timestamp={lastTrialAt} />
           </span>
         );
@@ -382,7 +369,11 @@ export function buildColumns(): ColumnDef<FoodDatabaseRow>[] {
       cell: ({ row }) => {
         const { aiVerdict } = row.original;
         if (aiVerdict === undefined) {
-          return <span className="font-mono text-xs text-[var(--text-faint)]">&mdash;</span>;
+          return (
+            <span className="font-mono text-xs text-[var(--text-faint)]">
+              &mdash;
+            </span>
+          );
         }
         return <AiBadge type={aiVerdict} />;
       },

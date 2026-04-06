@@ -92,6 +92,10 @@ const PROTECTED_PHRASES = [
   "peanut butter and jelly",
   "peanut butter and jam",
 ];
+const PROTECTED_PHRASE_PATTERNS = PROTECTED_PHRASES.map((phrase) => ({
+  phrase,
+  pattern: new RegExp(phrase, "gi"),
+}));
 const MIN_FOOD_MATCH_CHARS = 3;
 
 const DEFAULT_FUSE_OPTIONS: IFuseOptions<FoodSearchDocument> = {
@@ -172,10 +176,11 @@ function protectPhrases(raw: string): {
   let protectedText = raw;
   const placeholders = new Map<string, string>();
 
-  for (const phrase of PROTECTED_PHRASES) {
+  for (const { phrase, pattern } of PROTECTED_PHRASE_PATTERNS) {
     const placeholder = `__food_match_${placeholders.size}__`;
-    const pattern = new RegExp(phrase, "gi");
+    pattern.lastIndex = 0;
     if (!pattern.test(protectedText)) continue;
+    pattern.lastIndex = 0;
     protectedText = protectedText.replace(pattern, placeholder);
     placeholders.set(placeholder, phrase);
   }

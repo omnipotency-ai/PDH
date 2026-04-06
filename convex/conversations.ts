@@ -5,9 +5,8 @@ import { INPUT_SAFETY_LIMITS, sanitizeRequiredText } from "./lib/inputSafety";
 
 // Store a user message (reply to Dr. Poo).
 //
-// Timestamp is accepted as a client arg for Convex deterministic replay —
-// mutations must be deterministic, so Date.now() inside a mutation would break
-// replay. The client generates the timestamp and the server stores it as-is.
+// Timestamp is accepted as a client arg for deterministic replay.
+// The client generates the timestamp and the server stores it as-is.
 export const addUserMessage = mutation({
   args: {
     content: v.string(),
@@ -80,13 +79,8 @@ export const list = query({
 
 // Get all messages for a specific report.
 //
-// NOTE: The by_aiAnalysisId index is not scoped by userId — it reads across all
-// users' messages for a given report ID. We filter by userId in-memory for
-// security. A compound index (by_userId_aiAnalysisId) would be more efficient
-// but the conversations schema already has by_userId, by_userId_timestamp,
-// by_aiAnalysisId, and search_content indexes. Adding another is a schema
-// migration — tracked as a future improvement. The in-memory filter is safe
-// because report IDs are not guessable (Convex document IDs).
+// Uses the by_userId_aiAnalysisId compound index to enforce tenant isolation
+// at the database level, eliminating the prior in-memory userId filter.
 export const listByReport = query({
   args: {
     aiAnalysisId: v.id("aiAnalyses"),
@@ -95,27 +89,35 @@ export const listByReport = query({
     const { userId } = await requireAuth(ctx);
     const messages = await ctx.db
       .query("conversations")
-      .withIndex("by_aiAnalysisId", (q) => q.eq("aiAnalysisId", args.aiAnalysisId))
+      .withIndex("by_userId_aiAnalysisId", (q) =>
+        q.eq("userId", userId).eq("aiAnalysisId", args.aiAnalysisId),
+      )
       .collect();
-    // Filter by userId for security, sort chronologically
-    return messages.filter((m) => m.userId === userId).sort((a, b) => a.timestamp - b.timestamp);
+    // Sort chronologically — index does not guarantee timestamp order
+    return messages.sort((a, b) => a.timestamp - b.timestamp);
   },
 });
 
-// Get all messages within a date range (for weekly summaries)
+// Get messages within a date range (for weekly summaries and conversation panel).
+// Accepts an optional limit (default 500) to prevent unbounded result sets.
 export const listByDateRange = query({
   args: {
     startMs: v.number(),
     endMs: v.number(),
+    limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const { userId } = await requireAuth(ctx);
+    const limit = Math.min(Math.max(args.limit ?? 500, 1), 500);
     const messages = await ctx.db
       .query("conversations")
       .withIndex("by_userId_timestamp", (q) =>
-        q.eq("userId", userId).gte("timestamp", args.startMs).lte("timestamp", args.endMs),
+        q
+          .eq("userId", userId)
+          .gte("timestamp", args.startMs)
+          .lte("timestamp", args.endMs),
       )
-      .collect();
+      .take(limit);
     return messages.sort((a, b) => a.timestamp - b.timestamp);
   },
 });
@@ -132,12 +134,19 @@ export const search = query({
   handler: async (ctx, args) => {
     const { userId } = await requireAuth(ctx);
     const limit = Math.min(Math.max(args.limit ?? 50, 1), 200);
-    const keyword = sanitizeRequiredText(args.keyword, "Search keyword", INPUT_SAFETY_LIMITS.searchKeyword, {
-      preserveNewlines: false,
-    });
+    const keyword = sanitizeRequiredText(
+      args.keyword,
+      "Search keyword",
+      INPUT_SAFETY_LIMITS.searchKeyword,
+      {
+        preserveNewlines: false,
+      },
+    );
     const messages = await ctx.db
       .query("conversations")
-      .withSearchIndex("search_content", (q) => q.search("content", keyword).eq("userId", userId))
+      .withSearchIndex("search_content", (q) =>
+        q.search("content", keyword).eq("userId", userId),
+      )
       .take(limit);
     return messages;
   },
@@ -165,7 +174,9 @@ export const claimPendingReplies = mutation({
       .withIndex("by_userId_timestamp", (q) => q.eq("userId", userId))
       .order("desc")
       .take(100);
-    const pending = recentMessages.filter((m) => m.role === "user" && m.aiAnalysisId === undefined);
+    const pending = recentMessages.filter(
+      (m) => m.role === "user" && m.aiAnalysisId === undefined,
+    );
     if (pending.length > CLAIM_PENDING_CAP) {
       console.warn(
         `[claimPendingReplies] ${pending.length} pending messages for user ${userId}, capping at ${CLAIM_PENDING_CAP}`,

@@ -1,18 +1,6 @@
-import {
-  addDays,
-  differenceInCalendarDays,
-  format,
-  startOfDay,
-} from "date-fns";
+import { addDays, differenceInCalendarDays, format, startOfDay } from "date-fns";
 import { CalendarDays } from "lucide-react";
-import {
-  lazy,
-  Suspense,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AiInsightsSection } from "@/components/track/dr-poo/AiInsightsSection";
 
@@ -32,14 +20,10 @@ import { HabitDetailSheet } from "@/components/track/quick-capture/HabitDetailSh
 import { TodayStatusRow } from "@/components/track/TodayStatusRow";
 import { TodayLog } from "@/components/track/today-log";
 import { Button } from "@/components/ui/button";
-import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { ConfettiBurst } from "@/components/ui/Confetti";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useResponsiveShellMode } from "@/components/ui/responsive-shell";
 import { useSyncedLogsContext } from "@/contexts/SyncedLogsContext";
 import { useAiInsights } from "@/hooks/useAiInsights";
@@ -54,17 +38,14 @@ import { useQuickCapture } from "@/hooks/useQuickCapture";
 import { useUnresolvedFoodQueue } from "@/hooks/useUnresolvedFoodQueue";
 import { useUnresolvedFoodToast } from "@/hooks/useUnresolvedFoodToast";
 import { useWeeklySummaryAutoTrigger } from "@/hooks/useWeeklySummaryAutoTrigger";
+import { normalizeActivityTypeKey } from "@/lib/activityTypeUtils";
 import { bristolToConsistency, normalizeEpisodesCount } from "@/lib/analysis";
 import { formatLocalDateKey, getDateScopedTimestamp } from "@/lib/dateUtils";
 import { getErrorMessage } from "@/lib/errors";
 import type { HabitConfig } from "@/lib/habitTemplates";
 import { isSleepHabit } from "@/lib/habitTemplates";
 import { normalizeFluidItemName } from "@/lib/normalizeFluidName";
-import {
-  useAddSyncedLog,
-  useRemoveSyncedLog,
-  useUpdateSyncedLog,
-} from "@/lib/sync";
+import { useAddSyncedLog, useRemoveSyncedLog, useUpdateSyncedLog } from "@/lib/sync";
 import { MS_PER_DAY } from "@/lib/timeConstants";
 import { getDisplayWeightUnit } from "@/lib/units";
 import { useStore } from "@/store";
@@ -122,39 +103,19 @@ function TrackDatePicker({
   );
 }
 
-function toActivityTypeKey(value: string): string {
-  const key = value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-  if (/^walk(ing)?$/.test(key)) return "walk";
-  return key;
-}
-
-function getHabitsForActivityType(
-  habits: HabitConfig[],
-  activityType: string,
-): HabitConfig[] {
+function getHabitsForActivityType(habits: HabitConfig[], activityType: string): HabitConfig[] {
   if (activityType === "sleep") {
     return habits.filter((habit) => isSleepHabit(habit));
   }
-  return habits.filter(
-    (habit) => toActivityTypeKey(habit.name) === activityType,
-  );
+  return habits.filter((habit) => normalizeActivityTypeKey(habit.name) === activityType);
 }
 
-function getActivityHabitLogValue(
-  habit: HabitConfig,
-  durationMinutes: number,
-): number {
-  return habit.unit === "hours"
-    ? Math.round((durationMinutes / 60) * 100) / 100
-    : durationMinutes;
+function getActivityHabitLogValue(habit: HabitConfig, durationMinutes: number): number {
+  return habit.unit === "hours" ? Math.round((durationMinutes / 60) * 100) / 100 : durationMinutes;
 }
 
 export default function TrackPage() {
-  const logs = useSyncedLogsContext();
+  const { logs } = useSyncedLogsContext();
   const addSyncedLog = useAddSyncedLog();
   const removeSyncedLog = useRemoveSyncedLog();
   const updateSyncedLog = useUpdateSyncedLog();
@@ -173,17 +134,14 @@ export default function TrackPage() {
   // Auto-trigger LLM matching for food logs with unresolved items (no-op if no API key)
   useFoodLlmMatching();
 
-  const { celebration, celebrateLog, celebrateGoalComplete, clearCelebration } =
-    useCelebration();
+  const { celebration, celebrateLog, celebrateGoalComplete, clearCelebration } = useCelebration();
 
   // useLiveClock fires once per minute, aligned to the clock minute.
   // On each tick we derive a fresh `now` from Date so all downstream
   // computations (todayStart, selectedDate, formatted header) stay current.
   useLiveClock();
   const now = new Date();
-  const [selectedDate, setSelectedDate] = useState(() =>
-    startOfDay(new Date()),
-  );
+  const [selectedDate, setSelectedDate] = useState(() => startOfDay(new Date()));
 
   const todayStart = useMemo(() => startOfDay(now).getTime(), [now]);
   const todayEnd = todayStart + MS_PER_DAY;
@@ -195,8 +153,7 @@ export default function TrackPage() {
   const selectedStart = selectedDate.getTime();
   const selectedEnd = addDays(selectedDate, 1).getTime();
   const selectedCaptureTimestamp = useMemo(
-    () =>
-      dayOffset === 0 ? undefined : getDateScopedTimestamp(selectedDate, now),
+    () => (dayOffset === 0 ? undefined : getDateScopedTimestamp(selectedDate, now)),
     [dayOffset, now, selectedDate],
   );
 
@@ -215,10 +172,7 @@ export default function TrackPage() {
   } = useDayStats({ logs, todayStart: selectedStart, todayEnd: selectedEnd });
 
   const selectedLogs = useMemo(
-    () =>
-      logs.filter(
-        (log) => log.timestamp >= selectedStart && log.timestamp < selectedEnd,
-      ),
+    () => logs.filter((log) => log.timestamp >= selectedStart && log.timestamp < selectedEnd),
     [logs, selectedStart, selectedEnd],
   );
 
@@ -239,9 +193,7 @@ export default function TrackPage() {
 
     const destructiveHabits = habits.filter(
       (habit) =>
-        habit.kind === "destructive" &&
-        typeof habit.dailyCap === "number" &&
-        habit.dailyCap > 0,
+        habit.kind === "destructive" && typeof habit.dailyCap === "number" && habit.dailyCap > 0,
     );
 
     if (destructiveHabits.length === 0) return;
@@ -253,9 +205,7 @@ export default function TrackPage() {
       const total = habitLogs
         .filter(
           (entry) =>
-            entry.habitId === habit.id &&
-            entry.at >= yesterdayStart &&
-            entry.at < yesterdayEnd,
+            entry.habitId === habit.id && entry.at >= yesterdayStart && entry.at < yesterdayEnd,
         )
         .reduce((sum, entry) => sum + entry.value, 0);
 
@@ -309,12 +259,7 @@ export default function TrackPage() {
       }
       setReviewQueueOpen(true);
     } catch (err: unknown) {
-      toast.error(
-        getErrorMessage(
-          err,
-          "Unable to load unresolved items. Check connection.",
-        ),
-      );
+      toast.error(getErrorMessage(err, "Unable to load unresolved items. Check connection."));
     }
   }, [unresolvedQueue]);
   useUnresolvedFoodToast(logs, now.getTime(), handleReviewUnresolved);
@@ -375,9 +320,7 @@ export default function TrackPage() {
   const detailDaySummaries = useMemo(
     () =>
       detailSheetHabit
-        ? daySummaries.filter(
-            (summary) => summary.habitId === detailSheetHabit.id,
-          )
+        ? daySummaries.filter((summary) => summary.habitId === detailSheetHabit.id)
         : [],
     [daySummaries, detailSheetHabit],
   );
@@ -394,16 +337,11 @@ export default function TrackPage() {
       }),
     [todayDate],
   );
-  const handleJumpToToday = useCallback(
-    () => setSelectedDate(todayDate),
-    [todayDate],
-  );
+  const handleJumpToToday = useCallback(() => setSelectedDate(todayDate), [todayDate]);
   const handleSelectDate = useCallback(
     (date: Date) => {
       const normalized = startOfDay(date);
-      setSelectedDate(
-        normalized.getTime() > todayDate.getTime() ? todayDate : normalized,
-      );
+      setSelectedDate(normalized.getTime() > todayDate.getTime() ? todayDate : normalized);
     },
     [todayDate],
   );
@@ -447,9 +385,7 @@ export default function TrackPage() {
             for (const item of items) {
               const normalizedName = normalizeFluidItemName(item?.name);
               const matchingHabit = habits.find(
-                (h) =>
-                  h.logAs === "fluid" &&
-                  normalizeFluidItemName(h.name) === normalizedName,
+                (h) => h.logAs === "fluid" && normalizeFluidItemName(h.name) === normalizedName,
               );
               if (matchingHabit) {
                 removeHabitLog(matchingHabit.id, logToDelete.timestamp);
@@ -462,7 +398,7 @@ export default function TrackPage() {
             removeHabitLog(habitId, logToDelete.timestamp);
           }
         } else if (logToDelete.type === "activity") {
-          const activityType = toActivityTypeKey(
+          const activityType = normalizeActivityTypeKey(
             String(logToDelete.data?.activityType ?? ""),
           );
           if (activityType === "sleep") {
@@ -473,7 +409,7 @@ export default function TrackPage() {
             }
           } else {
             for (const habit of habits) {
-              const habitActivityType = toActivityTypeKey(habit.name);
+              const habitActivityType = normalizeActivityTypeKey(habit.name);
               if (habitActivityType === activityType) {
                 removeHabitLog(habit.id, logToDelete.timestamp);
               }
@@ -486,11 +422,7 @@ export default function TrackPage() {
     }
   };
 
-  const handleSave = async (
-    id: string,
-    data: LogPayloadData,
-    timestamp?: number,
-  ) => {
+  const handleSave = async (id: string, data: LogPayloadData, timestamp?: number) => {
     try {
       const log = logs.find((entry) => entry.id === id);
       if (!log) {
@@ -508,15 +440,12 @@ export default function TrackPage() {
 
       if (log.type === "fluid") {
         const nextFluidData = data as FluidLogData;
-        const previousItems = Array.isArray(log.data?.items)
-          ? log.data.items
-          : [];
+        const previousItems = Array.isArray(log.data?.items) ? log.data.items : [];
         for (const item of previousItems) {
           const normalizedName = normalizeFluidItemName(item?.name);
           const matchingHabit = habits.find(
             (habit) =>
-              habit.logAs === "fluid" &&
-              normalizeFluidItemName(habit.name) === normalizedName,
+              habit.logAs === "fluid" && normalizeFluidItemName(habit.name) === normalizedName,
           );
           if (matchingHabit) {
             removeHabitLog(matchingHabit.id, log.timestamp);
@@ -532,8 +461,7 @@ export default function TrackPage() {
 
           const matchingHabit = habits.find(
             (habit) =>
-              habit.logAs === "fluid" &&
-              normalizeFluidItemName(habit.name) === normalizedName,
+              habit.logAs === "fluid" && normalizeFluidItemName(habit.name) === normalizedName,
           );
           if (!matchingHabit) continue;
 
@@ -547,16 +475,13 @@ export default function TrackPage() {
         }
       } else if (log.type === "habit") {
         const nextHabitData = data as HabitLogData;
-        const previousHabitId =
-          typeof log.data?.habitId === "string" ? log.data.habitId : null;
+        const previousHabitId = typeof log.data?.habitId === "string" ? log.data.habitId : null;
         if (previousHabitId) {
           removeHabitLog(previousHabitId, log.timestamp);
         }
 
         const nextHabitId =
-          typeof nextHabitData.habitId === "string"
-            ? nextHabitData.habitId
-            : null;
+          typeof nextHabitData.habitId === "string" ? nextHabitData.habitId : null;
         const nextQuantity = Number(nextHabitData.quantity ?? 1);
         if (nextHabitId && Number.isFinite(nextQuantity) && nextQuantity > 0) {
           addHabitLog({
@@ -569,27 +494,17 @@ export default function TrackPage() {
         }
       } else if (log.type === "activity") {
         const nextActivityData = data as ActivityLogData;
-        const previousActivityType = toActivityTypeKey(
-          String(log.data?.activityType ?? ""),
-        );
-        for (const habit of getHabitsForActivityType(
-          habits,
-          previousActivityType,
-        )) {
+        const previousActivityType = normalizeActivityTypeKey(String(log.data?.activityType ?? ""));
+        for (const habit of getHabitsForActivityType(habits, previousActivityType)) {
           removeHabitLog(habit.id, log.timestamp);
         }
 
-        const nextActivityType = toActivityTypeKey(
+        const nextActivityType = normalizeActivityTypeKey(
           String(nextActivityData.activityType ?? ""),
         );
-        const nextDurationMinutes = Number(
-          nextActivityData.durationMinutes ?? 0,
-        );
+        const nextDurationMinutes = Number(nextActivityData.durationMinutes ?? 0);
         if (Number.isFinite(nextDurationMinutes) && nextDurationMinutes > 0) {
-          for (const habit of getHabitsForActivityType(
-            habits,
-            nextActivityType,
-          )) {
+          for (const habit of getHabitsForActivityType(habits, nextActivityType)) {
             addHabitLog({
               id: crypto.randomUUID(),
               habitId: habit.id,
@@ -703,14 +618,10 @@ export default function TrackPage() {
         </section>
 
         {/* ── Tablet (md): Column 2 = TodayLog ── */}
-        {isTablet && (
-          <section className="space-y-5 min-w-0">{todayLog}</section>
-        )}
+        {isTablet && <section className="space-y-5 min-w-0">{todayLog}</section>}
 
         {/* ── Desktop (xl): Column 2 = AiInsights ── */}
-        {isDesktop && (
-          <section className="space-y-5 min-w-0">{aiInsightsSection}</section>
-        )}
+        {isDesktop && <section className="space-y-5 min-w-0">{aiInsightsSection}</section>}
 
         {/* ── Mobile: TodayLog below inputs ── */}
         {isMobile && <aside className="space-y-5 min-w-0">{todayLog}</aside>}
@@ -734,21 +645,12 @@ export default function TrackPage() {
 
       <HabitDetailSheet
         habit={detailSheetHabit}
-        count={
-          detailSheetHabit ? (selectedHabitCounts[detailSheetHabit.id] ?? 0) : 0
-        }
+        count={detailSheetHabit ? (selectedHabitCounts[detailSheetHabit.id] ?? 0) : 0}
         {...(detailSheetHabit?.logAs === "fluid" && {
-          fluidMl:
-            selectedFluidTotalsByName[
-              normalizeFluidItemName(detailSheetHabit.name)
-            ],
+          fluidMl: selectedFluidTotalsByName[normalizeFluidItemName(detailSheetHabit.name)],
         })}
         daySummaries={detailDaySummaries}
-        streakSummary={
-          detailSheetHabit
-            ? (streakSummaries[detailSheetHabit.id] ?? null)
-            : null
-        }
+        streakSummary={detailSheetHabit ? (streakSummaries[detailSheetHabit.id] ?? null) : null}
         onClose={handleCloseDetailSheet}
       />
 

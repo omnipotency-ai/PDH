@@ -72,11 +72,19 @@ export function ActivityGroupRow({ group, expanded, onToggle }: ActivityGroupRow
           </span>
           {latest && !expanded && (
             <p className="mt-0.5 font-mono text-xs text-[var(--color-text-tertiary)]">
-              {format(latest.timestamp, "HH:mm")}
-              {`  ${latestLabel}`}
-              {latestDuration !== null && Number.isFinite(latestDuration) && latestDuration > 0
-                ? `  ${formatDuration(latestDuration, latestType)}`
-                : ""}
+              <span className="whitespace-nowrap">{format(latest.timestamp, "HH:mm")}</span>
+              {(latestLabel || (latestDuration !== null && Number.isFinite(latestDuration) && latestDuration > 0)) && (
+                <span className="ml-2 inline-flex items-center gap-1 whitespace-nowrap">
+                  {!isSleepOnlyGroup && <span>{latestLabel}</span>}
+                  {!isSleepOnlyGroup &&
+                    latestDuration !== null &&
+                    Number.isFinite(latestDuration) &&
+                    latestDuration > 0 && <span aria-hidden="true">·</span>}
+                  {latestDuration !== null && Number.isFinite(latestDuration) && latestDuration > 0 && (
+                    <span>{formatDuration(latestDuration, latestType)}</span>
+                  )}
+                </span>
+              )}
             </p>
           )}
         </div>

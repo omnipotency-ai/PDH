@@ -75,8 +75,7 @@ export function CircularProgressRing({
 
   // Fractions
   const primaryFraction = Math.min(value / safeGoal, 1);
-  const secondaryFraction =
-    secondaryValue != null ? Math.min(secondaryValue / safeGoal, 1) : 0;
+  const secondaryFraction = secondaryValue != null ? Math.min(secondaryValue / safeGoal, 1) : 0;
 
   // Offsets
   const primaryOffset = fractionToOffset(primaryFraction, circumference);
@@ -89,10 +88,7 @@ export function CircularProgressRing({
       : primaryOffset;
   const secondaryPreviewOffset =
     secondaryPreviewValue != null
-      ? fractionToOffset(
-          Math.min(secondaryPreviewValue / safeGoal, 1),
-          circumference,
-        )
+      ? fractionToOffset(Math.min(secondaryPreviewValue / safeGoal, 1), circumference)
       : secondaryOffset;
 
   // Colours
@@ -106,14 +102,10 @@ export function CircularProgressRing({
   // ── Animated offsets via spring ─────────────────────────────────────────
   const springConfig = { stiffness: 80, damping: 20 };
 
-  const motionPrimary = useMotionValue(
-    animateIn ? circumference : primaryOffset,
-  );
+  const motionPrimary = useMotionValue(animateIn ? circumference : primaryOffset);
   const springPrimary = useSpring(motionPrimary, springConfig);
 
-  const motionSecondary = useMotionValue(
-    animateIn ? circumference : secondaryOffset,
-  );
+  const motionSecondary = useMotionValue(animateIn ? circumference : secondaryOffset);
   const springSecondary = useSpring(motionSecondary, springConfig);
 
   useEffect(() => {

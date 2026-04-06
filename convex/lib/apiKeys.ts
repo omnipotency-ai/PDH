@@ -256,10 +256,10 @@ export async function storeApiKey(
   ctx: MutationCtx,
   userId: string,
   key: string,
-  now?: number,
+  now: number,
 ): Promise<void> {
   const encryptedApiKey = await encryptApiKey(key);
-  const updatedAt = now ?? Date.now();
+  const updatedAt = now;
   const profiles = await listProfilesByUserId(ctx, userId);
 
   if (profiles.length === 0) {
@@ -325,7 +325,7 @@ export async function getApiKey(
 export async function deleteApiKey(
   ctx: MutationCtx,
   userId: string,
-  now?: number,
+  now: number,
 ): Promise<void> {
   const profiles = await listProfilesByUserId(ctx, userId);
   if (profiles.length === 0) {
@@ -334,6 +334,6 @@ export async function deleteApiKey(
 
   await consolidateProfiles(ctx, profiles, {
     encryptedApiKey: null,
-    updatedAt: now ?? Date.now(),
+    updatedAt: now,
   });
 }

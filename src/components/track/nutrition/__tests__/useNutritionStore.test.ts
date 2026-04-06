@@ -302,6 +302,20 @@ describe("reducer ADD_TO_STAGING", () => {
     expect(s2.stagingItems[0].calories).toBe(expectedCal);
   });
 
+  it("clamps portionG to MAX_PORTION_G on repeated ADD_TO_STAGING (W0-08)", () => {
+    // toast: defaultPortionG=30, unitWeightG=30 — 17 taps would reach 510g without the clamp
+    let state = makeState();
+    for (let i = 0; i < 20; i++) {
+      state = nutritionReducer(state, {
+        type: "ADD_TO_STAGING",
+        canonicalName: "toast",
+      });
+    }
+    expect(state.stagingItems).toHaveLength(1);
+    expect(state.stagingItems[0].portionG).toBe(MAX_PORTION_G);
+    expect(state.stagingItems[0].portionG).toBeLessThanOrEqual(MAX_PORTION_G);
+  });
+
   it("returns unchanged state when canonicalName is not in registry", () => {
     const state = makeState();
     const next = nutritionReducer(state, {

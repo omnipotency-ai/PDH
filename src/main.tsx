@@ -7,6 +7,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import { ThemeProvider } from "./components/theme-provider";
 import { TooltipProvider } from "./components/ui/tooltip";
+import { THEME_STORAGE_KEY } from "./lib/storageKeys";
 import { registerServiceWorker } from "./registerServiceWorker";
 import "./index.css";
 
@@ -23,7 +24,7 @@ createRoot(rootElement).render(
   <StrictMode>
     <ClerkProvider publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string}>
       <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
-        <ThemeProvider defaultTheme="dark" storageKey="pdh-theme">
+        <ThemeProvider defaultTheme="dark" storageKey={THEME_STORAGE_KEY}>
           <TooltipProvider>
             <App />
           </TooltipProvider>

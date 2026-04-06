@@ -14,6 +14,7 @@ describe("ingredientProfiles", () => {
       tags: ["Breakfast", " egg ", "egg", "Low Residue"],
       lowResidue: true,
       source: "manual",
+      now: Date.now(),
       nutritionPer100g: {
         kcal: 143,
         proteinG: 13,
@@ -38,6 +39,7 @@ describe("ingredientProfiles", () => {
     await t.withIdentity({ subject: userId }).mutation(api.ingredientProfiles.upsert, {
       canonicalName: "xylofruit",
       displayName: "Xylofruit",
+      now: Date.now(),
       nutritionPer100g: {
         kcal: 250,
       },
@@ -45,6 +47,7 @@ describe("ingredientProfiles", () => {
 
     await t.withIdentity({ subject: userId }).mutation(api.ingredientProfiles.upsert, {
       canonicalName: "xylofruit",
+      now: Date.now(),
       nutritionPer100g: {
         proteinG: 8,
       },
@@ -69,6 +72,7 @@ describe("ingredientProfiles", () => {
     await expect(
       t.mutation(api.ingredientProfiles.upsert, {
         canonicalName: "xylofruit",
+        now: Date.now(),
       }),
     ).rejects.toThrow("Not authenticated");
   });

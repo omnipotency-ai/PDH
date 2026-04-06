@@ -54,7 +54,10 @@ describe("profiles.setApiKey", () => {
   it("rejects unauthenticated access", async () => {
     const t = convexTest(schema);
     await expect(
-      t.mutation(api.profiles.setApiKey, { apiKey: VALID_API_KEY }),
+      t.mutation(api.profiles.setApiKey, {
+        apiKey: VALID_API_KEY,
+        now: Date.now(),
+      }),
     ).rejects.toThrow("Not authenticated");
   });
 
@@ -66,6 +69,7 @@ describe("profiles.setApiKey", () => {
     await expect(
       t.withIdentity({ subject: userId }).mutation(api.profiles.setApiKey, {
         apiKey: INVALID_API_KEY,
+        now: Date.now(),
       }),
     ).rejects.toThrow("Invalid API key format");
   });
@@ -77,6 +81,7 @@ describe("profiles.setApiKey", () => {
 
     await t.withIdentity({ subject: userId }).mutation(api.profiles.setApiKey, {
       apiKey: VALID_API_KEY,
+      now: Date.now(),
     });
 
     // Verify the key is stored encrypted, not in plaintext or legacy base64.
@@ -107,9 +112,11 @@ describe("profiles.setApiKey", () => {
 
     await t.withIdentity({ subject: userId }).mutation(api.profiles.setApiKey, {
       apiKey: firstKey,
+      now: Date.now(),
     });
     await t.withIdentity({ subject: userId }).mutation(api.profiles.setApiKey, {
       apiKey: secondKey,
+      now: Date.now(),
     });
 
     await t.run(async (ctx) => {
@@ -130,6 +137,7 @@ describe("profiles.setApiKey", () => {
 
     await t.withIdentity({ subject: userId }).mutation(api.profiles.setApiKey, {
       apiKey: VALID_API_KEY,
+      now: Date.now(),
     });
 
     // Verify the profile was created with defaults and the key was stored
@@ -185,6 +193,7 @@ describe("profiles.setApiKey", () => {
 
     await t.withIdentity({ subject: userId }).mutation(api.profiles.setApiKey, {
       apiKey: VALID_API_KEY,
+      now: Date.now(),
     });
 
     await t.run(async (ctx) => {
@@ -210,7 +219,9 @@ describe("profiles.setApiKey", () => {
 describe("profiles.removeApiKey", () => {
   it("rejects unauthenticated access", async () => {
     const t = convexTest(schema);
-    await expect(t.mutation(api.profiles.removeApiKey, {})).rejects.toThrow(
+    await expect(
+      t.mutation(api.profiles.removeApiKey, { now: Date.now() }),
+    ).rejects.toThrow(
       "Not authenticated",
     );
   });
@@ -223,6 +234,7 @@ describe("profiles.removeApiKey", () => {
     // First store a key
     await t.withIdentity({ subject: userId }).mutation(api.profiles.setApiKey, {
       apiKey: VALID_API_KEY,
+      now: Date.now(),
     });
 
     // Verify it exists
@@ -238,7 +250,7 @@ describe("profiles.removeApiKey", () => {
     // Remove it
     await t
       .withIdentity({ subject: userId })
-      .mutation(api.profiles.removeApiKey, {});
+      .mutation(api.profiles.removeApiKey, { now: Date.now() });
 
     // Verify it's gone
     await t.run(async (ctx) => {
@@ -277,7 +289,7 @@ describe("profiles.removeApiKey", () => {
 
     await t
       .withIdentity({ subject: userId })
-      .mutation(api.profiles.removeApiKey, {});
+      .mutation(api.profiles.removeApiKey, { now: Date.now() });
 
     await t.run(async (ctx) => {
       const profiles = await ctx.db
@@ -297,7 +309,7 @@ describe("profiles.removeApiKey", () => {
     // No profile seeded — should not throw
     await t
       .withIdentity({ subject: userId })
-      .mutation(api.profiles.removeApiKey, {});
+      .mutation(api.profiles.removeApiKey, { now: Date.now() });
   });
 });
 
@@ -330,6 +342,7 @@ describe("profiles.hasServerApiKey", () => {
 
     await t.withIdentity({ subject: userId }).mutation(api.profiles.setApiKey, {
       apiKey: VALID_API_KEY,
+      now: Date.now(),
     });
 
     const result = await t
@@ -345,10 +358,11 @@ describe("profiles.hasServerApiKey", () => {
 
     await t.withIdentity({ subject: userId }).mutation(api.profiles.setApiKey, {
       apiKey: VALID_API_KEY,
+      now: Date.now(),
     });
     await t
       .withIdentity({ subject: userId })
-      .mutation(api.profiles.removeApiKey, {});
+      .mutation(api.profiles.removeApiKey, { now: Date.now() });
 
     const result = await t
       .withIdentity({ subject: userId })
@@ -386,6 +400,7 @@ describe("profiles.getServerApiKey (internal)", () => {
 
     await t.withIdentity({ subject: userId }).mutation(api.profiles.setApiKey, {
       apiKey: VALID_API_KEY,
+      now: Date.now(),
     });
 
     const result = await t.query(internal.profiles.getServerApiKey, { userId });

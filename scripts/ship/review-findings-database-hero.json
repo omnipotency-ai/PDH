@@ -29,8 +29,8 @@
       "category": "correctness",
       "file": "src/components/patterns/database/SmartViews.tsx",
       "line": 75,
-      "title": "Status filter ignores compound values (safe-loose, safe-hard) — rowMatchesFilters silently drops them",
-      "description": "rowMatchesStatusFilter delegates to values.some((value) => value === row.primaryStatus). This means the compound values 'safe-loose' and 'safe-hard' that the FilterSheet UI can produce are never matched — they are not equal to 'safe'. A user who selects 'Safe (Loose)' and then calls rowMatchesFilters (used by countRowsForView on SmartViews) will always get 0 matches for those options, making the view-count badge wrong. The TanStack column filterFn in columns.tsx handles compound values correctly, so the table itself works, but countRowsForView and rowMatchesFilters do not agree with what the table displays. This means saved smart view counts shown in SmartViews will be incorrect for any view that uses safe-loose or safe-hard filters.",
+      "title": "Status filter ignores compound values (safe-loose, safe-hard) \u2014 rowMatchesFilters silently drops them",
+      "description": "rowMatchesStatusFilter delegates to values.some((value) => value === row.primaryStatus). This means the compound values 'safe-loose' and 'safe-hard' that the FilterSheet UI can produce are never matched \u2014 they are not equal to 'safe'. A user who selects 'Safe (Loose)' and then calls rowMatchesFilters (used by countRowsForView on SmartViews) will always get 0 matches for those options, making the view-count badge wrong. The TanStack column filterFn in columns.tsx handles compound values correctly, so the table itself works, but countRowsForView and rowMatchesFilters do not agree with what the table displays. This means saved smart view counts shown in SmartViews will be incorrect for any view that uses safe-loose or safe-hard filters.",
       "fix": "Mirror the compound-value logic from the columns.tsx filterFn into rowMatchesStatusFilter:\n\nfunction rowMatchesStatusFilter(row: FoodDatabaseRow, values: string[]): boolean {\n  return values.some((value) => {\n    if (value === 'safe-loose') return row.primaryStatus === 'safe' && row.tendency === 'loose';\n    if (value === 'safe-hard') return row.primaryStatus === 'safe' && row.tendency === 'hard';\n    return value === row.primaryStatus;\n  });\n}",
       "implemented": false
     },
@@ -40,8 +40,8 @@
       "category": "data-accuracy",
       "file": "src/components/patterns/hero/BristolTrendTile.tsx",
       "line": 43,
-      "title": "getScoreColor semantics are inverted for this user context — 'good' Bristol range shown as orange",
-      "description": "getScoreColor returns 'text-orange-300' when the Bristol average is in the 3–5 range, which is clinically the normal/good range per the Bristol Stool Scale. The rose/red colors are used for out-of-range values. For a general health app this would be backwards enough to cause confusion, but for a post-surgical anastomosis patient, a Bristol 3-5 is an actively positive outcome and should be displayed in a calm/positive color (e.g. green/teal), not amber. Displaying normal scores in orange makes the UI feel alarming when outcomes are good, undermining the 'calm and trustworthy' design goal.",
+      "title": "getScoreColor semantics are inverted for this user context \u2014 'good' Bristol range shown as orange",
+      "description": "getScoreColor returns 'text-orange-300' when the Bristol average is in the 3\u20135 range, which is clinically the normal/good range per the Bristol Stool Scale. The rose/red colors are used for out-of-range values. For a general health app this would be backwards enough to cause confusion, but for a post-surgical anastomosis patient, a Bristol 3-5 is an actively positive outcome and should be displayed in a calm/positive color (e.g. green/teal), not amber. Displaying normal scores in orange makes the UI feel alarming when outcomes are good, undermining the 'calm and trustworthy' design goal.",
       "fix": "Align the color scheme with clinical meaning: green/teal for 3-5 (normal), amber for borderline, rose for out-of-range. Use existing design tokens like var(--section-observe) for the positive case rather than hard-coded Tailwind colors.",
       "implemented": false
     },
@@ -52,7 +52,7 @@
       "file": "src/components/patterns/hero/BristolTrendTile.tsx",
       "line": 56,
       "title": "getDeltaDisplay: positive delta always shown in rose regardless of direction meaning",
-      "description": "getDeltaDisplay returns className: 'text-rose-300' for any non-zero delta. A positive delta (score going up) can be bad (moving toward 6-7) OR good (recovering from 1-2), but is always shown in rose. A negative delta (score going down) is also shown in rose. The delta display provides no directional meaning — it is always alarming. At minimum the direction of the delta relative to the normal range (3-5) should inform the color: moving toward 3-5 is an improvement; moving away is a concern.",
+      "description": "getDeltaDisplay returns className: 'text-rose-300' for any non-zero delta. A positive delta (score going up) can be bad (moving toward 6-7) OR good (recovering from 1-2), but is always shown in rose. A negative delta (score going down) is also shown in rose. The delta display provides no directional meaning \u2014 it is always alarming. At minimum the direction of the delta relative to the normal range (3-5) should inform the color: moving toward 3-5 is an improvement; moving away is a concern.",
       "fix": "Compare previous and current average against the midpoint of the normal range (4.0). If the delta moves the current average closer to the midpoint, color it as a positive indicator; if it moves further away, color it as a concern.",
       "implemented": false
     },
@@ -63,7 +63,7 @@
       "file": "src/components/patterns/hero/BmFrequencyTile.tsx",
       "line": 28,
       "title": "getDateKey duplicated three times across the hero module",
-      "description": "An identical getDateKey(timestamp: number): string function body exists in three places: BmFrequencyTile.tsx (line 28), BristolTrendTile.tsx (line 34), and hero/utils.ts (line 5). hero/utils.ts is exported from the index but neither tile imports from it — each defines its own local copy. This means a bug fix in one copy would not propagate.",
+      "description": "An identical getDateKey(timestamp: number): string function body exists in three places: BmFrequencyTile.tsx (line 28), BristolTrendTile.tsx (line 34), and hero/utils.ts (line 5). hero/utils.ts is exported from the index but neither tile imports from it \u2014 each defines its own local copy. This means a bug fix in one copy would not propagate.",
       "fix": "Delete the local definitions in BmFrequencyTile.tsx and BristolTrendTile.tsx and import the shared one from './utils'.",
       "implemented": false
     },
@@ -73,7 +73,7 @@
       "category": "correctness",
       "file": "src/components/patterns/hero/BmFrequencyTile.tsx",
       "line": 59,
-      "title": "computeDailyCounts cutoff is timestamp-based but day buckets are local-time-based — off-by-one at day boundaries",
+      "title": "computeDailyCounts cutoff is timestamp-based but day buckets are local-time-based \u2014 off-by-one at day boundaries",
       "description": "The cutoff is computed as Date.now() - days * MS_PER_DAY (an exact millisecond offset). The day buckets are built using new Date(now.getFullYear(), now.getMonth(), now.getDate() - i) which respects local calendar days. A log entry timestamped at 11 PM local time on the day that is exactly `days` calendar days ago may fall inside the cutoff window but outside the populated dateKeys (or vice versa), causing it to be silently dropped (the countByDate.get(key) guard returns undefined). This produces a mismatch between the 7-day buckets and what logs are considered 'within range', leading to undercounting on the boundary day.",
       "fix": "Build the cutoff from the start of the oldest calendar day (midnight local time) rather than an exact millisecond offset:\n\nconst oldest = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (days - 1));\nconst cutoff = oldest.getTime();",
       "implemented": false
@@ -84,7 +84,7 @@
       "category": "correctness",
       "file": "src/components/patterns/database/columns.tsx",
       "line": 106,
-      "title": "formatRelativeTime uses Date.now() inside a render function — result is stale until next re-render",
+      "title": "formatRelativeTime uses Date.now() inside a render function \u2014 result is stale until next re-render",
       "description": "formatRelativeTime captures Date.now() at render time. A row displaying '2m ago' will not update its label unless the parent component re-renders. For a table with no timed refresh, 'Just now' and short relative durations will become permanently stale. This is a display accuracy problem: a log from an hour ago will still say 'Just now' if the page was already open.",
       "fix": "Either: (a) add a periodic refresh trigger in the parent using a short-interval setInterval, or (b) accept the limitation and document it as a known constraint. If the table re-renders frequently on data changes this may be acceptable in practice.",
       "implemented": false
@@ -106,8 +106,8 @@
       "category": "dead-code",
       "file": "src/components/patterns/database/columns.tsx",
       "line": 390,
-      "title": "Static columns export is dead code — nothing imports it",
-      "description": "The file exports both buildColumns() and a pre-built static array `export const columns = buildColumns()`. The DatabaseTable component calls buildColumns() directly inside useMemo. No other file in the codebase imports the static `columns` export — the index.ts re-exports it but nothing consumes it from there. This is dead code that adds a module-level side effect (buildColumns() called at import time regardless of use).",
+      "title": "Static columns export is dead code \u2014 nothing imports it",
+      "description": "The file exports both buildColumns() and a pre-built static array `export const columns = buildColumns()`. The DatabaseTable component calls buildColumns() directly inside useMemo. No other file in the codebase imports the static `columns` export \u2014 the index.ts re-exports it but nothing consumes it from there. This is dead code that adds a module-level side effect (buildColumns() called at import time regardless of use).",
       "fix": "Remove the static `export const columns = buildColumns()` line and remove its re-export from index.ts. If external consumers outside the reviewed files need it, they can call buildColumns() directly.",
       "implemented": false
     },
@@ -118,9 +118,11 @@
       "file": "src/components/patterns/database/FoodRow.tsx",
       "line": 1,
       "title": "FoodRow component is exported but has no callers in the codebase",
-      "description": "FoodRow is exported from both the file and the index barrel. A grep of the codebase shows no caller imports FoodRow from the database module — Menu.tsx defines its own local FoodRow with a completely different interface. The database FoodRow has an isMobile dual-render path that never gets used. Per the CLAUDE.md 'dead exports' feedback: unwired code should be integrated or explicitly marked as intentional.",
+      "description": "FoodRow is exported from both the file and the index barrel. A grep of the codebase shows no caller imports FoodRow from the database module \u2014 Menu.tsx defines its own local FoodRow with a completely different interface. The database FoodRow has an isMobile dual-render path that never gets used. Per the CLAUDE.md 'dead exports' feedback: unwired code should be integrated or explicitly marked as intentional.",
       "fix": "Either: (a) integrate FoodRow into the page/feature that was supposed to use it, or (b) remove it and its export from index.ts if it has been superseded by the TanStack table approach.",
-      "implemented": false
+      "implemented": false,
+      "archived": true,
+      "archiveReason": "file deleted from codebase"
     },
     {
       "id": "F010",
@@ -128,7 +130,7 @@
       "category": "ux",
       "file": "src/components/patterns/database/FilterSheet.tsx",
       "line": 239,
-      "title": "Clear All only clears column filters, not sorting — may leave user confused",
+      "title": "Clear All only clears column filters, not sorting \u2014 may leave user confused",
       "description": "The handleClearAll handler calls onColumnFiltersChange([]) but does not reset sorting to its default. A user who changed the sort field and then clicks 'Clear all' expecting to reset everything will still have the custom sort active. The button label 'Clear all' implies full state reset but only clears filters.",
       "fix": "Either rename the button to 'Clear filters' to set accurate expectations, or also reset sorting to the default in handleClearAll: onSortingChange([{ id: 'lastTested', desc: true }]).",
       "implemented": false
@@ -139,8 +141,8 @@
       "category": "performance",
       "file": "src/components/patterns/hero/Sparkline.tsx",
       "line": 81,
-      "title": "SVG gradient ID derived from raw color prop — collides if two Sparklines share the same color token",
-      "description": "The linearGradient id is computed as `fill-${color.replace('#', '')}`. Two Sparklines on the same page using the same color (both use 'var(--section-summary)') will produce the same id: 'fill-var(--section-summary)'. SVG IDs must be unique in the DOM. The second gradient definition will shadow the first but this is fragile — different browsers handle duplicate SVG IDs differently, and future rendering can pick up the wrong gradient.",
+      "title": "SVG gradient ID derived from raw color prop \u2014 collides if two Sparklines share the same color token",
+      "description": "The linearGradient id is computed as `fill-${color.replace('#', '')}`. Two Sparklines on the same page using the same color (both use 'var(--section-summary)') will produce the same id: 'fill-var(--section-summary)'. SVG IDs must be unique in the DOM. The second gradient definition will shadow the first but this is fragile \u2014 different browsers handle duplicate SVG IDs differently, and future rendering can pick up the wrong gradient.",
       "fix": "Append a stable unique suffix, e.g. use useId() from React: `fill-${useId().replace(/:/g, '')}-${color.replace('#', '')}`. Alternatively accept a required `id` prop.",
       "implemented": false
     },
@@ -173,7 +175,7 @@
       "file": "src/components/patterns/database/foodSafetyUtils.ts",
       "line": 23,
       "title": "Transit time display formula in FoodRow is subtly wrong",
-      "description": "FoodRow.tsx line 23: Math.round(avgTransitMinutes / 6) / 10. The intent is to convert minutes to hours with 1 decimal place. The correct formula is Math.round(avgTransitMinutes / 60 * 10) / 10, or equivalently Math.round(avgTransitMinutes / 6) / 10 only works coincidentally because dividing by 6 then by 10 equals dividing by 60 — so the result is numerically correct. However the same formula appears in columns.tsx line 309 as Math.round(avgTransitMinutes / 6) / 10 and in FoodRow.tsx line 23 as the same thing. The pattern is non-obvious and fragile. A reader unfamiliar with the trick will misread it.",
+      "description": "FoodRow.tsx line 23: Math.round(avgTransitMinutes / 6) / 10. The intent is to convert minutes to hours with 1 decimal place. The correct formula is Math.round(avgTransitMinutes / 60 * 10) / 10, or equivalently Math.round(avgTransitMinutes / 6) / 10 only works coincidentally because dividing by 6 then by 10 equals dividing by 60 \u2014 so the result is numerically correct. However the same formula appears in columns.tsx line 309 as Math.round(avgTransitMinutes / 6) / 10 and in FoodRow.tsx line 23 as the same thing. The pattern is non-obvious and fragile. A reader unfamiliar with the trick will misread it.",
       "fix": "Replace with the self-documenting form: const hours = (avgTransitMinutes / 60).toFixed(1) or Math.round((avgTransitMinutes / 60) * 10) / 10. Consider extracting to a shared formatTransitHours utility (one may already exist in trialFormatters.ts).",
       "implemented": false
     }
@@ -182,6 +184,7 @@
     "critical": 0,
     "high": 3,
     "moderate": 7,
-    "nice_to_have": 4
+    "nice_to_have": 3,
+    "archived": 1
   }
 }

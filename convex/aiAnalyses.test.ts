@@ -17,7 +17,7 @@ describe("aiAnalyses", () => {
         request: TEST_AI_REQUEST,
         response: TEST_AI_RESPONSE,
         insight: { ...TEST_AI_INSIGHT, summary: "All good" },
-        model: "gpt-5-mini",
+        model: "gpt-5.4-mini",
         durationMs: 1500,
         inputLogCount: 10,
       });
@@ -27,7 +27,7 @@ describe("aiAnalyses", () => {
       .withIdentity({ subject: "test-user-123" })
       .query(api.aiAnalyses.list, {});
     expect(analyses.length).toBe(1);
-    expect(analyses[0].model).toBe("gpt-5-mini");
+    expect(analyses[0].model).toBe("gpt-5.4-mini");
     expect(analyses[0].inputLogCount).toBe(10);
   });
 
