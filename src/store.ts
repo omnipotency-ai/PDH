@@ -54,8 +54,8 @@ export const isWeightLog = createLogTypeGuard("weight");
 // Re-exported types (consumed by other modules via "@/store")
 // ---------------------------------------------------------------------------
 
+export type { SleepGoal } from "@/lib/gamificationDefaults";
 export type { HabitConfig, HabitLog } from "@/lib/habitTemplates";
-export type { SleepGoal } from "@/lib/streaks";
 
 // ---------------------------------------------------------------------------
 // Constants (consumed by settings / fluid forms)

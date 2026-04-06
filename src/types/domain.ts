@@ -26,17 +26,10 @@ export type {
   TransitCalibration,
 };
 
-import type { SleepGoal } from "../lib/streaks";
+import type { SleepGoal } from "../lib/gamificationDefaults";
 import type { UnitSystem } from "../lib/units";
 
-export type LogType =
-  | "food"
-  | "liquid"
-  | "fluid"
-  | "digestion"
-  | "habit"
-  | "activity"
-  | "weight";
+export type LogType = "food" | "liquid" | "fluid" | "digestion" | "habit" | "activity" | "weight";
 
 export type SurgeryType =
   | "Colectomy with ileostomy"
@@ -82,12 +75,7 @@ export const HEALTH_COMORBIDITY_OPTIONS = [
   "HIV+",
 ] as const;
 
-export type Gender =
-  | "male"
-  | "female"
-  | "non_binary"
-  | "prefer_not_to_say"
-  | "";
+export type Gender = "male" | "female" | "non_binary" | "prefer_not_to_say" | "";
 
 // ── Nutrition Goals ───────────────────────────────────────────────────────────
 
@@ -323,12 +311,7 @@ export interface StructuredFoodAssessment {
   reasoning: string;
 }
 
-export type AiAnalysisStatus =
-  | "idle"
-  | "sending"
-  | "receiving"
-  | "done"
-  | "error";
+export type AiAnalysisStatus = "idle" | "sending" | "receiving" | "done" | "error";
 export type AiAnalysisProgressStep = "sending" | "receiving" | "done";
 
 export interface FoodItem {
@@ -365,10 +348,7 @@ export interface FoodItem {
   >;
 }
 
-export const GROUP_COLORS: Record<
-  FoodGroup,
-  { primary: string; glow: string }
-> = {
+export const GROUP_COLORS: Record<FoodGroup, { primary: string; glow: string }> = {
   protein: { primary: "teal-400", glow: "teal-500" },
   carbs: { primary: "amber-400", glow: "amber-500" },
   fats: { primary: "violet-400", glow: "violet-500" },
