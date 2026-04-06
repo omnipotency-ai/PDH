@@ -285,6 +285,7 @@ export const extractFromReport = internalMutation({
         {
           userId,
           eventTimestamp: reportTimestamp,
+          now: reportTimestamp,
         },
       );
     }

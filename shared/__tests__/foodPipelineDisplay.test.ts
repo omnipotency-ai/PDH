@@ -7,9 +7,11 @@
  */
 import { describe, expect, it } from "vitest";
 import {
+  resolveCanonicalFoodName,
+} from "../foodCanonicalName";
+import {
   getCanonicalFoodProjection,
   getLoggedFoodIdentity,
-  resolveCanonicalFoodName,
 } from "../foodProjection";
 
 // Import the helpers we're testing — they're pure functions, no React needed

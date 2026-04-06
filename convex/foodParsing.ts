@@ -95,11 +95,17 @@ interface ProcessedFoodItem {
 }
 
 /**
- * Write-side representation of a food item, derived directly from the Convex
- * validator to stay in sync automatically. This is the shape accepted by
- * writeProcessedItems and the foodItem array in the logs table.
+ * Write-side representation of a food item accepted by writeProcessedItems.
+ * userSegment and parsedName are required on write even though the shared
+ * log validator keeps them optional for backward compatibility with old data.
  */
-type WriteProcessedFoodItem = Infer<typeof foodItemValidator>;
+type StoredFoodItem = Omit<
+  Infer<typeof foodItemValidator>,
+  "userSegment" | "parsedName"
+> & {
+  userSegment: string;
+  parsedName: string;
+};
 
 interface FoodLogData {
   rawInput?: string;
@@ -599,6 +605,7 @@ export const writeProcessedItems = internalMutation({
                 v.literal("embedding"),
                 v.literal("combined"),
                 v.literal("llm"),
+                v.literal("user"),
               ),
               combinedConfidence: v.number(),
               fuzzyScore: v.union(v.number(), v.null()),
@@ -879,7 +886,7 @@ function toPendingItem(
 
 function serializeProcessedItem(
   item: ProcessedFoodItem,
-): WriteProcessedFoodItem {
+): StoredFoodItem {
   return {
     userSegment: item.userSegment,
     parsedName: item.parsedName,
@@ -1136,6 +1143,7 @@ async function upsertLearnedAlias(
   aliasText: string,
   canonicalName: string,
   source: "user" | "bucket",
+  timestamp: number,
 ): Promise<void> {
   const normalizedAlias = normalizeFoodMatchText(aliasText);
   if (!normalizedAlias) return;
@@ -1147,7 +1155,6 @@ async function upsertLearnedAlias(
     )
     .unique();
 
-  const timestamp = Date.now();
   if (existing) {
     await ctx.db.patch(existing._id, {
       aliasText,
@@ -1322,7 +1329,7 @@ export const applyLlmResults = internalMutation({
     logId: v.id("logs"),
     userId: v.string(),
     expectedItemsVersion: v.number(),
-    now: v.number(),
+    now: v.optional(v.number()),
     resolvedItems: v.array(
       v.object({
         userSegment: v.string(),
@@ -1472,6 +1479,8 @@ export const applyLlmResults = internalMutation({
       return;
     }
 
+    const appliedAt = args.now ?? data.evidenceProcessedAt ?? log.timestamp;
+
     // Create exposures for items that were just resolved by LLM.
     // resolvedIndices tracks exactly which item positions were updated above.
     for (const itemIndex of resolvedIndices) {
@@ -1501,7 +1510,7 @@ export const applyLlmResults = internalMutation({
           recoveryStage: item.recoveryStage,
         }),
         ...(item.spiceLevel !== undefined && { spiceLevel: item.spiceLevel }),
-        createdAt: args.now,
+        createdAt: appliedAt,
       });
     }
   },
@@ -1609,6 +1618,7 @@ export const resolveItem = mutation({
     logId: v.id("logs"),
     itemIndex: v.number(),
     canonicalName: v.string(),
+    now: v.number(),
   },
   handler: async (ctx, args) => {
     const { userId } = await requireAuth(ctx);
@@ -1708,6 +1718,7 @@ export const resolveItem = mutation({
       aliasText,
       args.canonicalName,
       aliasSource,
+      args.now,
     );
 
     // Embed the alias text so future misspellings resolve via vector
@@ -1742,7 +1753,7 @@ export const resolveItem = mutation({
         ...(updatedItem.spiceLevel !== undefined && {
           spiceLevel: updatedItem.spiceLevel,
         }),
-        createdAt: Date.now(),
+        createdAt: args.now,
       });
     }
   },

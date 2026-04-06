@@ -123,7 +123,7 @@ describe("computeAggregates", () => {
 
     const result = await t
       .withIdentity({ subject: "test-user-123" })
-      .mutation(api.computeAggregates.backfillWeeklyDigests, {});
+      .mutation(api.computeAggregates.backfillWeeklyDigests, { now });
 
     // Drain all scheduled backfill mutations before the test ends.
     await t.finishAllScheduledFunctions(() => vi.runAllTimers());
@@ -179,6 +179,7 @@ describe("computeAggregates", () => {
     await t.mutation(internal.computeAggregates.updateWeeklyDigest, {
       userId,
       eventTimestamp: now,
+      now,
     });
 
     // Compute Monday 00:00:00 for the week containing `now`
@@ -261,6 +262,7 @@ describe("computeAggregates", () => {
     await t.mutation(internal.computeAggregates.updateWeeklyDigest, {
       userId,
       eventTimestamp: currentWeek,
+      now: currentWeek,
     });
 
     const digest = await t.run(async (ctx) => {
@@ -320,6 +322,7 @@ describe("computeAggregates", () => {
     await t.mutation(internal.computeAggregates.updateWeeklyDigest, {
       userId,
       eventTimestamp: currentWeek,
+      now: currentWeek,
     });
 
     const digest = await t.run(async (ctx) => {
@@ -394,6 +397,7 @@ describe("computeAggregates", () => {
     await t.mutation(internal.computeAggregates.updateWeeklyDigest, {
       userId,
       eventTimestamp: currentWeek,
+      now: currentWeek,
     });
 
     const digest = await t.run(async (ctx) => {
@@ -508,7 +512,9 @@ describe("computeAggregates", () => {
   it("throws backfillWeeklyDigests without auth", async () => {
     const t = convexTest(schema);
     await expect(
-      t.mutation(api.computeAggregates.backfillWeeklyDigests, {}),
+      t.mutation(api.computeAggregates.backfillWeeklyDigests, {
+        now: Date.now(),
+      }),
     ).rejects.toThrow("Not authenticated");
   });
 
@@ -517,7 +523,9 @@ describe("computeAggregates", () => {
 
     const result = await t
       .withIdentity({ subject: "test-user-123" })
-      .mutation(api.computeAggregates.backfillWeeklyDigests, {});
+      .mutation(api.computeAggregates.backfillWeeklyDigests, {
+        now: Date.now(),
+      });
 
     // Drain all scheduled backfill mutations before the test ends.
     await t.finishAllScheduledFunctions(() => vi.runAllTimers());

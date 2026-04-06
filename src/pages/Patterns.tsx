@@ -1,4 +1,4 @@
-import { getFoodEntry, pickFoodDigestionMetadata } from "@shared/foodCanonicalization";
+import { getFoodEntry, pickFoodDigestionMetadata } from "@shared/foodRegistry";
 import type { ColumnFiltersState, SortingState } from "@tanstack/react-table";
 import { format } from "date-fns";
 import { Filter, Search } from "lucide-react";

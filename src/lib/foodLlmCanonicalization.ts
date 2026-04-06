@@ -10,11 +10,11 @@
  */
 
 import {
-  canonicalizeKnownFoodName,
   FOOD_REGISTRY,
   getFoodEntry,
   getFoodZone,
-} from "@shared/foodCanonicalization";
+} from "@shared/foodRegistry";
+import { canonicalizeKnownFoodName } from "@shared/foodCanonicalization";
 import { normalizeFoodName } from "@shared/foodNormalize";
 import type { FoodZone } from "@shared/foodRegistry";
 

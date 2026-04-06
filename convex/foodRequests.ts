@@ -16,7 +16,7 @@ export const submitRequest = mutation({
     note: v.optional(v.string()),
     logId: v.optional(v.string()),
     itemIndex: v.optional(v.number()),
-    now: v.optional(v.number()),
+    now: v.number(),
   },
   handler: async (ctx, args) => {
     const { userId } = await requireAuth(ctx);
@@ -39,7 +39,7 @@ export const submitRequest = mutation({
       ...(args.logId !== undefined && { logId: args.logId }),
       ...(args.itemIndex !== undefined && { itemIndex: args.itemIndex }),
       status: "pending",
-      createdAt: args.now ?? Date.now(),
+      createdAt: args.now,
     });
   },
 });

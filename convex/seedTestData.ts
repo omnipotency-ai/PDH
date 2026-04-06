@@ -420,10 +420,10 @@ const DAILY_FLUIDS: ReadonlyArray<ReadonlyArray<FluidTemplate>> = [
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const seedTestData = internalMutation({
-  args: { userId: v.string() },
+  args: { userId: v.string(), now: v.number() },
   handler: async (ctx, args) => {
     const { userId } = args;
-    const now = Date.now();
+    const now = args.now;
 
     let foodLogCount = 0;
     let bmLogCount = 0;
@@ -519,10 +519,10 @@ export const seedTestData = internalMutation({
  * Does NOT delete all user logs — only the backdated window used by seedTestData.
  */
 export const clearTestData = internalMutation({
-  args: { userId: v.string() },
+  args: { userId: v.string(), now: v.number() },
   handler: async (ctx, args) => {
     const { userId } = args;
-    const now = Date.now();
+    const now = args.now;
     const seedRangeStart = now - 11 * MS_PER_DAY;
     const seedRangeEnd = now;
 

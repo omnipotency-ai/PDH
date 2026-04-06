@@ -51,6 +51,7 @@ export const upsert = mutation({
     canonicalName: v.string(),
     status: overrideStatusValidator,
     note: v.optional(v.string()),
+    now: v.number(),
   },
   handler: async (ctx, args) => {
     const { userId } = await requireAuth(ctx);
@@ -78,8 +79,6 @@ export const upsert = mutation({
       )
       .collect();
 
-    const now = Date.now();
-
     if (allMatching.length > 0) {
       // Sort: most recently updated first, break ties by creation time.
       const sorted = allMatching
@@ -94,7 +93,7 @@ export const upsert = mutation({
       await ctx.db.patch(keeper._id, {
         status: args.status,
         ...(sanitizedNote !== undefined ? { note: sanitizedNote } : {}),
-        updatedAt: now,
+        updatedAt: args.now,
       });
 
       // Delete any duplicates that accumulated from prior races.
@@ -110,8 +109,8 @@ export const upsert = mutation({
       canonicalName,
       status: args.status,
       ...(sanitizedNote !== undefined ? { note: sanitizedNote } : {}),
-      createdAt: now,
-      updatedAt: now,
+      createdAt: args.now,
+      updatedAt: args.now,
     });
   },
 });

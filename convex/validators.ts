@@ -360,6 +360,7 @@ export const foodItemValidator = v.object({
       v.literal("registry"),
       v.literal("llm"),
       v.literal("heuristic"),
+      v.literal("fuzzy"),
       v.literal("user"),
       v.literal("expired"),
     ),

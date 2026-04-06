@@ -973,8 +973,8 @@ function midpointClock(start: string, end: string, fallback: string): string {
 // - healthProfile legacy keys renamed to canonical v1 keys
 // - removed profile metadata fields dropped from stored objects
 export const normalizeProfileDomainV1 = internalMutation({
-  args: {},
-  handler: async (ctx) => {
+  args: { now: v.number() },
+  handler: async (ctx, args) => {
     // Safety cap to prevent Convex memory limit hits in large deployments.
     const profiles = await ctx.db.query("profiles").take(1000);
     let fixed = 0;
@@ -1143,7 +1143,7 @@ export const normalizeProfileDomainV1 = internalMutation({
         ...(nextAiPreferences !== undefined && {
           aiPreferences: nextAiPreferences,
         }),
-        updatedAt: Date.now(),
+        updatedAt: args.now,
       });
       fixed++;
     }

@@ -11,6 +11,7 @@ describe("ingredientOverrides", () => {
     await t.withIdentity({ subject: userId }).mutation(api.ingredientOverrides.upsert, {
       canonicalName: " Fresh Baked Xylofruit ",
       status: "avoid",
+      now: Date.now(),
     });
 
     const rows = await t.withIdentity({ subject: userId }).query(api.ingredientOverrides.list, {});
@@ -21,6 +22,7 @@ describe("ingredientOverrides", () => {
     await t.withIdentity({ subject: userId }).mutation(api.ingredientOverrides.upsert, {
       canonicalName: "fresh baked xylofruit",
       status: "safe",
+      now: Date.now(),
     });
 
     const updated = await t
@@ -37,6 +39,7 @@ describe("ingredientOverrides", () => {
     await t.withIdentity({ subject: userId }).mutation(api.ingredientOverrides.upsert, {
       canonicalName: "toast",
       status: "watch",
+      now: Date.now(),
     });
 
     const result = await t
@@ -58,6 +61,7 @@ describe("ingredientOverrides", () => {
       t.mutation(api.ingredientOverrides.upsert, {
         canonicalName: "bread",
         status: "safe",
+        now: Date.now(),
       }),
     ).rejects.toThrow("Not authenticated");
   });

@@ -5,9 +5,8 @@ import { INPUT_SAFETY_LIMITS, sanitizeRequiredText } from "./lib/inputSafety";
 
 // Store a user message (reply to Dr. Poo).
 //
-// Timestamp is accepted as a client arg for Convex deterministic replay —
-// mutations must be deterministic, so Date.now() inside a mutation would break
-// replay. The client generates the timestamp and the server stores it as-is.
+// Timestamp is accepted as a client arg for deterministic replay.
+// The client generates the timestamp and the server stores it as-is.
 export const addUserMessage = mutation({
   args: {
     content: v.string(),

@@ -165,6 +165,7 @@ export function FoodMatchingModal({
         logId: asConvexId<"logs">(currentLogId),
         itemIndex: currentItemIndex,
         canonicalName: selectedCanonical,
+        now: Date.now(),
       });
       toast.success(`Matched "${currentFoodName}" to "${selectedCanonical}"`);
 
@@ -222,6 +223,7 @@ export function FoodMatchingModal({
     try {
       await submitFoodRequest({
         foodName: currentFoodName,
+        now: Date.now(),
         ...(currentRawInput.length > 0 && { rawInput: currentRawInput }),
         ...(ticketNote.trim().length > 0 && { note: ticketNote.trim() }),
         ...(currentLogId.length > 0 && { logId: currentLogId }),

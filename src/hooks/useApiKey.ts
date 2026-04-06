@@ -59,7 +59,7 @@ export function useApiKey() {
   // Auto-migrate: if IndexedDB has a key but server doesn't, push to Convex
   useEffect(() => {
     if (apiKey !== null && hasServerKey === false) {
-      setServerKey({ apiKey }).catch((err: unknown) => {
+      setServerKey({ apiKey, now: Date.now() }).catch((err: unknown) => {
         // WQ-323: Never log the raw error — it may contain the API key
         console.error("[ApiKey] Migration to server failed:", sanitizeApiKeyError(err));
       });
@@ -73,7 +73,7 @@ export function useApiKey() {
       setKey(key);
       // Then write to Convex (best-effort)
       try {
-        await setServerKey({ apiKey: key });
+        await setServerKey({ apiKey: key, now: Date.now() });
       } catch (err: unknown) {
         // WQ-323: Never log the raw error — it may contain the API key
         console.error("[ApiKey] Server save failed:", sanitizeApiKeyError(err));
@@ -88,7 +88,7 @@ export function useApiKey() {
     setKey(null);
     // Then clear Convex (best-effort)
     try {
-      await removeServerKey();
+      await removeServerKey({ now: Date.now() });
     } catch (err: unknown) {
       // WQ-323: Sanitize error even for delete — errors may reference prior state
       console.error("[ApiKey] Server delete failed:", sanitizeApiKeyError(err));

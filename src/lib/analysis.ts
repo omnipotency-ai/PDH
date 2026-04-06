@@ -1,6 +1,6 @@
 import { buildFoodEvidenceResult, toLegacyFoodStatus } from "@shared/foodEvidence";
 import { formatCanonicalFoodDisplayName } from "@shared/foodNormalize";
-import { resolveCanonicalFoodName } from "@shared/foodProjection";
+import { resolveCanonicalFoodName } from "@shared/foodCanonicalName";
 import type { FoodTrialStatus, SyncedLog } from "@/lib/sync";
 import type { DigestiveLogData, FoodPrimaryStatus, FoodTendency } from "@/types/domain";
 
@@ -99,6 +99,7 @@ export function analyzeLogs(
 ): AnalysisResult {
   const fused = buildFoodEvidenceResult({
     logs,
+    now: Date.now(),
     ...(evidenceInputs?.habits && { habits: evidenceInputs.habits }),
     ...(evidenceInputs?.calibration && {
       calibration: evidenceInputs.calibration,

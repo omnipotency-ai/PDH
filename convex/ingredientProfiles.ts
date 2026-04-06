@@ -97,6 +97,7 @@ export const upsert = mutation({
     externalId: v.optional(v.union(v.string(), v.null())),
     ingredientsText: v.optional(v.union(v.string(), v.null())),
     nutritionPer100g: v.optional(nutritionPatchValidator),
+    now: v.number(),
   },
   handler: async (ctx, args) => {
     const { userId } = await requireAuth(ctx);
@@ -106,8 +107,6 @@ export const upsert = mutation({
       throw new Error("canonicalName is required.");
     }
     const projection = getCanonicalFoodProjection(canonicalName);
-
-    const now = Date.now();
 
     const existing = await ctx.db
       .query("ingredientProfiles")
@@ -162,7 +161,7 @@ export const upsert = mutation({
       ...(args.nutritionPer100g !== undefined && {
         nutritionPer100g: nextNutrition,
       }),
-      updatedAt: now,
+      updatedAt: args.now,
     };
 
     if (existing) {
@@ -201,8 +200,8 @@ export const upsert = mutation({
               ...args.nutritionPer100g,
             }
           : blankNutrition(),
-      createdAt: now,
-      updatedAt: now,
+      createdAt: args.now,
+      updatedAt: args.now,
     });
   },
 });

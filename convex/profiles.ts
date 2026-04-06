@@ -32,7 +32,7 @@ const OPENAI_API_KEY_PATTERN = /^sk-[A-Za-z0-9_-]{20,}$/;
  * Validates key format before storing.
  */
 export const setApiKey = mutation({
-  args: { apiKey: v.string() },
+  args: { apiKey: v.string(), now: v.number() },
   handler: async (ctx, args) => {
     const { userId } = await requireAuth(ctx);
 
@@ -40,7 +40,7 @@ export const setApiKey = mutation({
       throw new Error("Invalid API key format");
     }
 
-    await storeApiKey(ctx, userId, args.apiKey);
+    await storeApiKey(ctx, userId, args.apiKey, args.now);
   },
 });
 
@@ -48,11 +48,11 @@ export const setApiKey = mutation({
  * Remove the user's stored API key from their profile.
  */
 export const removeApiKey = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: { now: v.number() },
+  handler: async (ctx, args) => {
     const { userId } = await requireAuth(ctx);
 
-    await deleteApiKey(ctx, userId);
+    await deleteApiKey(ctx, userId, args.now);
   },
 });
 

@@ -273,6 +273,7 @@ describe("resolveItem mutation", () => {
         logId,
         itemIndex: 0,
         canonicalName: "sweet biscuit",
+        now: Date.now(),
       });
 
     // Verify item is now resolved
@@ -312,6 +313,7 @@ describe("resolveItem mutation", () => {
           logId,
           itemIndex: 0,
           canonicalName: "toast",
+          now: Date.now(),
         }),
     ).rejects.toThrow("Not authorized");
   });
@@ -336,6 +338,7 @@ describe("resolveItem mutation", () => {
           logId,
           itemIndex: 0,
           canonicalName: "toast",
+          now: Date.now(),
         }),
     ).rejects.toThrow("not a food or liquid log");
   });
@@ -363,6 +366,7 @@ describe("resolveItem mutation", () => {
           logId,
           itemIndex: 5,
           canonicalName: "toast",
+          now: Date.now(),
         }),
     ).rejects.toThrow("out of range");
   });
@@ -387,6 +391,7 @@ describe("resolveItem mutation", () => {
           logId,
           itemIndex: 0,
           canonicalName: "toast",
+          now: Date.now(),
         }),
     ).rejects.toThrow("no items");
   });
@@ -414,6 +419,7 @@ describe("resolveItem mutation", () => {
           logId,
           itemIndex: 0,
           canonicalName: "completely_fake_food",
+          now: Date.now(),
         }),
     ).rejects.toThrow();
   });
@@ -441,6 +447,7 @@ describe("resolveItem mutation", () => {
           logId,
           itemIndex: 0,
           canonicalName: "bread",
+          now: Date.now(),
         }),
     ).rejects.toThrow("already resolved");
   });
@@ -484,6 +491,7 @@ describe("resolveItem mutation", () => {
           logId,
           itemIndex: 0,
           canonicalName: "sweet biscuit",
+          now: Date.now(),
         }),
     ).rejects.toThrow();
   });
@@ -509,6 +517,7 @@ describe("resolveItem mutation", () => {
         logId,
         itemIndex: 0,
         canonicalName: "sweet biscuit",
+        now: Date.now(),
       });
 
     const results = await t

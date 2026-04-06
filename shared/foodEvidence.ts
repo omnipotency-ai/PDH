@@ -1214,9 +1214,9 @@ export function buildFoodEvidenceResult(args: {
   habits?: HabitLike[];
   assessments?: FoodAssessmentRecord[];
   calibration?: TransitCalibration;
-  now?: number;
+  now: number;
 }): FoodEvidenceResult {
-  const now = args.now ?? Date.now();
+  const now = args.now;
   const resolvedTrials = resolveTrials(
     args.logs,
     args.habits ?? [],

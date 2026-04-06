@@ -14,8 +14,9 @@
  *   - shared/__tests__/foodParsing.test.ts
  */
 
-import { canonicalizeKnownFoodName, getFoodZone } from "./foodCanonicalization";
+import { canonicalizeKnownFoodName } from "./foodCanonicalization";
 import { normalizeFoodName } from "./foodNormalize";
+import { getFoodZone } from "./foodRegistryUtils";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types

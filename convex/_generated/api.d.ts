@@ -22,7 +22,6 @@ import type * as foodRequests from "../foodRequests.js";
 import type * as ingredientExposures from "../ingredientExposures.js";
 import type * as ingredientNutritionApi from "../ingredientNutritionApi.js";
 import type * as ingredientOverrides from "../ingredientOverrides.js";
-import type * as ingredientProfileProjection from "../ingredientProfileProjection.js";
 import type * as ingredientProfiles from "../ingredientProfiles.js";
 import type * as lib_apiKeys from "../lib/apiKeys.js";
 import type * as lib_auth from "../lib/auth.js";
@@ -57,7 +56,6 @@ declare const fullApi: ApiFromModules<{
   ingredientExposures: typeof ingredientExposures;
   ingredientNutritionApi: typeof ingredientNutritionApi;
   ingredientOverrides: typeof ingredientOverrides;
-  ingredientProfileProjection: typeof ingredientProfileProjection;
   ingredientProfiles: typeof ingredientProfiles;
   "lib/apiKeys": typeof lib_apiKeys;
   "lib/auth": typeof lib_auth;

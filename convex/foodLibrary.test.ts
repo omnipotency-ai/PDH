@@ -305,6 +305,7 @@ describe("foodLibrary", () => {
       .withIdentity({ subject: userId })
       .mutation(api.foodLibrary.mergeDuplicates, {
         merges: [{ source: "Fresh baked xylofruit", target: "xylofruit" }],
+        now,
       });
 
     expect(mergeResult.mergesApplied).toBe(1);
@@ -417,6 +418,7 @@ describe("foodLibrary", () => {
     await expect(
       t.mutation(api.foodLibrary.mergeDuplicates, {
         merges: [{ source: "a", target: "b" }],
+        now: Date.now(),
       }),
     ).rejects.toThrow("Not authenticated");
   });
@@ -447,6 +449,7 @@ describe("foodLibrary", () => {
       .withIdentity({ subject: userId })
       .mutation(api.foodLibrary.mergeDuplicates, {
         merges: [],
+        now,
       });
 
     expect(result.mergesApplied).toBe(0);

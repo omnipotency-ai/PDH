@@ -447,7 +447,7 @@ function getWeekStart(timestamp: number): {
  */
 async function updateWeeklyDigestImpl(
   ctx: MutationCtx,
-  args: { userId: string; eventTimestamp: number; now?: number },
+  args: { userId: string; eventTimestamp: number; now: number },
 ): Promise<{ weekStart: string }> {
   const { weekStart, weekStartTimestamp } = getWeekStart(args.eventTimestamp);
   const weekEndTimestamp = weekStartTimestamp + 7 * 24 * 60 * 60 * 1000;
@@ -633,7 +633,7 @@ async function updateWeeklyDigestImpl(
     topSafe,
     ...(habitLogs.length > 0 && { totalHabitLogs: habitLogs.length }),
     ...(totalFluidMl > 0 && { totalFluidMl }),
-    updatedAt: args.now ?? Date.now(),
+    updatedAt: args.now,
   };
 
   if (existing) {
@@ -661,14 +661,14 @@ export const updateWeeklyDigest = internalMutation({
   args: {
     userId: v.string(),
     eventTimestamp: v.number(),
-    now: v.optional(v.number()),
+    now: v.number(),
   },
   handler: async (ctx, args) => {
     try {
       return await updateWeeklyDigestImpl(ctx, {
         userId: args.userId,
         eventTimestamp: args.eventTimestamp,
-        ...(args.now !== undefined && { now: args.now }),
+        now: args.now,
       });
     } catch (error) {
       console.error(
@@ -730,7 +730,7 @@ export const backfillFoodTrialsWorker = internalMutation({
  * per week with staggered delays.
  */
 export const backfillWeeklyDigestsWorker = internalMutation({
-  args: { userId: v.string(), now: v.optional(v.number()) },
+  args: { userId: v.string(), now: v.number() },
   handler: async (ctx, args) => {
     const firstLog = await ctx.db
       .query("logs")
@@ -741,7 +741,7 @@ export const backfillWeeklyDigestsWorker = internalMutation({
     if (firstLog === null) return { scheduledWeeks: 0 };
 
     const oneWeek = 7 * 24 * 60 * 60 * 1000;
-    const now = args.now ?? Date.now();
+    const now = args.now;
     let current = firstLog.timestamp;
     let weeks = 0;
 
@@ -750,7 +750,7 @@ export const backfillWeeklyDigestsWorker = internalMutation({
         const taskId = await ctx.scheduler.runAfter(
           weeks * BACKFILL_STAGGER_MS,
           internal.computeAggregates.updateWeeklyDigest,
-          { userId: args.userId, eventTimestamp: current },
+          { userId: args.userId, eventTimestamp: current, now: args.now },
         );
         console.info(
           `[backfillWeeklyDigestsWorker] Scheduled week ${weeks} (task ${String(taskId)}) for user ${args.userId}`,
@@ -831,14 +831,14 @@ export const backfillFoodTrialsForUser = internalMutation({
  * Schedules one mutation per week to avoid hitting document read limits.
  */
 export const backfillWeeklyDigests = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: { now: v.number() },
+  handler: async (ctx, args) => {
     const { userId } = await requireAuth(ctx);
     try {
       const taskId = await ctx.scheduler.runAfter(
         0,
         internal.computeAggregates.backfillWeeklyDigestsWorker,
-        { userId },
+        { userId, now: args.now },
       );
       console.info(
         `[backfillWeeklyDigests] Scheduled worker (task ${String(taskId)}) for user ${userId}`,
@@ -855,7 +855,7 @@ export const backfillWeeklyDigests = mutation({
 });
 
 export const backfillWeeklyDigestsForUser = internalMutation({
-  args: { userId: v.string() },
+  args: { userId: v.string(), now: v.number() },
   handler: async (ctx, args) => {
     try {
       const taskId = await ctx.scheduler.runAfter(
@@ -863,6 +863,7 @@ export const backfillWeeklyDigestsForUser = internalMutation({
         internal.computeAggregates.backfillWeeklyDigestsWorker,
         {
           userId: args.userId,
+          now: args.now,
         },
       );
       console.info(

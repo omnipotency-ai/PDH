@@ -8,10 +8,8 @@ import {
   type TransitCalibration,
   toLegacyFoodStatus,
 } from "../shared/foodEvidence";
-import {
-  getCanonicalFoodProjection,
-  resolveCanonicalFoodName,
-} from "../shared/foodProjection";
+import { resolveCanonicalFoodName } from "../shared/foodCanonicalName";
+import { getCanonicalFoodProjection } from "../shared/foodProjection";
 import { mutation, query } from "./_generated/server";
 import { requireAuth } from "./lib/auth";
 import {
@@ -122,14 +120,12 @@ export const addEntry = mutation({
     canonicalName: v.string(),
     type: foodTypeValidator,
     ingredients: v.array(v.string()),
-    // Transitional: accepted but ignored — server generates createdAt.
-    createdAt: v.optional(v.number()),
+    // Supplied by the caller so replayed mutations keep the same timestamp.
+    createdAt: v.number(),
   },
   handler: async (ctx, args) => {
     const { userId } = await requireAuth(ctx);
     const normalizedName = resolveCanonicalFoodName(args.canonicalName);
-    const now = Date.now();
-
     // Race condition note: Two concurrent addEntry calls for the same
     // (userId, canonicalName) can both see "no rows" and both insert.
     // Convex indexes are not unique constraints, so duplicates can occur.
@@ -165,7 +161,7 @@ export const addEntry = mutation({
       canonicalName: normalizedName,
       type: args.type,
       ingredients: args.ingredients,
-      createdAt: now,
+      createdAt: args.createdAt,
     });
   },
 });
@@ -175,13 +171,11 @@ export const updateEntry = mutation({
     canonicalName: v.string(),
     type: foodTypeValidator,
     ingredients: v.array(v.string()),
-    now: v.optional(v.number()),
+    now: v.number(),
   },
   handler: async (ctx, args) => {
     const { userId } = await requireAuth(ctx);
     const normalizedName = resolveCanonicalFoodName(args.canonicalName);
-    const now = args.now ?? Date.now();
-
     // Race condition note: Two concurrent updateEntry calls for the same
     // (userId, canonicalName) can both see "no rows" and both insert.
     // Convex indexes are not unique constraints, so duplicates can occur.
@@ -200,7 +194,7 @@ export const updateEntry = mutation({
         canonicalName: normalizedName,
         type: args.type,
         ingredients: args.ingredients,
-        createdAt: now,
+        createdAt: args.now,
       });
     }
 
@@ -229,12 +223,13 @@ export const updateEntry = mutation({
 
 export const addBatch = mutation({
   args: {
+    now: v.number(),
     entries: v.array(
       v.object({
         canonicalName: v.string(),
         type: foodTypeValidator,
         ingredients: v.array(v.string()),
-        // Transitional: accepted but ignored — server generates createdAt.
+        // Retained for per-entry compatibility; addBatch uses the top-level now.
         createdAt: v.optional(v.number()),
       }),
     ),
@@ -246,7 +241,6 @@ export const addBatch = mutation({
       throw new Error("Batch too large: maximum 100 entries per call.");
     }
 
-    const now = Date.now();
     const ids: string[] = [];
 
     // Race condition note: Concurrent addBatch/addEntry calls for the same
@@ -287,7 +281,7 @@ export const addBatch = mutation({
         canonicalName: normalizedName,
         type: entry.type,
         ingredients: entry.ingredients,
-        createdAt: now,
+        createdAt: args.now,
       });
       ids.push(id);
     }
@@ -305,12 +299,10 @@ export const mergeDuplicates = mutation({
       }),
     ),
     updateFoodLogs: v.optional(v.boolean()),
-    now: v.optional(v.number()),
+    now: v.number(),
   },
   handler: async (ctx, args) => {
     const { userId } = await requireAuth(ctx);
-    const now = args.now ?? Date.now();
-
     const normalizedMerges = new Map<string, string>();
     for (const merge of args.merges) {
       const source = resolveCanonicalFoodName(merge.source);
@@ -519,7 +511,7 @@ export const mergeDuplicates = mutation({
         ingredientsText: firstNonNull(sorted.map((row) => row.ingredientsText)),
         nutritionPer100g: mergedNutrition,
         createdAt: Math.min(...sorted.map((row) => row.createdAt)),
-        updatedAt: now,
+        updatedAt: args.now,
       });
 
       for (const duplicate of duplicates) {
