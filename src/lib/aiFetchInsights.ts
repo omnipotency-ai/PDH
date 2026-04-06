@@ -237,7 +237,7 @@ export async function fetchAiInsights(
 
     messages.push({
       role: "user",
-      content: JSON.stringify(lightweightPayload, null, 2),
+      content: JSON.stringify(lightweightPayload),
     });
 
     const estimatedTokens = messages.reduce((sum, m) => {
@@ -573,7 +573,7 @@ export async function fetchWeeklySummary(
     content: string;
   }> = [
     { role: "system", content: WEEKLY_SUMMARY_SYSTEM_PROMPT },
-    { role: "user", content: JSON.stringify(safeInput, null, 2) },
+    { role: "user", content: JSON.stringify(safeInput) },
   ];
 
   let rawContent: string;

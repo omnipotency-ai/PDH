@@ -1562,7 +1562,7 @@ export function buildUserMessage(params: BuildUserMessageParams): string {
       baselineComparison: buildBaselineContext(baselineAverages),
     }),
   };
-  return JSON.stringify(payload, null, 2);
+  return JSON.stringify(payload);
 }
 
 // ─── Re-export DEFAULT_AI_PREFERENCES for convenience ────────────────────────
