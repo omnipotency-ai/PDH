@@ -146,12 +146,11 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   // compare via JSON.stringify per-field, which is cheaper than serializing
   // the whole profile on every render.
   // ---------------------------------------------------------------------------
-  const nextProfile = useMemo(() => resolveProfile(raw), [raw]);
   const prevProfileRef = useRef<ResolvedProfile>(DEFAULT_PROFILE);
 
   const profile: ResolvedProfile = useMemo(() => {
+    const next = resolveProfile(raw);
     const prev = prevProfileRef.current;
-    const next = nextProfile;
     const changed =
       prev.unitSystem !== next.unitSystem ||
       JSON.stringify(prev.habits) !== JSON.stringify(next.habits) ||
@@ -174,7 +173,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     }
     prevProfileRef.current = next;
     return next;
-  }, [nextProfile]);
+  }, [raw]);
 
   const patchProfile = useCallback(
     async (updates: PatchProfileArgs) => {
