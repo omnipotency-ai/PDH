@@ -443,6 +443,8 @@ export const replaceProfile = mutation({
       .withIndex("by_userId", (q) => q.eq("userId", userId))
       .first();
 
+    // nutritionGoals and foodFavourites are patch-only fields — excluded from full replace
+    // to prevent accidental overwrites of independently-managed preference data.
     const fields = buildNormalizedProfileFields({
       unitSystem: args.unitSystem,
       habits: args.habits,

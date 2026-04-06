@@ -337,6 +337,11 @@ function normalizeBackupPayload(payload: unknown): BackupPayload {
   };
 }
 
+/**
+ * INTERNAL: Deletes all rows across USER_DATA_TABLES for the given userId.
+ * Callers are responsible for ensuring userId belongs to the authenticated user.
+ * This function does NOT verify auth — do not call with an untrusted userId.
+ */
 export async function deleteAllUserData(ctx: MutationCtx, userId: string) {
   const counts: Record<string, number> = {};
   let totalDeleted = 0;
@@ -488,6 +493,19 @@ export const importBackup = mutation({
       logsInserted++;
     }
     insertedCounts.logs = logsInserted;
+
+    // Each AI analysis triggers 2 inserts (aiAnalyses + aiAnalysisPayloads).
+    // Cap at 500 to stay well within Convex per-transaction write limits.
+    // deleteAllUserData already ran, so a mid-import failure leaves the DB
+    // in a partially-deleted state — fail fast before writing anything.
+    const AI_ANALYSIS_IMPORT_LIMIT = 500;
+    if ((payload.data.aiAnalyses?.length ?? 0) > AI_ANALYSIS_IMPORT_LIMIT) {
+      throw new Error(
+        `Import contains ${payload.data.aiAnalyses.length} AI analyses, ` +
+          `which exceeds the safe import limit of ${AI_ANALYSIS_IMPORT_LIMIT}. ` +
+          `Import a more recent backup or clear old analyses first.`,
+      );
+    }
 
     for (const row of payload.data.aiAnalyses) {
       const rowError = asTrimmedString(row.error);
