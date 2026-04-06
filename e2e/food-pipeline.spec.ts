@@ -312,7 +312,7 @@ test.describe("Unresolved items", () => {
     await expect(toastMsg.first()).toBeVisible({ timeout: 15000 });
 
     // Toast should mention the count
-    await expect(page.locator(SEL.toast).filter({ hasText: /food/i })).toBeVisible({
+    await expect(page.locator(SEL.toast).filter({ hasText: /food/i }).first()).toBeVisible({
       timeout: 15000,
     });
   });
@@ -467,17 +467,24 @@ test.describe("FoodMatchingModal", () => {
 
     // Select bread
     await page.locator(SEL.searchFoodsInput).fill("bread");
-    const breadOption = page
-      .locator(SEL.matchModalBody)
-      .locator("button")
-      .filter({ hasText: "bread" })
+    const listbox = page.locator(SEL.matchModalBody).locator("#food-canonical-listbox");
+    const unselectedBread = listbox
+      .locator('[role="option"][aria-selected="false"]')
+      .filter({ hasText: /bread/i })
       .first();
-    await breadOption.click();
-    await expect(page.locator(SEL.matchButton)).toBeEnabled();
+    await expect(unselectedBread).toBeVisible({ timeout: 10000 });
+    await unselectedBread.click();
+    const matchButton = page.locator(SEL.matchButton);
+    await expect(matchButton).toBeEnabled();
 
     // Click again to deselect
-    await breadOption.click();
-    await expect(page.locator(SEL.matchButton)).toBeDisabled();
+    const selectedBread = listbox
+      .locator('[role="option"][aria-selected="true"]')
+      .filter({ hasText: /bread/i })
+      .first();
+    await expect(selectedBread).toBeVisible({ timeout: 5000 });
+    await selectedBread.click();
+    await expect(matchButton).toBeDisabled();
   });
 
   test("successful match updates dot from amber to green", async ({ page }) => {
@@ -777,27 +784,19 @@ test.describe("RawInputEditModal", () => {
     const textarea = page.locator(SEL.rawInputEditor);
     await textarea.clear();
     await textarea.fill("quinoa, rice");
-    await page.locator(SEL.saveReprocessButton).click();
+    const saveButton = page.locator(SEL.saveReprocessButton);
+    await expect(saveButton).toBeEnabled();
+    await saveButton.click({ force: true });
 
     // Modal should close
     await expect(page.locator(SEL.editModalTitle).first()).not.toBeVisible({
       timeout: 5000,
     });
 
-    // After reprocessing: should have 2 resolved items
-    // The old single-item entry should be replaced with 2 items
-    await waitForDots(page, SEL.dotResolved, 2, 15000);
-
-    // "rice" should now be visible in the entry.
-    // Use .first() because "rice" may match multiple elements — the display name
-    // and inline canonical labels like "(brown rice)" or "(white rice)".
-    await expect(
-      latestEntry(page, /quinoa/)
-        .getByText("rice")
-        .first(),
-    ).toBeVisible({
-      timeout: 10000,
+    await expect(entry.getByText("rice").first()).toBeVisible({
+      timeout: 15000,
     });
+    await waitForDotsInEntry(entry, SEL.dotResolved, 2, 15000);
   });
 
   test("editing to all-unresolvable shows amber dots", async ({ page }) => {
@@ -819,15 +818,17 @@ test.describe("RawInputEditModal", () => {
     const textarea = page.locator(SEL.rawInputEditor);
     await textarea.clear();
     await textarea.fill("glorpnik, fizzwax");
-    await page.locator(SEL.saveReprocessButton).click();
+    const saveButton = page.locator(SEL.saveReprocessButton);
+    await expect(saveButton).toBeEnabled();
+    await saveButton.click({ force: true });
 
     // After reprocessing: the green dots should be GONE
     // and amber dots should appear
-    await waitForDots(page, SEL.dotPending, 2, 15000);
-
-    // No green dots should remain for this reprocessed entry
-    const reprocessedEntry = latestEntry(page, /glorpnik|fizzwax/);
-    expect(await reprocessedEntry.locator(SEL.dotResolved).count()).toBe(0);
+    await expect(entry.getByText(/glorpnik|fizzwax/).first()).toBeVisible({
+      timeout: 15000,
+    });
+    await waitForDotsInEntry(entry, SEL.dotPending, 2, 15000);
+    expect(await entry.locator(SEL.dotResolved).count()).toBe(0);
   });
 });
 

@@ -1,4 +1,5 @@
 import { expect, test } from "./fixtures";
+import { TrackPage } from "./page-objects";
 
 /**
  * E2E tests for fluid tracking in the post-NutritionCard flow.
@@ -10,124 +11,92 @@ import { expect, test } from "./fixtures";
  * 4. Fluid total updates after multiple water entries
  */
 test.describe("Fluid tracking", () => {
-  const getNutritionCard = (page: import("@playwright/test").Page) =>
-    page.locator('[data-slot="nutrition-card"]');
-
-  // Helper to get the Fluids group button in Today's Log
-  const getFluidsGroupButton = (page: import("@playwright/test").Page) =>
-    page.locator("button", { hasText: /^Fluids/ }).first();
+  const parseFluidsTotalMl = (label: string | null) => {
+    const match = label?.match(/Fluids:\s*([0-9.]+)\s*ml/i);
+    return Number.parseFloat(match?.[1] ?? "0");
+  };
 
   test("nutrition card exposes water logging affordances", async ({ page }) => {
-    await page.goto("/");
-    await expect(page.locator("#root")).toBeVisible();
+    const track = new TrackPage(page);
+    await track.goto();
 
-    const nutritionCard = getNutritionCard(page);
-    await expect(nutritionCard).toBeVisible();
-
-    // Should have Water button
-    const waterButton = nutritionCard.locator('button[aria-label="Log water"]');
-    await expect(waterButton).toBeVisible();
-
-    // Should have water progress row
-    const waterProgress = nutritionCard.locator('[data-slot="water-progress"]');
-    await expect(waterProgress).toBeVisible();
+    await expect(track.nutritionCard.locator('button[aria-label="Log water"]')).toBeVisible();
+    await expect(track.waterProgress).toBeVisible();
   });
 
   test("can log water", async ({ page }) => {
-    await page.goto("/");
-    await expect(page.locator("#root")).toBeVisible();
+    const track = new TrackPage(page);
+    await track.goto();
 
-    const nutritionCard = getNutritionCard(page);
-    const waterButton = nutritionCard.locator('button[aria-label="Log water"]');
-    await waterButton.click();
-    await page.waitForTimeout(200);
+    await track.openWaterModal();
 
-    const modal = page.locator('[data-slot="water-modal"]');
+    const modal = track.waterModal;
     await expect(modal).toBeVisible();
 
-    const increaseButton = modal.locator('button[aria-label="Increase amount"]');
-    await increaseButton.click();
-    await page.waitForTimeout(100);
+    const amountInput = modal.locator('input[aria-label="Amount to add in millilitres"]');
+    await amountInput.fill("200");
+    await expect(modal.getByRole("button", { name: /Log Water/i })).toBeEnabled();
 
     const logButton = modal.getByRole("button", { name: /Log Water/i });
     await logButton.click();
-    await page.waitForTimeout(1000);
 
     // Fluids group should show in Today's Log
-    const fluidsGroupButton = getFluidsGroupButton(page);
+    const fluidsGroupButton = page.locator("button", { hasText: /^Fluids/ }).first();
     await expect(fluidsGroupButton).toBeVisible();
   });
 
   test("can log a non-water drink through NutritionCard search", async ({ page }) => {
-    await page.goto("/");
-    await expect(page.locator("#root")).toBeVisible();
+    const track = new TrackPage(page);
+    await track.goto();
 
-    const nutritionCard = getNutritionCard(page);
-    const searchInput = nutritionCard.getByLabel("Search foods").first();
-    await searchInput.fill("clear broth");
+    await track.openSearch("clear broth");
+    await track.addSearchResultToStaging(/clear broth/i);
+    await track.waitForLogFoodButtonText("1");
+    await track.openLogFoodModal();
 
-    const searchResults = nutritionCard.locator('[data-slot="search-results"]');
-    await expect(searchResults).toBeVisible();
-    const brothResult = searchResults.locator('[data-slot="search-result"]', {
-      hasText: /clear broth/i,
-    });
-    await brothResult.locator('button[aria-label$="to staging"]').click();
-
-    const logFoodButton = nutritionCard.locator('[data-slot="log-food-button"]');
-    await expect(logFoodButton).toContainText("1");
-    await logFoodButton.click();
-
-    const modal = page.locator('[data-slot="log-food-modal"]');
-    await expect(modal).toBeVisible();
+    const modal = track.logFoodModal;
     await modal.locator('[data-slot="log-food-actions"]').getByText("Log Food", { exact: true }).click();
-    await page.waitForTimeout(1500);
+    await expect(track.searchInput).toHaveValue("");
 
     const foodGroupButton = page.locator("button", { hasText: /Food intake/i }).first();
     await expect(foodGroupButton).toBeVisible();
     await foodGroupButton.click();
-    await page.waitForTimeout(500);
 
     await expect(page.locator("text=Clear broth").first()).toBeVisible();
   });
 
   test("fluid total updates after multiple entries", async ({ page }) => {
-    await page.goto("/");
-    await expect(page.locator("#root")).toBeVisible();
-
-    const nutritionCard = getNutritionCard(page);
-    const waterButton = nutritionCard.locator('button[aria-label="Log water"]');
+    const track = new TrackPage(page);
+    await track.goto();
+    const baselineLabel = await track.waterProgress.getAttribute("aria-label");
+    const baselineTotalMl = parseFluidsTotalMl(baselineLabel);
 
     // Log first water entry (200ml)
-    await waterButton.click();
-    await page.waitForTimeout(200);
-    let modal = page.locator('[data-slot="water-modal"]');
+    await track.openWaterModal();
+    let modal = track.waterModal;
     await expect(modal).toBeVisible();
+    await modal.locator('input[aria-label="Amount to add in millilitres"]').fill("200");
+    await expect(modal.getByRole("button", { name: /Log Water/i })).toBeEnabled();
     await modal.getByRole("button", { name: /Log Water/i }).click();
-    await page.waitForTimeout(1000);
-
-    // Capture the total after the first entry
-    const fluidsGroupButton = getFluidsGroupButton(page);
-    await expect(fluidsGroupButton).toBeVisible();
-    const badgeAfterFirst = fluidsGroupButton.locator("span.font-mono").first();
-    const textAfterFirst = await badgeAfterFirst.textContent();
-    const totalAfterFirst = Number.parseFloat(textAfterFirst ?? "0");
+    await expect
+      .poll(async () => {
+        const label = await track.waterProgress.getAttribute("aria-label");
+        return parseFluidsTotalMl(label);
+      })
+      .toBe(baselineTotalMl + 200);
 
     // Log second water entry (400ml)
-    await waterButton.click();
-    await page.waitForTimeout(200);
-    modal = page.locator('[data-slot="water-modal"]');
+    await track.openWaterModal();
+    modal = track.waterModal;
     await expect(modal).toBeVisible();
-    await modal.locator('button[aria-label="Increase amount"]').click();
-    await page.waitForTimeout(100);
+    await modal.locator('input[aria-label="Amount to add in millilitres"]').fill("400");
+    await expect(modal.getByRole("button", { name: /Log Water/i })).toBeEnabled();
     await modal.getByRole("button", { name: /Log Water/i }).click();
-    await page.waitForTimeout(1000);
-
-    // The total should have increased by 0.4L (400ml)
-    const badgeAfterSecond = getFluidsGroupButton(page).locator("span.font-mono").first();
-    const textAfterSecond = await badgeAfterSecond.textContent();
-    const totalAfterSecond = Number.parseFloat(textAfterSecond ?? "0");
-    const addedL = totalAfterSecond - totalAfterFirst;
-    // We added 400ml = 0.4L between the two captures
-    expect(addedL).toBeCloseTo(0.4, 1);
+    await expect
+      .poll(async () => {
+        const label = await track.waterProgress.getAttribute("aria-label");
+        return parseFluidsTotalMl(label);
+      })
+      .toBe(baselineTotalMl + 600);
   });
 });

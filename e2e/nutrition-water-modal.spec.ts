@@ -1,4 +1,5 @@
 import { expect, test } from "./fixtures";
+import { TrackPage } from "./page-objects";
 
 /**
  * E2E tests for the WaterModal component inside NutritionCard.
@@ -9,73 +10,43 @@ import { expect, test } from "./fixtures";
  * Water button. Close via X button or Escape.
  */
 test.describe("Water Modal", () => {
-  // Helper to get the NutritionCard section
-  const getNutritionCard = (page: import("@playwright/test").Page) =>
-    page.locator('[data-slot="nutrition-card"]');
+  async function openWaterModal(track: TrackPage) {
+    await track.goto();
 
-  // Helper to get the WaterModal dialog
-  const getWaterModal = (page: import("@playwright/test").Page) =>
-    page.locator('[data-slot="water-modal"]');
-
-  // Helper to open the WaterModal via the header water icon
-  async function openWaterModal(page: import("@playwright/test").Page) {
-    await page.goto("/");
-    await expect(page.locator("#root")).toBeVisible();
-
-    const nutritionCard = getNutritionCard(page);
-    await expect(nutritionCard).toBeVisible();
-
-    // Click the water icon button in the NutritionCard header
-    const waterIconButton = nutritionCard.locator('button[aria-label="Log water"]');
-    await expect(waterIconButton).toBeVisible();
-    await waterIconButton.click();
-    await page.waitForTimeout(200);
-
-    const modal = getWaterModal(page);
-    await expect(modal).toBeVisible();
+    await track.openWaterModal();
+    const modal = track.waterModal;
     return modal;
   }
 
   test("water icon opens the WaterModal", async ({ page }) => {
-    await page.goto("/");
-    await expect(page.locator("#root")).toBeVisible();
-
-    const nutritionCard = getNutritionCard(page);
-    await expect(nutritionCard).toBeVisible();
+    const track = new TrackPage(page);
+    await track.goto();
 
     // Modal should not be visible initially
-    const modal = getWaterModal(page);
-    await expect(modal).not.toBeVisible();
+    await expect(track.waterModal).not.toBeVisible();
 
     // Click the water icon in the header
-    const waterIconButton = nutritionCard.locator('button[aria-label="Log water"]');
-    await waterIconButton.click();
-    await page.waitForTimeout(200);
+    await track.openWaterModalFromHeader();
 
     // Modal should now be visible
-    await expect(modal).toBeVisible();
+    await expect(track.waterModal).toBeVisible();
   });
 
   test("water progress bar also opens the WaterModal", async ({ page }) => {
-    await page.goto("/");
-    await expect(page.locator("#root")).toBeVisible();
-
-    const nutritionCard = getNutritionCard(page);
-    await expect(nutritionCard).toBeVisible();
+    const track = new TrackPage(page);
+    await track.goto();
 
     // Click the water progress row
-    const waterProgressRow = nutritionCard.locator('[data-slot="water-progress"]');
-    await expect(waterProgressRow).toBeVisible();
-    await waterProgressRow.click();
-    await page.waitForTimeout(200);
+    await expect(track.waterProgress).toBeVisible();
+    await track.openWaterModal();
 
     // Modal should be visible
-    const modal = getWaterModal(page);
-    await expect(modal).toBeVisible();
+    await expect(track.waterModal).toBeVisible();
   });
 
   test("modal displays default water amount of 0 ml", async ({ page }) => {
-    const modal = await openWaterModal(page);
+    const track = new TrackPage(page);
+    const modal = await openWaterModal(track);
 
     // The amount input should show "0"
     const amountInput = modal.locator('input[aria-label="Amount to add in millilitres"]');
@@ -84,12 +55,12 @@ test.describe("Water Modal", () => {
   });
 
   test("plus button increases amount by 50ml", async ({ page }) => {
-    const modal = await openWaterModal(page);
+    const track = new TrackPage(page);
+    const modal = await openWaterModal(track);
 
     const increaseButton = modal.locator('button[aria-label="Increase amount"]');
     await expect(increaseButton).toBeVisible();
     await increaseButton.click();
-    await page.waitForTimeout(100);
 
     // Should now show 50ml
     const amountInput = modal.locator('input[aria-label="Amount to add in millilitres"]');
@@ -97,19 +68,18 @@ test.describe("Water Modal", () => {
 
     // Click increase again
     await increaseButton.click();
-    await page.waitForTimeout(100);
 
     // Should now show 100ml
     await expect(amountInput).toHaveValue("100");
   });
 
   test("minus button decreases amount by 50ml with floor at 0", async ({ page }) => {
-    const modal = await openWaterModal(page);
+    const track = new TrackPage(page);
+    const modal = await openWaterModal(track);
 
     // Start at 0, increase to 50 first
     const increaseButton = modal.locator('button[aria-label="Increase amount"]');
     await increaseButton.click();
-    await page.waitForTimeout(100);
 
     const amountInput = modal.locator('input[aria-label="Amount to add in millilitres"]');
     await expect(amountInput).toHaveValue("50");
@@ -117,7 +87,6 @@ test.describe("Water Modal", () => {
     // Now decrease back to 0
     const decreaseButton = modal.locator('button[aria-label="Decrease amount"]');
     await decreaseButton.click();
-    await page.waitForTimeout(100);
 
     await expect(amountInput).toHaveValue("0");
 
@@ -126,44 +95,43 @@ test.describe("Water Modal", () => {
   });
 
   test("close button closes the modal without logging", async ({ page }) => {
-    const modal = await openWaterModal(page);
+    const track = new TrackPage(page);
+    const modal = await openWaterModal(track);
 
     // Increase amount to 100ml first (so we can verify nothing was logged)
     const increaseButton = modal.locator('button[aria-label="Increase amount"]');
     await increaseButton.click();
     await increaseButton.click();
-    await page.waitForTimeout(100);
 
     // Click the X close button
     const closeButton = modal.locator('button[aria-label="Close"]');
     await expect(closeButton).toBeVisible();
     await closeButton.click();
-    await page.waitForTimeout(200);
 
     // Modal should be closed
     await expect(modal).not.toBeVisible();
   });
 
   test("log button logs water and closes the modal", async ({ page }) => {
-    const modal = await openWaterModal(page);
+    const track = new TrackPage(page);
+    const modal = await openWaterModal(track);
 
     // Need to add some amount first (starts at 0, button is disabled)
     const increaseButton = modal.locator('button[aria-label="Increase amount"]');
     await increaseButton.click();
-    await page.waitForTimeout(100);
 
     // Click "Log Water" button
     const logButton = modal.getByRole("button", { name: /Log Water/i });
     await expect(logButton).toBeVisible();
     await logButton.click();
-    await page.waitForTimeout(500);
 
     // Modal should close after logging
     await expect(modal).not.toBeVisible();
   });
 
   test("modal has proper accessibility attributes", async ({ page }) => {
-    const modal = await openWaterModal(page);
+    const track = new TrackPage(page);
+    const modal = await openWaterModal(track);
 
     // role="dialog"
     await expect(modal).toHaveAttribute("role", "dialog");
@@ -176,19 +144,20 @@ test.describe("Water Modal", () => {
   });
 
   test("escape key closes the modal", async ({ page }) => {
-    const modal = await openWaterModal(page);
+    const track = new TrackPage(page);
+    const modal = await openWaterModal(track);
     await expect(modal).toBeVisible();
 
     // Press Escape
     await page.keyboard.press("Escape");
-    await page.waitForTimeout(200);
 
     // Modal should be closed
     await expect(modal).not.toBeVisible();
   });
 
   test("clicking overlay backdrop closes the modal", async ({ page }) => {
-    await openWaterModal(page);
+    const track = new TrackPage(page);
+    await openWaterModal(track);
 
     // Click the overlay (outside the modal dialog)
     const overlay = page.locator('[data-slot="water-modal-overlay"]');
@@ -196,15 +165,14 @@ test.describe("Water Modal", () => {
 
     // Click the top-left corner of the overlay (outside the centered dialog)
     await overlay.click({ position: { x: 10, y: 10 } });
-    await page.waitForTimeout(200);
 
     // Modal should be closed
-    const modal = getWaterModal(page);
-    await expect(modal).not.toBeVisible();
+    await expect(track.waterModal).not.toBeVisible();
   });
 
   test("modal displays sky-blue accent color on progress ring", async ({ page }) => {
-    const modal = await openWaterModal(page);
+    const track = new TrackPage(page);
+    const modal = await openWaterModal(track);
 
     // The progress ring SVG should have a circle with var(--water) stroke
     const ringContainer = modal.locator('[data-slot="water-modal-ring"]');
@@ -212,16 +180,16 @@ test.describe("Water Modal", () => {
 
     // Check the primary progress arc uses the CSS variable
     const progressArc = ringContainer.locator("svg circle").nth(1);
-    await expect(progressArc).toHaveAttribute("stroke", "var(--water)");
+    await expect(progressArc).toHaveAttribute("stroke", "var(--fluid)");
   });
 
   test("user can type a custom amount in the input", async ({ page }) => {
-    const modal = await openWaterModal(page);
+    const track = new TrackPage(page);
+    const modal = await openWaterModal(track);
 
     const amountInput = modal.locator('input[aria-label="Amount to add in millilitres"]');
     await amountInput.click();
     await amountInput.fill("175");
-    await page.waitForTimeout(100);
 
     // Log Water should be enabled now
     const logButton = modal.getByRole("button", { name: /Log Water/i });
@@ -229,13 +197,13 @@ test.describe("Water Modal", () => {
   });
 
   test("plus button is disabled at maximum amount (2000ml)", async ({ page }) => {
-    const modal = await openWaterModal(page);
+    const track = new TrackPage(page);
+    const modal = await openWaterModal(track);
 
     // Type 2000 directly instead of clicking 40 times
     const amountInput = modal.locator('input[aria-label="Amount to add in millilitres"]');
     await amountInput.click();
     await amountInput.fill("2000");
-    await page.waitForTimeout(100);
 
     // Increase button should be disabled at max
     const increaseButton = modal.locator('button[aria-label="Increase amount"]');
@@ -243,7 +211,8 @@ test.describe("Water Modal", () => {
   });
 
   test("log button is disabled when amount is 0", async ({ page }) => {
-    const modal = await openWaterModal(page);
+    const track = new TrackPage(page);
+    const modal = await openWaterModal(track);
 
     // Amount starts at 0, so Log Water should be disabled
     const logButton = modal.getByRole("button", { name: /Log Water/i });
@@ -252,11 +221,11 @@ test.describe("Water Modal", () => {
 
   test("modal resets amount to 0 when reopened", async ({ page }) => {
     // Open modal and add some amount
-    const modal = await openWaterModal(page);
+    const track = new TrackPage(page);
+    const modal = await openWaterModal(track);
     const increaseButton = modal.locator('button[aria-label="Increase amount"]');
     await increaseButton.click();
     await increaseButton.click();
-    await page.waitForTimeout(100);
 
     // Verify it changed to 100
     const amountInput = modal.locator('input[aria-label="Amount to add in millilitres"]');
@@ -265,17 +234,13 @@ test.describe("Water Modal", () => {
     // Close via X button
     const closeButton = modal.locator('button[aria-label="Close"]');
     await closeButton.click();
-    await page.waitForTimeout(200);
     await expect(modal).not.toBeVisible();
 
     // Reopen
-    const nutritionCard = getNutritionCard(page);
-    const waterIconButton = nutritionCard.locator('button[aria-label="Log water"]');
-    await waterIconButton.click();
-    await page.waitForTimeout(200);
+    await track.openWaterModal();
 
     // Should be back to 0
-    await expect(modal).toBeVisible();
+    await expect(track.waterModal).toBeVisible();
     await expect(amountInput).toHaveValue("0");
   });
 });

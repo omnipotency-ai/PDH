@@ -1,4 +1,5 @@
 import { expect, test } from "./fixtures";
+import { QuickCapturePage } from "./page-objects";
 
 /**
  * E2E tests for sleep tracking.
@@ -9,28 +10,10 @@ import { expect, test } from "./fixtures";
  * 3. Can select hours and minutes and log sleep
  */
 test.describe("Sleep tracking", () => {
-  // Helper to get the Quick Capture section
-  const getQuickCapture = (page: import("@playwright/test").Page) =>
-    page.locator('[data-slot="quick-capture"]');
-
-  const getSleepTileButton = (page: import("@playwright/test").Page) =>
-    getQuickCapture(page).getByRole("button", { name: /^Sleep:/ }).first();
-
   async function openSleepPopover(page: import("@playwright/test").Page) {
-    const hoursInput = page.locator("#duration-popover-hours");
-    const minsInput = page.locator("#duration-popover-mins");
-
-    for (let attempt = 0; attempt < 3; attempt++) {
-      await getSleepTileButton(page).click();
-      try {
-        await expect(hoursInput).toBeVisible({ timeout: 2500 });
-        await expect(minsInput).toBeVisible({ timeout: 2500 });
-        return;
-      } catch (error) {
-        if (attempt === 2) throw error;
-        await page.keyboard.press("Escape").catch(() => {});
-      }
-    }
+    const quickCapture = new QuickCapturePage(page);
+    await quickCapture.goto();
+    return await quickCapture.openSleepPopover();
   }
 
   async function logSleepDuration(
@@ -40,10 +23,7 @@ test.describe("Sleep tracking", () => {
   ) {
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        await openSleepPopover(page);
-
-        const hoursInput = page.locator("#duration-popover-hours");
-        const minsInput = page.locator("#duration-popover-mins");
+        const { hoursInput, minsInput } = await openSleepPopover(page);
 
         await hoursInput.fill(hours, { timeout: 2500 });
         await minsInput.fill(minutes, { timeout: 2500 });
@@ -58,27 +38,21 @@ test.describe("Sleep tracking", () => {
   }
 
   test("sleep tile exists in Quick Capture", async ({ page }) => {
-    await page.goto("/");
-    await expect(page.locator("#root")).toBeVisible();
-
-    const quickCapture = getQuickCapture(page);
-    await expect(quickCapture).toBeVisible();
+    const quickCapture = new QuickCapturePage(page);
+    await quickCapture.goto();
 
     // Find Sleep tile
-    await expect(getSleepTileButton(page)).toBeVisible();
+    await expect(quickCapture.sleepTile).toBeVisible();
   });
 
   test("tapping Sleep opens sleep entry drawer", async ({ page }) => {
-    await page.goto("/");
-    await expect(page.locator("#root")).toBeVisible();
+    const quickCapture = new QuickCapturePage(page);
+    await quickCapture.goto();
 
-    await openSleepPopover(page);
+    await quickCapture.openSleepPopover();
   });
 
   test("can select hours and minutes and log sleep", async ({ page }) => {
-    await page.goto("/");
-    await expect(page.locator("#root")).toBeVisible();
-
     await logSleepDuration(page, "7", "30");
   });
 });
