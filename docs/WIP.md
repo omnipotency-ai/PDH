@@ -24,7 +24,7 @@
 
 ### W3-07 — Split aiAnalysis.ts into focused modules (2026-04-06)
 
-- **Commit:** `(see below)`
+- **Commit:** `4caf2d7`
 - **Files:** `src/lib/aiAnalysis.ts`, `src/lib/aiPrompts.ts` (new), `src/lib/aiParsing.ts`, `src/lib/aiFetchInsights.ts` (new)
 - **What:** Split 2178-line aiAnalysis.ts into three focused modules. aiPrompts.ts handles system prompt construction, context builders, and sanitization helpers. aiParsing.ts handles response parsing, JSON extraction, and validation. aiFetchInsights.ts handles fetch orchestration, error handling, and retry logic. aiAnalysis.ts is now a 67-line thin re-export barrel preserving the public API for all existing import sites. buildUserMessage already used an options object (BuildUserMessageParams) — no positional params to fix. Security fixes from W0-03/04/05 are preserved in the split modules.
 - **Decisions:** All existing import sites continue importing from `@/lib/aiAnalysis` via the barrel — no call-site changes were needed since the barrel re-exports everything. This is the correct pattern for a large module split where many files import from the same source.
