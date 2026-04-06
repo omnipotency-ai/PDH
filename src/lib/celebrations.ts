@@ -9,7 +9,7 @@
  * @exports getCelebration — sole export, returns CelebrationConfig for a completed habit
  *
  * @consumers
- *   - src/hooks/useQuickCapture.ts (sole consumer)
+ *   - src/hooks/useCelebrationTrigger.ts (sole consumer)
  */
 import type { HabitStreakSummary } from "./habitAggregates";
 import type { HabitConfig } from "./habitTemplates";
@@ -51,7 +51,9 @@ export function getCelebration(
     `${habit.name} locked in.`,
     `${habit.name} target reached — well done.`,
   ];
-  const messageHash = habit.name.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  const messageHash = habit.name
+    .split("")
+    .reduce((sum, char) => sum + char.charCodeAt(0), 0);
   const messageIndex = messageHash % dailyMessages.length;
 
   return {
