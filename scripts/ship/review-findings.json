@@ -1,43 +1,54 @@
 {
   "branch": "pans-labyrinth",
-  "reviewed_at": "2026-04-06T14:33:59Z",
+  "reviewed_at": "2026-04-06T21:37:43Z",
   "files_reviewed": [
-    "convex/__tests__/foodLlmMatching.test.ts",
-    "convex/__tests__/foodPipelineBranches.test.ts",
-    "convex/__tests__/profiles.test.ts",
-    "convex/_generated/api.d.ts",
-    "convex/computeAggregates.test.ts",
-    "convex/computeAggregates.ts",
-    "convex/conversations.ts",
-    "convex/extractInsightData.ts",
-    "convex/foodLibrary.test.ts",
-    "convex/foodLibrary.ts",
-    "convex/foodParsing.ts",
-    "convex/foodRequests.ts",
-    "convex/ingredientOverrides.test.ts",
-    "convex/ingredientOverrides.ts",
-    "convex/ingredientProfiles.test.ts",
-    "convex/ingredientProfiles.ts",
-    "convex/lib/apiKeys.ts",
-    "convex/migrations.ts",
-    "convex/profiles.ts",
-    "convex/seedTestData.ts",
-    "convex/validators.ts",
-    "shared/__tests__/foodCanonicalization.test.ts",
-    "shared/__tests__/foodPipelineDisplay.test.ts",
-    "shared/foodEvidence.ts",
-    "shared/foodParsing.ts",
-    "src/components/track/FoodMatchingModal.tsx",
-    "src/hooks/useApiKey.ts",
-    "src/lib/analysis.ts",
-    "src/lib/foodLlmCanonicalization.ts",
-    "src/lib/syncFood.ts"
+    "convex/aggregateQueries.ts",
+    "convex/aggregateQueries.test.ts",
+    "convex/foodAssessments.ts",
+    "convex/foodAssessments.test.ts",
+    "e2e/food-pipeline.spec.ts",
+    "e2e/nutrition-water-modal.spec.ts",
+    "src/components/track/nutrition/CircularProgressRing.tsx"
   ],
-  "findings": [],
+  "findings": [
+    {
+      "id": "F001",
+      "severity": "MODERATE",
+      "category": "tests",
+      "file": "e2e/food-pipeline.spec.ts",
+      "line": 508,
+      "title": "Matched-entry regression test no longer scopes the resolved item",
+      "description": "This test used to assert against the specific log entry containing the unique gibberish token. It now picks any pending entry and only checks aggregate dot counts, so a different pending item elsewhere on the page could satisfy the assertion and hide a regression in the matched entry itself.",
+      "fix": "Keep the assertion scoped to the unique logged entry, or additionally verify that the entry containing the gibberish token changed from 1 pending dot to 1 resolved dot.",
+      "implemented": false
+    },
+    {
+      "id": "F002",
+      "severity": "MODERATE",
+      "category": "tests",
+      "file": "e2e/nutrition-water-modal.spec.ts",
+      "line": 173,
+      "title": "Water-modal color check is asserting the wrong SVG arc",
+      "description": "The test claims to verify the sky-blue water accent, but `svg circle`.nth(1) is the primary total-fluids arc. In `CircularProgressRing`, the water segment is rendered as the final secondary arc, so this assertion would still pass if the water color regressed.",
+      "fix": "Assert the secondary arc color instead of the primary arc, ideally by targeting the water segment explicitly rather than relying on raw circle order.",
+      "implemented": false
+    },
+    {
+      "id": "F003",
+      "severity": "MODERATE",
+      "category": "tests",
+      "file": "convex/aggregateQueries.test.ts",
+      "line": 29,
+      "title": "New truncation contract is only covered on the happy path",
+      "description": "The refactor added row caps and `isTruncated` warnings in `convex/aggregateQueries.ts` and `convex/foodAssessments.ts`, but the updated tests only assert `isTruncated === false` on tiny fixtures. There is no regression test that forces the cap and proves the new contract behaves correctly when the result set is truncated.",
+      "fix": "Add a fixture that exceeds the cap and assert `isTruncated === true` plus the bounded result size for both `allFoodTrials` and `allFoods`.",
+      "implemented": false
+    }
+  ],
   "summary": {
     "critical": 0,
     "high": 0,
-    "moderate": 0,
+    "moderate": 3,
     "nice_to_have": 0
   }
 }

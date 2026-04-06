@@ -39,7 +39,13 @@ const appLayoutRoute = createRoute({
 const indexRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: "/",
-  component: () => withBoundary("Track", <TrackPage />),
+  component: () =>
+    withBoundary(
+      "Track",
+      <Suspense fallback={null}>
+        <TrackPage />
+      </Suspense>,
+    ),
 });
 
 const patternsRoute = createRoute({

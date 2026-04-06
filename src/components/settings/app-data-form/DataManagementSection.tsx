@@ -1,29 +1,24 @@
-import { ChevronRight, Download, RotateCcw, Trash2, Upload } from "lucide-react";
-import { useRef, useState } from "react";
+import { ChevronRight, Download, RotateCcw, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { APP_DATA_HEADING_CLASS } from "./shared";
 
 interface DataManagementSectionProps {
   logsCount: number;
-  isImportingBackup: boolean;
   onExportBackup: () => Promise<void> | void;
   onExportLogsCsv: () => Promise<void> | void;
-  onImportBackup: (file: File | null) => Promise<void> | void;
   onResetFactorySettings: () => void;
   onOpenDeleteDrawer: () => void;
 }
 
 export function DataManagementSection({
   logsCount,
-  isImportingBackup,
   onExportBackup,
   onExportLogsCsv,
-  onImportBackup,
   onResetFactorySettings,
   onOpenDeleteDrawer,
 }: DataManagementSectionProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   return (
     <div data-slot="data-management-section" className="space-y-2">
@@ -57,7 +52,7 @@ export function DataManagementSection({
               onClick={() => void onExportBackup()}
             >
               <Download className="h-3.5 w-3.5" />
-              Export Full Backup
+              Export App Data
             </Button>
             <Button
               variant="outline"
@@ -67,16 +62,6 @@ export function DataManagementSection({
             >
               <Download className="h-3.5 w-3.5" />
               Export Logs CSV
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 gap-1.5"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isImportingBackup}
-            >
-              <Upload className="h-3.5 w-3.5" />
-              {isImportingBackup ? "Importing..." : "Import Backup"}
             </Button>
             <Button
               variant="outline"
@@ -99,22 +84,10 @@ export function DataManagementSection({
           </div>
 
           <p className="text-[11px] text-[var(--text-muted)]">
-            Backup JSON includes your synced recovery data and excludes the local-only OpenAI API
+            Export JSON includes your synced recovery data and excludes the local-only OpenAI API
             key. Reset affects local settings only. Delete removes all cloud data linked to your
             account.
           </p>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="application/json,.json"
-            className="hidden"
-            onChange={(event) => {
-              const file = event.target.files?.[0] ?? null;
-              void onImportBackup(file);
-              event.currentTarget.value = "";
-            }}
-          />
         </>
       )}
     </div>

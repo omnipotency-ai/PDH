@@ -508,7 +508,7 @@ describe("logs", () => {
     expect(profile?.aiPreferences?.aiModel).toBe("gpt-5.4");
   });
 
-  it("exports and restores a full backup with remapped linked records", async () => {
+  it("exports a full data snapshot and deleteAll clears synced data", async () => {
     const t = convexTest(schema);
     const userId = "test-user-123";
     const now = Date.now();
@@ -681,56 +681,38 @@ describe("logs", () => {
       .query(api.logs.list, {});
     expect(emptyLogs).toHaveLength(0);
 
-    const restore = await t
-      .withIdentity({ subject: userId })
-      .mutation(api.logs.importBackup, { payload: backup });
-    expect(restore.inserted.logs).toBe(1);
-    expect(restore.inserted.aiAnalyses).toBe(1);
-
     await t.run(async (ctx) => {
-      const restoredLogs = await ctx.db
+      const clearedLogs = await ctx.db
         .query("logs")
         .withIndex("by_userId", (q) => q.eq("userId", userId))
         .collect();
-      const restoredAiAnalyses = await ctx.db
+      const clearedAiAnalyses = await ctx.db
         .query("aiAnalyses")
         .withIndex("by_userId", (q) => q.eq("userId", userId))
         .collect();
-      const restoredConversations = await ctx.db
+      const clearedConversations = await ctx.db
         .query("conversations")
         .withIndex("by_userId", (q) => q.eq("userId", userId))
         .collect();
-      const restoredAssessments = await ctx.db
+      const clearedAssessments = await ctx.db
         .query("foodAssessments")
         .withIndex("by_userId", (q) => q.eq("userId", userId))
         .collect();
-      const restoredExposures = await ctx.db
+      const clearedExposures = await ctx.db
         .query("ingredientExposures")
         .withIndex("by_userId", (q) => q.eq("userId", userId))
         .collect();
-      const restoredProfile = await ctx.db
+      const clearedProfile = await ctx.db
         .query("profiles")
         .withIndex("by_userId", (q) => q.eq("userId", userId))
         .first();
 
-      expect(restoredLogs).toHaveLength(1);
-      expect(restoredAiAnalyses).toHaveLength(1);
-      expect(restoredConversations).toHaveLength(1);
-      expect(restoredAssessments).toHaveLength(1);
-      expect(restoredExposures).toHaveLength(1);
-      expect(restoredProfile?.fluidPresets).toEqual([{ name: "Tea" }]);
-      expect(restoredProfile?.knownFoods).toEqual(["toast", "banana"]);
-      expect(restoredProfile?.encryptedApiKey).toBe(
-        "enc-v1:test-iv:test-ciphertext",
-      );
-
-      expect(restoredConversations[0].aiAnalysisId).toBe(
-        restoredAiAnalyses[0]._id,
-      );
-      expect(restoredAssessments[0].aiAnalysisId).toBe(
-        restoredAiAnalyses[0]._id,
-      );
-      expect(restoredExposures[0].logId).toBe(restoredLogs[0]._id);
+      expect(clearedLogs).toHaveLength(0);
+      expect(clearedAiAnalyses).toHaveLength(0);
+      expect(clearedConversations).toHaveLength(0);
+      expect(clearedAssessments).toHaveLength(0);
+      expect(clearedExposures).toHaveLength(0);
+      expect(clearedProfile).toBeNull();
     });
   });
 });

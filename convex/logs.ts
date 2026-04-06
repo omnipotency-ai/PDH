@@ -25,7 +25,7 @@ import { logDataValidator } from "./validators";
 
 export { getProfile, patchProfile, replaceProfile } from "./profileMutations";
 
-export { deleteAll, exportBackup, importBackup } from "./backup";
+export { deleteAll, exportBackup } from "./backup";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Log type validator
