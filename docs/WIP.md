@@ -22,6 +22,12 @@
 
 ## Active: Tech-Debt Audit Cleanup
 
+### Wave 5 complete except deferred W5-16 (2026-04-06)
+
+All requested Wave 5 tasks are complete on `pans-labyrinth` except W5-16, which remains intentionally deferred as a pure refactor. Key commits: `78a0a52` (weekly summary / AI correctness), `8f8ee78` (UI infrastructure fixes), `4a8f7cc` (hero BM/day-boundary fixes), `962c42e` (quick-capture form state fixes), `d681d04` (today-log correctness and fluid counting), `f01aa6c` (fixtures, calorie delete guard, Aquarius registry correction), `42439fa` (nested ternary cleanup), `b1b9f3b`, `af5537e` (Wave 5 E2E stabilization and full-suite hardening).
+
+Verification for the completed Wave 5 set passed with `bun run typecheck`, `bun run build`, and `bun run test` on 2026-04-06.
+
 ### Wave 4 complete (2026-04-06)
 
 All Wave 4 tasks resolved. 14 done, 4 skipped (W4-01, W4-02, W4-12, W4-14 deferred — personal-use product, not a priority).

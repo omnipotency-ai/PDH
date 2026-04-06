@@ -54,7 +54,7 @@ All 6 waves complete (W0-W5), 69 commits, 1430 tests, 211 files changed.
 
 ## Active: Tech-Debt Audit Cleanup
 
-> **Status:** IN PROGRESS (2026-04-06) — waves 0-4 partially complete on `pans-labyrinth`, W4 has 6 tasks pending rate-limit reset
+> **Status:** IN PROGRESS (2026-04-06) — waves 0-5 complete except W5-16 deferred on `pans-labyrinth`; wave 6 pending
 > **Plan (waves 0-1):** [`docs/plans/2026-04-06-tech-debt-audit-cleanup-waves-0-1.json`](plans/2026-04-06-tech-debt-audit-cleanup-waves-0-1.json)
 > **Plan (waves 2-3):** [`docs/plans/2026-04-06-tech-debt-audit-cleanup-waves-2-3.json`](plans/2026-04-06-tech-debt-audit-cleanup-waves-2-3.json)
 > **Plan (waves 4-5):** [`docs/plans/2026-04-06-tech-debt-audit-cleanup-waves-4-5.json`](plans/2026-04-06-tech-debt-audit-cleanup-waves-4-5.json)
@@ -62,7 +62,7 @@ All 6 waves complete (W0-W5), 69 commits, 1430 tests, 211 files changed.
 > **PRD:** [`docs/prd/2026-04-06-tech-debt-audit-cleanup.md`](prd/2026-04-06-tech-debt-audit-cleanup.md)
 > **Branch:** `pans-labyrinth`
 
-Waves 0-3 complete. Wave 4 partially complete (12/18 done). 6 tasks pending rate-limit reset (midnight Madrid 2026-04-06).
+Waves 0-5 complete except deferred refactor W5-16. Wave 6 remains pending.
 
 ### Wave 2
 
@@ -113,3 +113,38 @@ Waves 0-3 complete. Wave 4 partially complete (12/18 done). 6 tasks pending rate
 | W4-16 | Fix Confetti onComplete re-trigger via useRef                       | —          | done    | `0407871`                                                      |
 | W4-17 | Hoist CalendarDayButton getDefaultClassNames to module scope        | —          | done    | `0407871`                                                      |
 | W4-18 | Lazy-import TrackPage in routeTree                                  | —          | done    | `0407871`                                                      |
+
+### Wave 5
+
+| Task  | Title                                                          | Depends On | Status  | Commit                  |
+| ----- | -------------------------------------------------------------- | ---------- | ------- | ----------------------- |
+| W5-01 | Replace E2E waitForTimeout with condition waits and page objects | —        | done    | `b1b9f3b`, `af5537e`    |
+| W5-02 | Make getWeekStart deterministic                                | —          | done    | `78a0a52`               |
+| W5-03 | Remove hardcoded en-GB locale from weekly summary trigger      | —          | done    | `78a0a52`               |
+| W5-04 | Fix stale period bounds in weekly summary trigger              | W5-03      | done    | `78a0a52`               |
+| W5-05 | Sync weeklySummaries.add args with schema                      | —          | done    | `78a0a52`               |
+| W5-06 | Type testFixtures using Infer<> and freeze exported objects    | —          | done    | `f01aa6c`               |
+| W5-07 | Standardize day-boundary strategy in Bristol/BM tiles          | —          | done    | `4a8f7cc`               |
+| W5-08 | Consolidate BowelSection form state into BowelFormDraft        | —          | done    | `962c42e`               |
+| W5-09 | Add item-count assertion in CalorieDetailView delete           | —          | done    | `f01aa6c`               |
+| W5-10 | Replace unsafe cast with FoodPipelineLog union                 | —          | done    | `d681d04`               |
+| W5-11 | Fix responsive-shell flex mismatch and remove SSR guards       | —          | done    | `8f8ee78`               |
+| W5-12 | Fix PopoverTitle element semantics                             | —          | done    | `8f8ee78`               |
+| W5-13 | Expose isLoading from SyncedLogsContext                        | —          | done    | `8f8ee78`               |
+| W5-14 | Fix AudioContext race condition in sounds.ts                   | —          | done    | `8f8ee78`               |
+| W5-15 | Replace nested ternary chains with clearer control flow        | —          | done    | `42439fa`               |
+| W5-16 | Extract CollapsibleSectionHeader color prop / InlineConfirmation | —        | skipped | — deferred pure refactor |
+| W5-17 | Make AI analysis formatTime locale-independent                 | —          | done    | `78a0a52`               |
+| W5-18 | Fix getDaysPostOp to accept now parameter                      | —          | done    | `78a0a52`               |
+| W5-19 | Merge WeeklyContext and WeeklyDigestInput duplicate types      | —          | done    | `78a0a52`               |
+| W5-20 | Add model validation to fetchWeeklySummary                     | —          | done    | `78a0a52`               |
+| W5-21 | Verify and fix BM count data in hero section                   | —          | done    | `4a8f7cc`               |
+| W5-22 | Fix weight target save for integer input                       | —          | done    | `962c42e`               |
+| W5-23 | Fix Sleep/Weight quick capture two-click open                  | —          | done    | `962c42e`               |
+| W5-24 | Add E2E test for unauthenticated app-load flow                 | —          | done    | `b1b9f3b`               |
+| W5-25 | Fix duplicate timestamp display on today log expand            | —          | done    | `d681d04`               |
+| W5-26 | Fix cigarettes duplicate subrows in today log                  | —          | done    | `d681d04`               |
+| W5-27 | Fix sleep expand repeating label in today log                  | —          | done    | `d681d04`               |
+| W5-28 | Fix activity rows label/time separation in today log           | —          | done    | `d681d04`               |
+| W5-29 | Count liquid food-pipeline items toward fluid intake           | —          | done    | `d681d04`               |
+| W5-30 | Correct Aquarius/electrolyte drink registry entry              | —          | done    | `f01aa6c`               |
