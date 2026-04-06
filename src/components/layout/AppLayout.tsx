@@ -1,5 +1,5 @@
 import { SignInButton } from "@clerk/clerk-react";
-import { Outlet, useRouterState } from "@tanstack/react-router";
+import { Outlet } from "@tanstack/react-router";
 import { Authenticated, AuthLoading, Unauthenticated } from "convex/react";
 import { ApiKeyProvider } from "@/contexts/ApiKeyContext";
 import { ProfileProvider } from "@/contexts/ProfileContext";
@@ -8,31 +8,24 @@ import { AuthLoadingFallback } from "./AuthLoadingFallback";
 import { GlobalHeader } from "./GlobalHeader";
 
 export function AppLayout() {
-  const pathname = useRouterState({
-    select: (state) => state.location.pathname,
-  });
-  const requiresSyncedLogs =
-    pathname === "/" ||
-    pathname.startsWith("/patterns") ||
-    pathname.startsWith("/settings") ||
-    pathname.startsWith("/menu") ||
-    pathname.startsWith("/archive");
-
   return (
     <div className="relative min-h-screen">
       <Authenticated>
         <ApiKeyProvider>
           <ProfileProvider>
-            <GlobalHeader />
-            <main className="relative z-10 mx-auto w-full max-w-440 px-4 py-4 pb-8">
-              {requiresSyncedLogs ? (
-                <SyncedLogsProvider>
-                  <Outlet />
-                </SyncedLogsProvider>
-              ) : (
+            {/*
+             * SyncedLogsProvider wraps all app routes uniformly.
+             * Previously a pathname allowlist controlled this, but every current
+             * route either uses synced logs directly or is cheap enough that
+             * the Convex subscription adds no meaningful overhead. The allowlist
+             * was a maintenance hazard — it silently drifted as routes were added.
+             */}
+            <SyncedLogsProvider>
+              <GlobalHeader />
+              <main className="relative z-10 mx-auto w-full max-w-440 px-4 py-4 pb-8">
                 <Outlet />
-              )}
-            </main>
+              </main>
+            </SyncedLogsProvider>
           </ProfileProvider>
         </ApiKeyProvider>
       </Authenticated>
