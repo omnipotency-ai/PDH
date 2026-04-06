@@ -57,8 +57,12 @@ function buildExampleMap(): Map<string, string> {
           `${alias} -> ${Array.from(canonicals).sort().join(", ")}`,
       )
       .join("; ");
-    throw new Error(
-      `Duplicate normalized food aliases found in FOOD_REGISTRY: ${details}`,
+    // Do not throw at module load time — a crash here takes down the entire app
+    // or Convex worker. Log clearly so the issue is visible, then continue with
+    // the first registered mapping for each collision. The duplicate-alias Vitest
+    // test catches this at build time instead.
+    console.error(
+      `[foodCanonicalization] Duplicate normalized food aliases found in FOOD_REGISTRY: ${details}`,
     );
   }
 
