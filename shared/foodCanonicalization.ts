@@ -81,9 +81,18 @@ function buildExampleMap(): Map<string, string> {
   if (collisions.size > 0) {
     const details = Array.from(collisions.entries())
       .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([alias, canonicals]) => `${alias} -> ${Array.from(canonicals).sort().join(", ")}`)
+      .map(
+        ([alias, canonicals]) =>
+          `${alias} -> ${Array.from(canonicals).sort().join(", ")}`,
+      )
       .join("; ");
-    throw new Error(`Duplicate normalized food aliases found in FOOD_REGISTRY: ${details}`);
+    // Do not throw at module load time — a crash here takes down the entire app
+    // or Convex worker. Log clearly so the issue is visible, then continue with
+    // the first registered mapping for each collision. The duplicate-alias Vitest
+    // test catches this at build time instead.
+    console.error(
+      `[foodCanonicalization] Duplicate normalized food aliases found in FOOD_REGISTRY: ${details}`,
+    );
   }
 
   return map;
@@ -123,7 +132,10 @@ const LEADING_QUANTITY_WORDS = new Set([
 function stripLeadingQuantity(input: string): string {
   const words = input.split(" ");
   let i = 0;
-  while (i < words.length && (LEADING_QUANTITY_WORDS.has(words[i]) || /^\d+$/.test(words[i]))) {
+  while (
+    i < words.length &&
+    (LEADING_QUANTITY_WORDS.has(words[i]) || /^\d+$/.test(words[i]))
+  ) {
     i++;
   }
   return words.slice(i).join(" ").trim();
@@ -159,7 +171,9 @@ export function canonicalizeKnownFoodName(input: string): string | null {
 
   // Second pass: strip leading quantity words and retry
   // Handles "three scrambled eggs" → "scrambled egg" → "egg"
-  const stripped = stripLeadingQuantity(normalized ?? input.toLowerCase().trim());
+  const stripped = stripLeadingQuantity(
+    normalized ?? input.toLowerCase().trim(),
+  );
   if (stripped && stripped !== normalized) {
     const normalizedStripped = normalizeFoodName(stripped);
     if (normalizedStripped) {
