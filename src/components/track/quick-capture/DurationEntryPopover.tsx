@@ -17,35 +17,10 @@ import { getHabitIcon } from "@/lib/habitIcons";
 import {
   getProgressColor,
   getProgressText,
-  type HabitProgressColor,
   shouldShowBadge,
 } from "@/lib/habitProgress";
 import type { HabitConfig } from "@/lib/habitTemplates";
-
-// ── Tile color tint (mirrors QuickCaptureTile logic) ─────────────────────
-
-type TileColorTint = "default" | "emerald" | "orange" | "muted" | "red";
-
-const TINT_BY_PROGRESS_COLOR: Record<HabitProgressColor, TileColorTint> = {
-  neutral: "default",
-  "target-in-progress": "default",
-  "target-met": "emerald",
-  "cap-clear": "default",
-  "cap-under": "default",
-  "cap-warning": "orange",
-  "cap-at": "muted",
-  "cap-over": "red",
-};
-
-const TINT_CLASSES: Record<TileColorTint, string> = {
-  default: "bg-[var(--surface-2)] border-[var(--color-border-default)]",
-  emerald:
-    "bg-[rgba(52,211,153,0.12)] border-[rgba(52,211,153,0.35)] dark:bg-[rgba(52,211,153,0.12)] dark:border-[rgba(52,211,153,0.35)]",
-  orange:
-    "bg-[rgba(251,146,60,0.12)] border-[rgba(251,146,60,0.35)] dark:bg-[rgba(251,146,60,0.12)] dark:border-[rgba(251,146,60,0.35)]",
-  muted: "bg-[var(--surface-3)] border-[var(--color-border-default)] opacity-60",
-  red: "bg-[rgba(248,113,113,0.12)] border-[rgba(248,113,113,0.35)] dark:bg-[rgba(248,113,113,0.12)] dark:border-[rgba(248,113,113,0.35)]",
-};
+import { TINT_BY_PROGRESS_COLOR, TINT_CLASSES } from "./constants";
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -212,7 +187,9 @@ export function DurationEntryPopover({
 
             <div className="min-w-0 flex flex-1 items-center gap-2">
               <div className="min-w-0 flex flex-1 flex-col justify-center gap-0.5">
-                <span className={`block font-mono text-xs font-bold tabular-nums ${toneClassName}`}>
+                <span
+                  className={`block font-mono text-xs font-bold tabular-nums ${toneClassName}`}
+                >
                   {progressText}
                 </span>
                 <span className="block truncate text-[11px] leading-tight font-semibold text-[var(--text-muted)]">
@@ -234,7 +211,11 @@ export function DurationEntryPopover({
         </div>
       </PopoverAnchor>
 
-      <PopoverContent align="center" sideOffset={8} className="w-[240px] space-y-2 p-3">
+      <PopoverContent
+        align="center"
+        sideOffset={8}
+        className="w-[240px] space-y-2 p-3"
+      >
         <PopoverHeader>
           <PopoverTitle>{popoverTitle}</PopoverTitle>
           <PopoverDescription>{popoverDescription}</PopoverDescription>
@@ -247,7 +228,9 @@ export function DurationEntryPopover({
               id="duration-popover-minutes"
               inputMode="numeric"
               value={minutesDraft}
-              onChange={(e) => setMinutesDraft(e.target.value.replace(/[^\d]/g, ""))}
+              onChange={(e) =>
+                setMinutesDraft(e.target.value.replace(/[^\d]/g, ""))
+              }
               onKeyDown={handleKeyDown}
               autoFocus
               className="h-11 text-center font-mono text-lg"
@@ -263,7 +246,9 @@ export function DurationEntryPopover({
                 id="duration-popover-hours"
                 inputMode="numeric"
                 value={hoursDraft}
-                onChange={(e) => setHoursDraft(e.target.value.replace(/[^\d]/g, ""))}
+                onChange={(e) =>
+                  setHoursDraft(e.target.value.replace(/[^\d]/g, ""))
+                }
                 onKeyDown={handleKeyDown}
                 autoFocus
                 className="h-11 text-center font-mono text-lg"
@@ -277,7 +262,9 @@ export function DurationEntryPopover({
                 id="duration-popover-mins"
                 inputMode="numeric"
                 value={minsDraft}
-                onChange={(e) => setMinsDraft(e.target.value.replace(/[^\d]/g, ""))}
+                onChange={(e) =>
+                  setMinsDraft(e.target.value.replace(/[^\d]/g, ""))
+                }
                 onKeyDown={handleKeyDown}
                 className="h-11 text-center font-mono text-lg"
                 placeholder="0"
@@ -287,7 +274,11 @@ export function DurationEntryPopover({
           </div>
         )}
 
-        {saving && <p className="text-center text-xs text-[var(--text-muted)]">Saving...</p>}
+        {saving && (
+          <p className="text-center text-xs text-[var(--text-muted)]">
+            Saving...
+          </p>
+        )}
       </PopoverContent>
     </Popover>
   );
