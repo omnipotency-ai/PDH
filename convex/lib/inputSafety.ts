@@ -2,8 +2,8 @@
  * Input sanitization — server version (superset of shared core).
  *
  * Core logic (CONTROL_CHARS_RE, INPUT_SAFETY_LIMITS, SanitizeTextOptions,
- * DeepSanitizeOptions, sanitizePlainText, sanitizeUnknownStringsDeep,
- * assertMaxLength) MUST stay in sync with src/lib/inputSafety.ts.
+ * DeepSanitizeOptions, sanitizePlainText, sanitizeUnknownStringsDeep)
+ * MUST stay in sync with src/lib/inputSafety.ts.
  *
  * This file adds server-only helpers: sanitizeRequiredText,
  * sanitizeOptionalText, sanitizeStringArray.
@@ -93,7 +93,12 @@ export function sanitizeUnknownStringsDeep<T>(value: T, options: DeepSanitizeOpt
   const visit = (node: unknown, currentPath: string): unknown => {
     if (typeof node === "string") {
       const text = sanitizePlainText(node, textOptions);
-      assertMaxLength(text, currentPath, maxStringLength);
+      if (text.length > maxStringLength) {
+        console.warn(
+          `sanitizeUnknownStringsDeep: ${currentPath} is ${text.length} chars (max ${maxStringLength}); truncating.`,
+        );
+        return `${text.slice(0, maxStringLength)}...[truncated]`;
+      }
       return text;
     }
     if (Array.isArray(node)) {

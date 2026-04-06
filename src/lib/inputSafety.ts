@@ -62,7 +62,12 @@ export function sanitizeUnknownStringsDeep<T>(value: T, options: DeepSanitizeOpt
   const visit = (node: unknown, currentPath: string): unknown => {
     if (typeof node === "string") {
       const text = sanitizePlainText(node, textOptions);
-      assertMaxLength(text, currentPath, maxStringLength);
+      if (text.length > maxStringLength) {
+        console.warn(
+          `sanitizeUnknownStringsDeep: ${currentPath} is ${text.length} chars (max ${maxStringLength}); truncating.`,
+        );
+        return `${text.slice(0, maxStringLength)}...[truncated]`;
+      }
       return text;
     }
     if (Array.isArray(node)) {
@@ -78,10 +83,4 @@ export function sanitizeUnknownStringsDeep<T>(value: T, options: DeepSanitizeOpt
   };
 
   return visit(value, path) as T;
-}
-
-function assertMaxLength(value: string, fieldName: string, maxLength: number) {
-  if (value.length > maxLength) {
-    throw new Error(`${fieldName} is ${value.length} chars, max ${maxLength}.`);
-  }
 }
