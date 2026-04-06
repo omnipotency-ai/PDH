@@ -262,7 +262,6 @@ export function TodayLog({
                         habits={habits}
                         expanded={expandedGroups.has(item.groupKey)}
                         onToggle={() => toggleGroup(item.groupKey)}
-                        onDelete={onDelete}
                       />
                     );
                   case "food":

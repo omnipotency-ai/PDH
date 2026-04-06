@@ -22,6 +22,76 @@
 
 ## Active: Tech-Debt Audit Cleanup
 
+### W3-05 — Unify type guards: helpers.ts delegates to logTypeGuards.ts (2026-04-06 19:35)
+
+- **Commit:** `3afda47`
+- **Files:** `src/components/track/today-log/helpers.ts`
+- **What:** Replaced inline `hasNotes` (checking `log.type === "digestion"`) and `hasItems` (checking food/liquid/fluid) with calls to the canonical guards `isDigestionLog`, `isFoodLog`, `isLiquidLog`, `isFluidLog` imported from `@/lib/logTypeGuards`. Function signatures and return types are preserved.
+- **Decisions:** `NarrowableLog` in logTypeGuards.ts did not need widening — `SyncedLog` and `LogEntry` are structurally identical mapped union types, so `SyncedLog` already satisfies `NarrowableLog`. No callers of `hasNotes`/`hasItems` exist outside the today-log barrel, so no call-site updates were needed.
+
+### W3-01 — Split convex/logs.ts into focused modules (2026-04-06 19:35)
+
+- **Commit:** `996b0a0`
+- **Files:** `convex/logs.ts`, `convex/profileMutations.ts` (new), `convex/backup.ts` (new)
+- **What:** Split 2238-line convex/logs.ts into three focused files. Profile mutations and normalization (~15 helper functions) moved to profileMutations.ts. Backup export/import/delete and coerce helpers (~600 lines) moved to backup.ts. logs.ts re-exports the moved functions so all existing api.logs.\* call sites remain unchanged.
+- **Decisions:** Re-export pattern chosen over updating 8+ call sites — Convex file-based routing registers functions from both the re-export source and the re-export target, so api.logs.getProfile and api.profileMutations.getProfile both resolve. The shared `buildNormalizedProfileFields()` helper eliminates the duplicated 60-line payload construction that existed in both replaceProfile and patchProfile. logs.ts is 874 lines (slightly over 800 target) because recanonicalization helpers are genuinely log-domain logic.
+
+### W3-04 — Replace raw Tailwind color literals with design-system tokens in MealIdeaCard (2026-04-06 19:30)
+
+- **Commit:** `773d55e`
+- **Files:** `src/components/dr-poo/MealIdeaCard.tsx`
+- **What:** Replaced all raw Tailwind color literals (amber-500/20, emerald-400, etc.) in `getMealSlotStyle` with design-system CSS variable tokens. Gradient is now a CSS `linear-gradient` string in `style={{ background }}`; accent and label are CSS var strings in `style={{ color }}`.
+- **Decisions:** Used `--section-quick-muted`/`--section-quick` (amber) for breakfast, `--section-observe-muted`/`--section-observe` (emerald) for lunch, `--section-log-muted`/`--section-log` (indigo) for dinner, `--section-summary-muted`/`--section-summary` (rose) for snack. Gradient uses `color-mix(in srgb, ...)` for the mid-stop fade since Tailwind `/20` opacity syntax is not applicable to CSS var tokens. All tokens confirmed to exist in both dark and light theme blocks in `src/index.css`. Renamed `style` variable to `slotStyle` to avoid shadowing the built-in `style` JSX prop keyword.
+
+### W3-03 — Quality fixes: barrel indirection, vacuous type predicate, equality helpers (2026-04-06 19:26)
+
+- **Commit:** `773d55e`
+- **Files:** `src/components/patterns/database/index.ts`, `src/components/patterns/database/SmartViews.tsx`, `src/components/patterns/database/smartViewUtils.ts`
+- **What:** Three post-review quality fixes. (1) index.ts imports utilities directly from smartViewUtils, removing the SmartViews.tsx re-export indirection layer; SmartViews.tsx now exports only the React component and its props type. (2) Removed vacuous `value is FoodGroup` type predicate from rowMatchesCategoryFilter. (3) Replaced normalizeColumnFilters/normalizeSorting + JSON.stringify in equality helpers with direct field-by-field comparison; all call sites already pass typed, normalized values.
+- **Decisions:** columnFiltersEqual retains safeStringArray on values because ColumnFiltersState.value is typed as `unknown`. sortingEqual compares id/desc directly since SortingState items are fully typed. These changes landed in commit 773d55e alongside W3-06 due to pre-commit hook behavior.
+
+### W3-06 — Split LogEntry.tsx into DigestiveSubRow dispatcher (2026-04-06 19:25)
+
+- **Commit:** `773d55e`
+- **Files:** `src/components/track/today-log/editors/DigestiveSubRow.tsx` (new), `src/components/track/today-log/rows/LogEntry.tsx`, `src/components/track/today-log/types.ts`, `src/components/track/today-log/TodayLog.tsx`
+- **What:** Extracted the digestion accordion editor into a new DigestiveSubRow.tsx using context-based save/delete. Rewrote LogEntry.tsx as a thin type dispatcher (234 lines, was 741). Removed dead food/fluid/habit editing code — those types are always grouped and never reach LogEntry as IndividualItem. Removed onDelete/onSave from LogEntryProps.
+- **Decisions:** Food, fluid, habit, activity, sleep, and weight logs never reach LogEntry — grouping.ts routes them all into group rows. The food/fluid editing code in the old LogEntry was unreachable dead code. DigestiveSubRow uses useTodayLogActions context (same as all other SubRows) rather than prop-drilling.
+
+### W3-02 — Replace RouteErrorBoundary with canonical ErrorBoundary, remove SyncedLogs allowlist (2026-04-06 19:23)
+
+- **Commit:** `a207e76`
+- **Files:** `src/components/layout/RouteErrorBoundary.tsx`, `src/components/layout/index.ts`, `src/components/layout/AppLayout.tsx`
+- **What:** Replaced the weaker RouteErrorBoundary class (missing componentStack logging, error state, custom fallback) with a thin withBoundary helper that delegates to the canonical ErrorBoundary. Removed the pathname allowlist from AppLayout that controlled SyncedLogsProvider mounting — replaced with uniform wrapping of all app routes.
+- **Decisions:** RouteErrorBoundary class had no external consumers (only used internally by withBoundary), so the class export was safe to delete entirely. SyncedLogsProvider is a lightweight Convex subscription — wrapping /ui-migration-lab uniformly is harmless. The allowlist was a maintenance hazard with no real benefit.
+
+### W3-05 — Extract store configuration constants from src/store.ts (2026-04-06 19:20)
+
+- **Commit:** `4b71da6`
+- **Files:** `src/lib/fluidPresets.ts` (new), `src/lib/defaults.ts` (new), `src/lib/logTypeGuards.ts` (new), `src/store.ts`, `src/contexts/ProfileContext.tsx`, `src/components/track/panels/FluidSection.tsx`, `src/components/settings/PersonalisationForm.tsx`, `src/hooks/useWeeklySummaryAutoTrigger.ts`, `src/lib/aiParsing.ts`
+- **What:** Moved fluid preset constants to fluidPresets.ts, DEFAULT_HEALTH_PROFILE to defaults.ts, and all log type guards to logTypeGuards.ts with direct function declarations replacing the createLogTypeGuard factory. store.ts now exports only Zustand store state and actions. Also fixed pre-existing broken import in aiParsing.ts (./aiPrompts → ./aiAnalysis).
+- **Decisions:** Dead re-exports of SleepGoal, HabitConfig, HabitLog removed from store.ts (no consumers imported them from @/store). aiParsing.ts was an untracked file from prior wave work with a broken import that blocked typecheck — fixed in this commit to unblock the pre-commit hook.
+
+### W3-03 — Split SmartViews.tsx, extract utility logic to smartViewUtils.ts (2026-04-06 19:30)
+
+- **Commit:** `ec5deb7` (landed in same commit as W3-04)
+- **Files:** `src/components/patterns/database/smartViewUtils.ts` (new), `src/components/patterns/database/SmartViews.tsx`, `src/components/patterns/database/FilterSheet.tsx`
+- **What:** Extracted all normalisation, equality, row-matching, and row-counting helpers from SmartViews.tsx into a new smartViewUtils.ts. SORT_OPTIONS defined once there; SORTABLE_COLUMN_IDS derived from it. SmartViews.tsx re-exports utilities for barrel compatibility and keeps only the React component. FilterSheet.tsx imports SORT_OPTIONS from smartViewUtils.ts, removing the duplicate definition.
+- **Decisions:** SmartViews.tsx re-exports helpers via `export { ... } from "./smartViewUtils"` so the existing barrel (index.ts) requires no changes. Parallel in-progress work on the branch caused typecheck failures during commit; stashed and unstashed to isolate my changes.
+
+### W3-04 — Relocate Dr Poo components from archive/ to dr-poo/ (2026-04-06 19:17)
+
+- **Commit:** `ec5deb7`
+- **Files:** `src/components/dr-poo/DrPooReport.tsx`, `src/components/dr-poo/MealIdeaCard.tsx`, `src/components/dr-poo/AnalysisProgressOverlay.tsx`, `src/components/dr-poo/index.ts`, `src/components/track/dr-poo/AiInsightsBody.tsx`, `src/components/track/dr-poo/AiInsightsSection.tsx`, `src/pages/secondary_pages/Archive.tsx` (deleted: `src/components/archive/DrPooReport.tsx`, `src/components/archive/ai-insights/`)
+- **What:** Moved DrPooReport, MealIdeaCard, and AnalysisProgressOverlay from archive/ to src/components/dr-poo/. Created barrel index.ts exporting all three (including MealIdeaCard which was missing from the old barrel). Updated all four import sites. Removed now-empty archive/ directories.
+- **Decisions:** The formatter hook reverted import edits twice; had to re-apply after verifying with grep. No logic changes — pure relocation.
+
+### W3-02 — Split routeTree.tsx: extract layout components (2026-04-06 19:17)
+
+- **Commit:** `61e22fd`
+- **Files:** `src/routeTree.tsx`, `src/components/layout/RouteErrorBoundary.tsx`, `src/components/layout/AuthLoadingFallback.tsx`, `src/components/layout/GlobalHeader.tsx`, `src/components/layout/AppLayout.tsx`, `src/components/layout/index.ts`
+- **What:** Extracted RouteErrorBoundary, AuthLoadingFallback, GlobalHeader (with full NAV_ITEMS and nav rendering), and AppLayout into `src/components/layout/`. routeTree.tsx is now ~100 lines of route definitions only. Barrel index exports all four components plus the `withBoundary` helper.
+- **Decisions:** Moved `withBoundary` into RouteErrorBoundary.tsx since it is a thin wrapper around that class and is used in routeTree.tsx. `NAV_ITEMS` moved into GlobalHeader.tsx since it is only consumed there. `AUTH_LOADING_TIMEOUT_MS` moved into AuthLoadingFallback.tsx for the same reason.
+
 ### W2-10 — Consolidate `customFoodPresets` normalization and fix ID generation (2026-04-06 19:05)
 
 - **Commit:** TBD
