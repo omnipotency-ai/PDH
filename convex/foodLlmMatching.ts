@@ -226,7 +226,10 @@ function fuzzyPreMatch(segment: string): LlmResolvedItem | null {
   const topResult = results[0];
   // Fuse.js score: 0 = perfect match, 1 = no match.
   // Only accept if score is within threshold (very close match).
-  if (topResult.score === undefined || topResult.score > FUZZY_PRE_MATCH_THRESHOLD) {
+  if (
+    topResult.score === undefined ||
+    topResult.score > FUZZY_PRE_MATCH_THRESHOLD
+  ) {
     return null;
   }
 
@@ -369,7 +372,10 @@ function parseLlmResponse(raw: string): LlmMatchingResponse | null {
       foods: unknown;
     };
 
-    if (typeof segmentResult.segment !== "string" || !Array.isArray(segmentResult.foods)) {
+    if (
+      typeof segmentResult.segment !== "string" ||
+      !Array.isArray(segmentResult.foods)
+    ) {
       continue;
     }
 
@@ -389,7 +395,10 @@ function parseLlmResponse(raw: string): LlmMatchingResponse | null {
         canonical: unknown;
       };
 
-      if (typeof foodResult.parsedName !== "string" || typeof foodResult.canonical !== "string") {
+      if (
+        typeof foodResult.parsedName !== "string" ||
+        typeof foodResult.canonical !== "string"
+      ) {
         continue;
       }
 
@@ -422,12 +431,16 @@ function parseLlmResponse(raw: string): LlmMatchingResponse | null {
  * - If canonical doesn't exist in registry, try deterministic canonicalization
  *   as a fallback. If that fails, mark as unresolved.
  */
-function processLlmResults(llmResponse: LlmMatchingResponse): LlmProcessedItem[] {
+function processLlmResults(
+  llmResponse: LlmMatchingResponse,
+): LlmProcessedItem[] {
   const items: LlmProcessedItem[] = [];
 
   for (const segmentResult of llmResponse.results) {
     for (const food of segmentResult.foods) {
-      const { parsedName, quantity, unit } = parseLeadingQuantity(food.parsedName);
+      const { parsedName, quantity, unit } = parseLeadingQuantity(
+        food.parsedName,
+      );
 
       if (food.canonical === "NOT_ON_LIST") {
         items.push({
@@ -593,15 +606,39 @@ export const matchUnresolvedItems = action({
       return { matched: 0, unresolved: 0 };
     }
 
+    // W0-10: Input length cap — prevent runaway requests from causing huge LLM
+    // prompts and excessive API costs. Truncate array and individual strings
+    // before any further processing.
+    const MAX_SEGMENTS = 50;
+    const MAX_SEGMENT_CHARS = 200;
+
+    let segments = args.unresolvedSegments;
+    if (segments.length > MAX_SEGMENTS) {
+      console.warn(
+        `[matchUnresolvedItems] Received ${segments.length} segments — truncating to ${MAX_SEGMENTS}.`,
+      );
+      segments = segments.slice(0, MAX_SEGMENTS);
+    }
+    segments = segments.map((s) =>
+      s.length > MAX_SEGMENT_CHARS ? s.slice(0, MAX_SEGMENT_CHARS) : s,
+    );
+
     // 4. Read the log's current version for optimistic concurrency
-    const versionInfo = await ctx.runQuery(internal.foodParsing.getFoodLogVersionInfo, {
-      logId: args.logId,
-    });
+    const versionInfo = await ctx.runQuery(
+      internal.foodParsing.getFoodLogVersionInfo,
+      {
+        logId: args.logId,
+      },
+    );
     if (versionInfo === null) {
-      throw new Error("[NON_RETRYABLE] [VALIDATION_ERROR] Log not found or is not a food log.");
+      throw new Error(
+        "[NON_RETRYABLE] [VALIDATION_ERROR] Log not found or is not a food log.",
+      );
     }
     if (versionInfo.userId !== userId) {
-      throw new Error("[NON_RETRYABLE] [VALIDATION_ERROR] Not authorized to process this log.");
+      throw new Error(
+        "[NON_RETRYABLE] [VALIDATION_ERROR] Not authorized to process this log.",
+      );
     }
 
     // ─── WQ-347: Fuzzy pre-matching ──────────────────────────────────────
@@ -612,7 +649,7 @@ export const matchUnresolvedItems = action({
     const fuzzyMatched: LlmResolvedItem[] = [];
     const segmentsNeedingLlm: string[] = [];
 
-    for (const segment of args.unresolvedSegments) {
+    for (const segment of segments) {
       const fuzzyResult = fuzzyPreMatch(segment);
       if (fuzzyResult !== null) {
         fuzzyMatched.push(fuzzyResult);
@@ -658,7 +695,9 @@ export const matchUnresolvedItems = action({
         const errorCode = classifyHttpError(response.status);
         const isNonRetryable = errorCode === "KEY_ERROR";
         const prefix = isNonRetryable ? "[NON_RETRYABLE] " : "";
-        throw new Error(`${prefix}[${errorCode}] OpenAI API request failed: ${statusText}`);
+        throw new Error(
+          `${prefix}[${errorCode}] OpenAI API request failed: ${statusText}`,
+        );
       }
 
       const json = (await response.json()) as OpenAiChatCompletionResponse;
@@ -685,7 +724,9 @@ export const matchUnresolvedItems = action({
           // 8. Post-process: verify against registry, deterministic fallback
           const processedItems = processLlmResults(llmResponse);
           llmResolved = processedItems.filter(isLlmResolvedItem);
-          llmUnresolvedCount = processedItems.filter((item) => !isLlmResolvedItem(item)).length;
+          llmUnresolvedCount = processedItems.filter(
+            (item) => !isLlmResolvedItem(item),
+          ).length;
         }
       }
     }

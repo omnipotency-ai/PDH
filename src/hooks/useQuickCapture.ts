@@ -45,14 +45,7 @@ interface QuickCaptureResult {
   handleLogWeightKg: (weightKg: number) => Promise<void>;
   handleQuickCaptureLongPress: (habit: HabitConfig) => void;
   handleCloseDetailSheet: () => void;
-
   detailSheetHabit: HabitConfig | null;
-  detailDaySummaries: Array<{
-    date: string;
-    habitId: string;
-    totalValue: number;
-    isGoodDay: boolean;
-  }>;
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
@@ -129,7 +122,5 @@ export function useQuickCapture({
     handleQuickCaptureLongPress,
     handleCloseDetailSheet,
     detailSheetHabit,
-    // Note: detailDaySummaries is computed in Track.tsx since it depends on daySummaries from useHabitStreaks
-    detailDaySummaries: [],
   };
 }

@@ -2,11 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { playSound } from "@/lib/sounds";
 
-// Sound and confetti are always enabled — preferences were removed with the
-// gamification schema field. Re-introduce user-level settings if needed.
-const SOUND_ENABLED = true;
-const CONFETTI_ENABLED = true;
-
 interface CelebrationEvent {
   encouragement: string;
   confettiActive: boolean;
@@ -29,21 +24,15 @@ export function useCelebration() {
   }, []);
 
   const celebrateGoalComplete = useCallback((message: string) => {
-    if (SOUND_ENABLED) {
-      playSound("goalComplete");
-    }
-    if (CONFETTI_ENABLED) {
-      setCelebration({
-        encouragement: message,
-        confettiActive: true,
-        confettiOriginX: window.innerWidth / 2,
-        confettiOriginY: window.innerHeight / 3,
-      });
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = setTimeout(() => setCelebration(null), 2200);
-    } else {
-      toast.success(message);
-    }
+    playSound("goalComplete");
+    setCelebration({
+      encouragement: message,
+      confettiActive: true,
+      confettiOriginX: window.innerWidth / 2,
+      confettiOriginY: window.innerHeight / 3,
+    });
+    clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => setCelebration(null), 2200);
   }, []);
 
   const clearCelebration = useCallback(() => {
