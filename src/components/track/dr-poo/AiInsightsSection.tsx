@@ -1,10 +1,14 @@
 import { Loader2, Stethoscope } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AnalysisProgressOverlay } from "@/components/archive/ai-insights/AnalysisProgressOverlay";
+import { AnalysisProgressOverlay } from "@/components/dr-poo/AnalysisProgressOverlay";
 import { AiInsightsBody } from "@/components/track/dr-poo/AiInsightsBody";
 import { ConversationPanel } from "@/components/track/dr-poo/ConversationPanel";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useApiKeyContext } from "@/contexts/ApiKeyContext";
 import { useLatestSuccessfulAiAnalysis } from "@/lib/sync";
 import { useStore } from "@/store";
@@ -51,7 +55,10 @@ export function AiInsightsSection({ onSendNow }: AiInsightsSectionProps = {}) {
   }, [status, setAiAnalysisStatus]);
 
   const showInlineProgress =
-    status === "sending" || status === "receiving" || status === "error" || showDone;
+    status === "sending" ||
+    status === "receiving" ||
+    status === "error" ||
+    showDone;
   const progressStatus: AiAnalysisStatus = showDone ? "done" : status;
 
   return (
@@ -115,16 +122,23 @@ export function AiInsightsSection({ onSendNow }: AiInsightsSectionProps = {}) {
 
         {!hasApiKey ? (
           <div className="glass-card flex flex-col items-center gap-3 p-8 text-center">
-            <Stethoscope size={32} className="text-[var(--section-log)] opacity-30" />
+            <Stethoscope
+              size={32}
+              className="text-[var(--section-log)] opacity-30"
+            />
             <p className="text-sm text-[var(--text-faint)]">
               Add your OpenAI API key in Settings to enable AI food analysis.
             </p>
           </div>
         ) : !insights ? (
           <div className="glass-card flex flex-col items-center gap-3 p-8 text-center">
-            <Stethoscope size={32} className="text-[var(--section-log)] opacity-30" />
+            <Stethoscope
+              size={32}
+              className="text-[var(--section-log)] opacity-30"
+            />
             <p className="text-sm text-[var(--text-faint)]">
-              Log a bowel movement or send Dr. Poo a question to generate your first report.
+              Log a bowel movement or send Dr. Poo a question to generate your
+              first report.
             </p>
           </div>
         ) : (

@@ -2,9 +2,13 @@ import { Link } from "@tanstack/react-router";
 import { format, isSameDay } from "date-fns";
 import { Brain, ChevronLeft, ChevronRight, Star, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { DrPooFullReport } from "@/components/archive/DrPooReport";
+import { DrPooFullReport } from "@/components/dr-poo/DrPooReport";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { parseAiInsight } from "@/lib/aiAnalysis";
 import { useAiAnalysisHistory, useToggleReportStar } from "@/lib/sync";
 import type { AiNutritionistInsight } from "@/types/domain";
@@ -47,7 +51,9 @@ export default function ArchivePage() {
     let reports = allReports;
 
     if (dateFilter) {
-      reports = reports.filter((r: ArchiveReport) => isSameDay(new Date(r.timestamp), dateFilter));
+      reports = reports.filter((r: ArchiveReport) =>
+        isSameDay(new Date(r.timestamp), dateFilter),
+      );
     }
     if (starFilter) {
       reports = reports.filter((r: ArchiveReport) => r.starred);
@@ -143,7 +149,11 @@ export default function ArchivePage() {
               {dateFilter ? format(dateFilter, "d MMM yyyy") : "Jump to date"}
             </button>
           </PopoverTrigger>
-          <PopoverContent aria-label="Jump to date" className="w-auto p-0" align="start">
+          <PopoverContent
+            aria-label="Jump to date"
+            className="w-auto p-0"
+            align="start"
+          >
             <Calendar
               mode="single"
               selected={dateFilter}
@@ -156,7 +166,9 @@ export default function ArchivePage() {
         {/* Filter: All | Starred segmented control */}
         <fieldset className="inline-flex items-center gap-2 border-none p-0 m-0">
           <legend className="sr-only">Report filter</legend>
-          <span className="text-xs font-medium text-[var(--text-faint)]">Filter:</span>
+          <span className="text-xs font-medium text-[var(--text-faint)]">
+            Filter:
+          </span>
           <div
             data-slot="filter-segmented"
             className="inline-flex items-center rounded-lg border border-[var(--border)] bg-[var(--surface-1)] text-xs"
@@ -253,7 +265,10 @@ export default function ArchivePage() {
             </button>
 
             <p className="font-mono text-xs text-[var(--text-faint)]">
-              {format(new Date(currentReport.timestamp), "EEE d MMM yyyy · HH:mm")}
+              {format(
+                new Date(currentReport.timestamp),
+                "EEE d MMM yyyy · HH:mm",
+              )}
             </p>
 
             <button
@@ -273,7 +288,8 @@ export default function ArchivePage() {
             {/* Card header with report index and star action */}
             <div className="mb-3 flex items-center justify-between border-b border-[var(--border)] pb-3">
               <p className="text-xs font-medium text-[var(--text-muted)]">
-                Report {filteredReports.length - currentIndex} of {filteredReports.length}
+                Report {filteredReports.length - currentIndex} of{" "}
+                {filteredReports.length}
               </p>
               <button
                 type="button"
@@ -283,11 +299,15 @@ export default function ArchivePage() {
                     ? "border-amber-400/40 bg-amber-400/10 text-amber-400"
                     : "border-[var(--border)] text-[var(--text-muted)] hover:border-amber-400/40 hover:bg-amber-400/10 hover:text-amber-400"
                 }`}
-                aria-label={currentReport.starred ? "Unstar report" : "Star report"}
+                aria-label={
+                  currentReport.starred ? "Unstar report" : "Star report"
+                }
               >
                 <Star
                   size={16}
-                  className={currentReport.starred ? "fill-amber-400 text-amber-400" : ""}
+                  className={
+                    currentReport.starred ? "fill-amber-400 text-amber-400" : ""
+                  }
                 />
                 {currentReport.starred ? "Starred" : "Star"}
               </button>

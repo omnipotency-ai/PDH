@@ -1,8 +1,13 @@
 import type { FoodGroup } from "@shared/foodRegistry";
-import type { ColumnFiltersState, OnChangeFn, SortingState } from "@tanstack/react-table";
+import type {
+  ColumnFiltersState,
+  OnChangeFn,
+  SortingState,
+} from "@tanstack/react-table";
 import { useCallback, useRef, useState } from "react";
 import { ResponsiveShell } from "@/components/ui/responsive-shell";
 import { getColumnFilterValues } from "./filterUtils";
+import { SORT_OPTIONS } from "./smartViewUtils";
 
 // ── Status filter value type ──────────────────────────────────────────────────
 //
@@ -48,14 +53,6 @@ const ZONE_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
   { value: "3", label: "Zone 3 (Variety)" },
 ];
 
-const SORT_OPTIONS = [
-  { value: "lastTested", label: "Last Tested" },
-  { value: "bristolAvg", label: "Bristol Avg" },
-  { value: "transitAvg", label: "Transit Avg" },
-  { value: "trials", label: "Trials" },
-  { value: "stage", label: "Zone" },
-] as const;
-
 type FilterChipOption<T extends string> = {
   value: T;
   label: string;
@@ -70,7 +67,8 @@ type FilterChipOption<T extends string> = {
 export function countActiveFilters(filters: ColumnFiltersState): number {
   return filters.reduce((count, filter) => {
     if (Array.isArray(filter.value)) return count + filter.value.length;
-    if (typeof filter.value === "string" && filter.value.length > 0) return count + 1;
+    if (typeof filter.value === "string" && filter.value.length > 0)
+      return count + 1;
     return count;
   }, 0);
 }
@@ -91,7 +89,9 @@ function toggleFilterValue(
 
   const existing = filters.find((filter) => filter.id === columnId);
   if (existing !== undefined) {
-    return filters.map((filter) => (filter.id === columnId ? { ...filter, value: next } : filter));
+    return filters.map((filter) =>
+      filter.id === columnId ? { ...filter, value: next } : filter,
+    );
   }
 
   return [...filters, { id: columnId, value: next }];
@@ -172,8 +172,14 @@ export function FilterSheet({
   onApply,
   onSaveView,
 }: FilterSheetProps) {
-  const activeStatus = getColumnFilterValues<StatusFilterValue>(columnFilters, "status");
-  const activeCategory = getColumnFilterValues<FoodGroup>(columnFilters, "category");
+  const activeStatus = getColumnFilterValues<StatusFilterValue>(
+    columnFilters,
+    "status",
+  );
+  const activeCategory = getColumnFilterValues<FoodGroup>(
+    columnFilters,
+    "category",
+  );
   const activeZone = getColumnFilterValues<string>(columnFilters, "stage");
   const activeSort = sorting[0] ?? { id: "lastTested", desc: true };
 
@@ -213,7 +219,9 @@ export function FilterSheet({
 
   const handleCategoryClick = useCallback(
     (value: FoodGroup) => {
-      onColumnFiltersChange((prev) => toggleFilterValue(prev, "category", value));
+      onColumnFiltersChange((prev) =>
+        toggleFilterValue(prev, "category", value),
+      );
     },
     [onColumnFiltersChange],
   );
@@ -342,7 +350,10 @@ export function FilterSheet({
       </div>
 
       {/* Footer actions */}
-      <div data-slot="filter-sheet-footer" className="border-t border-[var(--border)] p-4">
+      <div
+        data-slot="filter-sheet-footer"
+        className="border-t border-[var(--border)] p-4"
+      >
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <button
             type="button"
