@@ -31,6 +31,15 @@ function getResponsiveShellMode(width: number): ResponsiveShellMode {
   return "mobile";
 }
 
+function getResponsiveShellModeFromQueries(
+  desktopMatches: boolean,
+  tabletMatches: boolean,
+): ResponsiveShellMode {
+  if (desktopMatches) return "desktop";
+  if (tabletMatches) return "tablet";
+  return "mobile";
+}
+
 export function useResponsiveShellMode(): ResponsiveShellMode {
   const [mode, setMode] = useState<ResponsiveShellMode>(() =>
     getResponsiveShellMode(window.innerWidth),
@@ -40,7 +49,7 @@ export function useResponsiveShellMode(): ResponsiveShellMode {
     const mqlMd = window.matchMedia(`(min-width: ${RESPONSIVE_SHELL_MD_BREAKPOINT_PX}px)`);
     const mqlXl = window.matchMedia(`(min-width: ${RESPONSIVE_SHELL_XL_BREAKPOINT_PX}px)`);
     const handler = () => {
-      setMode(mqlXl.matches ? "desktop" : mqlMd.matches ? "tablet" : "mobile");
+      setMode(getResponsiveShellModeFromQueries(mqlXl.matches, mqlMd.matches));
     };
     handler();
     mqlMd.addEventListener("change", handler);

@@ -52,6 +52,25 @@ function findGroupKeyForLogId(
   return null;
 }
 
+function getTodayLogTitle(dayOffset: number): string {
+  if (dayOffset === 0) return "Today's Log";
+  if (dayOffset === -1) return "Yesterday's Log";
+  return "Daily Log";
+}
+
+function getTodayLogCenterLabel(selectedDate: Date, dayOffset: number): string {
+  if (dayOffset === 0) return "Today";
+  return format(selectedDate, "EEE, MMM d, yyyy");
+}
+
+function getNextDayAction(
+  dayOffset: number,
+  onJumpToToday: () => void,
+  onNextDay: () => void,
+): () => void {
+  return dayOffset === -1 ? onJumpToToday : onNextDay;
+}
+
 // ── Main component ────────────────────────────────────────────────────
 
 export function TodayLog({
@@ -119,19 +138,14 @@ export function TodayLog({
   }, []);
 
   const canMoveForward = dayOffset < 0;
-  const title =
-    dayOffset === 0
-      ? "Today's Log"
-      : dayOffset === -1
-        ? "Yesterday's Log"
-        : "Daily Log";
+  const title = getTodayLogTitle(dayOffset);
 
   const prevDayLabel =
     dayOffset === 0 ? "Yesterday" : format(addDays(selectedDate, -1), "EEEE");
-  const centerLabel =
-    dayOffset === 0 ? "Today" : format(selectedDate, "EEE, MMM d, yyyy");
+  const centerLabel = getTodayLogCenterLabel(selectedDate, dayOffset);
   const nextDayLabel =
     dayOffset === -1 ? "Today" : format(addDays(selectedDate, 1), "EEEE");
+  const handleNextDay = getNextDayAction(dayOffset, onJumpToToday, onNextDay);
 
   const header = (
     <div className="mb-2 space-y-1">
@@ -184,7 +198,7 @@ export function TodayLog({
         {canMoveForward && (
           <button
             type="button"
-            onClick={dayOffset === -1 ? onJumpToToday : onNextDay}
+            onClick={handleNextDay}
             aria-label="Go to next day"
             className="text-xs font-medium text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--section-log)]"
           >

@@ -13,6 +13,13 @@ interface AnalysisProgressOverlayProps {
   canRetry?: boolean;
 }
 
+function getAnalysisProgressLabel(status: AiAnalysisStatus): string | null {
+  if (status === "sending") return "Sending logs to AI...";
+  if (status === "receiving") return "Analysing your data...";
+  if (status === "done") return "Analysis complete";
+  return null;
+}
+
 /**
  * Inline (non-blocking) progress indicator for AI analysis.
  * Renders within the normal document flow rather than as a full-screen overlay.
@@ -26,14 +33,7 @@ export function AnalysisProgressOverlay({
 }: AnalysisProgressOverlayProps) {
   const [showFullError, setShowFullError] = useState(false);
 
-  const label =
-    status === "sending"
-      ? "Sending logs to AI..."
-      : status === "receiving"
-        ? "Analysing your data..."
-        : status === "done"
-          ? "Analysis complete"
-          : null;
+  const label = getAnalysisProgressLabel(status);
 
   if (status === "error" && error) {
     const safeError = sanitizeAiErrorForDisplay(error);
