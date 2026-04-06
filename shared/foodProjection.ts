@@ -2,9 +2,6 @@ import { resolveCanonicalFoodName } from "./foodCanonicalName";
 import { formatFoodDisplayName } from "./foodNormalize";
 import { type FoodGroup, type FoodLine, getFoodEntry } from "./foodRegistry";
 
-// Re-export so existing import sites that reference this module still work.
-export { resolveCanonicalFoodName } from "./foodCanonicalName";
-
 export const BRAT_BASELINE_CANONICALS = [
   "ripe banana",
   "white rice",

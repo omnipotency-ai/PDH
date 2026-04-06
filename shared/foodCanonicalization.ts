@@ -12,35 +12,6 @@
 import { normalizeFoodName } from "./foodNormalize";
 import { FOOD_REGISTRY } from "./foodRegistry";
 
-export type {
-  FoodDigestionMetadata,
-  FoodGroup,
-  FoodLine,
-  FoodRegistryEntry,
-  FoodResidueLevel,
-  FoodRiskLevel,
-  FoodSubzone,
-  FoodZone,
-} from "./foodRegistry";
-export {
-  CANONICAL_FOOD_NAMES,
-  FOOD_GROUPS,
-  FOOD_LINES,
-  FOOD_REGISTRY,
-  getFoodDigestionMetadata,
-  getFoodEntry,
-  getFoodGroup,
-  getFoodLine,
-  getFoodsByLine,
-  getFoodsByZone,
-  getFoodZone,
-  getGroupDisplayName,
-  getLineDisplayName,
-  getLinesByGroup,
-  isCanonicalFood,
-  pickFoodDigestionMetadata,
-} from "./foodRegistry";
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Example lookup map
 // Each registry example is normalized and mapped to its canonical.
@@ -81,9 +52,14 @@ function buildExampleMap(): Map<string, string> {
   if (collisions.size > 0) {
     const details = Array.from(collisions.entries())
       .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([alias, canonicals]) => `${alias} -> ${Array.from(canonicals).sort().join(", ")}`)
+      .map(
+        ([alias, canonicals]) =>
+          `${alias} -> ${Array.from(canonicals).sort().join(", ")}`,
+      )
       .join("; ");
-    throw new Error(`Duplicate normalized food aliases found in FOOD_REGISTRY: ${details}`);
+    throw new Error(
+      `Duplicate normalized food aliases found in FOOD_REGISTRY: ${details}`,
+    );
   }
 
   return map;
@@ -123,7 +99,10 @@ const LEADING_QUANTITY_WORDS = new Set([
 function stripLeadingQuantity(input: string): string {
   const words = input.split(" ");
   let i = 0;
-  while (i < words.length && (LEADING_QUANTITY_WORDS.has(words[i]) || /^\d+$/.test(words[i]))) {
+  while (
+    i < words.length &&
+    (LEADING_QUANTITY_WORDS.has(words[i]) || /^\d+$/.test(words[i]))
+  ) {
     i++;
   }
   return words.slice(i).join(" ").trim();
@@ -159,7 +138,9 @@ export function canonicalizeKnownFoodName(input: string): string | null {
 
   // Second pass: strip leading quantity words and retry
   // Handles "three scrambled eggs" → "scrambled egg" → "egg"
-  const stripped = stripLeadingQuantity(normalized ?? input.toLowerCase().trim());
+  const stripped = stripLeadingQuantity(
+    normalized ?? input.toLowerCase().trim(),
+  );
   if (stripped && stripped !== normalized) {
     const normalizedStripped = normalizeFoodName(stripped);
     if (normalizedStripped) {
