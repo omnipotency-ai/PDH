@@ -9,7 +9,10 @@ import { api } from "../../convex/_generated/api";
 // ─── Weekly digest hooks ─────────────────────────────────────────────────────
 
 export function useWeeklyDigests(limit?: number) {
-  return useQuery(api.aggregateQueries.allWeeklyDigests, limit !== undefined ? { limit } : {});
+  return useQuery(
+    api.aggregateQueries.allWeeklyDigests,
+    limit !== undefined ? { limit } : {},
+  );
 }
 
 /** Compute Monday 00:00:00.000 local time for the current week. */
@@ -31,8 +34,16 @@ export function useCurrentWeekDigest() {
 
 // ─── Weekly summary data hooks ───────────────────────────────────────────────
 
-export function useConversationsByDateRange(startMs: number, endMs: number) {
-  return useQuery(api.conversations.listByDateRange, { startMs, endMs });
+export function useConversationsByDateRange(
+  startMs: number,
+  endMs: number,
+  limit?: number,
+) {
+  return useQuery(api.conversations.listByDateRange, {
+    startMs,
+    endMs,
+    ...(limit !== undefined && { limit }),
+  });
 }
 
 export function useSuggestionsByDateRange(startMs: number, endMs: number) {

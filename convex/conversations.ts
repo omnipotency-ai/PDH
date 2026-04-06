@@ -98,14 +98,17 @@ export const listByReport = query({
   },
 });
 
-// Get all messages within a date range (for weekly summaries)
+// Get messages within a date range (for weekly summaries and conversation panel).
+// Accepts an optional limit (default 500) to prevent unbounded result sets.
 export const listByDateRange = query({
   args: {
     startMs: v.number(),
     endMs: v.number(),
+    limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const { userId } = await requireAuth(ctx);
+    const limit = Math.min(Math.max(args.limit ?? 500, 1), 500);
     const messages = await ctx.db
       .query("conversations")
       .withIndex("by_userId_timestamp", (q) =>
@@ -114,7 +117,7 @@ export const listByDateRange = query({
           .gte("timestamp", args.startMs)
           .lte("timestamp", args.endMs),
       )
-      .collect();
+      .take(limit);
     return messages.sort((a, b) => a.timestamp - b.timestamp);
   },
 });
