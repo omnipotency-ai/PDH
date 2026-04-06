@@ -4,7 +4,12 @@ import type { Id } from "./_generated/dataModel";
 import type { DatabaseReader, MutationCtx } from "./_generated/server";
 import { mutation, query } from "./_generated/server";
 import { requireAuth } from "./lib/auth";
-import { asNumber, asRecord, asStringArray } from "./lib/coerce";
+import {
+  asNumber,
+  asRecord,
+  asStringArray,
+  asTrimmedString,
+} from "./lib/coerce";
 import { sanitizeUnknownStringsDeep } from "./lib/inputSafety";
 import {
   normalizeStoredAiPreferences,
@@ -248,12 +253,6 @@ function asNutritionPer100g(value: unknown): {
   };
 }
 
-function asString(value: unknown): string | undefined {
-  return typeof value === "string" && value.trim().length > 0
-    ? value.trim()
-    : undefined;
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Backup data access helpers
 // ─────────────────────────────────────────────────────────────────────────────
@@ -296,7 +295,7 @@ function remapId<T extends string>(
   value: unknown,
   mapping: ReadonlyMap<string, T>,
 ): T | undefined {
-  const id = asString(value);
+  const id = asTrimmedString(value);
   if (!id) return undefined;
   return mapping.get(id);
 }
@@ -463,7 +462,7 @@ export const importBackup = mutation({
     let logsInserted = 0;
     let logsSkippedUnknownType = 0;
     for (const row of payload.data.logs) {
-      const type = asString(row.type);
+      const type = asTrimmedString(row.type);
       const validatedType = asBackupLogType(type);
       if (validatedType === null) {
         console.warn(
@@ -491,13 +490,13 @@ export const importBackup = mutation({
     insertedCounts.logs = logsInserted;
 
     for (const row of payload.data.aiAnalyses) {
-      const rowError = asString(row.error);
+      const rowError = asTrimmedString(row.error);
       // Write lightweight metadata to aiAnalyses (no request/response).
       const nextId = await ctx.db.insert("aiAnalyses", {
         userId,
         timestamp: asNumber(row.timestamp) ?? payload.exportedAt,
         insight: (row.insight ?? null) as typeof aiInsightValidator.type,
-        model: asString(row.model) ?? "unknown",
+        model: asTrimmedString(row.model) ?? "unknown",
         durationMs: asNumber(row.durationMs) ?? 0,
         inputLogCount: asNumber(row.inputLogCount) ?? 0,
         ...(rowError !== undefined && { error: rowError }),
@@ -515,7 +514,7 @@ export const importBackup = mutation({
     insertedCounts.aiAnalyses = payload.data.aiAnalyses.length;
 
     for (const row of payload.data.profiles) {
-      const encryptedApiKey = asString(row.encryptedApiKey);
+      const encryptedApiKey = asTrimmedString(row.encryptedApiKey);
       await ctx.db.insert("profiles", {
         userId,
         unitSystem:
@@ -565,7 +564,7 @@ export const importBackup = mutation({
     for (const row of payload.data.foodLibrary) {
       await ctx.db.insert("foodLibrary", {
         userId,
-        canonicalName: asString(row.canonicalName) ?? "",
+        canonicalName: asTrimmedString(row.canonicalName) ?? "",
         type: row.type === "composite" ? "composite" : "ingredient",
         ingredients: asStringArray(row.ingredients),
         createdAt: asNumber(row.createdAt) ?? payload.exportedAt,
@@ -574,10 +573,10 @@ export const importBackup = mutation({
     insertedCounts.foodLibrary = payload.data.foodLibrary.length;
 
     for (const row of payload.data.ingredientOverrides) {
-      const rowNote = asString(row.note);
+      const rowNote = asTrimmedString(row.note);
       await ctx.db.insert("ingredientOverrides", {
         userId,
-        canonicalName: asString(row.canonicalName) ?? "",
+        canonicalName: asTrimmedString(row.canonicalName) ?? "",
         status:
           row.status === "watch" || row.status === "avoid"
             ? row.status
@@ -592,13 +591,15 @@ export const importBackup = mutation({
 
     for (const row of payload.data.ingredientProfiles) {
       const projection = getCanonicalFoodProjection(
-        asString(row.canonicalName) ?? "",
+        asTrimmedString(row.canonicalName) ?? "",
       );
       await ctx.db.insert("ingredientProfiles", {
         userId,
-        canonicalName: asString(row.canonicalName) ?? "",
+        canonicalName: asTrimmedString(row.canonicalName) ?? "",
         displayName:
-          asString(row.displayName) ?? asString(row.canonicalName) ?? "",
+          asTrimmedString(row.displayName) ??
+          asTrimmedString(row.canonicalName) ??
+          "",
         tags: asStringArray(row.tags),
         foodGroup: projection.foodGroup,
         foodLine: projection.foodLine,
@@ -634,7 +635,7 @@ export const importBackup = mutation({
       const totalFluidMl = asNumber(row.totalFluidMl);
       await ctx.db.insert("weeklyDigest", {
         userId,
-        weekStart: asString(row.weekStart) ?? "",
+        weekStart: asTrimmedString(row.weekStart) ?? "",
         weekStartTimestamp: asNumber(row.weekStartTimestamp) ?? 0,
         totalBowelEvents: asNumber(row.totalBowelEvents) ?? 0,
         ...(avgBristolScore !== undefined && { avgBristolScore }),
@@ -661,10 +662,10 @@ export const importBackup = mutation({
         userId,
         weekStartTimestamp: asNumber(row.weekStartTimestamp) ?? 0,
         weekEndTimestamp: asNumber(row.weekEndTimestamp) ?? 0,
-        weeklySummary: asString(row.weeklySummary) ?? "",
+        weeklySummary: asTrimmedString(row.weeklySummary) ?? "",
         keyFoods: asKeyFoods(row.keyFoods),
         carryForwardNotes: asStringArray(row.carryForwardNotes),
-        model: asString(row.model) ?? "unknown",
+        model: asTrimmedString(row.model) ?? "unknown",
         durationMs: asNumber(row.durationMs) ?? 0,
         generatedAt: asNumber(row.generatedAt) ?? payload.exportedAt,
         ...(promptVersion !== undefined && { promptVersion }),
@@ -680,7 +681,7 @@ export const importBackup = mutation({
         ...(aiAnalysisId !== undefined && { aiAnalysisId }),
         timestamp: asNumber(row.timestamp) ?? payload.exportedAt,
         role: row.role === "assistant" ? "assistant" : "user",
-        content: asString(row.content) ?? "",
+        content: asTrimmedString(row.content) ?? "",
         ...(promptVersion !== undefined && { promptVersion }),
       });
     }
@@ -689,7 +690,7 @@ export const importBackup = mutation({
     for (const row of payload.data.foodAssessments) {
       const aiAnalysisId = remapId(row.aiAnalysisId, aiAnalysisIdMap);
       if (!aiAnalysisId) continue;
-      const verdict = asString(row.verdict);
+      const verdict = asTrimmedString(row.verdict);
       const causalRole =
         row.causalRole === "primary" ||
         row.causalRole === "possible" ||
@@ -703,13 +704,13 @@ export const importBackup = mutation({
         row.changeType === "unchanged"
           ? row.changeType
           : undefined;
-      const modifierSummary = asString(row.modifierSummary);
+      const modifierSummary = asTrimmedString(row.modifierSummary);
       await ctx.db.insert("foodAssessments", {
         userId,
         aiAnalysisId,
         reportTimestamp: asNumber(row.reportTimestamp) ?? payload.exportedAt,
-        foodName: asString(row.foodName) ?? "",
-        canonicalName: asString(row.canonicalName) ?? "",
+        foodName: asTrimmedString(row.foodName) ?? "",
+        canonicalName: asTrimmedString(row.canonicalName) ?? "",
         verdict: asBackupFoodVerdict(verdict),
         ...(row.confidence === "high" ||
         row.confidence === "medium" ||
@@ -719,7 +720,7 @@ export const importBackup = mutation({
         ...(causalRole && { causalRole }),
         ...(changeType && { changeType }),
         ...(modifierSummary !== undefined && { modifierSummary }),
-        reasoning: asString(row.reasoning) ?? "",
+        reasoning: asTrimmedString(row.reasoning) ?? "",
       });
     }
     insertedCounts.foodAssessments = payload.data.foodAssessments.length;
@@ -730,14 +731,14 @@ export const importBackup = mutation({
     for (const row of payload.data.ingredientExposures) {
       const logId = remapId(row.logId, logIdMap);
       if (!logId) continue;
-      const preparation = asString(row.preparation);
+      const preparation = asTrimmedString(row.preparation);
       await ctx.db.insert("ingredientExposures", {
         userId,
         logId,
         itemIndex: asNumber(row.itemIndex) ?? 0,
         logTimestamp: asNumber(row.logTimestamp) ?? payload.exportedAt,
-        ingredientName: asString(row.ingredientName) ?? "",
-        canonicalName: asString(row.canonicalName) ?? "",
+        ingredientName: asTrimmedString(row.ingredientName) ?? "",
+        canonicalName: asTrimmedString(row.canonicalName) ?? "",
         quantity:
           typeof row.quantity === "number" || row.quantity === null
             ? row.quantity
@@ -762,8 +763,8 @@ export const importBackup = mutation({
       payload.data.ingredientExposures.length;
 
     for (const row of payload.data.foodTrialSummary) {
-      const currentStatus = asString(row.currentStatus);
-      const latestAiVerdict = asString(row.latestAiVerdict);
+      const currentStatus = asTrimmedString(row.currentStatus);
+      const latestAiVerdict = asTrimmedString(row.latestAiVerdict);
       const confidence = asNumber(row.confidence);
       const codeScore = asNumber(row.codeScore);
       const aiScore = asNumber(row.aiScore);
@@ -776,8 +777,8 @@ export const importBackup = mutation({
       );
       await ctx.db.insert("foodTrialSummary", {
         userId,
-        canonicalName: asString(row.canonicalName) ?? "",
-        displayName: asString(row.displayName) ?? "",
+        canonicalName: asTrimmedString(row.canonicalName) ?? "",
+        displayName: asTrimmedString(row.displayName) ?? "",
         currentStatus: asFoodTrialStatus(currentStatus),
         ...(isFoodPrimaryStatus(row.primaryStatus) && {
           primaryStatus: row.primaryStatus,
@@ -811,7 +812,7 @@ export const importBackup = mutation({
         nextToTryCount: asNumber(row.nextToTryCount) ?? 0,
         firstSeenAt: asNumber(row.firstSeenAt) ?? payload.exportedAt,
         lastAssessedAt: asNumber(row.lastAssessedAt) ?? payload.exportedAt,
-        latestReasoning: asString(row.latestReasoning) ?? "",
+        latestReasoning: asTrimmedString(row.latestReasoning) ?? "",
         updatedAt: asNumber(row.updatedAt) ?? payload.exportedAt,
       });
     }
