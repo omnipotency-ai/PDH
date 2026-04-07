@@ -1,8 +1,9 @@
 > **Ref:** `docs/ROADMAP.md`
 > **Updated:** 2026-04-06
-> **Version:** 2.1
+> **Version:** 2.2
 > **History:**
 >
+> - v2.2 (2026-04-06) — Food Page & Meal System initiative activated, Navigation Restructure superseded
 > - v2.1 (2026-04-06) — added planning triage notes from completed roadmap mapping reports
 > - v2.0 (2026-04-05) — append-only discipline, status column on initiatives
 > - v1.0 (2026-04-05) — created from WORK-QUEUE.md and VISION.md
@@ -133,11 +134,17 @@ Product barcode scan to look up or create foods in the registry. Separate from p
 
 ---
 
-### Navigation Restructure (Home / Track / Food / Insights)
+### Food Page, Meal System & Navigation Restructure
 
-> **Status:** Not planned
+> **Status:** In Work Queue — plan active
+> **PRD:** `docs/prd/2026-04-06-food-page-and-meal-system.md`
+> **Plan:** `docs/plans/2026-04-06-food-page-and-meal-system.md`
+> **Execution plans:** `docs/plans/2026-04-06-food-page-and-meal-system-waves-{0-1,2-3,4-6}.json`
+> **Branch:** TBD (create at execution time)
 
-Replace current 3-tab nav (Track / Patterns / Settings) with 4-tab layout: Home, Track, Food, Insights. The meal-logging PRD originally placed NutritionCard on a standalone `/food` route. Currently lives on Track page. This restructure is a prerequisite for the full PRD vision.
+Replace current 3-tab nav (Track / Patterns / Settings) with 4-tab bottom bar (Home / Track / Food / Insights) + header settings. Home = lightning-fast logging. Track = Today's Log only. Food = deep management with search, favourites, filter, editing, backfill. Insights = Patterns + Dr. Poo Report sub-tabs. Schema extensions for composite meal templates (deferred UI), slot-scoped favourite tagging, seed data for ~30 post-surgery foods.
+
+7 waves (W0-W6), 22 tasks. Waves 7-9 (meal system UI, AI text parser, voice capture) deferred.
 
 ---
 
@@ -159,32 +166,32 @@ Structured meal planning based on safe food data.
 > Notes below come from the completed roadmap mapping reports already gathered in-session.
 > They are intended to speed up plan consolidation and do not represent a fresh repo-wide re-audit.
 
-| ID     | Current assessment                  | Planning note                                                                                                                   |
-| ------ | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| ID     | Current assessment                  | Planning note                                                                                                                    |
+| ------ | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | WQ-148 | Open, but broader than a quick tidy | Real rename candidate, but touches multiple imports and should be planned as a focused cleanup task rather than folded casually. |
 | WQ-150 | Likely stale / not cleanup          | `toLegacyFoodStatus` still appears live downstream; do not treat this as dead-code removal without a status-model redesign.      |
-| WQ-151 | Likely stale / unclear              | Mapping report did not confirm the original bug; verify before folding into a cleanup plan.                                     |
-| WQ-153 | Open and low-risk                   | Safe cleanup candidate. Remove unused `FILTER_OPTIONS`, `SortKey`, and `SortDir` exports if no plan dependency says otherwise.  |
-| WQ-155 | Open and low-risk                   | Safe cleanup candidate. Strip leftover work-ticket marker comments during the next cleanup pass.                                |
-| WQ-159 | Open and low-risk                   | Safe cleanup candidate. Inert `use client` directives can be removed in a mechanical cleanup batch.                             |
-| WQ-161 | Open and low-risk                   | Safe content cleanup candidate. Replace or remove placeholder `"New entry."` notes during registry cleanup.                     |
-| WQ-162 | Open, but editorial                 | Keep separate from mechanical cleanup. This needs an intentional clinical-rationale pass, not a drive-by edit.                  |
-| WQ-163 | Unconfirmed / likely stale          | Mapping report did not confirm the stale comment at the cited location; verify before folding into the plan.                    |
-| WQ-198 | Open and substantive                | Real issue area. Keep as a proper habit/sleep-data cleanup task rather than bundling into minor cleanup work.                   |
+| WQ-151 | Likely stale / unclear              | Mapping report did not confirm the original bug; verify before folding into a cleanup plan.                                      |
+| WQ-153 | Open and low-risk                   | Safe cleanup candidate. Remove unused `FILTER_OPTIONS`, `SortKey`, and `SortDir` exports if no plan dependency says otherwise.   |
+| WQ-155 | Open and low-risk                   | Safe cleanup candidate. Strip leftover work-ticket marker comments during the next cleanup pass.                                 |
+| WQ-159 | Open and low-risk                   | Safe cleanup candidate. Inert `use client` directives can be removed in a mechanical cleanup batch.                              |
+| WQ-161 | Open and low-risk                   | Safe content cleanup candidate. Replace or remove placeholder `"New entry."` notes during registry cleanup.                      |
+| WQ-162 | Open, but editorial                 | Keep separate from mechanical cleanup. This needs an intentional clinical-rationale pass, not a drive-by edit.                   |
+| WQ-163 | Unconfirmed / likely stale          | Mapping report did not confirm the stale comment at the cited location; verify before folding into the plan.                     |
+| WQ-198 | Open and substantive                | Real issue area. Keep as a proper habit/sleep-data cleanup task rather than bundling into minor cleanup work.                    |
 | WQ-419 | Appears resolved on current branch  | Placeholder CSP domain was already removed when mapped. Treat as closed unless later regression appears.                         |
-| WQ-420 | Open                                | Still needs action: manifest/assets reference missing install-prompt screenshot/icon assets.                                    |
-| WQ-421 | Open                                | Still needs action: installable `512px` icon gap remains.                                                                       |
-| WQ-422 | Appears resolved on current branch  | `unsafe-inline` was already documented with an accepted-risk note when mapped. Treat as closed unless policy changes.           |
-| WQ-423 | Appears resolved on current branch  | Microphone policy was already opened up when mapped. Treat as closed unless voice scope changes.                                |
-| WQ-424 | Partially resolved / needs decision | PNG precache coverage exists; decide whether JPG/JPEG/WEBP support is still a requirement before planning more work.            |
-| WQ-425 | Appears resolved on current branch  | `dotenv` had already been moved to `devDependencies` when mapped. Treat as closed unless package drift reintroduces it.         |
-| WQ-426 | Appears resolved on current branch  | `next-themes` was already removed when mapped. Treat as closed unless dependency drift reintroduces it.                         |
-| WQ-427 | Appears resolved on current branch  | Stale transit-map `.gitignore` exclusions were already gone when mapped. Treat as closed unless they reappear.                  |
-| WQ-428 | Open                                | Still missing explicit unauthenticated app-load E2E coverage. Keep in the next release-hygiene/testing plan.                   |
-| WQ-429 | Appears resolved on current branch  | Document title was already made more descriptive when mapped. Treat as closed unless branding changes.                          |
-| WQ-430 | Appears resolved on current branch  | Package name was already lowercase when mapped. Treat as closed unless packaging needs change again.                            |
-| WQ-431 | Open                                | Still needs action: stale theme storage key fallback remains in `theme-provider.tsx`.                                           |
-| WQ-432 | Appears resolved on current branch  | Redundant `.playwright-cli` ignores were already simplified when mapped. Treat as closed unless ignore rules drift again.       |
+| WQ-420 | Open                                | Still needs action: manifest/assets reference missing install-prompt screenshot/icon assets.                                     |
+| WQ-421 | Open                                | Still needs action: installable `512px` icon gap remains.                                                                        |
+| WQ-422 | Appears resolved on current branch  | `unsafe-inline` was already documented with an accepted-risk note when mapped. Treat as closed unless policy changes.            |
+| WQ-423 | Appears resolved on current branch  | Microphone policy was already opened up when mapped. Treat as closed unless voice scope changes.                                 |
+| WQ-424 | Partially resolved / needs decision | PNG precache coverage exists; decide whether JPG/JPEG/WEBP support is still a requirement before planning more work.             |
+| WQ-425 | Appears resolved on current branch  | `dotenv` had already been moved to `devDependencies` when mapped. Treat as closed unless package drift reintroduces it.          |
+| WQ-426 | Appears resolved on current branch  | `next-themes` was already removed when mapped. Treat as closed unless dependency drift reintroduces it.                          |
+| WQ-427 | Appears resolved on current branch  | Stale transit-map `.gitignore` exclusions were already gone when mapped. Treat as closed unless they reappear.                   |
+| WQ-428 | Open                                | Still missing explicit unauthenticated app-load E2E coverage. Keep in the next release-hygiene/testing plan.                     |
+| WQ-429 | Appears resolved on current branch  | Document title was already made more descriptive when mapped. Treat as closed unless branding changes.                           |
+| WQ-430 | Appears resolved on current branch  | Package name was already lowercase when mapped. Treat as closed unless packaging needs change again.                             |
+| WQ-431 | Open                                | Still needs action: stale theme storage key fallback remains in `theme-provider.tsx`.                                            |
+| WQ-432 | Appears resolved on current branch  | Redundant `.playwright-cli` ignores were already simplified when mapped. Treat as closed unless ignore rules drift again.        |
 
 ### Track Page
 

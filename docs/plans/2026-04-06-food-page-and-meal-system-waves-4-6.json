@@ -1,0 +1,351 @@
+{
+  "planName": "Food Page, Meal System & Navigation Restructure",
+  "prd": "docs/prd/2026-04-06-food-page-and-meal-system.md",
+  "plan": "docs/plans/2026-04-06-food-page-and-meal-system.md",
+  "waves": "4-6",
+  "tasks": [
+    {
+      "id": "W4-T01",
+      "title": "Audit and fix heart toggle on every food row",
+      "wave": 4,
+      "dependsOn": ["W3-T02", "W5-T03"],
+      "skill": "vite-react-implementer",
+      "description": "Cross-cutting audit: grep for every <FoodRow> usage across the entire src/ directory. For every instance, verify isFavourite and onToggleFavourite props are provided. Fix FoodRow component (src/components/track/nutrition/FoodRow.tsx) to always render the heart icon — if onToggleFavourite is optional and the heart is conditionally rendered, change it so heart always shows (empty gray outline if not favourite, filled orange if favourite). Make onToggleFavourite required or provide a sensible default. Wire up useFoodFavourites() in every parent that renders FoodRow. Views to check: Home (favourites, recent, frequent, search results, food chips), Food page (search, favourites, filter), NutritionCard search results, FoodFilterView tabs, FavouritesView. Zero dead/non-functional hearts.",
+      "userStories": ["US-018"],
+      "files": {
+        "read": [
+          "src/components/track/nutrition/FoodRow.tsx",
+          "src/pages/Home.tsx",
+          "src/pages/Food.tsx",
+          "src/components/track/nutrition/NutritionCard.tsx",
+          "src/components/track/nutrition/FavouritesView.tsx",
+          "src/components/track/nutrition/FoodFilterView.tsx",
+          "src/hooks/useProfile.ts"
+        ],
+        "edit": [
+          "src/components/track/nutrition/FoodRow.tsx",
+          "src/pages/Home.tsx",
+          "src/pages/Food.tsx",
+          "src/components/track/nutrition/NutritionCard.tsx",
+          "src/components/track/nutrition/FavouritesView.tsx",
+          "src/components/track/nutrition/FoodFilterView.tsx"
+        ],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "Heart icon renders on every FoodRow in every view (no conditional hiding)",
+        "Empty heart (gray outline) = not favourited; filled heart (orange) = favourited",
+        "Tapping heart toggles favourite status (calls toggleFavourite from useFoodFavourites)",
+        "isFavourite prop is provided on every FoodRow instance",
+        "onToggleFavourite prop is provided on every FoodRow instance",
+        "Favourites persist to profiles table (foodFavourites array)",
+        "No dead/non-functional hearts anywhere in the app",
+        "bun run typecheck passes",
+        "Browser verification: check every view with food rows — heart toggles work consistently"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": true
+      }
+    },
+    {
+      "id": "W4-T02",
+      "title": "Plus button stages and auto-opens staging modal",
+      "wave": 4,
+      "dependsOn": ["W3-T02", "W5-T01"],
+      "skill": "vite-react-implementer",
+      "description": "Ensure every (+) button on every food row stages the food AND auto-opens the staging modal (LogFoodModal). In every parent component that handles the onAdd callback from FoodRow, chain two dispatches: ADD_TO_STAGING followed by OPEN_STAGING_MODAL. This ensures users see the staging area immediately with running calorie/macro totals. Check: Home page, Food page, NutritionCard, FoodFilterView, FavouritesView. LogFoodModal should show all staged items with name, portion, calories, (+/-) adjusters, running totals, and 'Log' button.",
+      "userStories": ["US-019"],
+      "files": {
+        "read": [
+          "src/components/track/nutrition/FoodRow.tsx",
+          "src/components/track/nutrition/LogFoodModal.tsx",
+          "src/components/track/nutrition/useNutritionStore.ts",
+          "src/pages/Home.tsx",
+          "src/pages/Food.tsx"
+        ],
+        "edit": [
+          "src/pages/Home.tsx",
+          "src/pages/Food.tsx",
+          "src/components/track/nutrition/NutritionCard.tsx"
+        ],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "Tapping (+) on any food row stages the food with default portion",
+        "LogFoodModal auto-opens immediately after staging",
+        "Staging modal shows all staged items with quantities and running calorie/macro totals",
+        "Works identically on Home page and Food page",
+        "Works in NutritionCard search results",
+        "Works in FoodFilterView and FavouritesView",
+        "bun run typecheck passes",
+        "Browser verification: tap (+) → modal opens → staged item visible → can adjust and log"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": true
+      }
+    },
+    {
+      "id": "W5-T01",
+      "title": "Food page shell with view switcher and backfill date picker",
+      "wave": 5,
+      "dependsOn": ["W1-T02"],
+      "skill": "vite-react-implementer",
+      "description": "Build the Food page (src/pages/Food.tsx) with: (1) View switcher — four icon tab buttons: Search (Search icon), Favourites (Heart icon), Filter (SlidersHorizontal icon). Clicking replaces the entire content area (primary views, not accordion). State: activeView: 'search' | 'favourites' | 'filter'. When search is empty, show all foods (this replaces the 'All' concept). (2) Initialize useNutritionStore() for staging. Render LogFoodModal. (3) Date/time picker for backfill logging (US-017) at top: 'Logging for: [date] [meal slot]' with date picker and slot selector. Defaults to current time and auto-detected slot. User can change to earlier today or previous days. Staged foods log with the selected timestamp. (4) Wire up aria-pressed state on view switcher buttons for accessibility.",
+      "userStories": ["US-012", "US-017"],
+      "files": {
+        "read": [
+          "src/pages/Food.tsx",
+          "src/components/track/nutrition/useNutritionStore.ts",
+          "src/components/track/nutrition/LogFoodModal.tsx",
+          "src/components/track/nutrition/NutritionCard.tsx",
+          "docs/prd/2026-04-06-food-page-and-meal-system.md"
+        ],
+        "edit": ["src/pages/Food.tsx"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "View switcher shows 3 icon tabs: Search, Favourites, Filter",
+        "Clicking a view replaces the content area (primary view switching)",
+        "View switcher buttons have aria-pressed state",
+        "useNutritionStore initialized for staging",
+        "LogFoodModal renders on Food page",
+        "Date/time picker shows 'Logging for: [date] [slot]'",
+        "Date defaults to today, slot auto-detected from time",
+        "User can select previous dates for backfill logging",
+        "bun run typecheck passes",
+        "Browser verification: view tabs switch content, date picker works"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": true
+      }
+    },
+    {
+      "id": "W5-T02",
+      "title": "Food page search view (no cap)",
+      "wave": 5,
+      "dependsOn": ["W5-T01"],
+      "skill": "vite-react-implementer",
+      "description": "Build the search view for the Food page and remove the 50-item search cap. (1) In useNutritionStore.ts, find searchFoodRegistry() and remove or raise the 50-item result cap to 500 (the PRD says ~300-400 foods, querying all is fine — Convex bandwidth is negligible). (2) Search view renders when activeView === 'search': search input at top, results as FoodRow list showing name, zone badge, portion, kcal, heart toggle, (+) to stage. Empty search shows all foods alphabetically. Results update as user types (Fuse.js fuzzy matching already exists).",
+      "userStories": ["US-013"],
+      "files": {
+        "read": [
+          "src/pages/Food.tsx",
+          "src/components/track/nutrition/useNutritionStore.ts",
+          "src/components/track/nutrition/FoodRow.tsx"
+        ],
+        "edit": [
+          "src/pages/Food.tsx",
+          "src/components/track/nutrition/useNutritionStore.ts"
+        ],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "searchFoodRegistry() no longer caps results at 50 (raised to 500 or removed)",
+        "Search view shows search input at top",
+        "Typing triggers Fuse.js fuzzy search",
+        "Results show as FoodRow with zone badge, portion, kcal, heart toggle, (+)",
+        "Empty search shows all foods alphabetically (no cap)",
+        "Heart toggle works on search results",
+        "(+) stages and opens LogFoodModal",
+        "bun run typecheck passes",
+        "Browser verification: search returns all matching foods, no 50-item limit"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": true
+      }
+    },
+    {
+      "id": "W5-T03",
+      "title": "Food page favourites view with slot filtering",
+      "wave": 5,
+      "dependsOn": ["W5-T01"],
+      "skill": "vite-react-implementer",
+      "description": "Build the favourites view for the Food page. Renders when activeView === 'favourites'. (1) Optional slot chips at top to filter by meal slot (uses foodFavouriteSlotTags from profile — if a slot chip is active, only show foods tagged for that slot; if no chip is active, show all favourites). (2) All favourited foods as FoodRow list — heart filled (orange), tappable to unfavourite. (+) to stage. (3) Empty state: 'No favourites yet — tap the heart on any food to add it'. Reuse patterns from existing FavouritesView.tsx but render inline in the Food page content area, not as a sub-panel with back button.",
+      "userStories": ["US-014"],
+      "files": {
+        "read": [
+          "src/pages/Food.tsx",
+          "src/components/track/nutrition/FavouritesView.tsx",
+          "src/hooks/useProfile.ts",
+          "src/components/track/nutrition/FoodRow.tsx"
+        ],
+        "edit": ["src/pages/Food.tsx"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "Favourites view shows all foods where heart is toggled on",
+        "Optional slot chips at top filter favourites by meal slot tags",
+        "Each food shows as FoodRow with filled heart, name, portion, kcal, (+)",
+        "Tapping heart unfavourites the food (removes from list reactively)",
+        "(+) stages and opens LogFoodModal",
+        "Empty state shows 'No favourites yet — tap the heart on any food to add it'",
+        "bun run typecheck passes",
+        "Browser verification: favourites view shows correct foods, slot filtering works, unfavourite removes item"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": true
+      }
+    },
+    {
+      "id": "W5-T04",
+      "title": "Food page filter view with recent/frequent/zone",
+      "wave": 5,
+      "dependsOn": ["W5-T01"],
+      "skill": "vite-react-implementer",
+      "description": "Build the filter view for the Food page. Renders when activeView === 'filter'. (1) Sub-filter chips: Recent, Frequent, Zone. Chips are toggles (multiple can be active to combine filters). (2) Recent: foods logged in last 7 days, sorted by last-logged timestamp. (3) Frequent: foods sorted by total log count, descending. (4) Zone: zone chip toggles (Z1, Z2, Z3, Z4) — filter by food zone from FOOD_REGISTRY. (5) Filters combine: e.g. Recent + Z1 shows only recent foods that are in zone 1. (6) Results as FoodRow list with heart toggle and (+) to stage. Reuse patterns from existing FoodFilterView.tsx (which has Recent, Frequent, All tabs and slot-scoped logic).",
+      "userStories": ["US-015"],
+      "files": {
+        "read": [
+          "src/pages/Food.tsx",
+          "src/components/track/nutrition/FoodFilterView.tsx",
+          "src/components/track/nutrition/FoodRow.tsx",
+          "shared/foodRegistry.ts",
+          "shared/foodRegistryData.ts"
+        ],
+        "edit": ["src/pages/Food.tsx"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "Filter view shows sub-filter chips: Recent, Frequent, Zone",
+        "Recent filter shows foods logged in last 7 days, sorted by last-logged",
+        "Frequent filter shows foods by total log count, descending",
+        "Zone filter shows Z1/Z2/Z3/Z4 toggle chips",
+        "Filters combine (e.g. Recent + Z1 filters to recent zone-1 foods)",
+        "Results show as FoodRow with heart toggle and (+) to stage",
+        "bun run typecheck passes",
+        "Browser verification: filter chips toggle, results update, combinations work"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": true
+      }
+    },
+    {
+      "id": "W5-T05",
+      "title": "Food detail editing modal",
+      "wave": 5,
+      "dependsOn": ["W5-T02"],
+      "skill": "vite-react-implementer",
+      "description": "Create a FoodDetailModal component and wire it into the Food page. (1) Create src/components/food/FoodDetailModal.tsx — a modal/sheet that opens when tapping a food name (not the heart or + button). Editable fields: name (display name), default portion size, unit (g/ml/tsp/tbsp/slice/piece/shot/pinch), kcal per 100g, protein, fat, carbs, fibre, sugar, salt per 100g. Save writes to ingredientProfiles table via Convex mutation. Cancel discards. (2) Wire up in Food page: when a food row's name is tapped, open FoodDetailModal. May need to add onNameClick prop to FoodRow or wrap the name element in a clickable button. (3) Create or find a Convex mutation updateIngredientProfile that patches ingredientProfiles for given user+canonicalName (upsert pattern).",
+      "userStories": ["US-016"],
+      "files": {
+        "read": [
+          "src/pages/Food.tsx",
+          "src/components/track/nutrition/FoodRow.tsx",
+          "convex/schema.ts",
+          "convex/_generated/ai/guidelines.md",
+          "shared/foodPortionData.ts"
+        ],
+        "edit": [
+          "src/pages/Food.tsx",
+          "src/components/track/nutrition/FoodRow.tsx"
+        ],
+        "create": [
+          "src/components/food/FoodDetailModal.tsx",
+          "convex/ingredientProfiles.ts"
+        ]
+      },
+      "acceptanceCriteria": [
+        "FoodDetailModal renders as modal/sheet with editable nutrition fields",
+        "Editable fields: name, portion size, unit, kcal, protein, fat, carbs, fibre, sugar, salt (all per 100g)",
+        "Tapping food name in any Food page view opens FoodDetailModal",
+        "Tapping heart or (+) does NOT open FoodDetailModal (only name tap)",
+        "Save writes to ingredientProfiles table via Convex mutation",
+        "Cancel discards changes and closes modal",
+        "Convex mutation updateIngredientProfile exists and upserts correctly",
+        "bun run typecheck passes",
+        "Browser verification: tap food name → modal opens → edit kcal → save → data persists"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": true
+      }
+    },
+    {
+      "id": "W6-T01",
+      "title": "Populate food registry with ~30 post-surgery foods",
+      "wave": 6,
+      "dependsOn": ["W5-T02"],
+      "skill": "vite-react-implementer",
+      "description": "Audit shared/foodPortionData.ts and shared/foodRegistryData.ts against the PRD's ~30-food list. Add missing entries with accurate nutrition data sourced from McCance & Widdowson / USDA / Open Food Facts. Foods: toast (slice, 30g), plain pasta (100g), rice (100g), wraps (1 wrap), breadsticks, tostadas, chaelitos (piece), bread snacks, lean meat (100g), lean fish (100g), chicken broth (250ml), eggs (1 large, 60g), grated cheddar (30g), sliced cheddar (20g), banana (1 medium, 120g), mashed pumpkin (100g), mashed potato (100g), butter (1 tsp, 5g), jam (1 tsp, 5g), peanut butter (1 tsp, 5g), cream cheese (1 tbsp, 10g), olive oil (1 tsp, 5ml), salt (pinch), pepper (pinch), fine herbs (pinch), coffee (espresso shot), milk (50ml), sugar (1 tsp, 5g), tea (cup, 240ml), diluted juice (cup, 240ml), carbonated drink (can, 330ml). Also add tspToGrams values for density-varying ingredients: butter 4.7g/tsp, jam 7g/tsp, peanut butter 5.4g/tsp, cream cheese 5g/tsp, olive oil 4.5g/tsp, sugar 4.2g/tsp, salt 6g/tsp.",
+      "userStories": ["US-027"],
+      "files": {
+        "read": [
+          "shared/foodPortionData.ts",
+          "shared/foodRegistryData.ts",
+          "shared/foodRegistry.ts",
+          "docs/prd/2026-04-06-food-page-and-meal-system.md"
+        ],
+        "edit": ["shared/foodPortionData.ts", "shared/foodRegistryData.ts"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "All ~30 foods from the PRD exist in FOOD_PORTION_DATA with defaultPortionG, naturalUnit, unitWeightG, kcalPer100g, and full macros",
+        "All ~30 foods have corresponding entries in FOOD_REGISTRY with canonical name, category, zone",
+        "tspToGrams values added for butter, jam, peanut butter, cream cheese, olive oil, sugar, salt",
+        "Nutrition data sourced from reliable sources (McCance & Widdowson / USDA / Open Food Facts)",
+        "No duplicate entries — audit existing data first, only add what's missing",
+        "bun run typecheck passes",
+        "bun run build succeeds"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W6-T02",
+      "title": "Seed Coffee and Toast meal templates",
+      "wave": 6,
+      "dependsOn": ["W0-T01", "W6-T01"],
+      "skill": "vite-react-implementer",
+      "description": "Create convex/seedMealTemplates.ts with an internal mutation that inserts two foodLibrary entries with type: 'composite'. Coffee (250ml): structuredIngredients=[espresso 1 shot, water 200ml, milk 50ml], modifiers=[sugar 5g, extra espresso 1 shot], sizes=[250ml cup (base), 450ml cup (water→350ml)]. Toast (2 slices): structuredIngredients=[toast 2 slices], modifiers=[butter 5g, jam 5g, peanut butter 5g, cream cheese 10g], sizes=[]. The mutation should check for existing entries (by userId+canonicalName) and skip if already seeded. Run via Convex dashboard or npx convex run.",
+      "userStories": ["US-027"],
+      "files": {
+        "read": [
+          "convex/schema.ts",
+          "convex/validators.ts",
+          "convex/_generated/ai/guidelines.md"
+        ],
+        "edit": [],
+        "create": ["convex/seedMealTemplates.ts"]
+      },
+      "acceptanceCriteria": [
+        "convex/seedMealTemplates.ts exports an internal mutation (e.g. internal.seedMealTemplates.seed)",
+        "Mutation creates Coffee composite with structuredIngredients, modifiers, and sizes",
+        "Mutation creates Toast composite with structuredIngredients and modifiers",
+        "Mutation is idempotent — skips if entries already exist for userId+canonicalName",
+        "Both entries have type: 'composite' and correct ingredients array for backward compat",
+        "bun run typecheck passes",
+        "Can be run via npx convex run seedMealTemplates:seed"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    }
+  ]
+}
