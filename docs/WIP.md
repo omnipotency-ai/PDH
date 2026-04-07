@@ -1,8 +1,9 @@
 > **Ref:** `docs/WIP.md`
-> **Updated:** 2026-04-06
-> **Version:** 3.2
+> **Updated:** 2026-04-07
+> **Version:** 3.3
 > **History:**
 >
+> - v3.3 (2026-04-07) — Tech-Debt initiative complete, collapsed to summary
 > - v3.2 (2026-04-06) — Food Page & Meal System initiative started
 > - v3.1 (2026-04-06) — Nutrition Card W4-5 collapsed to summary, initiative complete
 > - v3.0 (2026-04-05) — newest-first, timestamped, managed by project-ops + vite-react-implementer skills
@@ -28,7 +29,9 @@
 
 <!-- Implementer agents: prepend new entries HERE, above the completed summaries -->
 
-## Active: Tech-Debt Audit Cleanup
+---
+
+## Archived Tech-Debt Detail (collapsed — summary in Completed Initiatives)
 
 ### Wave 5 complete except deferred W5-16 (2026-04-06)
 
@@ -340,6 +343,12 @@ Key commits this session: `c4b22fb` (W4-09 impl), `8b5096c` (W4-09 fix: hard-fai
 ---
 
 ## Completed Initiatives
+
+### Tech-Debt Audit Cleanup — COMPLETE (2026-04-07)
+
+Cross-cutting cleanup driven by the 2026-04-06 audit report. 7 waves (0-6), ~80 tasks. Waves 0-5 on `pans-labyrinth` (PR #5), wave 6 on `dantes-inferno` (PR #6). Deferred: W4-01/02/12/14, W5-16.
+Key commits: `edec8b1`, `8c375b2`, `0407871`, `4aa2254`, `4caf2d7`, `773d55e`, `d681d04`, `78a0a52`, `b1b9f3b`.
+Resolved ~30 ROADMAP standalone items. Plans archived.
 
 ### Nutrition Card (Meal Logging Redesign) — COMPLETE (2026-04-06)
 
