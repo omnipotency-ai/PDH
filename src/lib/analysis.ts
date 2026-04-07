@@ -144,6 +144,8 @@ export function analyzeLogs(
     }, {});
     const primaryStatus = override?.primaryStatus ?? summary.primaryStatus;
     const tendency = override?.tendency ?? summary.tendency;
+    // Keep the legacy status bridge until downstream table/UI consumers no
+    // longer depend on the older FoodStatus variants.
     const legacyStatus = toLegacyFoodStatus(primaryStatus, tendency);
 
     return {

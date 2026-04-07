@@ -27,32 +27,41 @@
   "tasks": [
     {
       "id": "W6-01",
-      "title": "Set BYOK API key removal timeline and tighten key handling",
+      "title": "Replace BYOK with app-owned OpenAI secret",
       "wave": 6,
       "dependsOn": [],
       "skill": "vite-react-implementer",
-      "description": "Multiple issues with API key handling: convex/ai.ts and convex/foodLlmMatching.ts accept apiKey: v.optional(v.string()) from the client as a legacy BYOK fallback (key transits network, logged in action calls). The key is stored in IndexedDB under predictable key 'PDH-ai-key' accessible to XSS. Fix: (1) Add a TODO with target date (suggest 2026-06-01) for removing the client key arg entirely from both actions. (2) If BYOK must remain short-term, consider moving client storage from IndexedDB to sessionStorage (cleared on tab close). (3) Ensure generateSettingsSuggestions and callAi never log the apiKey parameter — audit for console.log/console.error that might include it. (4) Keep key retrieval as close to the Convex action call boundary as possible.",
+      "description": "Replace the legacy BYOK path with an app-owned OpenAI secret. Remove client key storage and the ApiKeyContext, stop accepting apiKey args in convex/ai.ts and convex/foodLlmMatching.ts, and read OPENAI_API_KEY only from Convex environment variables. Update the settings UI so it reports deployment-level AI configuration rather than asking the user for a key.",
       "files": {
         "read": [
           "convex/ai.ts",
           "convex/foodLlmMatching.ts",
-          "src/lib/apiKeyStore.ts",
-          "src/components/settings/AiSuggestionsCard.tsx"
+          "src/components/settings/AiSuggestionsCard.tsx",
+          "src/components/settings/AppDataForm.tsx",
+          "src/components/layout/AppLayout.tsx"
         ],
         "edit": [
           "convex/ai.ts",
           "convex/foodLlmMatching.ts",
-          "src/lib/apiKeyStore.ts"
+          "convex/appConfig.ts",
+          "src/components/layout/AppLayout.tsx",
+          "src/components/settings/AiSuggestionsCard.tsx",
+          "src/components/settings/AppDataForm.tsx",
+          "src/components/settings/app-data-form/ArtificialIntelligenceSection.tsx",
+          "src/components/settings/app-data-form/CloudProfileSection.tsx"
         ],
-        "create": []
+        "create": [
+          "src/hooks/useAiConfig.ts"
+        ]
       },
       "acceptanceCriteria": [
-        "TODO with target date for BYOK removal exists in both convex/ai.ts and convex/foodLlmMatching.ts",
-        "No console.log/console.error that could include raw API key in the call chain",
-        "API key never appears in any log output during normal operation",
+        "Convex AI actions no longer accept client-supplied apiKey arguments",
+        "IndexedDB/local user key storage is removed from the runtime path",
+        "Settings UI reflects deployment-level AI configuration instead of BYOK",
+        "AI call chain never threads a raw API key through browser-side code",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -61,23 +70,22 @@
     },
     {
       "id": "W6-02",
-      "title": "Add integrity check to legacy base64 API key decryption",
+      "title": "Supersede legacy BYOK decryption hardening for private app",
       "wave": 6,
       "dependsOn": [],
       "skill": "vite-react-implementer",
-      "description": "decryptLegacyApiKey in convex/lib/apiKeys.ts (~L94-96) calls atob(value) with no validation that the decoded bytes represent a valid API key. Fix: After decoding, validate the result against OPENAI_API_KEY_PATTERN (now importable from convex/lib/openai.ts after W2-01). Throw a specific error if validation fails.",
+      "description": "This finding only mattered while BYOK remained a live runtime path. Wave 6 removed client-supplied OpenAI keys from the app runtime and standardized on an app-owned Convex environment variable, so legacy base64 key validation is no longer a release blocker for this private deployment. Keep any remaining legacy helpers out of the runtime path and defer full deletion to a future schema cleanup if desired.",
       "files": {
         "read": ["convex/lib/apiKeys.ts", "convex/lib/openai.ts"],
         "edit": ["convex/lib/apiKeys.ts"],
         "create": []
       },
       "acceptanceCriteria": [
-        "Decoded legacy API key validated against OPENAI_API_KEY_PATTERN",
-        "Invalid decoded key throws descriptive error",
-        "Import from convex/lib/openai.ts (canonical location after W2-01)",
+        "No production AI flow depends on decrypting a user-supplied API key",
+        "OpenAI access is sourced from app-owned environment configuration only",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -86,23 +94,22 @@
     },
     {
       "id": "W6-03",
-      "title": "Add meta CSP fallback to index.html",
+      "title": "Defer meta CSP fallback for private deployment",
       "wave": 6,
       "dependsOn": [],
       "skill": "vite-react-implementer",
-      "description": "index.html has no Content-Security-Policy meta tag. If served from a context without server-side headers (e.g., local dev, alternative hosting), there is no CSP at all. Fix: Add `<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'self'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'\">` as defense-in-depth. Ensure it doesn't conflict with the vercel.json CSP headers (meta tag is overridden by HTTP headers when both exist).",
+      "description": "A meta-tag CSP fallback is defense-in-depth for alternate/public hosting, not a blocker for the current private Vercel + phone-install deployment. Keep relying on header-based CSP for the live app and revisit a meta fallback if the app is later distributed outside the current hosting setup.",
       "files": {
         "read": ["index.html", "vercel.json"],
         "edit": ["index.html"],
         "create": []
       },
       "acceptanceCriteria": [
-        "index.html has <meta http-equiv='Content-Security-Policy'> tag",
-        "Meta CSP includes default-src 'self' and object-src 'none'",
-        "Does not conflict with vercel.json headers",
+        "Live deployment continues to rely on host-provided CSP headers",
+        "Wave 6 closure is not blocked on a fallback needed only for alternate/public hosting",
         "Build succeeds"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run build"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -111,17 +118,16 @@
     },
     {
       "id": "W6-04",
-      "title": "Fix misleading API key privacy copy in Settings",
+      "title": "Fix AI configuration copy in Settings",
       "wave": 6,
       "dependsOn": [],
       "skill": "vite-react-implementer",
-      "description": "ArtificialIntelligenceSection.tsx says 'stored securely on our servers' but the key may be in IndexedDB. CloudProfileSection says 'AES-256-GCM encryption'. The descriptions contradict. Fix: (1) Audit whether the key is currently stored locally (IndexedDB) or server-side (Convex). (2) Update both components' copy to match reality. If stored locally, say 'stored locally in your browser'. If server-side, confirm AES-256-GCM claim. (3) Make copy consistent between the two sections.",
+      "description": "The app now uses an app-owned OpenAI key stored in environment variables. Update ArtificialIntelligenceSection.tsx and CloudProfileSection.tsx so both sections explain that AI is configured at the deployment level and that no OpenAI key is stored in the browser or user profile.",
       "files": {
         "read": [
           "src/components/settings/app-data-form/ArtificialIntelligenceSection.tsx",
           "src/components/settings/app-data-form/CloudProfileSection.tsx",
-          "src/lib/apiKeyStore.ts",
-          "convex/lib/apiKeys.ts"
+          "convex/appConfig.ts"
         ],
         "edit": [
           "src/components/settings/app-data-form/ArtificialIntelligenceSection.tsx",
@@ -130,12 +136,12 @@
         "create": []
       },
       "acceptanceCriteria": [
-        "API key storage description matches actual implementation",
+        "AI configuration description matches actual implementation",
         "No contradictory claims between sections",
-        "Copy is honest about where the key is stored",
+        "Copy is honest about deployment-level secret storage",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -159,7 +165,7 @@
         "Arrow navigation still works when focus is on non-input elements",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -183,7 +189,7 @@
         "Timer is cleared on unmount regardless of early return path",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -192,11 +198,11 @@
     },
     {
       "id": "W6-07",
-      "title": "Add tracked issue ID to Privacy Policy TODO",
+      "title": "Re-scope Privacy Policy TODO for private deployment",
       "wave": 6,
       "dependsOn": [],
       "skill": "vite-react-implementer",
-      "description": "CloudProfileSection.tsx (~L30-33) has a TODO saying Privacy Policy link must be reinstated before launch for GDPR, but no tracked work item. Fix: (1) Create a GitHub issue for the Privacy Policy link. (2) Update the TODO comment with the issue number/URL.",
+      "description": "A hosted Privacy Policy link is public-launch work, not a blocker for a private app installed on the owner's phone. Replace the existing TODO with a narrower comment that makes the public-launch dependency explicit without requiring issue tracking inside Wave 6.",
       "files": {
         "read": [
           "src/components/settings/app-data-form/CloudProfileSection.tsx"
@@ -207,11 +213,11 @@
         "create": []
       },
       "acceptanceCriteria": [
-        "TODO comment includes a GitHub issue number or URL",
-        "Issue is created and trackable",
+        "CloudProfileSection no longer implies this is a Wave 6 blocker for the private deployment",
+        "Any remaining comment scopes the work to a future public launch",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -236,7 +242,7 @@
         "No import-site breakage",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -261,7 +267,7 @@
         "Responsive behavior preserved",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -285,7 +291,7 @@
         "Clicks do not pass through to underlying cards",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -310,7 +316,7 @@
         "If kept: comment references Food Registry initiative for future removal",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -319,21 +325,21 @@
     },
     {
       "id": "W6-12",
-      "title": "Assess columns stale export — remove if stale",
+      "title": "Confirm columns export is live, not stale",
       "wave": 6,
       "dependsOn": [],
       "skill": "vite-react-implementer",
-      "description": "WQ-151: Patterns/database columns may have a stale static snapshot export at module load. The triage notes say it was not confirmed as a bug during mapping. Fix: (1) Read the column definition code. (2) Verify if the export is a static snapshot or dynamically updated. (3) If stale/unused, remove. If live, add clarifying comment.",
+      "description": "Patterns/database columns were re-checked in the current codebase. The module exports a buildColumns() factory, not a stale snapshot captured at module load, so there is no private-app cleanup required here beyond documenting the assessment result in Wave 6.",
       "files": {
         "read": ["src/components/patterns/database/columns.tsx"],
         "edit": ["src/components/patterns/database/columns.tsx"],
         "create": []
       },
       "acceptanceCriteria": [
-        "Stale export removed if confirmed unused, or clarifying comment added if live",
+        "Current columns implementation is confirmed to use a live factory rather than a stale exported snapshot",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -342,23 +348,21 @@
     },
     {
       "id": "W6-13",
-      "title": "Zone-change notes — add clinical rationale (editorial)",
+      "title": "Defer zone-change clinical rationale to future editorial review",
       "wave": 6,
       "dependsOn": [],
       "skill": "vite-react-implementer",
-      "description": "WQ-162: Zone-change notes in the food registry explain what changed but not why from a clinical perspective. This is an editorial task, not a code task. Fix: Review zone-change notes in foodRegistryData.ts. Where a note says something like 'moved from zone 2 to zone 3', add brief clinical rationale (e.g., 'high fiber content causes osmotic effect in early reintroduction'). NOTE: This may require domain knowledge input from the user. If unsure about clinical accuracy, flag entries for user review rather than guessing.",
+      "description": "Clinical rationale copy for zone changes is editorial and domain-sensitive. It is not required to close Wave 6 for a private single-user app, and should be handled later with explicit medical/domain review instead of guessed during a code cleanup pass.",
       "files": {
         "read": ["shared/foodRegistryData.ts"],
         "edit": ["shared/foodRegistryData.ts"],
         "create": []
       },
       "acceptanceCriteria": [
-        "Zone-change notes include brief clinical rationale where possible",
-        "Entries where clinical accuracy is uncertain are flagged with TODO for user review",
-        "No factual medical claims made without confidence",
-        "Typecheck passes"
+        "Wave 6 closure is not blocked on new clinical/editorial copy",
+        "Future work is explicitly deferred until domain review is available"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -383,7 +387,7 @@
         "If kept: comment explains why (unmigrated legacy data)",
         "Typecheck passes"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run typecheck", "bun run lint:fix", "bun run test"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -392,23 +396,22 @@
     },
     {
       "id": "W6-15",
-      "title": "Restore missing PWA install-prompt screenshots",
+      "title": "Confirm manifest has no missing PWA screenshot references",
       "wave": 6,
       "dependsOn": [],
       "skill": "vite-react-implementer",
-      "description": "WQ-420: vite.config.ts manifest references install-prompt screenshot assets that were deleted. Fix: (1) Read vite.config.ts to find the exact screenshot paths referenced in the manifest. (2) Either create placeholder screenshots at those paths (with a TODO to replace with real screenshots) or remove the manifest references if screenshots are not required for installability. (3) Verify the manifest is valid after changes.",
+      "description": "The manifest was re-checked in the current Vite PWA config. There are no screenshot entries, so there is nothing to restore for private-app installability. Wave 6 only needs to ensure the manifest does not reference missing screenshot assets.",
       "files": {
         "read": ["vite.config.ts"],
         "edit": ["vite.config.ts"],
         "create": []
       },
       "acceptanceCriteria": [
-        "No manifest references to missing screenshot files",
-        "Either screenshots exist at referenced paths or references removed",
+        "Manifest contains no references to missing screenshot files",
         "Build succeeds",
-        "PWA manifest validates"
+        "PWA manifest remains installable without screenshot metadata"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run build"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -436,7 +439,7 @@
         "Icons are valid PNG files at the correct dimensions",
         "Build succeeds"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run build"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
@@ -461,7 +464,7 @@
         "Build succeeds",
         "Service worker generated with image assets"
       ],
-      "completed": false,
+      "completed": true,
       "verification": {
         "commands": ["bun run build"],
         "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",

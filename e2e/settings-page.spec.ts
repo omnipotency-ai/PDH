@@ -20,7 +20,7 @@ test.describe("Settings page", () => {
 
     await expect(page.getByText(/Privacy by default/i).first()).toBeVisible();
     await expect(
-      page.getByText(/Your OpenAI API key is stored securely on our servers/i),
+      page.getByText(/AI access is configured at the app level for this private deployment/i),
     ).toBeVisible();
     await expect(
       page.getByText(/Settings changes are saved to the cloud immediately/i),

@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
-import { useApiKeyContext } from "@/contexts/ApiKeyContext";
+import { useAiConfig } from "@/hooks/useAiConfig";
 import { useProfileContext } from "@/contexts/ProfileContext";
 import { useAiPreferences, useHealthProfile, useUnitSystem } from "@/hooks/useProfile";
 import { getErrorMessage } from "@/lib/errors";
@@ -33,8 +33,7 @@ const LOCAL_APP_STORAGE_PREFIXES = ["quick-capture-destructive-rollover:"] as co
 export function AppDataForm() {
   const logsCount = useSyncedLogCount();
   const { isLoading: isProfileLoading, patchProfile } = useProfileContext();
-  const { apiKey, updateKey: setOpenAiApiKey, removeKey } = useApiKeyContext();
-  const openAiApiKey = apiKey ?? "";
+  const { isAiConfigured } = useAiConfig();
   const { unitSystem, setUnitSystem } = useUnitSystem();
   const { healthProfile, setHealthProfile: setFullHealthProfile } = useHealthProfile();
   const { aiPreferences, setAiPreferences } = useAiPreferences();
@@ -52,15 +51,6 @@ export function AppDataForm() {
   );
 
   const clearLocalData = async () => {
-    // Await async IndexedDB operations so failures are not silently swallowed.
-    // removeKey() alone is sufficient — it deletes the IndexedDB entry and
-    // resets the in-memory state. No separate setOpenAiApiKey("") call needed.
-    try {
-      await removeKey();
-    } catch (error) {
-      toast.error(getErrorMessage(error, "Failed to remove API key from IndexedDB."));
-    }
-
     if (typeof window === "undefined") return;
 
     try {
@@ -160,9 +150,8 @@ export function AppDataForm() {
       <Separator />
 
       <ArtificialIntelligenceSection
-        openAiApiKey={openAiApiKey}
+        aiEnabled={isAiConfigured === true}
         aiModel={aiPreferences.aiModel}
-        onApiKeyChange={(value) => void setOpenAiApiKey(value)}
         onAiModelChange={(model) => void setAiPreferences({ aiModel: model })}
       />
 

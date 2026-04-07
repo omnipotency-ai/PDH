@@ -422,7 +422,6 @@ export async function parseFood(
 
     try {
       const result = await callAi({
-        apiKey,
         model: FOOD_PARSE_MODEL,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },

@@ -40,6 +40,10 @@ function DrawerOverlay({
   return (
     <DrawerPrimitive.Backdrop
       data-slot="drawer-overlay"
+      onClickCapture={(event) => {
+        event.stopPropagation();
+        props.onClickCapture?.(event);
+      }}
       className={cn(
         "fixed inset-0 z-[70] bg-black/52 backdrop-blur-[2px] transition-opacity duration-220 ease-out data-[starting-style]:opacity-0 data-[ending-style]:opacity-0",
         className,

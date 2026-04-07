@@ -7,7 +7,7 @@ import { expect, test } from "./fixtures";
  * - Auto mode: Bristol 4 does NOT trigger a report (only 6-7 do)
  * - Manual mode: user can request a report via "Send now"
  * - Cooldown UI state after report generation
- * - "Add your OpenAI API key" message when no key is set
+ * - Deployment-level AI configuration messaging when AI is not enabled
  *
  * Tests that require an actual OpenAI API key are marked with test.skip
  * and a comment explaining why. The toggle and UI-state tests run against
@@ -23,22 +23,20 @@ test.describe("Dr. Poo trigger behavior", () => {
   const getConversationPanel = (page: import("@playwright/test").Page) =>
     page.locator('[data-slot="conversation-panel"]');
 
-  // ── No API key state ──
+  // ── AI not configured state ──
 
-  test.describe("No API key state", () => {
-    test("Dr. Poo section shows API key prompt when no key is set", async ({
+  test.describe("AI not configured state", () => {
+    test("Dr. Poo section shows deployment configuration prompt when AI is disabled", async ({
       page,
     }) => {
-      // This test assumes the test user does NOT have an API key stored.
-      // If the test user already has a key configured, this test will be
+      // This test assumes the deployment does NOT have AI configured.
+      // If AI is configured for the deployment, this test will be
       // skipped at assertion time (the text won't be visible).
       await page.goto("/");
       await expect(page.locator("#root")).toBeVisible();
 
-      // The Dr. Poo section should show the "Add your OpenAI API key" message
-      // if no API key is configured for this user.
-      const apiKeyPrompt = page.getByText(
-        "Add your OpenAI API key in Settings to enable AI food analysis.",
+      const configPrompt = page.getByText(
+        "AI is not configured for this deployment yet.",
       );
 
       // Check if the API key prompt OR the conversation panel is visible.
@@ -46,14 +44,13 @@ test.describe("Dr. Poo trigger behavior", () => {
       const conversationPanel = page.locator(
         '[data-slot="conversation-panel"]',
       );
-      const hasApiKey = await conversationPanel.isVisible().catch(() => false);
+      const hasAiConfigured = await conversationPanel.isVisible().catch(() => false);
 
-      if (hasApiKey) {
-        // User already has a key — skip this assertion gracefully
-        test.skip(true, "Test user already has an API key configured");
+      if (hasAiConfigured) {
+        test.skip(true, "AI is configured for this deployment");
       }
 
-      await expect(apiKeyPrompt).toBeVisible();
+      await expect(configPrompt).toBeVisible();
     });
   });
 

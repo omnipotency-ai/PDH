@@ -1,6 +1,6 @@
 import { useAction } from "convex/react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useApiKeyContext } from "@/contexts/ApiKeyContext";
+import { useAiConfig } from "@/hooks/useAiConfig";
 import { useAiPreferences } from "@/hooks/useProfile";
 import { fetchWeeklySummary } from "@/lib/aiAnalysis";
 import { formatTime } from "@/lib/aiUtils";
@@ -107,7 +107,7 @@ function getCompletedPeriodBounds(nowMs: number = Date.now()): {
  * 2. If not, generates one from conversations, suggestions, and bowel notes
  */
 export function useWeeklySummaryAutoTrigger() {
-  const { apiKey } = useApiKeyContext();
+  const { isAiConfigured } = useAiConfig();
   const callAi = useAction(api.ai.chatCompletion);
   const { aiPreferences } = useAiPreferences();
   const latestSummary = useLatestWeeklySummary();
@@ -157,7 +157,7 @@ export function useWeeklySummaryAutoTrigger() {
   aiPreferencesRef.current = aiPreferences;
 
   const generate = useCallback(async () => {
-    if (!apiKey || generatingRef.current) return;
+    if (!isAiConfigured || generatingRef.current) return;
 
     const currentConversations = conversationsRef.current;
     if (!currentConversations || currentConversations.length === 0) return;
@@ -199,7 +199,7 @@ export function useWeeklySummaryAutoTrigger() {
 
     try {
       const model = aiPreferencesRef.current.aiModel;
-      const response = await fetchWeeklySummary(callAi, apiKey, input, model);
+      const response = await fetchWeeklySummary(callAi, input, model);
 
       await addWeeklySummaryRef.current({
         weekStartTimestamp: startMs,
@@ -224,7 +224,7 @@ export function useWeeklySummaryAutoTrigger() {
     } finally {
       generatingRef.current = false;
     }
-  }, [apiKey, callAi, periodLabel, startMs, endMs]);
+  }, [isAiConfigured, callAi, periodLabel, startMs, endMs]);
 
   // Auto-trigger: check on mount and whenever data loads.
   // Depends only on stable values — conversations?.length triggers when data first arrives,
@@ -235,12 +235,12 @@ export function useWeeklySummaryAutoTrigger() {
     latestSummary !== undefined && latestSummary?.weekStartTimestamp === startMs;
 
   useEffect(() => {
-    if (!apiKey) return;
+    if (!isAiConfigured) return;
     if (!dataReady || !hasConversations) return;
     if (alreadyHasSummary) return;
     if (generatingRef.current) return;
     if (generatedForPeriodRef.current === startMs) return;
 
     generate();
-  }, [apiKey, dataReady, hasConversations, alreadyHasSummary, startMs, generate]);
+  }, [isAiConfigured, dataReady, hasConversations, alreadyHasSummary, startMs, generate]);
 }

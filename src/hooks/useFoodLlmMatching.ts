@@ -19,7 +19,7 @@ import { isFoodPipelineType } from "@shared/logTypeUtils";
 import { useAction } from "convex/react";
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
-import { useApiKeyContext } from "@/contexts/ApiKeyContext";
+import { useAiConfig } from "@/hooks/useAiConfig";
 import { useSyncedLogsContext } from "@/contexts/SyncedLogsContext";
 import { asConvexId, type SyncedLog } from "@/lib/sync";
 import { SIX_HOURS_MS } from "@/lib/timeConstants";
@@ -77,7 +77,7 @@ function findLogsNeedingLlmMatching(logs: SyncedLog[], nowMs: number): (FoodLog 
  */
 export function useFoodLlmMatching(): void {
   const { logs } = useSyncedLogsContext();
-  const { hasApiKey } = useApiKeyContext();
+  const { isAiConfigured } = useAiConfig();
   const matchItems = useAction(api.foodLlmMatching.matchUnresolvedItems);
 
   // Track which log IDs have already been sent to avoid duplicate calls
@@ -87,7 +87,7 @@ export function useFoodLlmMatching(): void {
   matchItemsRef.current = matchItems;
 
   useEffect(() => {
-    if (!hasApiKey) return;
+    if (!isAiConfigured) return;
 
     const nowMs = Date.now();
     const logsNeedingMatching = findLogsNeedingLlmMatching(logs, nowMs);
@@ -143,16 +143,12 @@ export function useFoodLlmMatching(): void {
           // Non-retryable errors: don't remove from sent set (prevents retry loops)
           const isNonRetryable =
             message.includes("[NON_RETRYABLE]") ||
-            message.includes("Invalid OpenAI API key") ||
+            message.includes("AI is not configured for this deployment") ||
             message.includes("Not authorized");
 
           if (isNonRetryable) {
-            // Show user-friendly error for bad API key — most actionable non-retryable error
-            if (
-              message.includes("Invalid OpenAI API key") ||
-              message.includes("No OpenAI API key available")
-            ) {
-              toast.error("AI matching failed: check your OpenAI API key in Settings", {
+            if (message.includes("AI is not configured for this deployment")) {
+              toast.error("AI matching is not configured for this deployment.", {
                 id: toastId,
               });
             } else {
@@ -166,5 +162,5 @@ export function useFoodLlmMatching(): void {
         });
     }
     // logs array ref changes on every Convex update, but sentLogIdsRef deduplicates
-  }, [logs, hasApiKey]);
+  }, [logs, isAiConfigured]);
 }

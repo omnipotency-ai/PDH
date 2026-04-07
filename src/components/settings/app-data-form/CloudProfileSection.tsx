@@ -17,19 +17,18 @@ export function CloudProfileSection({ isLoading }: CloudProfileSectionProps) {
       <div className="space-y-1.5 rounded-lg border border-[var(--section-appdata-border)]/70 bg-[var(--surface-0)]/40 p-3">
         <p className="text-[11px] font-semibold text-[var(--text)]">Privacy by default.</p>
         <p className="text-[11px] text-[var(--text-muted)]">
-          Your OpenAI API key is stored securely on our servers using AES-256-GCM encryption. It is
-          only used to make AI requests on your behalf and is never shared with third parties. All
-          other settings and data are stored in Convex so they survive refreshes and travel with you
-          to another device.
+          AI access is configured at the app level for this private deployment. The OpenAI key
+          lives in server environment variables, not in your browser or your user profile. All
+          other settings and data are stored in Convex so they survive refreshes and travel with
+          you to another device.
         </p>
         <p className="text-[11px] text-[var(--text-muted)]">
           Settings changes are saved to the cloud immediately. Data is encrypted in transit and at
           rest but is not end-to-end encrypted, so cloud storage is for portability, not for storing
           secrets.
         </p>
-        {/* TODO (pre-launch): Restore a Privacy Policy link here once the policy page exists.
-            The link was removed because the policy page is not yet published. It must be
-            reinstated before public launch to comply with GDPR transparency requirements. */}
+        {/* Public-launch follow-up: add a hosted Privacy Policy link here if this app is
+            ever distributed beyond the current private deployment. */}
         <p className="text-[10px] text-[var(--text-faint)]">
           Your rights under{" "}
           <a

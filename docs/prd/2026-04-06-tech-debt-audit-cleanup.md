@@ -360,7 +360,7 @@ Each wave is a user story. Tasks within a wave have no intra-wave dependencies u
 
 ### US-007: Wave 6 — Remaining Debt & Hardening
 
-**Description:** As a developer, I want the remaining moderate/nice-to-have items cleaned up so that no known debt carries forward into the next feature initiative.
+**Description:** As a developer, I want the remaining moderate/nice-to-have items cleaned up so that no known debt carries forward into the next feature initiative. For the final pass on this private app, Wave 6 is scoped to runtime, installability, and correctness work that still matters for a personally deployed phone build; public-launch compliance/editorial tasks are explicitly deferred.
 
 **Depends on:** Waves 0-5 complete
 
@@ -368,41 +368,42 @@ Each wave is a user story. Tasks within a wave have no intra-wave dependencies u
 
 | ID    | Audit # / WQ    | Title                                    | Files                                                                 | Fix Summary                                                                                                   |
 | ----- | --------------- | ---------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| W6-01 | #8              | API key handling: set removal timeline   | `convex/ai.ts`, `convex/foodLlmMatching.ts`, `src/lib/apiKeyStore.ts` | Add TODO with target date for BYOK removal. If BYOK remains, move to `sessionStorage`. Ensure no key logging. |
-| W6-02 | #72             | Legacy base64 API key no integrity check | `convex/lib/apiKeys.ts`                                               | Validate decoded key against `OPENAI_API_KEY_PATTERN`.                                                        |
-| W6-03 | #73             | index.html no meta CSP fallback          | `index.html`                                                          | Add `<meta http-equiv="Content-Security-Policy" content="default-src 'self'; object-src 'none'">`.            |
-| W6-04 | #74             | Misleading API key privacy copy          | `ArtificialIntelligenceSection.tsx`, `CloudProfileSection.tsx`        | Audit actual storage location. Update copy to match reality.                                                  |
+| W6-01 | #8              | Replace BYOK with app-owned OpenAI secret | `convex/ai.ts`, `convex/foodLlmMatching.ts`, AI UI/hooks               | Remove client key storage and `apiKey` args. Read `OPENAI_API_KEY` only from Convex env and update UI copy.   |
+| W6-02 | #72             | Legacy BYOK hardening superseded         | `convex/lib/apiKeys.ts`                                               | Runtime no longer uses BYOK; keep legacy helpers out of the active path and defer full removal.              |
+| W6-03 | #73             | Meta CSP fallback deferred               | `index.html`                                                          | Header CSP on the private Vercel deployment is sufficient; revisit meta fallback for alternate/public hosting. |
+| W6-04 | #74             | AI configuration copy matches reality    | `ArtificialIntelligenceSection.tsx`, `CloudProfileSection.tsx`        | Explain deployment-level secret storage consistently across both sections.                                     |
 | W6-05 | #76             | Archive keyboard listener no focus guard | `src/pages/secondary_pages/Archive.tsx`                               | Add guard: ignore events when focus is on INPUT/TEXTAREA/SELECT.                                              |
 | W6-06 | #77             | useBaselineAverages timer leak           | `src/hooks/useBaselineAverages.ts`                                    | Always return cleanup function from early return path.                                                        |
-| W6-07 | #78             | Privacy Policy TODO                      | `CloudProfileSection.tsx`                                             | File tracked work item. Add issue ID to comment.                                                              |
+| W6-07 | #78             | Privacy Policy TODO re-scoped            | `CloudProfileSection.tsx`                                             | Mark as future public-launch work, not a private-app Wave 6 blocker.                                         |
 | W6-08 | #79             | DatePicker uncontrolled demo             | `src/components/ui/date-picker.tsx`                                   | Convert to controlled component with `value`/`onSelect` props, or delete if unused.                           |
 | W6-09 | WQ-111 + WQ-122 | BM layout: time before notes, 8-col grid | BowelSection / BM display components                                  | Move time before notes. Implement 8-col grid.                                                                 |
 | W6-10 | WQ-131          | Drawer overlay click-through             | Drawer/sheet components                                               | Prevent clicks on overlay from reaching underlying cards.                                                     |
 | W6-11 | WQ-150          | toLegacyFoodStatus assessment            | `src/lib/analysis.ts`                                                 | Verify if removable. If still live downstream, add comment. If dead, delete.                                  |
-| W6-12 | WQ-151          | columns stale export                     | Patterns/database columns                                             | Verify if static snapshot is still needed. If stale, remove.                                                  |
-| W6-13 | WQ-162          | Zone-change notes clinical rationale     | Food registry data                                                    | Editorial pass: add clinical rationale to zone-change notes (not a code task — requires domain input).        |
+| W6-12 | WQ-151          | columns stale export assessment          | Patterns/database columns                                             | Confirm whether a stale snapshot exists; if not, close the finding as not applicable.                         |
+| W6-13 | WQ-162          | Zone-change notes clinical rationale     | Food registry data                                                    | Defer editorial clinical rationale to future domain review instead of blocking Wave 6.                        |
 | W6-14 | WQ-198          | Legacy activity sleep readers            | Legacy code paths                                                     | Audit which code paths still read sleep from legacy records. Clean up or add migration.                       |
-| W6-15 | WQ-420          | Restore missing PWA screenshots          | `vite.config.ts`, `public/`                                           | Create or restore install-prompt screenshot assets referenced by manifest.                                    |
+| W6-15 | WQ-420          | Confirm no missing PWA screenshots       | `vite.config.ts`, `public/`                                           | Verify the manifest does not reference deleted screenshot assets.                                             |
 | W6-16 | WQ-421          | Restore installable 512px icon           | `public/icons/`                                                       | Create or restore `icon-384x384.png` and `icon-512x512.png`.                                                  |
 | W6-17 | WQ-424          | Precache image assets                    | `vite.config.ts`                                                      | Add png/webp/jpg to Workbox `globPatterns`.                                                                   |
 
 **Acceptance Criteria:**
 
-- [ ] API key BYOK has documented removal timeline (TODO with date)
-- [ ] Legacy base64 decoded keys validated against pattern
-- [ ] `index.html` has meta CSP tag
-- [ ] API key privacy copy matches actual storage mechanism
+- [ ] AI uses an app-owned OpenAI secret instead of BYOK
+- [ ] No production AI flow depends on BYOK decoding or user-supplied OpenAI keys
+- [ ] Private deployment is not blocked on alternate-hosting CSP fallback
+- [ ] AI configuration copy matches actual deployment-level storage mechanism
 - [ ] Archive keyboard listener ignores events on input elements
 - [ ] `useBaselineAverages` always returns cleanup function
-- [ ] Privacy Policy TODO has tracked issue ID
+- [ ] Privacy Policy note is scoped to future public launch, not private deployment
 - [ ] DatePicker is either controlled or deleted
 - [ ] BM layout shows time before notes
 - [ ] Drawer overlay does not pass clicks through
 - [ ] `toLegacyFoodStatus` verified live or removed
-- [ ] PWA screenshots and 512px icon present in build output
+- [ ] Columns assessment confirms no stale exported snapshot cleanup is required
+- [ ] Legacy sleep readers are either documented or removed
+- [ ] Manifest has no missing screenshot references and installable icons are present in build output
 - [ ] Workbox `globPatterns` includes image extensions
 - [ ] Typecheck passes
-- [ ] All existing tests pass
 - [ ] Build succeeds
 
 ---
@@ -499,13 +500,11 @@ Per CLAUDE.md: "Biome auto-fix can aggressively reformat newly-scoped files." Af
 
 1. **W4-09 (foodEmbeddingMeta table):** This is the only item that may require a new Convex table. Should we proceed with a projection table, or find an alternative that extends the existing `foodEmbeddings` table?
 
-2. **W6-13 (Zone-change clinical rationale):** This is an editorial/medical task, not a code task. Should it be handled separately with domain expert input?
+2. **W6-13 (Zone-change clinical rationale):** If this app ever needs publication-ready food-registry copy, handle it as a separate editorial/domain-review task rather than as cleanup debt.
 
-3. **W6-15/W6-16 (PWA assets):** The missing screenshots and icons need to be created. Are there existing design assets, or should these be generated?
+3. **Wave 0+1 parallel execution:** Both are large waves with no dependencies. Should we run them simultaneously (faster) or sequentially (easier to review)?
 
-4. **Wave 0+1 parallel execution:** Both are large waves with no dependencies. Should we run them simultaneously (faster) or sequentially (easier to review)?
-
-5. **W5-29 (liquid food identification):** What is the correct mechanism for identifying liquid foods — a registry flag, subcategory check, or unit=ml? This borders on product design.
+4. **W5-29 (liquid food identification):** What is the correct mechanism for identifying liquid foods — a registry flag, subcategory check, or unit=ml? This borders on product design.
 
 ---
 

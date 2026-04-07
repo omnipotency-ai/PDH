@@ -18,6 +18,7 @@ export default defineConfig(({}) => {
           "icons/favicon.ico",
           "icons/apple-touch-icon.png",
           "icons/icon-192x192.png",
+          "icons/icon-384x384.png",
           "icons/icon-512x512.png",
         ],
         manifest: {
@@ -64,10 +65,20 @@ export default defineConfig(({}) => {
               sizes: "192x192",
               type: "image/png",
             },
+            {
+              src: "/icons/icon-384x384.png",
+              sizes: "384x384",
+              type: "image/png",
+            },
+            {
+              src: "/icons/icon-512x512.png",
+              sizes: "512x512",
+              type: "image/png",
+            },
           ],
         },
         workbox: {
-          globPatterns: ["**/*.{js,css,html,ico,svg,png}"],
+          globPatterns: ["**/*.{js,css,html,ico,svg,png,jpg,jpeg,webp}"],
           navigateFallback: "index.html",
           runtimeCaching: [
             {

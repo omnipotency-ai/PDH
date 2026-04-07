@@ -8,7 +8,6 @@
 export type AllowedAiModel = "gpt-5.4" | "gpt-5.4-mini";
 
 export type ConvexAiCaller = (args: {
-  apiKey?: string;
   model: AllowedAiModel;
   messages: Array<{
     role: "system" | "user" | "assistant";
@@ -17,6 +16,7 @@ export type ConvexAiCaller = (args: {
   temperature?: number;
   maxTokens?: number;
   responseFormat?: { type: string };
+  featureType?: "drpoo" | "coaching";
 }) => Promise<{
   content: string;
   usage: {

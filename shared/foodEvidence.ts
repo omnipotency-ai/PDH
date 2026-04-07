@@ -547,6 +547,8 @@ function summarizeModifiers(logs: FoodEvidenceLog[], habits: HabitLike[]) {
           current.deltaMinutes -= Math.min(90, durationMinutes * 0.9);
           current.reliability -= 0.08;
         }
+        // Keep accepting sleep as an activityType here for historical logs and
+        // the legacy migration path that stored sleep as activity records.
         if (/sleep/.test(activityType)) {
           current.deltaMinutes += 45;
         }

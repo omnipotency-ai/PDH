@@ -6,8 +6,7 @@ import { action } from "./_generated/server";
 import { requireAuth } from "./lib/auth";
 import {
   classifyOpenAiHttpError,
-  maskApiKey,
-  OPENAI_API_KEY_PATTERN,
+  getConfiguredOpenAiApiKey,
 } from "./lib/openai";
 
 // 5-minute server-side cooldown per user per feature type.
@@ -22,16 +21,12 @@ const allowedModels = v.union(v.literal("gpt-5.4"), v.literal("gpt-5.4-mini"));
  * Generic OpenAI chat completion action.
  *
  * The client builds the full prompt (system + user messages) and sends them here.
- * This action is a thin relay: it authenticates the user, resolves the API key
- * (server-stored preferred, client-provided as fallback), makes the call, and
- * returns the result.
+ * This action is a thin relay: it authenticates the user, resolves the
+ * deployment-level OpenAI key from the Convex environment, makes the call,
+ * and returns the result.
  */
 export const chatCompletion = action({
   args: {
-    // Client-supplied key is optional — server-stored key is preferred.
-    // The client key exists as a fallback for users who haven't saved their key
-    // server-side yet (legacy BYOK flow via IndexedDB).
-    apiKey: v.optional(v.string()),
     model: allowedModels,
     messages: v.array(
       v.object({
@@ -83,30 +78,10 @@ export const chatCompletion = action({
       );
     }
 
-    // Resolve API key: prefer server-stored key, fall back to client-provided.
-    // Server key is authoritative — it was validated and stored by the user via
-    // the settings UI. Client key is a legacy fallback for the IndexedDB BYOK flow.
-    let apiKey: string | undefined;
-    const profileKey = await ctx.runQuery(internal.profiles.getServerApiKey, {
-      userId,
-    });
-    if (profileKey !== null) {
-      apiKey = profileKey;
-    } else if (args.apiKey) {
-      apiKey = args.apiKey;
-    }
-
-    if (apiKey === undefined) {
+    const apiKey = getConfiguredOpenAiApiKey();
+    if (apiKey === null) {
       throw new Error(
-        "[NON_RETRYABLE] [KEY_ERROR] No OpenAI API key available. Please add your key in Settings.",
-      );
-    }
-
-    // WQ-324: Validate API key format BEFORE creating the OpenAI client.
-    // This prevents instantiating the client with malicious or malformed data.
-    if (!OPENAI_API_KEY_PATTERN.test(apiKey)) {
-      throw new Error(
-        `[NON_RETRYABLE] [KEY_ERROR] Invalid OpenAI API key format (key ending ...${maskApiKey(apiKey)}).`,
+        "[NON_RETRYABLE] [CONFIG_ERROR] AI is not configured for this deployment.",
       );
     }
 

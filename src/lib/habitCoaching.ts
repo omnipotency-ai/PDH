@@ -31,7 +31,6 @@ function getTodayHabitValue(context: CoachingContext, habit: HabitConfig): numbe
 
 export async function generateCoachingSnippet(
   callAi: ConvexAiCaller,
-  apiKey: string,
   context: CoachingContext & {
     timeOfDay: string; // "morning" | "afternoon" | "evening"
     hadGapYesterday: boolean;
@@ -82,8 +81,8 @@ export async function generateCoachingSnippet(
   ].join("\n");
 
   const result = await callAi({
-    apiKey,
     model: BACKGROUND_MODEL,
+    featureType: "coaching",
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
@@ -228,7 +227,6 @@ export function getHeuristicCoachingMessage(
 
 export async function generateHabitSnippet(
   callAi: ConvexAiCaller,
-  apiKey: string,
   context: {
     habit: HabitConfig;
     daySummaries: HabitDaySummary[];
@@ -272,8 +270,8 @@ export async function generateHabitSnippet(
   ].join("\n");
 
   const result = await callAi({
-    apiKey,
     model: BACKGROUND_MODEL,
+    featureType: "coaching",
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
@@ -344,7 +342,6 @@ function isHabitSuggestion(value: unknown): value is HabitSuggestion {
 
 export async function generateSettingsSuggestions(
   callAi: ConvexAiCaller,
-  apiKey: string,
   context: {
     habits: HabitConfig[];
     streakSummaries: Record<string, HabitStreakSummary>;
@@ -398,8 +395,8 @@ export async function generateSettingsSuggestions(
   const userPrompt = ["Habits:", habitLines].join("\n");
 
   const aiResult = await callAi({
-    apiKey,
     model: BACKGROUND_MODEL,
+    featureType: "coaching",
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },

@@ -1,7 +1,6 @@
 import { SignInButton } from "@clerk/clerk-react";
 import { Outlet, useRouterState } from "@tanstack/react-router";
 import { Authenticated, AuthLoading, Unauthenticated } from "convex/react";
-import { ApiKeyProvider } from "@/contexts/ApiKeyContext";
 import { ProfileProvider } from "@/contexts/ProfileContext";
 import { SyncedLogsProvider } from "@/contexts/SyncedLogsContext";
 import { AuthLoadingFallback } from "./AuthLoadingFallback";
@@ -18,20 +17,18 @@ export function AppLayout() {
   return (
     <div className="relative min-h-screen">
       <Authenticated>
-        <ApiKeyProvider>
-          <ProfileProvider>
-            <GlobalHeader />
-            <main className="relative z-10 mx-auto w-full max-w-440 px-4 py-4 pb-8">
-              {requiresSyncedLogs ? (
-                <SyncedLogsProvider>
-                  <Outlet />
-                </SyncedLogsProvider>
-              ) : (
+        <ProfileProvider>
+          <GlobalHeader />
+          <main className="relative z-10 mx-auto w-full max-w-440 px-4 py-4 pb-8">
+            {requiresSyncedLogs ? (
+              <SyncedLogsProvider>
                 <Outlet />
-              )}
-            </main>
-          </ProfileProvider>
-        </ApiKeyProvider>
+              </SyncedLogsProvider>
+            ) : (
+              <Outlet />
+            )}
+          </main>
+        </ProfileProvider>
       </Authenticated>
       <Unauthenticated>
         <div className="flex min-h-screen flex-col items-center justify-center gap-6">

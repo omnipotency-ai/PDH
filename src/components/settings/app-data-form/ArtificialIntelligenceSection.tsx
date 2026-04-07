@@ -1,20 +1,16 @@
-import { KeyRound } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getModelLabel, INSIGHT_MODEL_OPTIONS, type InsightModel } from "@/lib/aiModels";
 import { APP_DATA_HEADING_CLASS, APP_DATA_SELECT_CLASS } from "./shared";
 
 interface ArtificialIntelligenceSectionProps {
-  openAiApiKey: string;
+  aiEnabled: boolean;
   aiModel: InsightModel;
-  onApiKeyChange: (value: string) => void;
   onAiModelChange: (model: InsightModel) => void;
 }
 
 export function ArtificialIntelligenceSection({
-  openAiApiKey,
+  aiEnabled,
   aiModel,
-  onApiKeyChange,
   onAiModelChange,
 }: ArtificialIntelligenceSectionProps) {
   return (
@@ -26,29 +22,18 @@ export function ArtificialIntelligenceSection({
         <p className={APP_DATA_HEADING_CLASS}>Artificial Intelligence</p>
         <span className="text-[11px] text-[var(--text-muted)]">
           Status:{" "}
-          <span className={openAiApiKey ? "text-emerald-400" : "text-amber-300"}>
-            {openAiApiKey ? "key configured" : "no key set"}
+          <span className={aiEnabled ? "text-emerald-400" : "text-amber-300"}>
+            {aiEnabled ? "configured" : "not configured"}
           </span>
         </span>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="openai-api-key" className="text-xs font-medium text-[var(--text-muted)]">
-          <KeyRound className="mr-1 inline h-3.5 w-3.5" />
-          OPENAI_API_KEY
-        </Label>
-        <Input
-          id="openai-api-key"
-          type="password"
-          value={openAiApiKey}
-          maxLength={512}
-          onChange={(event) => onApiKeyChange(event.target.value)}
-          placeholder="sk-..."
-          className="h-9"
-        />
+      <div className="space-y-2 rounded-lg border border-[var(--section-appdata-border)]/60 bg-[var(--surface-0)]/40 p-3">
+        <p className="text-xs font-medium text-[var(--text-muted)]">OpenAI access</p>
         <p className="text-[11px] text-[var(--text-muted)]">
-          Your API key is stored securely on our servers and used to make requests on your behalf.
-          You can delete it at any time.
+          {aiEnabled
+            ? "This private deployment uses an app-owned OpenAI key stored in server environment variables. Nothing is stored in this browser or in your user profile."
+            : "OpenAI access has not been configured for this deployment yet. Add OPENAI_API_KEY to Convex and Vercel before using AI features on your devices."}
         </p>
       </div>
 

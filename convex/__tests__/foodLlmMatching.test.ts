@@ -3,7 +3,8 @@
  *
  * The four internal helpers (buildRegistryVocabularyForPrompt, buildMatchingPrompt,
  * parseLlmResponse, processLlmResults) are exported via _testing for direct testing.
- * The matchUnresolvedItems action is tested via convex-test for auth and API key validation.
+ * The matchUnresolvedItems action is tested via convex-test for auth and deployment-level
+ * OpenAI configuration validation.
  * The applyLlmResults internalMutation is tested via convex-test for writeback logic.
  */
 import { convexTest } from "convex-test";
@@ -20,7 +21,7 @@ const {
   parseLlmResponse,
   processLlmResults,
 } = _testing;
-const ORIGINAL_ENCRYPTION_SECRET = process.env.API_KEY_ENCRYPTION_SECRET;
+const ORIGINAL_OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // buildRegistryVocabularyForPrompt
@@ -860,16 +861,16 @@ describe("parseLlmResponse — malformed and adversarial inputs", () => {
 describe("matchUnresolvedItems action", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    process.env.API_KEY_ENCRYPTION_SECRET = "test-api-key-encryption-secret";
+    process.env.OPENAI_API_KEY = "sk-test1234567890abcdefghij";
   });
 
   afterEach(() => {
     vi.useRealTimers();
-    if (ORIGINAL_ENCRYPTION_SECRET === undefined) {
-      delete process.env.API_KEY_ENCRYPTION_SECRET;
+    if (ORIGINAL_OPENAI_API_KEY === undefined) {
+      delete process.env.OPENAI_API_KEY;
       return;
     }
-    process.env.API_KEY_ENCRYPTION_SECRET = ORIGINAL_ENCRYPTION_SECRET;
+    process.env.OPENAI_API_KEY = ORIGINAL_OPENAI_API_KEY;
   });
 
   it("throws when called without authentication", async () => {
@@ -898,9 +899,10 @@ describe("matchUnresolvedItems action", () => {
     ).rejects.toThrow("Not authenticated");
   });
 
-  it("throws on invalid API key format (client-provided fallback)", async () => {
+  it("throws when OPENAI_API_KEY has an invalid format", async () => {
     const t = convexTest(schema);
     const userId = "test-user-bad-key";
+    process.env.OPENAI_API_KEY = "not-a-valid-key";
 
     const logId = await t
       .withIdentity({ subject: userId })
@@ -914,24 +916,23 @@ describe("matchUnresolvedItems action", () => {
         },
       });
 
-    // No server key stored, so client key is used as fallback — and it's invalid
     await expect(
       t
         .withIdentity({ subject: userId })
         .action(api.foodLlmMatching.matchUnresolvedItems, {
-          apiKey: "not-a-valid-key",
           logId,
           rawInput: "mystery food",
           unresolvedSegments: ["mystery food"],
         }),
     ).rejects.toThrow(
-      "[NON_RETRYABLE] [KEY_ERROR] Invalid OpenAI API key format",
+      "[NON_RETRYABLE] [CONFIG_ERROR] OPENAI_API_KEY is configured with an invalid format.",
     );
   });
 
-  it("throws when no API key is available (no server key, no client key)", async () => {
+  it("throws when OPENAI_API_KEY is missing", async () => {
     const t = convexTest(schema);
     const userId = "test-user-no-key";
+    delete process.env.OPENAI_API_KEY;
 
     const logId = await t
       .withIdentity({ subject: userId })
@@ -954,19 +955,13 @@ describe("matchUnresolvedItems action", () => {
           unresolvedSegments: ["mystery food"],
         }),
     ).rejects.toThrow(
-      "[NON_RETRYABLE] [KEY_ERROR] No OpenAI API key available. Please add your key in Settings.",
+      "[NON_RETRYABLE] [CONFIG_ERROR] AI is not configured for this deployment.",
     );
   });
 
   it("returns early with zero counts for empty unresolvedSegments", async () => {
     const t = convexTest(schema);
     const userId = "test-user-empty";
-
-    // Store a server key so the action can proceed past key resolution
-    await t.withIdentity({ subject: userId }).mutation(api.profiles.setApiKey, {
-      apiKey: "sk-test1234567890abcdefghij",
-      now: Date.now(),
-    });
 
     const logId = await t
       .withIdentity({ subject: userId })
@@ -990,14 +985,9 @@ describe("matchUnresolvedItems action", () => {
     expect(result).toEqual({ matched: 0, unresolved: 0 });
   });
 
-  it("resolves the server-stored key without any client key", async () => {
+  it("resolves the deployment key without any client-supplied key", async () => {
     const t = convexTest(schema);
     const userId = "test-user-server-key";
-
-    await t.withIdentity({ subject: userId }).mutation(api.profiles.setApiKey, {
-      apiKey: "sk-test1234567890abcdefghij",
-      now: Date.now(),
-    });
 
     const logId = await t
       .withIdentity({ subject: userId })
@@ -1011,7 +1001,6 @@ describe("matchUnresolvedItems action", () => {
         },
       });
 
-    // No apiKey arg at all — server resolves from profile
     const result = await t
       .withIdentity({ subject: userId })
       .action(api.foodLlmMatching.matchUnresolvedItems, {
@@ -1027,20 +1016,6 @@ describe("matchUnresolvedItems action", () => {
     const t = convexTest(schema);
     const ownerUserId = "test-user-owner";
     const attackerUserId = "test-user-attacker";
-
-    // Both users need API keys for the action to proceed past key resolution
-    await t
-      .withIdentity({ subject: ownerUserId })
-      .mutation(api.profiles.setApiKey, {
-        apiKey: "sk-test1234567890abcdefghij",
-        now: Date.now(),
-      });
-    await t
-      .withIdentity({ subject: attackerUserId })
-      .mutation(api.profiles.setApiKey, {
-        apiKey: "sk-test1234567890abcdefghij",
-        now: Date.now(),
-      });
 
     const logId = await t
       .withIdentity({ subject: ownerUserId })

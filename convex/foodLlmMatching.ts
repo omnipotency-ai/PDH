@@ -16,8 +16,7 @@
  * `resolvedBy: "llm"`. Unmatched items stay pending for user resolution or
  * 6-hour expiry.
  *
- * The OpenAI API key can be passed from the client or, if empty, looked up
- * from the user's profile (server-side storage via convex/profiles.ts).
+ * The OpenAI API key is held at the app level in the Convex environment.
  *
  * WQ-346: Registry vocabulary is cached at module level (registry is static).
  * WQ-347: Fuse.js fuzzy pre-matching skips LLM for trivial matches.
@@ -34,8 +33,7 @@ import { requireAuth } from "./lib/auth";
 import { sanitizePlainText } from "./lib/inputSafety";
 import {
   classifyOpenAiHttpError,
-  maskApiKey,
-  OPENAI_API_KEY_PATTERN,
+  getConfiguredOpenAiApiKey,
 } from "./lib/openai";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -539,10 +537,6 @@ export const _testing = {
  */
 export const matchUnresolvedItems = action({
   args: {
-    // Client-supplied key is optional — server-stored key is preferred.
-    // The client key exists as a fallback for users who haven't saved their key
-    // server-side yet (legacy BYOK flow via IndexedDB).
-    apiKey: v.optional(v.string()),
     logId: v.id("logs"),
     rawInput: v.string(),
     unresolvedSegments: v.array(v.string()),
@@ -557,29 +551,10 @@ export const matchUnresolvedItems = action({
     // 1. Auth guard
     const { userId } = await requireAuth(ctx);
 
-    // 2. Resolve API key: prefer server-stored key, fall back to client-provided.
-    // Server key is authoritative — it was validated and stored by the user via
-    // the settings UI. Client key is a legacy fallback for the IndexedDB BYOK flow.
-    let apiKey: string | undefined;
-    const profileKey = await ctx.runQuery(internal.profiles.getServerApiKey, {
-      userId,
-    });
-    if (profileKey !== null) {
-      apiKey = profileKey;
-    } else if (args.apiKey) {
-      apiKey = args.apiKey;
-    }
-
-    if (apiKey === undefined) {
+    const apiKey = getConfiguredOpenAiApiKey();
+    if (apiKey === null) {
       throw new Error(
-        "[NON_RETRYABLE] [KEY_ERROR] No OpenAI API key available. Please add your key in Settings.",
-      );
-    }
-
-    // WQ-324: Validate API key format BEFORE any further processing.
-    if (!OPENAI_API_KEY_PATTERN.test(apiKey)) {
-      throw new Error(
-        `[NON_RETRYABLE] [KEY_ERROR] Invalid OpenAI API key format (key ending ...${maskApiKey(apiKey)}).`,
+        "[NON_RETRYABLE] [CONFIG_ERROR] AI is not configured for this deployment.",
       );
     }
 

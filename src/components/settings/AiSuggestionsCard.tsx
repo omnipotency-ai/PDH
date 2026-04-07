@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { useApiKeyContext } from "@/contexts/ApiKeyContext";
+import { useAiConfig } from "@/hooks/useAiConfig";
 import { useHabits } from "@/hooks/useProfile";
 import { formatLocalDateKey } from "@/lib/dateUtils";
 import { getErrorMessage } from "@/lib/errors";
@@ -33,7 +33,7 @@ export function AiSuggestionsCard({
   const callAi = useAction(api.ai.chatCompletion);
   const { habits, updateHabit } = useHabits();
   const habitLogs = useStore((s) => s.habitLogs);
-  const { apiKey: openAiApiKey } = useApiKeyContext();
+  const { isAiConfigured } = useAiConfig();
 
   const [suggestions, setSuggestions] = useState<HabitSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
@@ -62,8 +62,8 @@ export function AiSuggestionsCard({
 
       let result: HabitSuggestion[];
 
-      if (openAiApiKey) {
-        result = await generateSettingsSuggestions(callAi, openAiApiKey, {
+      if (isAiConfigured) {
+        result = await generateSettingsSuggestions(callAi, {
           habits: activeHabits,
           streakSummaries,
           recentDaySummaries: daySummaries,
@@ -121,8 +121,8 @@ export function AiSuggestionsCard({
 
   const body = (
     <div className="space-y-3">
-      <p className="text-xs text-[var(--text-muted)]">
-        {openAiApiKey
+        <p className="text-xs text-[var(--text-muted)]">
+        {isAiConfigured
           ? "Get AI-powered target and cap adjustments based on your last 14 days."
           : "Get data-driven target and cap adjustments based on your last 14 days."}
       </p>

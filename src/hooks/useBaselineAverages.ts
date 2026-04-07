@@ -119,7 +119,14 @@ export function useBaselineAverages(input: UseBaselineAveragesInput): BaselineAv
   // change triggers computation after RECOMPUTE_DEBOUNCE_MS of quiet.
   // First computation (storedBaseline === null) fires immediately.
   useEffect(() => {
-    if (!needsRecompute) return;
+    if (!needsRecompute) {
+      return () => {
+        if (pendingTimerRef.current !== null) {
+          clearTimeout(pendingTimerRef.current);
+          pendingTimerRef.current = null;
+        }
+      };
+    }
 
     // First computation ever — compute immediately, don't debounce
     if (storedBaseline === null) {

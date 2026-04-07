@@ -1,7 +1,7 @@
 import { useAction, useMutation } from "convex/react";
 import { useCallback, useMemo, useRef } from "react";
 import { toast } from "sonner";
-import { useApiKeyContext } from "@/contexts/ApiKeyContext";
+import { useAiConfig } from "@/hooks/useAiConfig";
 import { useSyncedLogsContext } from "@/contexts/SyncedLogsContext";
 import { usePendingReplies } from "@/hooks/usePendingReplies";
 import { useAiPreferences, useHealthProfile } from "@/hooks/useProfile";
@@ -60,7 +60,7 @@ interface DataRefs {
 }
 
 export function useAiInsights() {
-  const { apiKey } = useApiKeyContext();
+  const { isAiConfigured } = useAiConfig();
   const callAi = useAction(api.ai.chatCompletion);
   const setAiAnalysisStatus = useStore((state) => state.setAiAnalysisStatus);
   const { pendingReplies } = usePendingReplies();
@@ -157,7 +157,7 @@ export function useAiInsights() {
 
   const runAnalysis = useCallback(
     async (runOptions?: FetchAiInsightsOptions) => {
-      if (!apiKey) return;
+      if (!isAiConfigured) return;
       if (isLoading) return;
       // Guard: skip if a request is already in flight
       if (loadingRef.current) return;
@@ -265,7 +265,6 @@ export function useAiInsights() {
         setAiAnalysisStatus("receiving");
         const result = await fetchAiInsights(
           callAi,
-          apiKey,
           freshLogs as LogEntry[],
           previousReports,
           pendingReplies,
@@ -341,7 +340,7 @@ export function useAiInsights() {
       }
     },
     [
-      apiKey,
+      isAiConfigured,
       callAi,
       setAiAnalysisStatus,
       addAiAnalysis,
@@ -364,7 +363,7 @@ export function useAiInsights() {
   // identity is stable even when that query re-resolves with the same timestamp.
   const triggerAnalysis = useCallback(
     async (options?: { bristolScore?: number; autoSendEnabled?: boolean }) => {
-      if (!apiKey) return;
+      if (!isAiConfigured) return;
 
       if (options?.autoSendEnabled === false) return;
 
@@ -389,7 +388,7 @@ export function useAiInsights() {
 
       await runAnalysis();
     },
-    [apiKey, runAnalysis],
+    [isAiConfigured, runAnalysis],
   );
 
   // sendNow: manual trigger. During cooldown, use lightweight mode (conversation-only).
@@ -402,7 +401,7 @@ export function useAiInsights() {
 
   // Memoize the return value so the parent component only re-renders when
   // the actual outputs change, not when internal queries resolve.
-  const hasApiKey = Boolean(apiKey);
+  const hasApiKey = Boolean(isAiConfigured);
   return useMemo(
     () => ({ hasApiKey, triggerAnalysis, sendNow }),
     [hasApiKey, triggerAnalysis, sendNow],

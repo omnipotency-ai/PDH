@@ -5,7 +5,7 @@ import { AiInsightsBody } from "@/components/track/dr-poo/AiInsightsBody";
 import { ConversationPanel } from "@/components/track/dr-poo/ConversationPanel";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useApiKeyContext } from "@/contexts/ApiKeyContext";
+import { useAiConfig } from "@/hooks/useAiConfig";
 import { useLatestSuccessfulAiAnalysis } from "@/lib/sync";
 import { useStore } from "@/store";
 import type { AiAnalysisStatus } from "@/types/domain";
@@ -17,7 +17,7 @@ interface AiInsightsSectionProps {
 export function AiInsightsSection({ onSendNow }: AiInsightsSectionProps = {}) {
   const latestSuccessfulAnalysis = useLatestSuccessfulAiAnalysis();
   const insights = latestSuccessfulAnalysis?.insight ?? null;
-  const { hasApiKey } = useApiKeyContext();
+  const { isAiConfigured } = useAiConfig();
   const status = useStore((state) => state.aiAnalysisStatus);
   const error = useStore((state) => state.aiAnalysisError);
   const setAiAnalysisStatus = useStore((state) => state.setAiAnalysisStatus);
@@ -25,7 +25,7 @@ export function AiInsightsSection({ onSendNow }: AiInsightsSectionProps = {}) {
   const replyInputRef = useRef<HTMLInputElement>(null);
 
   const isLoading = status === "sending" || status === "receiving";
-  const canRetry = Boolean(hasApiKey && onSendNow);
+  const canRetry = Boolean(isAiConfigured && onSendNow);
 
   const handleDismissError = useCallback(() => {
     setAiAnalysisStatus("idle");
@@ -69,7 +69,7 @@ export function AiInsightsSection({ onSendNow }: AiInsightsSectionProps = {}) {
               size={14}
               className="ml-auto animate-spin text-[var(--section-log)] opacity-60"
             />
-          ) : hasApiKey ? (
+          ) : isAiConfigured ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
@@ -104,7 +104,7 @@ export function AiInsightsSection({ onSendNow }: AiInsightsSectionProps = {}) {
           </div>
         )}
 
-        {hasApiKey && (
+        {isAiConfigured && (
           <div className="mb-4">
             <ConversationPanel
               {...(onSendNow !== undefined && { onSendNow })}
@@ -113,11 +113,11 @@ export function AiInsightsSection({ onSendNow }: AiInsightsSectionProps = {}) {
           </div>
         )}
 
-        {!hasApiKey ? (
+        {!isAiConfigured ? (
           <div className="glass-card flex flex-col items-center gap-3 p-8 text-center">
             <Stethoscope size={32} className="text-[var(--section-log)] opacity-30" />
             <p className="text-sm text-[var(--text-faint)]">
-              Add your OpenAI API key in Settings to enable AI food analysis.
+              AI is not configured for this deployment yet.
             </p>
           </div>
         ) : !insights ? (

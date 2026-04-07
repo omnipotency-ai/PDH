@@ -159,7 +159,6 @@ function groupSuggestions(
 
 export async function fetchAiInsights(
   callAi: ConvexAiCaller,
-  apiKey: string,
   logs: LogEntry[],
   previousReports: PreviousReport[],
   patientMessages: DrPooReply[],
@@ -255,10 +254,10 @@ export async function fetchAiInsights(
     let rawContent: string;
     try {
       const result = await callAi({
-        apiKey,
         model: validatedModel,
         messages,
         responseFormat: { type: "json_object" },
+        featureType: "drpoo",
       });
       rawContent = result.content;
     } catch (error) {
@@ -437,10 +436,10 @@ export async function fetchAiInsights(
   let rawContent: string;
   try {
     const result = await callAi({
-      apiKey,
       model: validatedModel,
       messages,
       responseFormat: { type: "json_object" },
+      featureType: "drpoo",
     });
     rawContent = result.content;
   } catch (error) {
@@ -535,7 +534,6 @@ Just tell the unfiltered story of what we actually said to each other last week.
 
 export async function fetchWeeklySummary(
   callAi: ConvexAiCaller,
-  apiKey: string,
   input: WeeklySummaryInput,
   model: AllowedAiModel = DEFAULT_INSIGHT_MODEL as AllowedAiModel,
 ): Promise<{
@@ -596,10 +594,10 @@ export async function fetchWeeklySummary(
   const startedAt = performance.now();
   try {
     const result = await callAi({
-      apiKey,
       model: validatedModel,
       messages,
       responseFormat: { type: "json_object" },
+      featureType: "drpoo",
     });
     rawContent = result.content;
     durationMs = Math.round(performance.now() - startedAt);

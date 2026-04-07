@@ -24,3 +24,16 @@ export function classifyOpenAiHttpError(
   if (status === 429) return "QUOTA_ERROR";
   return "NETWORK_ERROR";
 }
+
+export function getConfiguredOpenAiApiKey(): string | null {
+  const apiKey = process.env.OPENAI_API_KEY?.trim() ?? "";
+  if (!apiKey) {
+    return null;
+  }
+  if (!OPENAI_API_KEY_PATTERN.test(apiKey)) {
+    throw new Error(
+      "[NON_RETRYABLE] [CONFIG_ERROR] OPENAI_API_KEY is configured with an invalid format.",
+    );
+  }
+  return apiKey;
+}
