@@ -1,8 +1,9 @@
 > **Ref:** `docs/WIP.md`
 > **Updated:** 2026-04-06
-> **Version:** 3.1
+> **Version:** 3.2
 > **History:**
 >
+> - v3.2 (2026-04-06) — Food Page & Meal System initiative started
 > - v3.1 (2026-04-06) — Nutrition Card W4-5 collapsed to summary, initiative complete
 > - v3.0 (2026-04-05) — newest-first, timestamped, managed by project-ops + vite-react-implementer skills
 > - v2.0 (2026-04-05) — trimmed completed work to summaries
@@ -17,6 +18,13 @@
 > **Flow:** ROADMAP -> WORK-QUEUE (plan attached) -> **WIP (you are here)** -> Archive
 
 ---
+
+## Active: Food Page, Meal System & Navigation Restructure
+
+> **PRD:** `docs/prd/2026-04-06-food-page-and-meal-system.md`
+> **Plan:** `docs/plans/2026-04-06-food-page-and-meal-system.md`
+> **Execution plans:** `docs/plans/2026-04-06-food-page-and-meal-system-waves-{0-1,2-3,4-6}.json`
+> **Started:** 2026-04-06
 
 <!-- Implementer agents: prepend new entries HERE, above the completed summaries -->
 

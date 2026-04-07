@@ -1,0 +1,275 @@
+{
+  "planName": "Food Page, Meal System & Navigation Restructure",
+  "prd": "docs/prd/2026-04-06-food-page-and-meal-system.md",
+  "plan": "docs/plans/2026-04-06-food-page-and-meal-system.md",
+  "waves": "2-3",
+  "parallelNote": "Wave 2 and Wave 3 can run in parallel after Wave 1 — they touch different pages with no shared state.",
+  "tasks": [
+    {
+      "id": "W2-T01",
+      "title": "Simplify Track page to Today's Log only",
+      "wave": 2,
+      "dependsOn": ["W1-T02"],
+      "skill": "vite-react-implementer",
+      "description": "Strip the Track page (src/pages/Track.tsx) from its 3-column grid layout down to a single-column page showing only Today's Log. Keep: Track heading with date/time, date picker popover with calendar, yesterday/today toggle, status row (BM count, fluid intake, water only), Today's Log vertical timeline (all log entries, tappable to expand). Remove from this page (but do NOT delete the components): NutritionCard, NutritionCardErrorBoundary, BowelSection, QuickCapture, AiInsightsSection, ConfettiBurst, the 3-column responsive grid (grid-cols-[3fr_4fr_3fr]). These components are reused by Home (Wave 3) and Insights (Wave 2 task 2). The page should render as a clean single-column timeline.",
+      "userStories": ["US-011"],
+      "files": {
+        "read": [
+          "src/pages/Track.tsx",
+          "src/components/track/nutrition/NutritionCard.tsx",
+          "src/components/track/dr-poo/AiInsightsSection.tsx",
+          "src/components/track/quick-capture/QuickCapture.tsx"
+        ],
+        "edit": ["src/pages/Track.tsx"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "Track page renders single-column layout (no 3-column grid)",
+        "Track page shows: heading with date/time, date picker, yesterday/today toggle, status row, Today's Log timeline",
+        "NutritionCard is NOT rendered on Track page",
+        "BowelSection is NOT rendered on Track page",
+        "QuickCapture is NOT rendered on Track page",
+        "AiInsightsSection is NOT rendered on Track page",
+        "ConfettiBurst is NOT rendered on Track page",
+        "None of the removed components are deleted from the codebase — only removed from Track.tsx imports/render",
+        "Yesterday/Today toggle still works",
+        "Log entries are tappable to expand details",
+        "bun run typecheck passes",
+        "bun run build succeeds",
+        "Browser verification at /track: clean timeline, no nutrition card or Dr. Poo"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": true
+      }
+    },
+    {
+      "id": "W2-T02",
+      "title": "Move Dr. Poo Report into Insights page",
+      "wave": 2,
+      "dependsOn": ["W1-T01", "W2-T01"],
+      "skill": "vite-react-implementer",
+      "description": "Update src/pages/Insights.tsx to render the AiInsightsSection component in the 'Dr. Poo Report' tab (replacing the placeholder text). Import AiInsightsSection from @/components/track/dr-poo/AiInsightsSection. Verify that AiInsightsSection works outside Track page context — it uses its own hooks (useLatestSuccessfulAiAnalysis, useStore for AI status). The SyncedLogsProvider is already wired up for /insights in W1-T02. If AiInsightsSection depends on any Track-specific context/props, extract what's needed.",
+      "userStories": ["US-011"],
+      "files": {
+        "read": [
+          "src/pages/Insights.tsx",
+          "src/components/track/dr-poo/AiInsightsSection.tsx",
+          "src/components/track/dr-poo/AiInsightsBody.tsx",
+          "src/components/track/dr-poo/ConversationPanel.tsx"
+        ],
+        "edit": ["src/pages/Insights.tsx"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "Insights page 'Dr. Poo Report' tab renders AiInsightsSection",
+        "AiInsightsSection renders correctly at /insights (no crashes, no missing context)",
+        "Patterns tab still works (lazy-loads PatternsPage)",
+        "Tab switching between Patterns and Dr. Poo Report works",
+        "bun run typecheck passes",
+        "Browser verification at /insights → Dr. Poo Report tab shows the AI insights section"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": true
+      }
+    },
+    {
+      "id": "W3-T01",
+      "title": "Home page layout with greeting and nutrition summary",
+      "wave": 3,
+      "dependsOn": ["W1-T02"],
+      "skill": "vite-react-implementer",
+      "description": "Build the Home page (src/pages/Home.tsx) with: (1) Time-of-day greeting ('Good morning/afternoon/evening') with user's first name from Clerk useUser(). (2) Compact nutrition summary: CircularProgressRing (reuse existing) on the left, two horizontal progress bars on the right stacked vertically — orange bar for calories '{consumed} / {goal} kcal', blue bar for fluids '{consumed} / {goal} ml'. Data from useSyncedLogs for today's food/fluid logs, goals from useProfileContext() → nutritionGoals (dailyCalorieGoal default 1850, dailyWaterGoalMl default 2000). Layout matches PRD: ring + bars side by side, not stacked. Follow existing dark theme tokens (emerald, teal, orange accents).",
+      "userStories": ["US-002"],
+      "files": {
+        "read": [
+          "src/pages/Home.tsx",
+          "src/components/track/nutrition/CircularProgressRing.tsx",
+          "src/components/track/nutrition/NutritionCard.tsx",
+          "src/contexts/ProfileContext.tsx",
+          "src/contexts/SyncedLogsContext.tsx",
+          "docs/prd/2026-04-06-food-page-and-meal-system.md"
+        ],
+        "edit": ["src/pages/Home.tsx"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "Home page shows time-of-day greeting with user's first name",
+        "Nutrition summary shows CircularProgressRing on left",
+        "Calorie bar shows '{consumed} / {goal} kcal' with orange fill",
+        "Fluid bar shows '{consumed} / {goal} ml' with blue fill",
+        "Ring and bars are laid out side-by-side (flex-row), not stacked vertically",
+        "Data is live — logging food/fluid elsewhere updates the summary reactively",
+        "Default goals used when nutritionGoals not set (1850 kcal, 2000 ml)",
+        "bun run typecheck passes",
+        "Browser verification at /: greeting renders, nutrition summary shows live data"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": true
+      }
+    },
+    {
+      "id": "W3-T02",
+      "title": "Meal slot chips, favourites, recent, and frequent sections on Home",
+      "wave": 3,
+      "dependsOn": ["W3-T01"],
+      "skill": "vite-react-implementer",
+      "description": "Add to Home page: (1) Meal slot chips row — Breakfast, Lunch, Dinner, Snack as tappable pills. Auto-detect active slot from time of day (reuse getActiveMealSlot pattern from useNutritionStore). Tapping overrides the slot. (2) Favourites section (slot-scoped) — reads foodFavourites from profile, filters by foodFavouriteSlotTags for active slot. Shows up to 7 FoodRow items with heart toggle and (+) to stage. 'Show more' loads next 7. Empty state: 'No favourites for {slot}'. (3) Recent section — last 7 unique foods logged in active slot from synced logs. (4) Frequent section — top 7 foods by log count for active slot. (5) Food chips — compact tappable pills above full sections, order: favourites → frequent → recent. Tapping stages with default portion. (6) Wire up staging — initialize useNutritionStore, ADD_TO_STAGING + OPEN_STAGING_MODAL on (+) tap, render LogFoodModal. Create src/hooks/useSlotScopedFoods.ts hook for recent/frequent computation.",
+      "userStories": ["US-003", "US-004", "US-005", "US-006"],
+      "files": {
+        "read": [
+          "src/pages/Home.tsx",
+          "src/components/track/nutrition/FoodRow.tsx",
+          "src/components/track/nutrition/useNutritionStore.ts",
+          "src/components/track/nutrition/LogFoodModal.tsx",
+          "src/components/track/nutrition/FavouritesView.tsx",
+          "src/components/track/nutrition/FoodFilterView.tsx",
+          "src/hooks/useProfile.ts",
+          "src/contexts/SyncedLogsContext.tsx"
+        ],
+        "edit": ["src/pages/Home.tsx"],
+        "create": ["src/hooks/useSlotScopedFoods.ts"]
+      },
+      "acceptanceCriteria": [
+        "Meal slot chips render: Breakfast, Lunch, Dinner, Snack",
+        "Active slot auto-detected from time of day",
+        "Tapping a slot chip overrides the active slot",
+        "Favourites section shows up to 7 items filtered by active slot's tags",
+        "Favourites section has 'Show more' to load next 7",
+        "Empty favourites state shows 'No favourites for {slot}'",
+        "Recent section shows last 7 unique foods for active slot",
+        "Frequent section shows top 7 foods by count for active slot",
+        "Food chips render as tappable pills (favourites → frequent → recent order)",
+        "Tapping a chip stages food with default portion and opens LogFoodModal",
+        "Heart toggle works on all FoodRow instances (add/remove favourite)",
+        "(+) button stages food and opens LogFoodModal",
+        "useSlotScopedFoods hook correctly computes recent and frequent per slot",
+        "bun run typecheck passes",
+        "Browser verification: slot chips switch content, food rows appear, staging works"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": true
+      }
+    },
+    {
+      "id": "W3-T03",
+      "title": "Modifier chips and Quick Capture on Home",
+      "wave": 3,
+      "dependsOn": ["W3-T02"],
+      "skill": "vite-react-implementer",
+      "description": "Add to Home page: (1) Modifier chip row — icon chips for Sleep, Stress, Mood, Activity, Medication, Cigarettes, Supplements. Tapping each opens its existing logging flow (reuse the habit/modifier logging components from Track — QuickCaptureTile or the modal flows). (2) Quick Capture section — import and render the existing QuickCapture component from src/components/track/quick-capture/QuickCapture.tsx. This shows one-click logging tiles for regular items (brush teeth, coffee, tea, sleep). Verify it works outside Track page context (it may depend on SyncedLogsContext which is already provided). Streamlined visual: compact cards, minimal chrome, no customisation UI.",
+      "userStories": ["US-007", "US-007b"],
+      "files": {
+        "read": [
+          "src/pages/Home.tsx",
+          "src/components/track/quick-capture/QuickCapture.tsx",
+          "src/components/track/quick-capture/QuickCaptureTile.tsx",
+          "src/components/track/quick-capture/HabitDetailSheet.tsx",
+          "src/hooks/useQuickCapture.ts"
+        ],
+        "edit": ["src/pages/Home.tsx"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "Modifier chip row shows icons for Sleep, Stress, Mood, Activity, Medication, Cigarettes, Supplements",
+        "Tapping a modifier chip opens its existing logging flow (modal or sheet)",
+        "Quick Capture section renders on Home page",
+        "Quick Capture tiles show regularly logged items",
+        "One-tap logging works — tap a tile, item is logged with current timestamp, no confirmation needed",
+        "QuickCapture works correctly outside Track page context (no crashes)",
+        "bun run typecheck passes",
+        "Browser verification: modifier chips open flows, Quick Capture tiles log items"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": true
+      }
+    },
+    {
+      "id": "W3-T04",
+      "title": "Search bar and water quick-action on Home",
+      "wave": 3,
+      "dependsOn": ["W3-T02"],
+      "skill": "vite-react-implementer",
+      "description": "Add to Home page: (1) Search bar with placeholder 'Search or type a food...' and a 'Log Food' button beside it. Typing triggers the existing searchFoodRegistry() function (Fuse.js fuzzy search from useNutritionStore). Results render as FoodRow components with heart toggle and (+) to stage. This mirrors the existing NutritionCard search UX. (2) Water droplet icon button near the nutrition summary. Tapping opens the existing WaterModal component. Logging water updates the fluid bar in real-time via the synced logs subscription.",
+      "userStories": ["US-008", "US-009"],
+      "files": {
+        "read": [
+          "src/pages/Home.tsx",
+          "src/components/track/nutrition/useNutritionStore.ts",
+          "src/components/track/nutrition/NutritionCard.tsx",
+          "src/components/track/nutrition/WaterModal.tsx",
+          "src/components/track/nutrition/FoodRow.tsx"
+        ],
+        "edit": ["src/pages/Home.tsx"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "Search bar renders with placeholder 'Search or type a food...'",
+        "Log Food button beside search bar",
+        "Typing triggers fuzzy search against food registry",
+        "Search results show as FoodRow list with heart toggle and (+) to stage",
+        "Water droplet icon button visible near nutrition summary",
+        "Tapping water button opens WaterModal",
+        "Logging water via modal updates the fluid bar in real-time",
+        "bun run typecheck passes",
+        "Browser verification: search works, water modal works, fluid bar updates"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": true
+      }
+    },
+    {
+      "id": "W3-T05",
+      "title": "Dr. Poo touchpoints on Home",
+      "wave": 3,
+      "dependsOn": ["W3-T01"],
+      "skill": "vite-react-implementer",
+      "description": "Add two Dr. Poo touchpoints to Home page: (1) 'Ask Dr. Poo' button at top of page — tapping opens the ConversationPanel as a slide-out sheet or modal (not full page navigation). Reuse existing ConversationPanel from src/components/track/dr-poo/ConversationPanel.tsx. (2) Proactive card at bottom of page — shows the latest AI-summarized message (max 150 chars, not truncated but summarized). Card has two actions: 'Got it' (dismiss via local state, not persisted) and 'Chat with Dr. Poo' (opens conversation panel with topic pre-loaded). Card content: if latest aiAnalysis insight exists, show its summary; otherwise show a time-based prompt (e.g. 'Have you logged lunch?' based on time of day and missing logs).",
+      "userStories": ["US-010"],
+      "files": {
+        "read": [
+          "src/pages/Home.tsx",
+          "src/components/track/dr-poo/AiInsightsSection.tsx",
+          "src/components/track/dr-poo/ConversationPanel.tsx",
+          "src/components/track/dr-poo/ReplyInput.tsx"
+        ],
+        "edit": ["src/pages/Home.tsx"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "'Ask Dr. Poo' button renders at top of Home page with Dr. Poo branding",
+        "Tapping 'Ask Dr. Poo' opens ConversationPanel as sheet/modal (not full navigation)",
+        "Proactive card renders at bottom of Home page",
+        "Card shows latest AI-summarized message (max 150 chars) or time-based prompt",
+        "'Got it' button dismisses the card (local state)",
+        "'Chat with Dr. Poo' button opens conversation panel",
+        "Card updates based on latest aiAnalysis data",
+        "bun run typecheck passes",
+        "Browser verification: both touchpoints render, conversation panel opens/closes"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": true
+      }
+    }
+  ]
+}

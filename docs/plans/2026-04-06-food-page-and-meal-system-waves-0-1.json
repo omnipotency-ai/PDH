@@ -1,0 +1,243 @@
+{
+  "planName": "Food Page, Meal System & Navigation Restructure",
+  "prd": "docs/prd/2026-04-06-food-page-and-meal-system.md",
+  "plan": "docs/plans/2026-04-06-food-page-and-meal-system.md",
+  "designRefs": [
+    "docs/plans/archive/Worktree spec/user-annotations/pdh-light-mode-reference.png",
+    "docs/plans/archive/Worktree spec/user-annotations/pdh-dark-mode-reference.png"
+  ],
+  "nonGoals": [
+    "Meal system UI (P7 — deferred, schema only in W0)",
+    "AI text parser (P8 — depends on P7)",
+    "Voice capture (P9 — keyboard STT is interim)",
+    "Offline support",
+    "Full Insights redesign",
+    "Desktop side-by-side layout",
+    "Coach summary card (open question)",
+    "Barcode scanning / photo capture"
+  ],
+  "waves": "0-1",
+  "tasks": [
+    {
+      "id": "W0-T01",
+      "title": "Extend foodLibrary table for composite meals",
+      "wave": 0,
+      "dependsOn": [],
+      "skill": "convex-migration-helper",
+      "description": "Add validators for structuredIngredients, modifiers, sizes, slotDefaults to convex/validators.ts. Extend the foodLibrary table in convex/schema.ts with these as optional fields (widen step). This is data-model-only — no UI. The composite meal template UI is deferred to Wave 7.",
+      "userStories": ["US-020"],
+      "files": {
+        "read": [
+          "convex/schema.ts",
+          "convex/validators.ts",
+          "convex/_generated/ai/guidelines.md"
+        ],
+        "edit": ["convex/validators.ts", "convex/schema.ts"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "convex/validators.ts exports structuredIngredientValidator, mealModifierValidator, sizeAdjustmentValidator, mealSizeValidator, slotDefaultValidator",
+        "foodLibrary table in schema.ts includes optional fields: structuredIngredients, slotDefaults, modifiers, sizes",
+        "All new fields are v.optional() (widen step — no migration needed)",
+        "bun run typecheck passes with zero errors",
+        "npx convex dev --once pushes schema successfully"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W0-T02",
+      "title": "Add tspToGrams field to ingredientProfiles",
+      "wave": 0,
+      "dependsOn": ["W0-T01"],
+      "skill": "convex-migration-helper",
+      "description": "Add an optional tspToGrams: v.optional(v.number()) field to the ingredientProfiles table for density-aware teaspoon-to-gram conversions (e.g. butter=4.7g/tsp, sugar=4.2g/tsp). This supports the per-ingredient portion calculations needed by the seed data (Wave 6) and future meal system.",
+      "userStories": ["US-020", "US-027"],
+      "files": {
+        "read": ["convex/schema.ts"],
+        "edit": ["convex/schema.ts"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "ingredientProfiles table has tspToGrams: v.optional(v.number()) field",
+        "bun run typecheck passes",
+        "Field is optional — no migration needed for existing docs"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W0-T03",
+      "title": "Add foodFavouriteSlotTags to profiles",
+      "wave": 0,
+      "dependsOn": ["W0-T01"],
+      "skill": "convex-migration-helper",
+      "description": "Add a mealSlotValidator to convex/validators.ts (union of 'breakfast'|'lunch'|'dinner'|'snacks'). Add foodFavouriteSlotTags: v.optional(v.record(v.string(), v.array(mealSlotValidator))) to the profiles table. This stores auto-learned meal slot associations for favourited foods — when a favourited food is logged in a slot, that slot is added to its tags. The Favourites view on Home and Food pages will filter by the active slot's tags.",
+      "userStories": ["US-004"],
+      "files": {
+        "read": ["convex/schema.ts", "convex/validators.ts"],
+        "edit": ["convex/validators.ts", "convex/schema.ts"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "convex/validators.ts exports mealSlotValidator",
+        "profiles table has foodFavouriteSlotTags: v.optional(v.record(v.string(), v.array(mealSlotValidator)))",
+        "bun run typecheck passes"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W0-T04",
+      "title": "Convex mutation to auto-tag favourite slot associations",
+      "wave": 0,
+      "dependsOn": ["W0-T03"],
+      "skill": "vite-react-implementer",
+      "description": "Create an internal mutation tagFavouriteSlot(canonicalName, slot) that: (1) gets profile by userId from auth, (2) reads existing foodFavouriteSlotTags (default {}), (3) adds slot to the food's array if not already present, (4) patches profile. Write failing tests first (TDD): test that calling with ('coffee', 'breakfast') adds 'breakfast' to coffee's tags, and that calling twice deduplicates.",
+      "userStories": ["US-004"],
+      "files": {
+        "read": [
+          "convex/profiles.ts",
+          "convex/schema.ts",
+          "convex/_generated/ai/guidelines.md"
+        ],
+        "edit": ["convex/profiles.ts"],
+        "create": ["convex/__tests__/profiles.test.ts"]
+      },
+      "acceptanceCriteria": [
+        "Internal mutation tagFavouriteSlot exists and is exported",
+        "Mutation adds slot to foodFavouriteSlotTags[canonicalName] array",
+        "Mutation deduplicates — calling twice with same (food, slot) pair results in slot appearing once",
+        "Mutation creates the record and array if foodFavouriteSlotTags is undefined",
+        "Unit test: tagFavouriteSlot adds slot to food's tag list — PASSES",
+        "Unit test: tagFavouriteSlot deduplicates slots — PASSES",
+        "bun run typecheck passes"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": [
+          "bun run typecheck",
+          "bun run lint:fix",
+          "cd convex && npx vitest run __tests__/profiles.test.ts --reporter=verbose"
+        ],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": false
+      }
+    },
+    {
+      "id": "W1-T01",
+      "title": "Create page stubs for Home, Food, and Insights",
+      "wave": 1,
+      "dependsOn": ["W0-T01", "W0-T02", "W0-T03", "W0-T04"],
+      "skill": "vite-react-implementer",
+      "description": "Create three new page files: src/pages/Home.tsx (empty shell with 'Home' heading), src/pages/Food.tsx (empty shell with 'Food' heading), src/pages/Insights.tsx (two sub-tabs: Patterns — lazy-loading existing PatternsPage, and Dr. Poo Report — placeholder text for now). These are minimal stubs that will be fleshed out in later waves. Follow existing page patterns (e.g. Track.tsx, Settings.tsx).",
+      "userStories": ["US-001"],
+      "files": {
+        "read": [
+          "src/pages/Track.tsx",
+          "src/pages/Patterns.tsx",
+          "src/pages/Settings.tsx"
+        ],
+        "edit": [],
+        "create": [
+          "src/pages/Home.tsx",
+          "src/pages/Food.tsx",
+          "src/pages/Insights.tsx"
+        ]
+      },
+      "acceptanceCriteria": [
+        "src/pages/Home.tsx exports a default HomePage component with a heading",
+        "src/pages/Food.tsx exports a default FoodPage component with a heading",
+        "src/pages/Insights.tsx exports a default InsightsPage with two tab buttons (Patterns, Dr. Poo Report)",
+        "Insights 'Patterns' tab lazy-loads and renders the existing PatternsPage",
+        "Insights 'Dr. Poo Report' tab shows placeholder text",
+        "bun run typecheck passes"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": true
+      }
+    },
+    {
+      "id": "W1-T02",
+      "title": "Restructure route tree to 4-tab bottom nav layout",
+      "wave": 1,
+      "dependsOn": ["W1-T01"],
+      "skill": "vite-react-implementer",
+      "description": "Major refactor of src/routeTree.tsx. (1) Update NAV_ITEMS to 4 tabs: Home (/), Track (/track), Food (/food), Insights (/insights) with appropriate Lucide icons (Home, NotebookPen, UtensilsCrossed, BarChart3). (2) Move Settings from tab to header gear icon (alongside ModeToggle and UserButton). (3) Change indexRoute from TrackPage to lazy HomePage. Add trackRoute (/track → TrackPage), foodRoute (/food → lazy FoodPage), insightsRoute (/insights → lazy InsightsPage). (4) Create a BottomTabBar component (fixed bottom, frosted glass, 4 tab icons+labels with active state). (5) Strip NavigationMenu from GlobalHeader — keep logo, settings gear, dark mode, user button. (6) Add pb-20 to main to clear bottom bar. (7) Update requiresSyncedLogs to include /track, /food, /insights paths. (8) Keep patternsRoute for now (redirect added in next task).",
+      "userStories": ["US-001"],
+      "files": {
+        "read": [
+          "src/routeTree.tsx",
+          "src/pages/Home.tsx",
+          "src/pages/Food.tsx",
+          "src/pages/Insights.tsx"
+        ],
+        "edit": ["src/routeTree.tsx"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "Bottom tab bar renders 4 tabs: Home, Track, Food, Insights with correct icons",
+        "Settings gear icon in header navigates to /settings",
+        "/ route renders HomePage (lazy loaded)",
+        "/track route renders TrackPage",
+        "/food route renders FoodPage (lazy loaded)",
+        "/insights route renders InsightsPage (lazy loaded)",
+        "Active tab is visually highlighted with correct color",
+        "Deep links work — navigating directly to /food renders Food page",
+        "SyncedLogsProvider wraps /, /track, /food, /insights, /patterns, /settings, /menu, /archive paths",
+        "NavigationMenu removed from GlobalHeader",
+        "Main content has pb-20 to clear bottom bar",
+        "bun run typecheck passes",
+        "bun run build succeeds",
+        "Browser verification: all 4 tabs navigate correctly"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": true
+      }
+    },
+    {
+      "id": "W1-T03",
+      "title": "Add /patterns → /insights redirect",
+      "wave": 1,
+      "dependsOn": ["W1-T02"],
+      "skill": "vite-react-implementer",
+      "description": "Update the patternsRoute in src/routeTree.tsx to redirect to /insights using TanStack Router's beforeLoad + redirect(). Import redirect from @tanstack/react-router. Remove the PatternsPage lazy import and Suspense wrapper from the patterns route component — it's no longer needed since Insights handles it.",
+      "userStories": ["US-001"],
+      "files": {
+        "read": ["src/routeTree.tsx"],
+        "edit": ["src/routeTree.tsx"],
+        "create": []
+      },
+      "acceptanceCriteria": [
+        "Navigating to /patterns redirects to /insights",
+        "No PatternsPage import or component on the patterns route",
+        "bun run typecheck passes",
+        "Browser verification: /patterns lands on /insights"
+      ],
+      "completed": false,
+      "verification": {
+        "commands": ["bun run typecheck", "bun run lint:fix", "bun run build"],
+        "testPolicy": "Tests must be updated to reflect new behavior. Never simplify or remove assertions to make tests pass — update them to match the new reality.",
+        "uiAffected": true
+      }
+    }
+  ]
+}

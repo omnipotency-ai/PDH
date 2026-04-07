@@ -1,8 +1,9 @@
 > **Ref:** `docs/WORK-QUEUE.md`
 > **Updated:** 2026-04-06
-> **Version:** 3.1
+> **Version:** 3.2
 > **History:**
 >
+> - v3.2 (2026-04-06) — Food Page & Meal System initiative added (22 tasks, 7 waves)
 > - v3.1 (2026-04-06) — Nutrition Card initiative marked complete, task rows removed
 > - v3.0 (2026-04-05) — inline tasks with dependencies, managed by project-ops skill
 > - v2.0 (2026-04-05) — rewritten as planned-work-only queue
@@ -28,6 +29,48 @@
   2. Completed task rows are removed
   3. Initiative row stays with final status
   4. Plan goes to `docs/plans/archive/`
+
+---
+
+## Active: Food Page, Meal System & Navigation Restructure
+
+> **Status:** ACTIVE
+> **PRD:** [`2026-04-06-food-page-and-meal-system.md`](prd/2026-04-06-food-page-and-meal-system.md)
+> **Plan:** [`2026-04-06-food-page-and-meal-system.md`](plans/2026-04-06-food-page-and-meal-system.md)
+> **Execution plans:** `docs/plans/2026-04-06-food-page-and-meal-system-waves-{0-1,2-3,4-6}.json`
+> **Branch:** TBD (create at execution time)
+
+### Roadmap items folded in
+
+- WQ-090 — TrackPage eagerly imported (addressed by W1-T02: Track moves to /track, lazy-loadable)
+
+### Tasks
+
+| Task   | Title                                               | Wave | Depends On     | Status  | Commit |
+| ------ | --------------------------------------------------- | ---- | -------------- | ------- | ------ |
+| W0-T01 | Extend foodLibrary for composite meals              | 0    | —              | pending |        |
+| W0-T02 | Add tspToGrams to ingredientProfiles                | 0    | W0-T01         | pending |        |
+| W0-T03 | Add foodFavouriteSlotTags to profiles               | 0    | W0-T01         | pending |        |
+| W0-T04 | Mutation: auto-tag favourite slot associations      | 0    | W0-T03         | pending |        |
+| W1-T01 | Create page stubs (Home, Food, Insights)            | 1    | W0-T04         | pending |        |
+| W1-T02 | Restructure route tree to 4-tab bottom nav          | 1    | W1-T01         | pending |        |
+| W1-T03 | Add /patterns → /insights redirect                  | 1    | W1-T02         | pending |        |
+| W2-T01 | Simplify Track page to Today's Log only             | 2    | W1-T02         | pending |        |
+| W2-T02 | Move Dr. Poo Report into Insights page              | 2    | W1-T01, W2-T01 | pending |        |
+| W3-T01 | Home page: greeting + nutrition summary             | 3    | W1-T02         | pending |        |
+| W3-T02 | Home page: slot chips, favourites, recent, frequent | 3    | W3-T01         | pending |        |
+| W3-T03 | Home page: modifier chips + Quick Capture           | 3    | W3-T02         | pending |        |
+| W3-T04 | Home page: search bar + water quick-action          | 3    | W3-T02         | pending |        |
+| W3-T05 | Home page: Dr. Poo touchpoints                      | 3    | W3-T01         | pending |        |
+| W4-T01 | Audit + fix heart toggle everywhere                 | 4    | W3-T02, W5-T03 | pending |        |
+| W4-T02 | Plus button stages + auto-opens modal               | 4    | W3-T02, W5-T01 | pending |        |
+| W5-T01 | Food page shell + view switcher + backfill picker   | 5    | W1-T02         | pending |        |
+| W5-T02 | Food page search view (no cap)                      | 5    | W5-T01         | pending |        |
+| W5-T03 | Food page favourites view + slot filtering          | 5    | W5-T01         | pending |        |
+| W5-T04 | Food page filter view (recent/frequent/zone)        | 5    | W5-T01         | pending |        |
+| W5-T05 | Food detail editing modal                           | 5    | W5-T02         | pending |        |
+| W6-T01 | Populate registry with ~30 post-surgery foods       | 6    | W5-T02         | pending |        |
+| W6-T02 | Seed Coffee + Toast meal templates                  | 6    | W0-T01, W6-T01 | pending |        |
 
 ---
 
