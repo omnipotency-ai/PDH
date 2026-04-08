@@ -31,6 +31,24 @@
 
 <!-- Implementer agents: prepend new entries HERE, above the completed summaries -->
 
+### 2026-04-08 — W4-T01/T02 complete: Page reorganization
+
+- **Tasks:** W4-T01, W4-T02
+- **Commit:** `6faa28a`
+- **What:**
+  - Slimmed Track to Today's Log with date picker and log CRUD only
+  - Moved capture panels (BowelSection, NutritionCard, QuickCapture) to Home
+  - Wired AiInsightsSection into Insights/Dr. Poo Report tab
+  - Added pendingEditLogId store field for cross-page Home→Track auto-edit
+
+### 2026-04-08 — W5-T03 complete: Quick capture modifiers + unit labels
+
+- **Tasks:** W5-T03
+- **Commit:** `d14b307`
+- **What:**
+  - Integrated quick capture modifier chips and configurable unit labels on Home
+  - Added CircularProgressRing improvements for progress tracking
+
 ### 2026-04-08 — W5-T05 complete: Home Dr. Poo touchpoints
 
 - **Tasks:** W5-T05

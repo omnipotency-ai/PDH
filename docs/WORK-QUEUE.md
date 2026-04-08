@@ -1,8 +1,9 @@
 > **Ref:** `docs/WORK-QUEUE.md`
 > **Updated:** 2026-04-08
-> **Version:** 3.4
+> **Version:** 3.5
 > **History:**
 >
+> - v3.5 (2026-04-08) — Backfill commit hashes for W2-W5, mark W4-T01/T02, W5-T03/T05 done from git history
 > - v3.4 (2026-04-08) — Food Platform master plan adopted (31 tasks, 8 waves), old 22-task plan superseded
 > - v3.3 (2026-04-07) — Tech-Debt initiative marked complete, task rows removed, resolved ROADMAP items updated
 > - v3.2 (2026-04-06) — Food Page & Meal System initiative added (22 tasks, 7 waves)
@@ -60,20 +61,20 @@
 | W1-T02 | Fix buildStagedNutritionLogData to preserve units       | 1    | W1-T01         | done    | e51f4e6 |
 | W1-T03 | Fix buildPortionText display for discrete units         | 1    | W1-T01         | done    | e51f4e6 |
 | W1-T04 | Create useFoodData hook (Convex-first, static fallback) | 1    | W0-T01, W0-T02 | done    | e51f4e6 |
-| W2-T01 | Registry → clinicalRegistry seed script                 | 2    | W0-T01         | done    |         |
-| W2-T02 | Seed ~30 post-surgery foods                             | 2    | W2-T01         | done    |         |
-| W2-T03 | Seed Coffee + Toast meal templates                      | 2    | W0-T04, W2-T02 | done    |         |
-| W2-T04 | Favourite slot auto-tag mutation                        | 2    | W0-T05         | done    |         |
+| W2-T01 | Registry → clinicalRegistry seed script                 | 2    | W0-T01         | done    | 701ec6e |
+| W2-T02 | Seed ~30 post-surgery foods                             | 2    | W2-T01         | done    | c62b4b3 |
+| W2-T03 | Seed Coffee + Toast meal templates                      | 2    | W0-T04, W2-T02 | done    | c62b4b3 |
+| W2-T04 | Favourite slot auto-tag mutation                        | 2    | W0-T05         | done    | a0d2ccb |
 | W3-T01 | Page stubs: Home, Food, Insights                        | 3    | —              | done    | cdcd643 |
 | W3-T02 | 4-tab bottom nav layout                                 | 3    | W3-T01         | done    | 3f97a64 |
 | W3-T03 | /patterns → /insights redirect                          | 3    | W3-T02         | done    | 3f97a64 |
-| W4-T01 | Simplify Track to Today's Log only                      | 4    | W3-T02         | pending |         |
-| W4-T02 | Move Dr. Poo to Insights tab                            | 4    | W3-T01, W4-T01 | pending |         |
+| W4-T01 | Simplify Track to Today's Log only                      | 4    | W3-T02         | done    | 6faa28a |
+| W4-T02 | Move Dr. Poo to Insights tab                            | 4    | W3-T01, W4-T01 | done    | 6faa28a |
 | W5-T01 | Greeting + nutrition summary                            | 5    | W3-T02, W1-T04 | done    | 22e778c |
 | W5-T02 | Meal slots, favourites, recent, frequent                | 5    | W5-T01, W2-T04 | done    | a641f69 |
-| W5-T03 | Modifier chips + Quick Capture                          | 5    | W5-T02         | pending |         |
+| W5-T03 | Modifier chips + Quick Capture                          | 5    | W5-T02         | done    | d14b307 |
 | W5-T04 | Search bar + water action                               | 5    | W5-T02         | pending |         |
-| W5-T05 | Dr. Poo touchpoints                                     | 5    | W5-T01         | pending |         |
+| W5-T05 | Dr. Poo touchpoints                                     | 5    | W5-T01         | done    | b06371b |
 | W6-T01 | Food page shell + view switcher + backfill picker       | 6    | W3-T02, W1-T04 | pending |         |
 | W6-T02 | Search view (Convex-backed, no cap)                     | 6    | W6-T01         | pending |         |
 | W6-T03 | Favourites view with slot filtering                     | 6    | W6-T01         | pending |         |

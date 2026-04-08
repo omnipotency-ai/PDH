@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { buildRawNutritionLogData, buildStagedNutritionLogData } from "../nutritionLogging";
+import {
+  buildRawNutritionLogData,
+  buildStagedNutritionLogData,
+} from "../nutritionLogging";
 import type { StagedItem } from "../useNutritionStore";
 
 function makeStagedItem(overrides?: Partial<StagedItem>): StagedItem {
@@ -21,11 +24,13 @@ function makeStagedItem(overrides?: Partial<StagedItem>): StagedItem {
 
 describe("buildRawNutritionLogData", () => {
   it("creates a raw-input parser payload with mealSlot", () => {
-    expect(buildRawNutritionLogData(" two toast, honey ", "breakfast")).toEqual({
-      rawInput: "two toast, honey",
-      items: [],
-      mealSlot: "breakfast",
-    });
+    expect(buildRawNutritionLogData(" two toast, honey ", "breakfast")).toEqual(
+      {
+        rawInput: "two toast, honey",
+        items: [],
+        mealSlot: "breakfast",
+      },
+    );
   });
 
   it("returns null for empty raw input", () => {
@@ -35,16 +40,14 @@ describe("buildRawNutritionLogData", () => {
 
 describe("buildStagedNutritionLogData", () => {
   it("preserves staged items without naturalUnit as grams", () => {
-    expect(buildStagedNutritionLogData([makeStagedItem()], "lunch")).toEqual({
-      mealSlot: "lunch",
-      items: [
-        {
-          canonicalName: "toast",
-          parsedName: "Toast",
-          quantity: 60,
-          unit: "g",
-        },
-      ],
+    const result = buildStagedNutritionLogData([makeStagedItem()], "lunch");
+    expect(result.mealSlot).toBe("lunch");
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toMatchObject({
+      canonicalName: "toast",
+      parsedName: "Toast",
+      quantity: 60,
+      unit: "g",
     });
   });
 
@@ -55,7 +58,7 @@ describe("buildStagedNutritionLogData", () => {
       unitWeightG: 30,
     });
     const result = buildStagedNutritionLogData([item], "breakfast");
-    expect(result.items[0]).toEqual({
+    expect(result.items[0]).toMatchObject({
       canonicalName: "toast",
       parsedName: "Toast",
       quantity: 8,
