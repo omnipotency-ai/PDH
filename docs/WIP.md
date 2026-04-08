@@ -31,6 +31,19 @@
 
 <!-- Implementer agents: prepend new entries HERE, above the completed summaries -->
 
+### 2026-04-08 — W3-T02/W3-T03 complete: 4-tab navigation + `/patterns` redirect
+
+- **Tasks:** W3-T02, W3-T03
+- **Files:** `src/routeTree.tsx`, `src/components/layout/AppLayout.tsx`, `src/components/layout/GlobalHeader.tsx`, `docs/WIP.md`
+- **What:**
+  - Swapped the root route from Track to the new lazy-loaded Home page and added lazy-loaded `/food` and `/insights` routes.
+  - Moved primary navigation into a fixed bottom tab bar with Home, Track, Food, and Insights tabs plus active-state highlighting.
+  - Expanded `requiresSyncedLogs` so the new main routes and existing secondary routes retain synced-log context.
+  - Removed the header nav, kept the logo, mode toggle, settings gear, and user button, and redirected `/patterns` to `/insights`.
+- **Verification:**
+  - `bun run typecheck` PASS
+  - `bun run build` PASS
+
 ### 2026-04-08 — W3-T01 complete: Home, Food, and Insights page stubs
 
 - **Tasks:** W3-T01

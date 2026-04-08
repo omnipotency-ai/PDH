@@ -1,10 +1,18 @@
-import { createRootRoute, createRoute, createRouter, Outlet } from "@tanstack/react-router";
+import {
+  Outlet,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  redirect,
+} from "@tanstack/react-router";
 import { lazy, Suspense } from "react";
 import { AppLayout, withBoundary } from "@/components/layout";
 import { Toaster } from "@/components/ui/sonner";
 
+const HomePage = lazy(() => import("./pages/Home"));
 const TrackPage = lazy(() => import("./pages/Track"));
-const PatternsPage = lazy(() => import("./pages/Patterns"));
+const FoodPage = lazy(() => import("./pages/Food"));
+const InsightsPage = lazy(() => import("./pages/Insights"));
 const SettingsPage = lazy(() => import("./pages/Settings"));
 const UiMigrationLabPage = lazy(() => import("./pages/UiMigrationLab"));
 const ArchivePage = lazy(() => import("./pages/secondary_pages/Archive"));
@@ -31,6 +39,18 @@ const indexRoute = createRoute({
   path: "/",
   component: () =>
     withBoundary(
+      "Home",
+      <Suspense fallback={null}>
+        <HomePage />
+      </Suspense>,
+    ),
+});
+
+const trackRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/track",
+  component: () =>
+    withBoundary(
       "Track",
       <Suspense fallback={null}>
         <TrackPage />
@@ -38,16 +58,36 @@ const indexRoute = createRoute({
     ),
 });
 
+const foodRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/food",
+  component: () =>
+    withBoundary(
+      "Food",
+      <Suspense fallback={null}>
+        <FoodPage />
+      </Suspense>,
+    ),
+});
+
+const insightsRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/insights",
+  component: () =>
+    withBoundary(
+      "Insights",
+      <Suspense fallback={null}>
+        <InsightsPage />
+      </Suspense>,
+    ),
+});
+
 const patternsRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: "/patterns",
-  component: () =>
-    withBoundary(
-      "Patterns",
-      <Suspense fallback={null}>
-        <PatternsPage />
-      </Suspense>,
-    ),
+  beforeLoad: () => {
+    throw redirect({ to: "/insights" });
+  },
 });
 
 const settingsRoute = createRoute({
@@ -105,6 +145,9 @@ const devOnlyRoutes = import.meta.env.DEV
 export const routeTree = rootRoute.addChildren([
   appLayoutRoute.addChildren([
     indexRoute,
+    trackRoute,
+    foodRoute,
+    insightsRoute,
     patternsRoute,
     settingsRoute,
     archiveRoute,
