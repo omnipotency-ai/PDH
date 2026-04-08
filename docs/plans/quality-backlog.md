@@ -5,6 +5,12 @@ Sweep this file when planning new initiatives for items that fit.
 
 ---
 
+## W0 Schema Widening — 2026-04-08
+
+- **Quality** `convex/validators.ts:382` — `customPortionValidator.weightG` allows zero/negative. Fix: enforce positive value in mutation layer (W6 when custom portions UI ships).
+- **Architecture** `convex/schema.ts:91` — `clinicalRegistry.by_canonicalName` index doesn't enforce uniqueness (Convex limitation). Fix: check-before-insert in seed script (W2-T01).
+- **Architecture** `convex/schema.ts:417` — `profiles.foodFavouriteSlotTags` v.record keys are `v.string()` (broad). Fix: validate canonical food name format in mutation layer (W2-T04).
+
 ## W3-04 — 2026-04-06
 
 - **Quality** `src/components/dr-poo/MealIdeaCard.tsx:147-154` — `meal.items` rendered with `key={item}` (item text). If AI returns duplicate strings, React emits key-collision warning and drops duplicates. Fix: `key={`${item}-${i}`}` with index.

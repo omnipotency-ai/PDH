@@ -51,11 +51,11 @@
 
 | Task   | Title                                                   | Wave | Depends On     | Status  | Commit |
 | ------ | ------------------------------------------------------- | ---- | -------------- | ------- | ------ |
-| W0-T01 | Create clinicalRegistry table                           | 0    | —              | pending |        |
-| W0-T02 | Extend ingredientProfiles with product catalog fields   | 0    | —              | pending |        |
-| W0-T03 | Add productId to logs table                             | 0    | —              | pending |        |
-| W0-T04 | Extend foodLibrary for composite meals                  | 0    | —              | pending |        |
-| W0-T05 | Add foodFavouriteSlotTags to profiles                   | 0    | —              | pending |        |
+| W0-T01 | Create clinicalRegistry table                           | 0    | —              | done    | TBD    |
+| W0-T02 | Extend ingredientProfiles with product catalog fields   | 0    | —              | done    | TBD    |
+| W0-T03 | Add productId to logs table                             | 0    | —              | done    | TBD    |
+| W0-T04 | Extend foodLibrary for composite meals                  | 0    | —              | done    | TBD    |
+| W0-T05 | Add foodFavouriteSlotTags to profiles                   | 0    | —              | done    | TBD    |
 | W1-T01 | Fix getEffectivePortionG to be unit-aware               | 1    | W0-T02         | pending |        |
 | W1-T02 | Fix buildStagedNutritionLogData to preserve units       | 1    | W1-T01         | pending |        |
 | W1-T03 | Fix buildPortionText display for discrete units         | 1    | W1-T01         | pending |        |

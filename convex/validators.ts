@@ -292,6 +292,139 @@ export const aiPreferencesValidator = v.object({
   ),
 });
 
+// ── Food Platform validators ──────────────────────────────────────────────
+
+/** Mirrors FoodCategory from shared/foodRegistryData.ts */
+export const foodCategoryValidator = v.union(
+  v.literal("protein"),
+  v.literal("carbohydrate"),
+  v.literal("fat"),
+  v.literal("dairy"),
+  v.literal("condiment"),
+  v.literal("drink"),
+  v.literal("beverage"),
+);
+
+/** Mirrors FoodSubcategory from shared/foodRegistryData.ts */
+export const foodSubcategoryValidator = v.union(
+  v.literal("meat"),
+  v.literal("fish"),
+  v.literal("egg"),
+  v.literal("legume"),
+  v.literal("grain"),
+  v.literal("vegetable"),
+  v.literal("root_vegetable"),
+  v.literal("fruit"),
+  v.literal("oil"),
+  v.literal("butter_cream"),
+  v.literal("nut_seed"),
+  v.literal("nut"),
+  v.literal("milk_yogurt"),
+  v.literal("cheese"),
+  v.literal("dairy"),
+  v.literal("dairy_alternative"),
+  v.literal("dessert"),
+  v.literal("frozen"),
+  v.literal("herb"),
+  v.literal("spice"),
+  v.literal("sauce"),
+  v.literal("acid"),
+  v.literal("thickener"),
+  v.literal("seasoning"),
+  v.literal("irritant"),
+  v.literal("processed"),
+  v.literal("composite_dish"),
+  v.literal("sugar"),
+  v.literal("broth"),
+  v.literal("hot_drink"),
+  v.literal("juice"),
+  v.literal("supplement"),
+  v.literal("water"),
+  v.literal("alcohol"),
+  v.literal("fizzy_drink"),
+);
+
+/** Mirrors FoodRiskLevel from shared/foodRegistryData.ts (6 levels) */
+export const foodRiskLevelValidator = v.union(
+  v.literal("none"),
+  v.literal("low"),
+  v.literal("low_moderate"),
+  v.literal("moderate"),
+  v.literal("moderate_high"),
+  v.literal("high"),
+);
+
+/** Mirrors FoodResidueLevel from shared/foodRegistryData.ts */
+export const totalResidueValidator = v.union(
+  v.literal("very_low"),
+  v.literal("low"),
+  v.literal("low_moderate"),
+  v.literal("moderate"),
+  v.literal("high"),
+);
+
+/** Mirrors FoodGasLevel from shared/foodRegistryData.ts */
+export const gasProducingValidator = v.union(
+  v.literal("no"),
+  v.literal("possible"),
+  v.literal("yes"),
+);
+
+/** Mirrors FoodDryTextureLevel from shared/foodRegistryData.ts */
+export const dryTextureValidator = v.union(
+  v.literal("no"),
+  v.literal("low"),
+  v.literal("yes"),
+);
+
+/** Custom portion for ingredientProfiles product catalog */
+export const customPortionValidator = v.object({
+  label: v.string(),
+  weightG: v.number(),
+});
+
+/** Structured ingredient for composite meals in foodLibrary */
+export const structuredIngredientValidator = v.object({
+  canonicalName: v.string(),
+  quantity: v.number(),
+  unit: v.string(),
+});
+
+/** Meal modifier for composite meals in foodLibrary */
+export const mealModifierValidator = v.object({
+  canonicalName: v.string(),
+  quantity: v.number(),
+  unit: v.string(),
+  isDefault: v.boolean(),
+});
+
+/** Size adjustment entry within a meal size */
+export const sizeAdjustmentValidator = v.object({
+  canonicalName: v.string(),
+  quantity: v.number(),
+  unit: v.string(),
+});
+
+/** Named meal size with ingredient quantity adjustments */
+export const mealSizeValidator = v.object({
+  name: v.string(),
+  adjustments: v.array(sizeAdjustmentValidator),
+});
+
+/** Slot-specific ingredient overrides for composite meals */
+export const slotDefaultValidator = v.object({
+  slot: v.string(),
+  overrides: v.array(structuredIngredientValidator),
+});
+
+/** Meal slot labels for favourites tagging on profiles */
+export const mealSlotValidator = v.union(
+  v.literal("breakfast"),
+  v.literal("lunch"),
+  v.literal("dinner"),
+  v.literal("snack"),
+);
+
 // ── Log data validators ────────────────────────────────────────────────────
 
 const recoveryStageValidator = v.union(

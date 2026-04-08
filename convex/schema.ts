@@ -6,19 +6,31 @@ import {
   aiRateLimitsValidator,
   aiRequestValidator,
   aiResponseValidator,
+  customPortionValidator,
+  dryTextureValidator,
   foodAssessmentCausalRoleValidator,
   foodAssessmentChangeTypeValidator,
+  foodCategoryValidator,
   foodGroupValidator,
   foodLineValidator,
   foodPersonalisationValidator,
   foodPrimaryStatusValidator,
+  foodRiskLevelValidator,
+  foodSubcategoryValidator,
   foodTendencyValidator,
+  gasProducingValidator,
   healthProfileValidator,
   logDataValidator,
+  mealModifierValidator,
+  mealSizeValidator,
+  mealSlotValidator,
   nutritionGoalsValidator,
   sleepGoalValidator,
+  slotDefaultValidator,
   storedFluidPresetsValidator,
   storedProfileHabitsValidator,
+  structuredIngredientValidator,
+  totalResidueValidator,
   transitCalibrationValidator,
 } from "./validators";
 
@@ -36,9 +48,49 @@ export default defineSchema({
       v.literal("weight"),
     ),
     data: logDataValidator,
+    // W0-T03: Links a food log entry to the exact brand/product used.
+    productId: v.optional(v.id("ingredientProfiles")),
   })
     .index("by_userId", ["userId"])
     .index("by_userId_timestamp", ["userId", "timestamp"]),
+
+  // W0-T01: Global medical baseline for each canonical food.
+  clinicalRegistry: defineTable({
+    canonicalName: v.string(),
+    zone: v.union(v.literal(1), v.literal(2), v.literal(3)),
+    subzone: v.optional(v.union(v.literal("1A"), v.literal("1B"))),
+    category: foodCategoryValidator,
+    subcategory: foodSubcategoryValidator,
+    group: foodGroupValidator,
+    line: foodLineValidator,
+    lineOrder: v.number(),
+    macros: v.array(
+      v.union(
+        v.literal("protein"),
+        v.literal("carbohydrate"),
+        v.literal("fat"),
+      ),
+    ),
+    notes: v.optional(v.string()),
+    defaultPortionG: v.optional(v.number()),
+    naturalUnit: v.optional(v.string()),
+    unitWeightG: v.optional(v.number()),
+    osmoticEffect: v.optional(foodRiskLevelValidator),
+    totalResidue: v.optional(totalResidueValidator),
+    fiberTotalApproxG: v.optional(v.number()),
+    fiberInsolubleLevel: v.optional(foodRiskLevelValidator),
+    fiberSolubleLevel: v.optional(foodRiskLevelValidator),
+    gasProducing: v.optional(gasProducingValidator),
+    dryTexture: v.optional(dryTextureValidator),
+    irritantLoad: v.optional(foodRiskLevelValidator),
+    highFatRisk: v.optional(foodRiskLevelValidator),
+    lactoseRisk: v.optional(foodRiskLevelValidator),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_canonicalName", ["canonicalName"])
+    .index("by_zone", ["zone"])
+    .index("by_group_and_line", ["group", "line"]),
 
   foodAliases: defineTable({
     aliasText: v.string(),
@@ -134,6 +186,11 @@ export default defineSchema({
       proteinG: v.union(v.number(), v.null()),
       saltG: v.union(v.number(), v.null()),
     }),
+    // W0-T02: Product catalog fields for brand/product tracking.
+    customPortions: v.optional(v.array(customPortionValidator)),
+    productName: v.optional(v.string()),
+    barcode: v.optional(v.string()),
+    registryId: v.optional(v.id("clinicalRegistry")),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -356,6 +413,10 @@ export default defineSchema({
     encryptedApiKey: v.optional(v.string()),
     nutritionGoals: v.optional(nutritionGoalsValidator),
     foodFavourites: v.optional(v.array(v.string())),
+    // W0-T05: Per-favourite slot tags (e.g. "porridge" -> ["breakfast"]).
+    foodFavouriteSlotTags: v.optional(
+      v.record(v.string(), v.array(mealSlotValidator)),
+    ),
     // Server-side AI rate limit state, keyed by feature type.
     // Survives page reload. Updated by the chatCompletion action.
     aiRateLimits: v.optional(aiRateLimitsValidator),
@@ -367,6 +428,11 @@ export default defineSchema({
     canonicalName: v.string(),
     type: v.union(v.literal("ingredient"), v.literal("composite")),
     ingredients: v.array(v.string()),
+    // W0-T04: Composite meal structure fields.
+    structuredIngredients: v.optional(v.array(structuredIngredientValidator)),
+    modifiers: v.optional(v.array(mealModifierValidator)),
+    sizes: v.optional(v.array(mealSizeValidator)),
+    slotDefaults: v.optional(v.array(slotDefaultValidator)),
     createdAt: v.number(),
   })
     .index("by_userId", ["userId"])

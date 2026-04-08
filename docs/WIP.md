@@ -30,6 +30,20 @@
 
 <!-- Implementer agents: prepend new entries HERE, above the completed summaries -->
 
+### 2026-04-08 — Wave 0 complete: Schema widening for 3-layer architecture
+
+- **Tasks:** W0-T01 through W0-T05 (all 5 Wave 0 tasks)
+- **Files:** `convex/schema.ts`, `convex/validators.ts`
+- **What:**
+  - W0-T01: Created `clinicalRegistry` table (24 fields, 3 indexes) — global medical truth layer
+  - W0-T02: Extended `ingredientProfiles` with `customPortions`, `productName`, `barcode`, `registryId`
+  - W0-T03: Added `productId` to `logs` table (historical calorie integrity)
+  - W0-T04: Extended `foodLibrary` with `structuredIngredients`, `modifiers`, `sizes`, `slotDefaults`
+  - W0-T05: Added `foodFavouriteSlotTags` to `profiles`
+  - Created 13 new validators in `convex/validators.ts` (food categories, risk levels, portions, meal structures)
+- **Verification:** typecheck PASS, build PASS, 1432 vitest PASS, 135 E2E PASS (5 pre-existing flaky), schema push PASS
+- **Decisions:** Used `foodRiskLevelValidator` with 6 values (matching `FoodRiskLevel` source type) instead of plan's 4 values — plan said "mirror them from source"
+
 ### 2026-04-08 — Plan superseded: Food Platform master plan
 
 Old wave JSONs (0-1, 2-3, 4-6) archived. New 8-wave plan with 31 tasks.
