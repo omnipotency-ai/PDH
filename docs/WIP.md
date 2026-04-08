@@ -31,6 +31,16 @@
 
 <!-- Implementer agents: prepend new entries HERE, above the completed summaries -->
 
+### 2026-04-08 — W3-T01 complete: Home, Food, and Insights page stubs
+
+- **Tasks:** W3-T01
+- **Files:** `src/pages/Home.tsx`, `src/pages/Food.tsx`, `src/pages/Insights.tsx`, `docs/WIP.md`
+- **What:**
+  - Replaced the full Home page implementation with the requested stub shell.
+  - Confirmed the Food page already matched the requested stub shape and left it unchanged.
+  - Kept the Insights page as the required lazy-loaded tab shell with `Patterns` and `Dr. Poo Report`.
+- **Verification:** `bun run typecheck` PASS
+
 ### 2026-04-08 — Wave 2 complete: core food seed coverage + meal template seeding
 
 - **Tasks:** W2-T02, W2-T03 (W2-T01 and W2-T04 already present on branch and confirmed in queue)
