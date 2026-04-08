@@ -15,15 +15,6 @@ The app helps users understand food-to-bowel-movement transit timing and emergin
 - Evidence-based insights (what is known vs. inferred).
 - High-quality, clinical-yet-warm UI.
 
-## Commands & Stack
-
-- **Dev:** `bun run dev` (port 3005) | `npx convex dev` (backend)
-- **Build/Check:** `bun run build` | `bun run typecheck`
-- **Lint/Format:** `bun run lint:fix` | `bun run format`
-- **Stack:** React, Vite, Convex (DB), Tailwind v4, Zustand (ephemeral state), IndexedDB (API keys only), shadcn/ui.
-
----
-
 ## Safety Rules
 
 **Never perform destructive data operations (delete, clear, reset) without explicitly confirming the target user ID and scope with the user first.** Always scope destructive operations to test data only.
@@ -62,16 +53,6 @@ The app helps users understand food-to-bowel-movement transit timing and emergin
 **Failure States:** If connectivity or Convex is unavailable, prefer explicit failure states over misleading "saved" behavior.
 **The "Leave it Better" Rule:** Always leave the codebase in a more coherent and trustworthy state than you found it.
 
-### Dashboard Operations (Convex, Clerk, Vercel)
-
-**Use Claude-in-Chrome, not workaround scripts.** When you need to perform operations on Convex dashboard, Clerk dashboard, or Vercel — use the Claude-in-Chrome MCP tools (`mcp__claude-in-chrome__*`) to open the tab. The user already has these dashboards logged in and saved in their browser. Do NOT build clever internal mutations, scripts, or CLI workarounds for tasks the dashboard handles natively (e.g. running migrations, checking data, managing users, viewing logs). The dashboard is always simpler and safer.
-
-**playwright-cli is for testing only.** `playwright-cli` runs a headless browser with no saved sessions — it cannot access dashboards. Use it for E2E testing and localhost browser verification. Use Claude-in-Chrome for anything requiring the user's credentials.
-
-### Destructive Operations
-
-**Always confirm before deleting data.** Before ANY destructive database operation (delete, clear, wipe, reset): (1) confirm the exact target with the user, (2) ask if backups exist — user backups are NOT automatic, (3) scope deletions narrowly (by time range, marker, or specific IDs — never blanket-delete "all records for user X").
-
 ## Development Environment
 
 This project uses TypeScript as the primary language with Biome for formatting/linting. Always run typecheck and tests after changes. Be aware that Biome auto-fix can aggressively reformat newly-scoped files — review its changes before committing.
@@ -88,18 +69,12 @@ After completing sprint tasks or work items, always update WIP tracking docs and
 
 When gathering file contents for reference or concatenation, prefer a single shell command (e.g., `cat` or `find | xargs cat`) over reading files individually into context then re-reading them via agents.
 
-## Cross-Tool Collaboration
-
-When Claude Code and Codex are both used on the same task, follow `docs/ai/cross-tool-collaboration.md`.
-
-- Claude should bias toward orchestration, memory-aware planning, dashboard work, and visual verification.
-- Codex should bias toward precise implementation, verification, and code review in the current workspace.
-- Durable decisions belong in repo docs. User-level Claude memory is secondary and must not become the only source of truth.
-
 <!-- convex-ai-start -->
+
 This project uses [Convex](https://convex.dev) as its backend.
 
 When working on Convex code, **always read `convex/_generated/ai/guidelines.md` first** for important guidelines on how to correctly use Convex APIs and patterns. The file contains rules that override what you may have learned about Convex from training data.
 
 Convex agent skills for common tasks can be installed by running `npx convex ai-files install`.
+
 <!-- convex-ai-end -->

@@ -331,6 +331,7 @@ export interface FoodItem {
   preparation?: string;
   recoveryStage?: 1 | 2 | 3;
   spiceLevel?: "plain" | "mild" | "spicy";
+  productId?: string;
   bucketKey?: string;
   bucketLabel?: string;
   matchConfidence?: number;

@@ -10,6 +10,7 @@ import {
   getCurrentMealSlot,
   getDefaultCalories,
   getDisplayName,
+  getEffectivePortionG,
   getFoodItems,
   getItemMacros,
   getMealSlot,
@@ -696,5 +697,113 @@ describe("getItemMacros", () => {
     expect(result.protein).toBeCloseTo(2.7, 1);
     expect(result.carbs).toBeCloseTo(28.2, 1);
     expect(result.fat).toBeCloseTo(0.3, 1);
+  });
+
+  it("8 sl toast -> ~751 kcal (not 25) via unit-aware portion", () => {
+    const item: FoodItem = {
+      canonicalName: "toast",
+      quantity: 8,
+      unit: "sl",
+    };
+    const result = getItemMacros(item);
+    // toast: unitWeightG=30, so 8*30=240g. caloriesPer100g=313, so 313*240/100=751.2 -> 751
+    expect(result.portionG).toBe(240);
+    expect(result.calories).toBe(751);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getEffectivePortionG — unit-aware
+// ---------------------------------------------------------------------------
+
+describe("getEffectivePortionG — unit-aware", () => {
+  it("8 sl toast -> 240g (via unitWeightG=30)", () => {
+    const item: FoodItem = { canonicalName: "toast", quantity: 8, unit: "sl" };
+    expect(getEffectivePortionG(item)).toBe(240);
+  });
+
+  it("2 pc egg -> 100g (via unitWeightG=50)", () => {
+    const item: FoodItem = {
+      canonicalName: "egg",
+      quantity: 2,
+      unit: "pc",
+    };
+    expect(getEffectivePortionG(item)).toBe(100);
+  });
+
+  it("quantity in grams passes through", () => {
+    const item: FoodItem = { canonicalName: "toast", quantity: 50, unit: "g" };
+    expect(getEffectivePortionG(item)).toBe(50);
+  });
+
+  it("kg converts correctly", () => {
+    const item: FoodItem = {
+      canonicalName: "toast",
+      quantity: 0.5,
+      unit: "kg",
+    };
+    expect(getEffectivePortionG(item)).toBe(500);
+  });
+
+  it("oz converts correctly", () => {
+    const item: FoodItem = { canonicalName: "toast", quantity: 1, unit: "oz" };
+    expect(getEffectivePortionG(item)).toBeCloseTo(28.3495, 2);
+  });
+
+  it("lb converts correctly", () => {
+    const item: FoodItem = { canonicalName: "toast", quantity: 1, unit: "lb" };
+    expect(getEffectivePortionG(item)).toBeCloseTo(453.592, 2);
+  });
+
+  it("ml passes through", () => {
+    const item: FoodItem = {
+      canonicalName: "clear broth",
+      quantity: 250,
+      unit: "ml",
+    };
+    expect(getEffectivePortionG(item)).toBe(250);
+  });
+
+  it("l converts correctly", () => {
+    const item: FoodItem = {
+      canonicalName: "clear broth",
+      quantity: 1.5,
+      unit: "l",
+    };
+    expect(getEffectivePortionG(item)).toBe(1500);
+  });
+
+  it("customPortions override static data", () => {
+    const item: FoodItem = { canonicalName: "toast", quantity: 4, unit: "sl" };
+    const custom = [{ label: "slice", weightG: 31.5 }];
+    expect(getEffectivePortionG(item, custom)).toBe(126);
+  });
+
+  it("unknown unit falls back to quantity as grams", () => {
+    const item: FoodItem = {
+      canonicalName: "toast",
+      quantity: 200,
+      unit: "blob",
+    };
+    expect(getEffectivePortionG(item)).toBe(200);
+  });
+
+  it("no quantity falls back to defaultPortionG", () => {
+    const item: FoodItem = {
+      canonicalName: "toast",
+      quantity: null,
+      unit: "g",
+    };
+    // toast defaultPortionG = 30
+    expect(getEffectivePortionG(item)).toBe(30);
+  });
+
+  it("no quantity and no unit falls back to defaultPortionG", () => {
+    const item: FoodItem = {
+      canonicalName: "toast",
+      quantity: null,
+      unit: null,
+    };
+    expect(getEffectivePortionG(item)).toBe(30);
   });
 });

@@ -82,22 +82,92 @@ export function getCurrentMealSlot(now?: Date): MealSlot {
 }
 
 // ---------------------------------------------------------------------------
-// Internal: resolve portion weight for a food item
+// Unit alias normalization
+// ---------------------------------------------------------------------------
+
+const UNIT_ALIASES: Record<string, string> = {
+  sl: "slice",
+  slices: "slice",
+  slice: "slice",
+  pc: "piece",
+  pcs: "piece",
+  pieces: "piece",
+  piece: "piece",
+  cup: "cup",
+  cups: "cup",
+  tbsp: "tablespoon",
+  tablespoon: "tablespoon",
+  tablespoons: "tablespoon",
+  tsp: "teaspoon",
+  teaspoon: "teaspoon",
+  teaspoons: "teaspoon",
+};
+
+function normalizeUnitLabel(label: string): string {
+  const l = label.toLowerCase().trim();
+  return UNIT_ALIASES[l] ?? l;
+}
+
+function lookupDefaultPortionG(canonicalName: string): number {
+  return FOOD_PORTION_DATA.get(canonicalName)?.defaultPortionG ?? 0;
+}
+
+// ---------------------------------------------------------------------------
+// Resolve portion weight for a food item (unit-aware)
 // ---------------------------------------------------------------------------
 
 /**
  * Get the effective portion weight in grams for a food item.
- * Uses item.quantity if present, otherwise falls back to
- * FOOD_PORTION_DATA.defaultPortionG, or 0 if no data exists.
+ *
+ * Handles weight units (g, kg, oz, lb), volume units (ml, l), and discrete
+ * units (sl, pc, cup, tbsp, tsp) via a customPortions-first lookup chain:
+ *   1. customPortions array (user overrides)
+ *   2. FOOD_PORTION_DATA.unitWeightG (static registry)
+ *   3. Treat quantity as grams (best guess)
+ *
+ * Falls back to FOOD_PORTION_DATA.defaultPortionG when no quantity is given.
  */
-function getEffectivePortionG(item: FoodItem): number {
-  if (item.quantity != null && item.quantity > 0) {
-    return item.quantity;
+export function getEffectivePortionG(
+  item: FoodItem,
+  customPortions?: Array<{ label: string; weightG: number }>,
+): number {
+  const qty = item.quantity != null && item.quantity > 0 ? item.quantity : null;
+  const unit = item.unit?.toLowerCase().trim() ?? "";
+
+  // Direct weight units — return as grams
+  if (unit === "g" || unit === "") return qty ?? lookupDefaultPortionG(item.canonicalName ?? "");
+  if (unit === "kg") return (qty ?? 0) * 1000;
+  if (unit === "oz") return (qty ?? 0) * 28.3495;
+  if (unit === "lb") return (qty ?? 0) * 453.592;
+
+  // Volume units — return as ml (treated as grams for water-density foods)
+  if (unit === "ml") return qty ?? lookupDefaultPortionG(item.canonicalName ?? "");
+  if (unit === "l") return (qty ?? 0) * 1000;
+
+  // Discrete units (sl, pc, cup, tbsp, tsp, etc.) — customPortions-first lookup chain
+  if (qty != null) {
+    // 1. Check customPortions for matching label
+    if (customPortions) {
+      const match = customPortions.find(
+        (p) => normalizeUnitLabel(p.label) === normalizeUnitLabel(unit),
+      );
+      if (match) return qty * match.weightG;
+    }
+    // 2. Fallback to static FOOD_PORTION_DATA unitWeightG — only when the unit
+    //    is a recognized discrete alias or matches the food's naturalUnit
+    const portionData = FOOD_PORTION_DATA.get(item.canonicalName ?? "");
+    if (portionData?.unitWeightG) {
+      const normalizedUnit = normalizeUnitLabel(unit);
+      const isKnownDiscrete = normalizedUnit !== unit || UNIT_ALIASES[unit] !== undefined;
+      const matchesNatural =
+        portionData.naturalUnit && normalizeUnitLabel(portionData.naturalUnit) === normalizedUnit;
+      if (isKnownDiscrete || matchesNatural) return qty * portionData.unitWeightG;
+    }
+    // 3. Final fallback: treat as grams (best guess)
+    return qty;
   }
-  const canonical = item.canonicalName;
-  if (canonical == null) return 0;
-  const portionData = FOOD_PORTION_DATA.get(canonical);
-  return portionData?.defaultPortionG ?? 0;
+
+  return lookupDefaultPortionG(item.canonicalName ?? "");
 }
 
 // ---------------------------------------------------------------------------
@@ -416,12 +486,7 @@ export function getItemMacros(item: FoodItem): {
   const portionData = FOOD_PORTION_DATA.get(canonical);
   if (!portionData) return { ...ZERO_ITEM_MACROS };
 
-  let portionG = 0;
-  if (item.quantity != null && item.quantity > 0) {
-    portionG = item.quantity;
-  } else {
-    portionG = portionData.defaultPortionG;
-  }
+  const portionG = getEffectivePortionG(item);
 
   const macros = computeMacrosForPortion(canonical, portionG);
   return { ...macros, portionG };

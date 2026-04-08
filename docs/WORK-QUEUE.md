@@ -56,10 +56,10 @@
 | W0-T03 | Add productId to logs table                             | 0    | —              | done    | 33e17cc |
 | W0-T04 | Extend foodLibrary for composite meals                  | 0    | —              | done    | 33e17cc |
 | W0-T05 | Add foodFavouriteSlotTags to profiles                   | 0    | —              | done    | 33e17cc |
-| W1-T01 | Fix getEffectivePortionG to be unit-aware               | 1    | W0-T02         | pending |         |
-| W1-T02 | Fix buildStagedNutritionLogData to preserve units       | 1    | W1-T01         | pending |         |
-| W1-T03 | Fix buildPortionText display for discrete units         | 1    | W1-T01         | pending |         |
-| W1-T04 | Create useFoodData hook (Convex-first, static fallback) | 1    | W0-T01, W0-T02 | pending |         |
+| W1-T01 | Fix getEffectivePortionG to be unit-aware               | 1    | W0-T02         | done    | pending |
+| W1-T02 | Fix buildStagedNutritionLogData to preserve units       | 1    | W1-T01         | done    | pending |
+| W1-T03 | Fix buildPortionText display for discrete units         | 1    | W1-T01         | done    | pending |
+| W1-T04 | Create useFoodData hook (Convex-first, static fallback) | 1    | W0-T01, W0-T02 | done    | pending |
 | W2-T01 | Registry → clinicalRegistry seed script                 | 2    | W0-T01         | pending |         |
 | W2-T02 | Seed ~30 post-surgery foods                             | 2    | W2-T01         | pending |         |
 | W2-T03 | Seed Coffee + Toast meal templates                      | 2    | W0-T04, W2-T02 | pending |         |

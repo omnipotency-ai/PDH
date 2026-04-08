@@ -83,6 +83,15 @@ Focus on changed files only. Don't review unchanged code.
 - Batch processing opportunities (e.g., multiple Convex calls that could be a single function)
 - No memory leaks (uncleaned subscriptions, event listeners, intervals)
 
+**Product/UX (MODERATE–HIGH):**
+
+- UI elements that imply features not yet built (buttons, icons, menu items that do nothing or lead nowhere) — erodes user trust (HIGH)
+- Unused or partially-wired features: state/refs/handlers built but never connected to UI, or UI that calls stubs (HIGH)
+- Empty states missing or unhelpful (e.g., blank screen instead of "no data yet" message)
+- Destructive actions without confirmation (delete, clear, reset)
+- Loading/error states missing or misleading (showing "saved" when nothing happened)
+- Inconsistent terminology between UI labels and domain concepts
+
 **Quality (varies):**
 
 - `any` types or unsafe type assertions (HIGH)
@@ -94,12 +103,12 @@ Focus on changed files only. Don't review unchanged code.
 
 ### 4. Categorize Each Finding
 
-| Severity     | Criteria                          | Example                                              |
-| ------------ | --------------------------------- | ---------------------------------------------------- |
-| CRITICAL     | Security vulnerability or breakage | Auth bypass in Convex function, secret in source     |
-| HIGH         | Significant bug, clear fix         | `Date.now()` in mutation, unhandled action error     |
-| MODERATE     | Tech debt, not urgent              | Missing index on growing table, duplicate code       |
-| NICE-TO-HAVE | Improvement                        | Better naming, added comment                         |
+| Severity     | Criteria                           | Example                                          |
+| ------------ | ---------------------------------- | ------------------------------------------------ |
+| CRITICAL     | Security vulnerability or breakage | Auth bypass in Convex function, secret in source |
+| HIGH         | Significant bug, clear fix         | `Date.now()` in mutation, unhandled action error |
+| MODERATE     | Tech debt, not urgent              | Missing index on growing table, duplicate code   |
+| NICE-TO-HAVE | Improvement                        | Better naming, added comment                     |
 
 ### 5. Output Format
 

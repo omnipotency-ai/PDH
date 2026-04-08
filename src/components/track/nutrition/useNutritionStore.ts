@@ -43,6 +43,8 @@ export interface StagedItem {
   naturalUnit?: string;
   /** Grams per natural unit. */
   unitWeightG?: number;
+  /** Link to ingredientProfiles entry, if selected from user's catalog. */
+  productId?: string;
   /** Computed from portionG + FOOD_PORTION_DATA. */
   calories: number;
   /** Computed protein grams. */

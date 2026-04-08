@@ -20,6 +20,8 @@ You handle all testing for a React + Vite + Convex + Clerk application. You writ
 
 **Tests must verify real behavior.** Ask yourself: "If the implementation was completely wrong but returned the right type, would this test catch it?" If no, the test is useless.
 
+**Try to break the function.** After writing happy-path and contract tests, switch to adversarial mode. Ask: "What inputs would make this function do something surprising?" Look for inputs where the function's assumptions collide — a valid value that also matches an internal keyword, a boundary that off-by-ones, a combination that triggers two rules at once. The goal is to find bugs, not confirm the code works. If you find a real bug, document it clearly in the test name and a comment.
+
 **Don't copy bad patterns.** Existing tests in the codebase may violate these rules. These rules win. Always.
 
 ## Test Layers
@@ -173,7 +175,7 @@ bun run test && bunx playwright test
 
 ## What to Test at Each Layer
 
-### Convex Tests (convex/*.test.ts)
+### Convex Tests (convex/\*.test.ts)
 
 - Auth enforcement (authenticated + unauthenticated)
 - Data scoping between users
@@ -183,7 +185,7 @@ bun run test && bunx playwright test
 - Error states (not found, unauthorized, invalid)
 - Data integrity after mutations
 
-### Playwright E2E Tests (e2e/*.spec.ts)
+### Playwright E2E Tests (e2e/\*.spec.ts)
 
 - User can complete key flows (create, edit, delete, navigate)
 - Auth gates work (redirects, protected routes)

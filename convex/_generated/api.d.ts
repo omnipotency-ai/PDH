@@ -35,6 +35,7 @@ import type * as logs from "../logs.js";
 import type * as migrations from "../migrations.js";
 import type * as profileMutations from "../profileMutations.js";
 import type * as profiles from "../profiles.js";
+import type * as search from "../search.js";
 import type * as seedTestData from "../seedTestData.js";
 import type * as testFixtures from "../testFixtures.js";
 import type * as validators from "../validators.js";
@@ -74,6 +75,7 @@ declare const fullApi: ApiFromModules<{
   migrations: typeof migrations;
   profileMutations: typeof profileMutations;
   profiles: typeof profiles;
+  search: typeof search;
   seedTestData: typeof seedTestData;
   testFixtures: typeof testFixtures;
   validators: typeof validators;
