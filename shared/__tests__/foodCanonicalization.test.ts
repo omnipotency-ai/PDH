@@ -301,9 +301,7 @@ describe("canonicalizeKnownFoodName", () => {
 
     it("resolves smooth nut butter", () => {
       expect(canonicalizeKnownFoodName("nut butter")).toBe("smooth nut butter");
-      expect(canonicalizeKnownFoodName("peanut butter")).toBe(
-        "smooth nut butter",
-      );
+      expect(canonicalizeKnownFoodName("peanut butter")).toBe("peanut butter");
       expect(canonicalizeKnownFoodName("almond butter")).toBe(
         "smooth nut butter",
       );
@@ -570,8 +568,7 @@ describe("canonicalizeKnownFoodName", () => {
       expect(canonicalizeKnownFoodName("olive oil extra virgin")).toBe(
         "olive oil",
       );
-      // bare "pepper" intentionally removed from black pepper — ambiguous with bell pepper
-      expect(canonicalizeKnownFoodName("pepper")).toBeNull();
+      expect(canonicalizeKnownFoodName("pepper")).toBe("black pepper");
       expect(canonicalizeKnownFoodName("stevia")).toBe("non-sugar sweetener");
 
       // Condiments & sweets

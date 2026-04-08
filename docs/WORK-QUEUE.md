@@ -60,10 +60,10 @@
 | W1-T02 | Fix buildStagedNutritionLogData to preserve units       | 1    | W1-T01         | done    | e51f4e6 |
 | W1-T03 | Fix buildPortionText display for discrete units         | 1    | W1-T01         | done    | e51f4e6 |
 | W1-T04 | Create useFoodData hook (Convex-first, static fallback) | 1    | W0-T01, W0-T02 | done    | e51f4e6 |
-| W2-T01 | Registry → clinicalRegistry seed script                 | 2    | W0-T01         | pending |         |
-| W2-T02 | Seed ~30 post-surgery foods                             | 2    | W2-T01         | pending |         |
-| W2-T03 | Seed Coffee + Toast meal templates                      | 2    | W0-T04, W2-T02 | pending |         |
-| W2-T04 | Favourite slot auto-tag mutation                        | 2    | W0-T05         | pending |         |
+| W2-T01 | Registry → clinicalRegistry seed script                 | 2    | W0-T01         | done    |         |
+| W2-T02 | Seed ~30 post-surgery foods                             | 2    | W2-T01         | done    |         |
+| W2-T03 | Seed Coffee + Toast meal templates                      | 2    | W0-T04, W2-T02 | done    |         |
+| W2-T04 | Favourite slot auto-tag mutation                        | 2    | W0-T05         | done    |         |
 | W3-T01 | Page stubs: Home, Food, Insights                        | 3    | —              | pending |         |
 | W3-T02 | 4-tab bottom nav layout                                 | 3    | W3-T01         | pending |         |
 | W3-T03 | /patterns → /insights redirect                          | 3    | W3-T02         | pending |         |

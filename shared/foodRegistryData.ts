@@ -82,20 +82,9 @@ export type FoodSubcategory =
   | "alcohol"
   | "fizzy_drink";
 
-export type FoodRiskLevel =
-  | "none"
-  | "low"
-  | "low_moderate"
-  | "moderate"
-  | "moderate_high"
-  | "high";
+export type FoodRiskLevel = "none" | "low" | "low_moderate" | "moderate" | "moderate_high" | "high";
 
-export type FoodResidueLevel =
-  | "very_low"
-  | "low"
-  | "low_moderate"
-  | "moderate"
-  | "high";
+export type FoodResidueLevel = "very_low" | "low" | "low_moderate" | "moderate" | "high";
 
 export type FoodGasLevel = "no" | "possible" | "yes";
 export type FoodDryTextureLevel = "no" | "low" | "yes";
@@ -175,8 +164,7 @@ const ZONE_1A: ReadonlyArray<FoodRegistryEntry> = [
       "clear soup",
       "stock",
     ],
-    notes:
-      "Clear, strained liquid only. No solids, cream, or blended vegetables.",
+    notes: "Clear, strained liquid only. No solids, cream, or blended vegetables.",
   },
   {
     canonical: "gelatin dessert",
@@ -197,8 +185,7 @@ const ZONE_1A: ReadonlyArray<FoodRegistryEntry> = [
       "jelly pot",
       "gelatin cup",
     ],
-    notes:
-      "Smooth gelatin dessert only. No fruit pieces, seeds, cream, or layered toppings.",
+    notes: "Smooth gelatin dessert only. No fruit pieces, seeds, cream, or layered toppings.",
   },
   {
     canonical: "smooth soup",
@@ -565,11 +552,7 @@ const ZONE_1B: ReadonlyArray<FoodRegistryEntry> = [
     group: "protein",
     line: "eggs_dairy",
     lineOrder: 4,
-    examples: [
-      "cottage cheese",
-      "low fat cottage cheese",
-      "smooth cottage cheese",
-    ],
+    examples: ["cottage cheese", "low fat cottage cheese", "smooth cottage cheese"],
     notes: "Soft, smooth, high protein, low fat. Easy to digest.",
   },
   {
@@ -591,8 +574,7 @@ const ZONE_1B: ReadonlyArray<FoodRegistryEntry> = [
       "crème anglaise",
       "creme anglaise",
     ],
-    notes:
-      "Smooth milk-and-egg custard only. No pastry shells, dried fruit, or baked skins.",
+    notes: "Smooth milk-and-egg custard only. No pastry shells, dried fruit, or baked skins.",
   },
 
   // ── grains ──
@@ -622,8 +604,7 @@ const ZONE_1B: ReadonlyArray<FoodRegistryEntry> = [
       "rice soup (rice)",
       "sm bowl white rice soup (rice)",
     ],
-    notes:
-      "Well-cooked, plain. Any white rice variety. Congee counts here — very well-cooked.",
+    notes: "Well-cooked, plain. Any white rice variety. Congee counts here — very well-cooked.",
   },
   {
     canonical: "toast",
@@ -700,6 +681,9 @@ const ZONE_1B: ReadonlyArray<FoodRegistryEntry> = [
       "french bread",
       "soft white bread slice",
       "wrap",
+      "wraps",
+      "plain wrap",
+      "tortilla wrap",
       "flat bread tortilla",
       "wrap (flat bread tortilla)",
       "hamburger bun",
@@ -732,8 +716,7 @@ const ZONE_1B: ReadonlyArray<FoodRegistryEntry> = [
       "cooked pasta",
       "boiled pasta",
     ],
-    notes:
-      "White/refined pasta only, well-cooked. No wholemeal pasta (Zone 3).",
+    notes: "White/refined pasta only, well-cooked. No wholemeal pasta (Zone 3).",
   },
   {
     canonical: "rice cracker",
@@ -836,8 +819,7 @@ const ZONE_1B: ReadonlyArray<FoodRegistryEntry> = [
       "couscous soft",
       "fine couscous",
     ],
-    notes:
-      "Plain, fine couscous cooked very soft. No herbs, seeds, or vegetables.",
+    notes: "Plain, fine couscous cooked very soft. No herbs, seeds, or vegetables.",
     osmoticEffect: "low",
     totalResidue: "low",
     fiberTotalApproxG: 1,
@@ -866,8 +848,7 @@ const ZONE_1B: ReadonlyArray<FoodRegistryEntry> = [
       "fine polenta",
       "polenta soft",
     ],
-    notes:
-      "Plain, fine polenta cooked until spoon-soft. No cheese, herbs, or coarse grit.",
+    notes: "Plain, fine polenta cooked until spoon-soft. No cheese, herbs, or coarse grit.",
     osmoticEffect: "low",
     totalResidue: "low",
     fiberTotalApproxG: 1,
@@ -903,8 +884,7 @@ const ZONE_1B: ReadonlyArray<FoodRegistryEntry> = [
       "potato puree",
       "potato purée",
     ],
-    notes:
-      "Peeled, well-cooked, mashed smooth. Small amount of butter or milk is fine.",
+    notes: "Peeled, well-cooked, mashed smooth. Small amount of butter or milk is fine.",
   },
   {
     canonical: "mashed root vegetable",
@@ -985,8 +965,7 @@ const ZONE_1B: ReadonlyArray<FoodRegistryEntry> = [
       "stewed apple without skin",
       "peeled cooked apple",
     ],
-    notes:
-      "Peeled, stewed or cooked until soft. No raw apple (high fibre, firm texture).",
+    notes: "Peeled, stewed or cooked until soft. No raw apple (high fibre, firm texture).",
   },
   {
     canonical: "canned pear",
@@ -1010,8 +989,7 @@ const ZONE_1B: ReadonlyArray<FoodRegistryEntry> = [
       "poached pear",
       "poached pears",
     ],
-    notes:
-      "Canned/tinned in juice, or freshly stewed, peeled. Very low residue.",
+    notes: "Canned/tinned in juice, or freshly stewed, peeled. Very low residue.",
   },
   {
     canonical: "canned peach",
@@ -1032,8 +1010,7 @@ const ZONE_1B: ReadonlyArray<FoodRegistryEntry> = [
       "tinned apricot",
       "canned nectarine",
     ],
-    notes:
-      "Canned/tinned in juice. Soft, very low residue. Zone changed from 2 to 1B.",
+    notes: "Canned/tinned in juice. Soft, very low residue. Zone changed from 2 to 1B.",
   },
 
   // ── oils ──
@@ -1173,6 +1150,7 @@ const ZONE_2: ReadonlyArray<FoodRegistryEntry> = [
       "grilled turkey",
       "baked turkey",
       "grilled chicken breast",
+      "lean chicken breast",
       "grilled chicken fillet",
       "baked chicken breast",
       "roasted chicken breast",
@@ -1189,6 +1167,8 @@ const ZONE_2: ReadonlyArray<FoodRegistryEntry> = [
       "cold turkey",
       "turkey breast",
       "roasted turkey",
+      "lean meat",
+      "lean white meat",
     ],
     notes:
       "Dry-heat chicken or turkey (grilled, baked, roasted, air-fried) with little or no added fat. No skin. Distinct from Zone 1 boiled white meat (moist-heat).",
@@ -1215,8 +1195,7 @@ const ZONE_2: ReadonlyArray<FoodRegistryEntry> = [
       "baked sole",
       "fish in foil",
     ],
-    notes:
-      "White fish with small amount of butter or oil. Distinct from Zone 1 boiled fish.",
+    notes: "White fish with small amount of butter or oil. Distinct from Zone 1 boiled fish.",
   },
   {
     canonical: "lean minced meat",
@@ -1448,14 +1427,7 @@ const ZONE_2: ReadonlyArray<FoodRegistryEntry> = [
     group: "protein",
     line: "vegetable_protein",
     lineOrder: 1,
-    examples: [
-      "tofu",
-      "plain tofu",
-      "silken tofu",
-      "soft tofu",
-      "firm tofu",
-      "steamed tofu",
-    ],
+    examples: ["tofu", "plain tofu", "silken tofu", "soft tofu", "firm tofu", "steamed tofu"],
     notes:
       "Plain tofu only. Soft soy protein without the skins and fibre load of whole legumes. No fried, smoked, or spicy tofu dishes.",
   },
@@ -1698,14 +1670,8 @@ const ZONE_2: ReadonlyArray<FoodRegistryEntry> = [
     group: "carbs",
     line: "vegetables",
     lineOrder: 4,
-    examples: [
-      "boiled carrot",
-      "steamed carrot",
-      "carrot sticks cooked",
-      "soft cooked carrot",
-    ],
-    notes:
-      "Boiled, not pureed. Distinct from Zone 1B mashed root vegetable (pureed).",
+    examples: ["boiled carrot", "steamed carrot", "carrot sticks cooked", "soft cooked carrot"],
+    notes: "Boiled, not pureed. Distinct from Zone 1B mashed root vegetable (pureed).",
   },
   {
     canonical: "baked potato",
@@ -1734,14 +1700,8 @@ const ZONE_2: ReadonlyArray<FoodRegistryEntry> = [
     group: "carbs",
     line: "vegetables",
     lineOrder: 6,
-    examples: [
-      "sweet potato",
-      "baked sweet potato",
-      "boiled sweet potato",
-      "yam",
-    ],
-    notes:
-      "Peeled, well-cooked. No skin. Mashed/pureed sweet potato has its own Zone 1B entry.",
+    examples: ["sweet potato", "baked sweet potato", "boiled sweet potato", "yam"],
+    notes: "Peeled, well-cooked. No skin. Mashed/pureed sweet potato has its own Zone 1B entry.",
   },
   {
     canonical: "cooked pumpkin",
@@ -1753,6 +1713,7 @@ const ZONE_2: ReadonlyArray<FoodRegistryEntry> = [
     line: "vegetables",
     lineOrder: 7,
     examples: [
+      "pumpkin",
       "baked pumpkin",
       "roasted pumpkin",
       "baked butternut squash",
@@ -1761,8 +1722,7 @@ const ZONE_2: ReadonlyArray<FoodRegistryEntry> = [
       "boiled pumpkin",
       "steamed butternut squash",
     ],
-    notes:
-      "Boiled/baked pumpkin (not pureed — pureed is under mashed root vegetable in Zone 1B).",
+    notes: "Boiled/baked pumpkin (not pureed — pureed is under mashed root vegetable in Zone 1B).",
   },
   {
     canonical: "courgette",
@@ -1782,8 +1742,7 @@ const ZONE_2: ReadonlyArray<FoodRegistryEntry> = [
       "peeled courgette",
       "courgette without skin",
     ],
-    notes:
-      "Peeled, well-cooked. Skin can be included if very well cooked and soft.",
+    notes: "Peeled, well-cooked. Skin can be included if very well cooked and soft.",
   },
   {
     canonical: "peeled cucumber",
@@ -1794,12 +1753,7 @@ const ZONE_2: ReadonlyArray<FoodRegistryEntry> = [
     group: "carbs",
     line: "vegetables",
     lineOrder: 9,
-    examples: [
-      "peeled cucumber",
-      "cucumber without skin",
-      "deseeded cucumber",
-      "cucumber flesh",
-    ],
+    examples: ["peeled cucumber", "cucumber without skin", "deseeded cucumber", "cucumber flesh"],
     notes:
       "Peeled and de-seeded only. Cucumber with skin stays in Zone 3. Exception to the no-raw-vegetables guidance: peeled, de-seeded cucumber is >95% water with near-zero fiber.",
   },
@@ -1842,8 +1796,7 @@ const ZONE_2: ReadonlyArray<FoodRegistryEntry> = [
       "passata",
       "strained tomato",
     ],
-    notes:
-      "Peeled and de-seeded, or canned/passata. No raw tomato with skin or seeds.",
+    notes: "Peeled and de-seeded, or canned/passata. No raw tomato with skin or seeds.",
   },
   {
     canonical: "cooked bell pepper",
@@ -1895,13 +1848,7 @@ const ZONE_2: ReadonlyArray<FoodRegistryEntry> = [
     line: "vegetables",
     // lineOrder 10: parsnip is well-tolerated early in vegetable reintroduction
     lineOrder: 10,
-    examples: [
-      "parsnip",
-      "cooked parsnip",
-      "boiled parsnip",
-      "roasted parsnip",
-      "mashed parsnip",
-    ],
+    examples: ["parsnip", "cooked parsnip", "boiled parsnip", "roasted parsnip", "mashed parsnip"],
     notes: "Peeled, well-cooked.",
   },
   {
@@ -1923,8 +1870,7 @@ const ZONE_2: ReadonlyArray<FoodRegistryEntry> = [
       "cauliflower mash",
       "mashed cauliflower",
     ],
-    notes:
-      "Florets only, no tough stalks, well-cooked. End of Zone 2 — gassy but tolerable.",
+    notes: "Florets only, no tough stalks, well-cooked. End of Zone 2 — gassy but tolerable.",
     gasProducing: "yes",
   },
 
@@ -1938,14 +1884,7 @@ const ZONE_2: ReadonlyArray<FoodRegistryEntry> = [
     group: "carbs",
     line: "fruit",
     lineOrder: 5,
-    examples: [
-      "melon",
-      "honeydew melon",
-      "cantaloupe",
-      "rockmelon",
-      "watermelon",
-      "ripe melon",
-    ],
+    examples: ["melon", "honeydew melon", "cantaloupe", "rockmelon", "watermelon", "ripe melon"],
     notes: "Ripe, no skin. Low fibre, very high water content.",
   },
   {
@@ -1957,15 +1896,8 @@ const ZONE_2: ReadonlyArray<FoodRegistryEntry> = [
     group: "carbs",
     line: "fruit",
     lineOrder: 6,
-    examples: [
-      "mango",
-      "ripe mango",
-      "fresh mango",
-      "mango flesh",
-      "sliced mango",
-    ],
-    notes:
-      "Ripe, no skin. Good source of soluble fibre — tolerated well in Zone 2.",
+    examples: ["mango", "ripe mango", "fresh mango", "mango flesh", "sliced mango"],
+    notes: "Ripe, no skin. Good source of soluble fibre — tolerated well in Zone 2.",
   },
   {
     canonical: "peeled apple",
@@ -1976,12 +1908,7 @@ const ZONE_2: ReadonlyArray<FoodRegistryEntry> = [
     group: "carbs",
     line: "fruit",
     lineOrder: 7,
-    examples: [
-      "peeled apple",
-      "apple without skin",
-      "skinless apple",
-      "apple peeled",
-    ],
+    examples: ["peeled apple", "apple without skin", "skinless apple", "apple peeled"],
     notes:
       "Peeled raw apple — skin removed reduces insoluble fibre. Easier to digest than raw apple with skin (Zone 3), harder than stewed apple (Zone 1).",
   },
@@ -2004,8 +1931,7 @@ const ZONE_2: ReadonlyArray<FoodRegistryEntry> = [
       "cooking oil",
       "neutral oil",
     ],
-    notes:
-      "For cooking. Small amounts only. Coconut oil has its own Zone 3 entry under coconut.",
+    notes: "For cooking. Small amounts only. Coconut oil has its own Zone 3 entry under coconut.",
   },
 
   // ── dairy_fats ──
@@ -2051,8 +1977,7 @@ const ZONE_2: ReadonlyArray<FoodRegistryEntry> = [
       "lactose-free cream cheese",
       "dairy free cream cheese",
     ],
-    notes:
-      "Soft, smooth dairy. Ricotta and quark included — lower fat than cream cheese.",
+    notes: "Soft, smooth dairy. Ricotta and quark included — lower fat than cream cheese.",
   },
   {
     canonical: "hard cheese",
@@ -2064,6 +1989,7 @@ const ZONE_2: ReadonlyArray<FoodRegistryEntry> = [
     line: "dairy_fats",
     lineOrder: 3,
     examples: [
+      "cheese",
       "four cheeses",
       "cheddar",
       "cheddar cheese",
@@ -2097,8 +2023,7 @@ const ZONE_2: ReadonlyArray<FoodRegistryEntry> = [
       "crème fraîche",
       "sour cream",
     ],
-    notes:
-      "Small amounts in cooking only. High fat — too much can worsen loose stools.",
+    notes: "Small amounts in cooking only. High fat — too much can worsen loose stools.",
   },
   {
     canonical: "plain ice cream",
@@ -2109,13 +2034,7 @@ const ZONE_2: ReadonlyArray<FoodRegistryEntry> = [
     group: "fats",
     line: "dairy_fats",
     lineOrder: 6,
-    examples: [
-      "ice cream",
-      "plain ice cream",
-      "vanilla ice cream",
-      "dairy ice cream",
-      "gelato",
-    ],
+    examples: ["ice cream", "plain ice cream", "vanilla ice cream", "dairy ice cream", "gelato"],
     notes:
       "Plain vanilla or similar. Small portion. High fat and sugar — limit to occasional small serving.",
   },
@@ -2130,15 +2049,27 @@ const ZONE_2: ReadonlyArray<FoodRegistryEntry> = [
     group: "fats",
     line: "nuts_seeds",
     lineOrder: 1,
-    examples: [
-      "avocado",
-      "ripe avocado",
-      "avocado flesh",
-      "mashed avocado",
-      "smashed avocado",
-    ],
+    examples: ["avocado", "ripe avocado", "avocado flesh", "mashed avocado", "smashed avocado"],
     notes:
       "Primarily healthy monounsaturated fat. Small portions — high fat content can increase output if eaten in large amounts. Moved from fruit to nuts_seeds.",
+  },
+  {
+    canonical: "peanut butter",
+    zone: 2,
+    category: "fat",
+    subcategory: "nut_seed",
+    macros: ["fat", "protein"],
+    group: "fats",
+    line: "nuts_seeds",
+    lineOrder: 7,
+    examples: [
+      "peanut butter",
+      "smooth peanut butter",
+      "creamy peanut butter",
+      "natural peanut butter",
+    ],
+    notes:
+      "Smooth peanut butter only — no crunchy or seeded styles. Split out from the broader nut-butter bucket because it is a core post-surgery staple and a dedicated meal-template modifier.",
   },
   {
     canonical: "smooth nut butter",
@@ -2151,8 +2082,6 @@ const ZONE_2: ReadonlyArray<FoodRegistryEntry> = [
     lineOrder: 2,
     examples: [
       "nut butter",
-      "peanut butter",
-      "smooth peanut butter",
       "almond butter",
       "smooth almond butter",
       "cashew butter",
@@ -2173,13 +2102,7 @@ const ZONE_2: ReadonlyArray<FoodRegistryEntry> = [
     group: "seasoning",
     line: "sauces_condiments",
     lineOrder: 2,
-    examples: [
-      "soy sauce",
-      "soya sauce",
-      "tamari",
-      "light soy sauce",
-      "low sodium soy sauce",
-    ],
+    examples: ["soy sauce", "soya sauce", "tamari", "light soy sauce", "low sodium soy sauce"],
     notes: "Small amounts. Tamari is gluten-free equivalent.",
   },
   {
@@ -2201,8 +2124,7 @@ const ZONE_2: ReadonlyArray<FoodRegistryEntry> = [
       "ketchup",
       "tomato ketchup",
     ],
-    notes:
-      "Smooth only — no chunks, seeds, or garlic/onion. Ketchup in small amounts.",
+    notes: "Smooth only — no chunks, seeds, or garlic/onion. Ketchup in small amounts.",
   },
   {
     canonical: "mild mustard",
@@ -2273,13 +2195,7 @@ const ZONE_2: ReadonlyArray<FoodRegistryEntry> = [
     group: "seasoning",
     line: "sauces_condiments",
     lineOrder: 7,
-    examples: [
-      "honey",
-      "runny honey",
-      "clear honey",
-      "honey drizzle",
-      "teaspoon of honey",
-    ],
+    examples: ["honey", "runny honey", "clear honey", "honey drizzle", "teaspoon of honey"],
     notes:
       "Small amounts as a smooth sweetener or spread. Concentrated sugar load, so treat as a condiment not a free food.",
   },
@@ -2308,6 +2224,27 @@ const ZONE_2: ReadonlyArray<FoodRegistryEntry> = [
     notes:
       "Smooth or seedless fruit spread only. Keep this separate from gelatin dessert and from chunky preserves with skins or seeds.",
   },
+  {
+    canonical: "sugar",
+    zone: 2,
+    category: "condiment",
+    subcategory: "sugar",
+    macros: ["carbohydrate"],
+    group: "seasoning",
+    line: "sauces_condiments",
+    lineOrder: 13,
+    examples: [
+      "sugar",
+      "table sugar",
+      "white sugar",
+      "caster sugar",
+      "granulated sugar",
+      "brown sugar",
+      "teaspoon of sugar",
+    ],
+    notes:
+      "Plain added sugar used in tea, coffee, and simple spreads. Keep separate from non-sugar sweeteners and from naturally sugary foods such as jam or juice.",
+  },
 
   // ── herbs_spices ──
   {
@@ -2328,6 +2265,7 @@ const ZONE_2: ReadonlyArray<FoodRegistryEntry> = [
       "tarragon",
       "dried parsley",
       "dried chives",
+      "herbs",
       "mixed herbs",
       "herbes de provence",
       "bay leaf",
@@ -2414,6 +2352,7 @@ const ZONE_2: ReadonlyArray<FoodRegistryEntry> = [
     line: "vegetables",
     lineOrder: 27,
     examples: [
+      "potato",
       "boiled potatoes",
       "boiled potato",
       "new potatoes",
@@ -2482,13 +2421,7 @@ const ZONE_2: ReadonlyArray<FoodRegistryEntry> = [
     group: "carbs",
     line: "fruit",
     lineOrder: 17,
-    examples: [
-      "grapes",
-      "green grapes",
-      "red grapes",
-      "black grapes",
-      "seedless grapes",
-    ],
+    examples: ["grapes", "green grapes", "red grapes", "black grapes", "seedless grapes"],
     notes:
       "Peeled or seedless preferred. Grape skin can be tough — peel if early in Zone 2. Moderate fructose.",
   },
@@ -2629,12 +2562,7 @@ const ZONE_3: ReadonlyArray<FoodRegistryEntry> = [
     group: "protein",
     line: "meat_fish",
     lineOrder: 12,
-    examples: [
-      "fish and chips",
-      "battered fish",
-      "deep fried fish",
-      "fish in batter",
-    ],
+    examples: ["fish and chips", "battered fish", "deep fried fish", "fish in batter"],
     notes: "Deep fried in batter.",
   },
   {
@@ -2646,12 +2574,7 @@ const ZONE_3: ReadonlyArray<FoodRegistryEntry> = [
     group: "protein",
     line: "meat_fish",
     lineOrder: 13,
-    examples: [
-      "chili con carne",
-      "bean chili",
-      "veggie chili",
-      "chilli con carne",
-    ],
+    examples: ["chili con carne", "bean chili", "veggie chili", "chilli con carne"],
     notes:
       "Composite dish: meat, legumes, spicy. Combines three Zone 3 ingredients: chili, garlic/onion, and legumes.",
   },
@@ -2799,8 +2722,7 @@ const ZONE_3: ReadonlyArray<FoodRegistryEntry> = [
       "brown toast",
       "wholewheat bread",
     ],
-    notes:
-      "High insoluble fibre. Move to Zone 3 when ready to reintroduce higher-fibre grains.",
+    notes: "High insoluble fibre. Move to Zone 3 when ready to reintroduce higher-fibre grains.",
   },
   {
     canonical: "brown rice",
@@ -2822,8 +2744,7 @@ const ZONE_3: ReadonlyArray<FoodRegistryEntry> = [
       "freekeh",
       "farro",
     ],
-    notes:
-      "Higher fibre than white rice. Quinoa and bulgur also included here.",
+    notes: "Higher fibre than white rice. Quinoa and bulgur also included here.",
   },
   {
     canonical: "sweet biscuit",
@@ -2980,8 +2901,7 @@ const ZONE_3: ReadonlyArray<FoodRegistryEntry> = [
       "oven roasted potato",
       "potatoes roasted in oil",
     ],
-    notes:
-      "Peeled, roasted with oil. Zone changed from 2 to 3 (roasted in fat).",
+    notes: "Peeled, roasted with oil. Zone changed from 2 to 3 (roasted in fat).",
   },
   {
     canonical: "broccoli",
@@ -3075,14 +2995,7 @@ const ZONE_3: ReadonlyArray<FoodRegistryEntry> = [
     group: "carbs",
     line: "vegetables",
     lineOrder: 21,
-    examples: [
-      "corn",
-      "sweetcorn",
-      "corn on the cob",
-      "sweet corn",
-      "corn kernels",
-      "popcorn",
-    ],
+    examples: ["corn", "sweetcorn", "corn on the cob", "sweet corn", "corn kernels", "popcorn"],
     notes:
       "Hulls pass through undigested — blockage risk even when cooked. Popcorn is also Zone 3.",
   },
@@ -3113,8 +3026,7 @@ const ZONE_3: ReadonlyArray<FoodRegistryEntry> = [
       "raw mushrooms",
       "spinach salad",
     ],
-    notes:
-      "Raw vegetables are consistently Zone 3 in post-surgical guidelines regardless of type.",
+    notes: "Raw vegetables are consistently Zone 3 in post-surgical guidelines regardless of type.",
   },
   {
     canonical: "mushrooms",
@@ -3149,13 +3061,7 @@ const ZONE_3: ReadonlyArray<FoodRegistryEntry> = [
     group: "carbs",
     line: "fruit",
     lineOrder: 8,
-    examples: [
-      "mandarin",
-      "tangerine",
-      "clementine",
-      "mandarin segments",
-      "satsuma",
-    ],
+    examples: ["mandarin", "tangerine", "clementine", "mandarin segments", "satsuma"],
     notes:
       "Fresh mandarin/tangerine/clementine. Zone 3 due to citrus acid. Canned mandarin has its own Zone 2 entry.",
   },
@@ -3360,15 +3266,8 @@ const ZONE_3: ReadonlyArray<FoodRegistryEntry> = [
     group: "fats",
     line: "dairy_fats",
     lineOrder: 8,
-    examples: [
-      "double cream",
-      "heavy cream",
-      "whipped cream",
-      "clotted cream",
-      "whipping cream",
-    ],
-    notes:
-      "Very high saturated fat. More concentrated than the Zone 2 single/cooking cream.",
+    examples: ["double cream", "heavy cream", "whipped cream", "clotted cream", "whipping cream"],
+    notes: "Very high saturated fat. More concentrated than the Zone 2 single/cooking cream.",
   },
 
   // ── nuts_seeds ──
@@ -3392,8 +3291,7 @@ const ZONE_3: ReadonlyArray<FoodRegistryEntry> = [
       "pecans",
       "macadamia",
     ],
-    notes:
-      "Blockage risk from skins. Smooth nut butters have their own Zone 2 entry.",
+    notes: "Blockage risk from skins. Smooth nut butters have their own Zone 2 entry.",
   },
   {
     canonical: "seeds",
@@ -3441,12 +3339,7 @@ const ZONE_3: ReadonlyArray<FoodRegistryEntry> = [
     group: "seasoning",
     line: "sauces_condiments",
     lineOrder: 9,
-    examples: [
-      "miso soup",
-      "plain miso soup",
-      "miso broth",
-      "strained miso soup",
-    ],
+    examples: ["miso soup", "plain miso soup", "miso broth", "strained miso soup"],
     notes:
       "Fermented soy broth. Keep separate from clear stock because it carries soy solids/seasoning and is often served with tofu, seaweed, or scallion.",
   },
@@ -3486,13 +3379,13 @@ const ZONE_3: ReadonlyArray<FoodRegistryEntry> = [
     lineOrder: 4,
     examples: [
       "black pepper",
+      "pepper",
       "lots of pepper",
       "freshly ground pepper",
       "cracked black pepper",
       "white pepper",
     ],
-    notes:
-      "Piperine in black pepper is a mild GI irritant. Zone changed from 2 to 3.",
+    notes: "Piperine in black pepper is a mild GI irritant. Zone changed from 2 to 3.",
   },
   {
     canonical: "garlic",
@@ -3670,15 +3563,7 @@ const ZONE_3: ReadonlyArray<FoodRegistryEntry> = [
     group: "carbs",
     line: "fruit",
     lineOrder: 19,
-    examples: [
-      "fig",
-      "figs",
-      "fresh fig",
-      "dried fig",
-      "fig roll",
-      "fig bar",
-      "fig newton",
-    ],
+    examples: ["fig", "figs", "fresh fig", "dried fig", "fig roll", "fig bar", "fig newton"],
     notes:
       "Very high fiber and full of small seeds. Both fresh and dried are Zone 3. Dried figs are especially high in concentrated fiber and fructose. A common natural laxative.",
   },
@@ -3691,12 +3576,7 @@ const ZONE_3: ReadonlyArray<FoodRegistryEntry> = [
     group: "carbs",
     line: "fruit",
     lineOrder: 20,
-    examples: [
-      "pomegranate",
-      "pomegranate seeds",
-      "pomegranate arils",
-      "pomegranate juice",
-    ],
+    examples: ["pomegranate", "pomegranate seeds", "pomegranate arils", "pomegranate juice"],
     notes:
       "Seeds are the defining characteristic — hundreds of small seeds per fruit. Pomegranate juice (strained) may be tolerated earlier but whole seeds are a blockage concern.",
   },
@@ -4007,273 +3887,238 @@ const DEEP_FRIED_PROFILE: FoodDigestionMetadata = {
   lactoseRisk: "none",
 };
 
-const FOOD_ENTRY_ENRICHMENTS: ReadonlyMap<string, FoodEntryEnrichment> =
-  new Map([
-    [
-      "clear broth",
-      {
-        addExamples: [
-          "clear vegetable broth",
-          "clear chicken broth",
-          "clear beef broth",
-        ],
-        ...CLEAR_LIQUID_PROFILE,
-      },
-    ],
-    ["gelatin dessert", { ...SWEET_SNACK_PROFILE }],
-    [
-      "smooth soup",
-      {
-        addExamples: [
-          "clear strained tomato broth",
-          "strained vegetable soup",
-          "carrot and potato soup",
-          "strained chicken puree soup",
-        ],
-        ...SMOOTH_LIQUID_PROFILE,
-      },
-    ],
-    ["boiled fish", { ...LEAN_PROTEIN_PROFILE }],
-    ["boiled white meat", { ...LEAN_PROTEIN_PROFILE }],
-    ["plain yogurt", { addExamples: ["strained yogurt"], ...YOGURT_PROFILE }],
-    ["egg", { ...EGG_PROFILE }],
-    ["milk", { ...MILK_PROFILE }],
-    [
-      "cottage cheese",
-      {
-        ...SOFT_CHEESE_PROFILE,
-      },
-    ],
-    ["custard", { ...PUDDING_PROFILE }],
-    ["white rice", { ...REFINED_GRAIN_PROFILE }],
-    [
-      "toast",
-      {
-        ...DRY_REFINED_GRAIN_PROFILE,
-        highFatRisk: "low",
-      },
-    ],
-    ["white bread", { ...REFINED_GRAIN_PROFILE }],
-    [
-      "white pasta",
-      {
-        addExamples: ["plain macaroni", "plain spaghetti"],
-        ...REFINED_GRAIN_PROFILE,
-      },
-    ],
-    ["rice cracker", { ...DRY_REFINED_GRAIN_PROFILE }],
-    ["porridge", { ...PORRIDGE_PROFILE }],
-    ["noodles", { ...REFINED_GRAIN_PROFILE }],
-    [
-      "rice pudding",
-      { addExamples: ["tapioca pudding", "sago pudding"], ...PUDDING_PROFILE },
-    ],
-    ["mashed potato", { ...ROOT_VEG_PROFILE }],
-    ["mashed root vegetable", { ...ROOT_VEG_PROFILE }],
-    ["ripe banana", { ...SOFT_FRUIT_PROFILE }],
-    ["stewed apple", { ...SOFT_FRUIT_PROFILE }],
-    [
-      "canned pear",
-      {
-        addExamples: ["peeled soft pear", "pear puree"],
-        ...SOFT_FRUIT_PROFILE,
-      },
-    ],
-    [
-      "canned peach",
-      {
-        addExamples: [
-          "peeled ripe peach",
-          "peeled ripe nectarine",
-          "peeled ripe apricot",
-          "canned apricots in juice",
-        ],
-        ...SOFT_FRUIT_PROFILE,
-      },
-    ],
-    ["olive oil", { ...OIL_PROFILE }],
-    [
-      "grilled white meat",
-      {
-        addExamples: [
-          "grilled chicken breast lightly oiled",
-          "baked chicken breast no heavy crust",
-          "grilled turkey breast",
-          "roast turkey breast",
-        ],
-        ...DRY_HEAT_PROTEIN_PROFILE,
-      },
-    ],
-    [
-      "ham",
-      {
-        ...DRY_HEAT_PROTEIN_PROFILE,
-        irritantLoad: "low_moderate",
-        highFatRisk: "low_moderate",
-      },
-    ],
-    [
-      "cooked fish",
-      {
-        addExamples: [
-          "baked cod light oil",
-          "baked haddock",
-          "grilled hake",
-          "grilled sole",
-        ],
-        ...DRY_HEAT_PROTEIN_PROFILE,
-      },
-    ],
-    [
-      "buttered scrambled eggs",
-      { ...EGG_PROFILE, dryTexture: "low", highFatRisk: "low_moderate" },
-    ],
-    ["flavoured yogurt", { ...YOGURT_PROFILE, osmoticEffect: "moderate" }],
-    ["milk pudding", { ...PUDDING_PROFILE }],
-    [
-      "boiled carrot",
-      { addExamples: ["boiled carrots"], ...LOW_FIBER_VEG_PROFILE },
-    ],
-    [
-      "baked potato",
-      {
-        addExamples: ["peeled potato pieces"],
-        ...ROOT_VEG_PROFILE,
-      },
-    ],
-    [
-      "sweet potato",
-      { addExamples: ["boiled sweet potato"], ...ROOT_VEG_PROFILE },
-    ],
-    [
-      "cooked pumpkin",
-      { addExamples: ["boiled butternut squash"], ...LOW_FIBER_VEG_PROFILE },
-    ],
-    [
-      "courgette",
-      {
-        addExamples: [
-          "boiled peeled courgette",
-          "boiled peeled zucchini",
-          "boiled peeled marrow",
-        ],
-        ...LOW_FIBER_VEG_PROFILE,
-      },
-    ],
-    [
-      "swede",
-      { addExamples: ["boiled swede", "boiled turnip"], ...ROOT_VEG_PROFILE },
-    ],
-    ["parsnip", { ...ROOT_VEG_PROFILE }],
-    ["melon", { ...MELON_PROFILE }],
-    ["ripe mango", { ...SOFT_FRUIT_PROFILE }],
-    ["peeled apple", { ...SOFT_FRUIT_PROFILE }],
-    ["vegetable oil", { ...OIL_PROFILE }],
-    ["butter", { ...BUTTER_PROFILE }],
-    [
-      "non-sugar sweetener",
-      {
-        osmoticEffect: "none",
-        totalResidue: "very_low",
-        fiberTotalApproxG: 0,
-        fiberInsolubleLevel: "low",
-        fiberSolubleLevel: "low",
-        gasProducing: "possible",
-        dryTexture: "no",
-        irritantLoad: "none",
-        highFatRisk: "none",
-        lactoseRisk: "none",
-      },
-    ],
-    ["cream cheese", { ...SOFT_CHEESE_PROFILE }],
-    [
-      "hard cheese",
-      {
-        addExamples: [
-          "mild sliced cheese",
-          "grated mild cheese",
-          "grated mild cheese on pasta",
-          "melted cheese on potato",
-        ],
-        ...HARD_CHEESE_PROFILE,
-      },
-    ],
-    ["cream", { ...CREAM_PROFILE }],
-    [
-      "plain ice cream",
-      {
-        osmoticEffect: "moderate",
-        totalResidue: "very_low",
-        fiberTotalApproxG: 0,
-        fiberInsolubleLevel: "low",
-        fiberSolubleLevel: "low",
-        gasProducing: "possible",
-        dryTexture: "no",
-        irritantLoad: "none",
-        highFatRisk: "moderate",
-        lactoseRisk: "moderate",
-      },
-    ],
-    [
-      "tofu",
-      {
-        addExamples: [
-          "firm tofu cubes in mild sauce",
-          "plain tofu stir fry with peeled soft veg",
-        ],
-        ...SOFT_CHEESE_PROFILE,
-        highFatRisk: "low",
-        lactoseRisk: "none",
-      },
-    ],
-    ["kefir", { addExamples: ["plain kefir"], ...FERMENTED_DAIRY_PROFILE }],
-    [
-      "sweet biscuit",
-      {
-        osmoticEffect: "moderate",
-        totalResidue: "low",
-        fiberTotalApproxG: 1.5,
-        fiberInsolubleLevel: "low",
-        fiberSolubleLevel: "low",
-        gasProducing: "possible",
-        dryTexture: "yes",
-        irritantLoad: "low",
-        highFatRisk: "moderate",
-        lactoseRisk: "low",
-      },
-    ],
-    [
-      "dark chocolate",
-      {
-        osmoticEffect: "low_moderate",
-        totalResidue: "low",
-        fiberTotalApproxG: 2,
-        fiberInsolubleLevel: "low",
-        fiberSolubleLevel: "low",
-        gasProducing: "possible",
-        dryTexture: "low",
-        irritantLoad: "low",
-        highFatRisk: "moderate",
-        lactoseRisk: "low",
-      },
-    ],
-    [
-      "refined confectionery",
-      {
-        osmoticEffect: "high",
-        totalResidue: "very_low",
-        fiberTotalApproxG: 0,
-        fiberInsolubleLevel: "low",
-        fiberSolubleLevel: "low",
-        gasProducing: "possible",
-        dryTexture: "no",
-        irritantLoad: "low",
-        highFatRisk: "moderate",
-        lactoseRisk: "low",
-      },
-    ],
-    ["deep fried food", { ...DEEP_FRIED_PROFILE }],
-  ]);
+const FOOD_ENTRY_ENRICHMENTS: ReadonlyMap<string, FoodEntryEnrichment> = new Map([
+  [
+    "clear broth",
+    {
+      addExamples: ["clear vegetable broth", "clear chicken broth", "clear beef broth"],
+      ...CLEAR_LIQUID_PROFILE,
+    },
+  ],
+  ["gelatin dessert", { ...SWEET_SNACK_PROFILE }],
+  [
+    "smooth soup",
+    {
+      addExamples: [
+        "clear strained tomato broth",
+        "strained vegetable soup",
+        "carrot and potato soup",
+        "strained chicken puree soup",
+      ],
+      ...SMOOTH_LIQUID_PROFILE,
+    },
+  ],
+  ["boiled fish", { ...LEAN_PROTEIN_PROFILE }],
+  ["boiled white meat", { ...LEAN_PROTEIN_PROFILE }],
+  ["plain yogurt", { addExamples: ["strained yogurt"], ...YOGURT_PROFILE }],
+  ["egg", { ...EGG_PROFILE }],
+  ["milk", { ...MILK_PROFILE }],
+  [
+    "cottage cheese",
+    {
+      ...SOFT_CHEESE_PROFILE,
+    },
+  ],
+  ["custard", { ...PUDDING_PROFILE }],
+  ["white rice", { ...REFINED_GRAIN_PROFILE }],
+  [
+    "toast",
+    {
+      ...DRY_REFINED_GRAIN_PROFILE,
+      highFatRisk: "low",
+    },
+  ],
+  ["white bread", { ...REFINED_GRAIN_PROFILE }],
+  [
+    "white pasta",
+    {
+      addExamples: ["plain macaroni", "plain spaghetti"],
+      ...REFINED_GRAIN_PROFILE,
+    },
+  ],
+  ["rice cracker", { ...DRY_REFINED_GRAIN_PROFILE }],
+  ["porridge", { ...PORRIDGE_PROFILE }],
+  ["noodles", { ...REFINED_GRAIN_PROFILE }],
+  ["rice pudding", { addExamples: ["tapioca pudding", "sago pudding"], ...PUDDING_PROFILE }],
+  ["mashed potato", { ...ROOT_VEG_PROFILE }],
+  ["mashed root vegetable", { ...ROOT_VEG_PROFILE }],
+  ["ripe banana", { ...SOFT_FRUIT_PROFILE }],
+  ["stewed apple", { ...SOFT_FRUIT_PROFILE }],
+  [
+    "canned pear",
+    {
+      addExamples: ["peeled soft pear", "pear puree"],
+      ...SOFT_FRUIT_PROFILE,
+    },
+  ],
+  [
+    "canned peach",
+    {
+      addExamples: [
+        "peeled ripe peach",
+        "peeled ripe nectarine",
+        "peeled ripe apricot",
+        "canned apricots in juice",
+      ],
+      ...SOFT_FRUIT_PROFILE,
+    },
+  ],
+  ["olive oil", { ...OIL_PROFILE }],
+  [
+    "grilled white meat",
+    {
+      addExamples: [
+        "grilled chicken breast lightly oiled",
+        "baked chicken breast no heavy crust",
+        "grilled turkey breast",
+        "roast turkey breast",
+      ],
+      ...DRY_HEAT_PROTEIN_PROFILE,
+    },
+  ],
+  [
+    "ham",
+    {
+      ...DRY_HEAT_PROTEIN_PROFILE,
+      irritantLoad: "low_moderate",
+      highFatRisk: "low_moderate",
+    },
+  ],
+  [
+    "cooked fish",
+    {
+      addExamples: ["baked cod light oil", "baked haddock", "grilled hake", "grilled sole"],
+      ...DRY_HEAT_PROTEIN_PROFILE,
+    },
+  ],
+  ["buttered scrambled eggs", { ...EGG_PROFILE, dryTexture: "low", highFatRisk: "low_moderate" }],
+  ["flavoured yogurt", { ...YOGURT_PROFILE, osmoticEffect: "moderate" }],
+  ["milk pudding", { ...PUDDING_PROFILE }],
+  ["boiled carrot", { addExamples: ["boiled carrots"], ...LOW_FIBER_VEG_PROFILE }],
+  [
+    "baked potato",
+    {
+      addExamples: ["peeled potato pieces"],
+      ...ROOT_VEG_PROFILE,
+    },
+  ],
+  ["sweet potato", { addExamples: ["boiled sweet potato"], ...ROOT_VEG_PROFILE }],
+  ["cooked pumpkin", { addExamples: ["boiled butternut squash"], ...LOW_FIBER_VEG_PROFILE }],
+  [
+    "courgette",
+    {
+      addExamples: ["boiled peeled courgette", "boiled peeled zucchini", "boiled peeled marrow"],
+      ...LOW_FIBER_VEG_PROFILE,
+    },
+  ],
+  ["swede", { addExamples: ["boiled swede", "boiled turnip"], ...ROOT_VEG_PROFILE }],
+  ["parsnip", { ...ROOT_VEG_PROFILE }],
+  ["melon", { ...MELON_PROFILE }],
+  ["ripe mango", { ...SOFT_FRUIT_PROFILE }],
+  ["peeled apple", { ...SOFT_FRUIT_PROFILE }],
+  ["vegetable oil", { ...OIL_PROFILE }],
+  ["butter", { ...BUTTER_PROFILE }],
+  [
+    "non-sugar sweetener",
+    {
+      osmoticEffect: "none",
+      totalResidue: "very_low",
+      fiberTotalApproxG: 0,
+      fiberInsolubleLevel: "low",
+      fiberSolubleLevel: "low",
+      gasProducing: "possible",
+      dryTexture: "no",
+      irritantLoad: "none",
+      highFatRisk: "none",
+      lactoseRisk: "none",
+    },
+  ],
+  ["cream cheese", { ...SOFT_CHEESE_PROFILE }],
+  [
+    "hard cheese",
+    {
+      addExamples: [
+        "mild sliced cheese",
+        "grated mild cheese",
+        "grated mild cheese on pasta",
+        "melted cheese on potato",
+      ],
+      ...HARD_CHEESE_PROFILE,
+    },
+  ],
+  ["cream", { ...CREAM_PROFILE }],
+  [
+    "plain ice cream",
+    {
+      osmoticEffect: "moderate",
+      totalResidue: "very_low",
+      fiberTotalApproxG: 0,
+      fiberInsolubleLevel: "low",
+      fiberSolubleLevel: "low",
+      gasProducing: "possible",
+      dryTexture: "no",
+      irritantLoad: "none",
+      highFatRisk: "moderate",
+      lactoseRisk: "moderate",
+    },
+  ],
+  [
+    "tofu",
+    {
+      addExamples: ["firm tofu cubes in mild sauce", "plain tofu stir fry with peeled soft veg"],
+      ...SOFT_CHEESE_PROFILE,
+      highFatRisk: "low",
+      lactoseRisk: "none",
+    },
+  ],
+  ["kefir", { addExamples: ["plain kefir"], ...FERMENTED_DAIRY_PROFILE }],
+  [
+    "sweet biscuit",
+    {
+      osmoticEffect: "moderate",
+      totalResidue: "low",
+      fiberTotalApproxG: 1.5,
+      fiberInsolubleLevel: "low",
+      fiberSolubleLevel: "low",
+      gasProducing: "possible",
+      dryTexture: "yes",
+      irritantLoad: "low",
+      highFatRisk: "moderate",
+      lactoseRisk: "low",
+    },
+  ],
+  [
+    "dark chocolate",
+    {
+      osmoticEffect: "low_moderate",
+      totalResidue: "low",
+      fiberTotalApproxG: 2,
+      fiberInsolubleLevel: "low",
+      fiberSolubleLevel: "low",
+      gasProducing: "possible",
+      dryTexture: "low",
+      irritantLoad: "low",
+      highFatRisk: "moderate",
+      lactoseRisk: "low",
+    },
+  ],
+  [
+    "refined confectionery",
+    {
+      osmoticEffect: "high",
+      totalResidue: "very_low",
+      fiberTotalApproxG: 0,
+      fiberInsolubleLevel: "low",
+      fiberSolubleLevel: "low",
+      gasProducing: "possible",
+      dryTexture: "no",
+      irritantLoad: "low",
+      highFatRisk: "moderate",
+      lactoseRisk: "low",
+    },
+  ],
+  ["deep fried food", { ...DEEP_FRIED_PROFILE }],
+]);
 
 function mergeExamples(
   existing: ReadonlyArray<string>,
@@ -4301,9 +4146,7 @@ function applyFoodEntryEnrichment(entry: FoodRegistryEntry): FoodRegistryEntry {
 
   return {
     ...entry,
-    ...(addExamples
-      ? { examples: mergeExamples(entry.examples, addExamples) }
-      : {}),
+    ...(addExamples ? { examples: mergeExamples(entry.examples, addExamples) } : {}),
     ...metadata,
   };
 }
@@ -4326,29 +4169,21 @@ function isFoodLineInGroup(group: FoodGroup, line: FoodLine): boolean {
   return (FOOD_GROUP_LINES[group] as ReadonlyArray<FoodLine>).includes(line);
 }
 
-function assertFoodRegistryInvariants(
-  registry: ReadonlyArray<FoodRegistryEntry>,
-): void {
+function assertFoodRegistryInvariants(registry: ReadonlyArray<FoodRegistryEntry>): void {
   const canonicals = new Set<string>();
   const lineOrders = new Map<FoodLine, Map<number, string>>();
 
   for (const entry of registry) {
     if (canonicals.has(entry.canonical)) {
-      throw new Error(
-        `Duplicate canonical found in FOOD_REGISTRY: ${entry.canonical}`,
-      );
+      throw new Error(`Duplicate canonical found in FOOD_REGISTRY: ${entry.canonical}`);
     }
     canonicals.add(entry.canonical);
 
     if (entry.zone === 1 && entry.subzone === undefined) {
-      throw new Error(
-        `Zone 1 registry entry is missing a subzone: ${entry.canonical}`,
-      );
+      throw new Error(`Zone 1 registry entry is missing a subzone: ${entry.canonical}`);
     }
     if (entry.zone !== 1 && entry.subzone !== undefined) {
-      throw new Error(
-        `Only Zone 1 entries may declare subzone: ${entry.canonical}`,
-      );
+      throw new Error(`Only Zone 1 entries may declare subzone: ${entry.canonical}`);
     }
     if (!isFoodLineInGroup(entry.group, entry.line)) {
       throw new Error(
@@ -4361,13 +4196,10 @@ function assertFoodRegistryInvariants(
       );
     }
     if (entry.examples.length === 0) {
-      throw new Error(
-        `Registry entry must define at least one example: ${entry.canonical}`,
-      );
+      throw new Error(`Registry entry must define at least one example: ${entry.canonical}`);
     }
 
-    const lineOrderMap =
-      lineOrders.get(entry.line) ?? new Map<number, string>();
+    const lineOrderMap = lineOrders.get(entry.line) ?? new Map<number, string>();
     const existingLineOrderOwner = lineOrderMap.get(entry.lineOrder);
     if (existingLineOrderOwner && existingLineOrderOwner !== entry.canonical) {
       throw new Error(

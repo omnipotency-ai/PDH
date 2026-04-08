@@ -513,6 +513,38 @@ describe("computeMacrosForPortion", () => {
     expect(result.calories).toBe(0);
     expect(result.protein).toBe(0);
   });
+
+  it("computes correct values for sugar at 1 tsp (4.2g)", () => {
+    const result = computeMacrosForPortion("sugar", 4.2);
+    expect(result).toEqual({
+      calories: 16,
+      protein: 0,
+      carbs: 4.2,
+      fat: 0,
+      sugars: 4.2,
+      fiber: 0,
+    });
+  });
+
+  it("computes correct values for peanut butter at 1 tsp (5.3g)", () => {
+    const result = computeMacrosForPortion("peanut butter", 5.3);
+    expect(result.calories).toBe(31);
+    expect(result.protein).toBe(1.3);
+    expect(result.carbs).toBe(1.1);
+    expect(result.fat).toBe(2.7);
+    expect(result.sugars).toBe(0.5);
+    expect(result.fiber).toBe(0.3);
+  });
+
+  it("computes correct values for butter at 1 tsp (4.7g)", () => {
+    const result = computeMacrosForPortion("butter", 4.7);
+    expect(result.calories).toBe(34);
+    expect(result.protein).toBe(0);
+    expect(result.carbs).toBe(0);
+    expect(result.fat).toBe(3.8);
+    expect(result.sugars).toBe(0);
+    expect(result.fiber).toBe(0);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -805,5 +837,32 @@ describe("getEffectivePortionG — unit-aware", () => {
       unit: null,
     };
     expect(getEffectivePortionG(item)).toBe(30);
+  });
+
+  it("1 tsp butter uses the explicit spoon density", () => {
+    const item: FoodItem = {
+      canonicalName: "butter",
+      quantity: 1,
+      unit: "tsp",
+    };
+    expect(getEffectivePortionG(item)).toBe(4.7);
+  });
+
+  it("1 tsp peanut butter uses the explicit spoon density", () => {
+    const item: FoodItem = {
+      canonicalName: "peanut butter",
+      quantity: 1,
+      unit: "tsp",
+    };
+    expect(getEffectivePortionG(item)).toBe(5.3);
+  });
+
+  it("1 tsp sugar uses the explicit spoon density", () => {
+    const item: FoodItem = {
+      canonicalName: "sugar",
+      quantity: 1,
+      unit: "tsp",
+    };
+    expect(getEffectivePortionG(item)).toBe(4.2);
   });
 });

@@ -112,6 +112,23 @@ function lookupDefaultPortionG(canonicalName: string): number {
   return FOOD_PORTION_DATA.get(canonicalName)?.defaultPortionG ?? 0;
 }
 
+function lookupExplicitDiscreteWeightG(
+  canonicalName: string | null | undefined,
+  normalizedUnit: string,
+): number | null {
+  const portionData = FOOD_PORTION_DATA.get(canonicalName ?? "");
+  if (!portionData) return null;
+
+  if (normalizedUnit === "teaspoon") {
+    return portionData.teaspoonWeightG ?? null;
+  }
+  if (normalizedUnit === "tablespoon") {
+    return portionData.tablespoonWeightG ?? null;
+  }
+
+  return null;
+}
+
 // ---------------------------------------------------------------------------
 // Resolve portion weight for a food item (unit-aware)
 // ---------------------------------------------------------------------------
@@ -153,17 +170,25 @@ export function getEffectivePortionG(
       );
       if (match) return qty * match.weightG;
     }
-    // 2. Fallback to static FOOD_PORTION_DATA unitWeightG — only when the unit
+    // 2. Use explicit food-specific tsp/tbsp densities when available.
+    const normalizedUnit = normalizeUnitLabel(unit);
+    const explicitDiscreteWeightG = lookupExplicitDiscreteWeightG(
+      item.canonicalName,
+      normalizedUnit,
+    );
+    if (explicitDiscreteWeightG != null) {
+      return qty * explicitDiscreteWeightG;
+    }
+    // 3. Fallback to static FOOD_PORTION_DATA unitWeightG — only when the unit
     //    is a recognized discrete alias or matches the food's naturalUnit
     const portionData = FOOD_PORTION_DATA.get(item.canonicalName ?? "");
     if (portionData?.unitWeightG) {
-      const normalizedUnit = normalizeUnitLabel(unit);
       const isKnownDiscrete = normalizedUnit !== unit || UNIT_ALIASES[unit] !== undefined;
       const matchesNatural =
         portionData.naturalUnit && normalizeUnitLabel(portionData.naturalUnit) === normalizedUnit;
       if (isKnownDiscrete || matchesNatural) return qty * portionData.unitWeightG;
     }
-    // 3. Final fallback: treat as grams (best guess)
+    // 4. Final fallback: treat as grams (best guess)
     return qty;
   }
 

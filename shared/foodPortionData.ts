@@ -36,6 +36,13 @@ export interface PortionData {
    */
   unitWeightG?: number;
 
+  /**
+   * Explicit spoon densities for foods where tsp/tbsp weight matters more than
+   * the generic natural unit.
+   */
+  teaspoonWeightG?: number;
+  tablespoonWeightG?: number;
+
   // -- Nutrition per 100g --------------------------------------------------
 
   /** Kilocalories per 100g. */
@@ -445,6 +452,8 @@ const ZONE_1B: PortionRecord = {
     defaultPortionG: 14,
     naturalUnit: "tbsp",
     unitWeightG: 14,
+    teaspoonWeightG: 4.5,
+    tablespoonWeightG: 13.5,
     caloriesPer100g: 884,
     proteinPer100g: 0,
     carbsPer100g: 0,
@@ -457,6 +466,8 @@ const ZONE_1B: PortionRecord = {
     defaultPortionG: 2,
     naturalUnit: "pinch",
     unitWeightG: 0.4,
+    teaspoonWeightG: 6,
+    tablespoonWeightG: 18,
     caloriesPer100g: 0,
     proteinPer100g: 0,
     carbsPer100g: 0,
@@ -872,6 +883,8 @@ const ZONE_2: PortionRecord = {
     defaultPortionG: 10,
     naturalUnit: "pat",
     unitWeightG: 5,
+    teaspoonWeightG: 4.7,
+    tablespoonWeightG: 14.1,
     caloriesPer100g: 717,
     proteinPer100g: 0.9,
     carbsPer100g: 0.1,
@@ -884,6 +897,8 @@ const ZONE_2: PortionRecord = {
     defaultPortionG: 30,
     naturalUnit: "tbsp",
     unitWeightG: 15,
+    teaspoonWeightG: 5,
+    tablespoonWeightG: 15,
     caloriesPer100g: 342,
     proteinPer100g: 5.9,
     carbsPer100g: 4.1,
@@ -940,10 +955,26 @@ const ZONE_2: PortionRecord = {
     fiberPer100g: 6.7,
     source: "usda",
   },
+  "peanut butter": {
+    defaultPortionG: 32,
+    naturalUnit: "tbsp",
+    unitWeightG: 16,
+    teaspoonWeightG: 5.3,
+    tablespoonWeightG: 15.9,
+    caloriesPer100g: 588,
+    proteinPer100g: 25.1,
+    carbsPer100g: 20.0,
+    fatPer100g: 50.4,
+    sugarsPer100g: 9.2,
+    fiberPer100g: 6.0,
+    source: "usda",
+  },
   "smooth nut butter": {
     defaultPortionG: 32,
     naturalUnit: "tbsp",
     unitWeightG: 16,
+    teaspoonWeightG: 5.3,
+    tablespoonWeightG: 15.9,
     caloriesPer100g: 588,
     proteinPer100g: 25.1,
     carbsPer100g: 20.0,
@@ -1019,15 +1050,31 @@ const ZONE_2: PortionRecord = {
     source: "usda",
   },
   jam: {
-    defaultPortionG: 20,
+    defaultPortionG: 21,
     naturalUnit: "tbsp",
-    unitWeightG: 20,
+    unitWeightG: 21,
+    teaspoonWeightG: 7,
+    tablespoonWeightG: 21,
     caloriesPer100g: 250,
     proteinPer100g: 0.4,
     carbsPer100g: 62.9,
     fatPer100g: 0.1,
     sugarsPer100g: 48.5,
     fiberPer100g: 0.9,
+    source: "usda",
+  },
+  sugar: {
+    defaultPortionG: 4.2,
+    naturalUnit: "tsp",
+    unitWeightG: 4.2,
+    teaspoonWeightG: 4.2,
+    tablespoonWeightG: 12.6,
+    caloriesPer100g: 387,
+    proteinPer100g: 0,
+    carbsPer100g: 100.0,
+    fatPer100g: 0,
+    sugarsPer100g: 100.0,
+    fiberPer100g: 0,
     source: "usda",
   },
   "mild herb": {
@@ -1609,6 +1656,8 @@ const ZONE_3: PortionRecord = {
     defaultPortionG: 1,
     naturalUnit: "pinch",
     unitWeightG: 0.3,
+    teaspoonWeightG: 2.3,
+    tablespoonWeightG: 6.9,
     caloriesPer100g: 251,
     proteinPer100g: 10.4,
     carbsPer100g: 64.0,
@@ -1730,9 +1779,7 @@ const ZONE_3: PortionRecord = {
 
 // ── Assembly ───────────────────────────────────────────────────────────────
 
-function buildPortionMap(
-  ...records: PortionRecord[]
-): ReadonlyMap<string, PortionData> {
+function buildPortionMap(...records: PortionRecord[]): ReadonlyMap<string, PortionData> {
   const map = new Map<string, PortionData>();
   for (const record of records) {
     for (const [key, data] of Object.entries(record)) {
@@ -1746,11 +1793,15 @@ function buildPortionMap(
 }
 
 /**
- * Static portion and nutrition data for all 147 canonical foods.
+ * Static portion and nutrition data for all canonical foods.
  * Keyed by canonical name. Immutable.
  *
  * Sources: USDA FoodData Central (SR Legacy / Foundation), Open Food Facts,
  * and conservative estimates for composite/ambiguous entries.
  */
-export const FOOD_PORTION_DATA: ReadonlyMap<string, PortionData> =
-  buildPortionMap(ZONE_1A, ZONE_1B, ZONE_2, ZONE_3);
+export const FOOD_PORTION_DATA: ReadonlyMap<string, PortionData> = buildPortionMap(
+  ZONE_1A,
+  ZONE_1B,
+  ZONE_2,
+  ZONE_3,
+);

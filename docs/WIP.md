@@ -1,8 +1,9 @@
 > **Ref:** `docs/WIP.md`
 > **Updated:** 2026-04-08
-> **Version:** 3.4
+> **Version:** 3.5
 > **History:**
 >
+> - v3.5 (2026-04-08) — logged Wave 2 data seeding and meal template execution
 > - v3.4 (2026-04-08) — Food Platform master plan adopted, old plan superseded
 > - v3.3 (2026-04-07) — Tech-Debt initiative complete, collapsed to summary
 > - v3.2 (2026-04-06) — Food Page & Meal System initiative started
@@ -29,6 +30,25 @@
 > **Started:** 2026-04-08
 
 <!-- Implementer agents: prepend new entries HERE, above the completed summaries -->
+
+### 2026-04-08 — Wave 2 complete: core food seed coverage + meal template seeding
+
+- **Tasks:** W2-T02, W2-T03 (W2-T01 and W2-T04 already present on branch and confirmed in queue)
+- **Files:** `shared/foodRegistryData.ts`, `shared/foodPortionData.ts`, `src/lib/nutritionUtils.ts`, `src/lib/__tests__/nutritionUtils.test.ts`, `convex/seedMealTemplates.ts`, `convex/__tests__/seedMealTemplates.test.ts`, `convex/_generated/api.d.ts`
+- **What:**
+  - Added explicit `sugar` and `peanut butter` canonicals with USDA-backed portion/macro data.
+  - Filled the remaining Wave 2 target-food gaps through canonical aliases (`lean meat`, `cheese`, `pumpkin`, `potato`, `pepper`, `herbs`, `wraps`) so the static registry now covers the full core post-surgery list.
+  - Extended `PortionData` with explicit spoon-density fields and updated `getEffectivePortionG()` to use tsp/tbsp weights for density-sensitive foods such as butter, jam, peanut butter, cream cheese, olive oil, sugar, salt, and black pepper.
+  - Added the `seedMealTemplates` internal mutation with per-user, idempotent seeding for `"coffee + toast"` and `"toast + spread"`, including breakfast slot defaults and optional modifiers.
+  - Added targeted Vitest coverage for the new spoon-density math and for meal-template seed idempotency.
+- **Verification:**
+  - `bun x convex codegen`
+  - `bun x vitest run src/lib/__tests__/nutritionUtils.test.ts convex/__tests__/seedClinicalData.test.ts convex/__tests__/seedMealTemplates.test.ts`
+  - `bun run typecheck`
+  - `bun x vitest run convex/foodLibrary.test.ts`
+  - `bun run build`
+- **Decisions:**
+  - Split `peanut butter` out from the broader `smooth nut butter` canonical so meal templates and common user input can use an exact staple food name, while almond/cashew-style entries still map to the generic smooth nut-butter bucket.
 
 ### 2026-04-08 — Wave 0 complete: Schema widening for 3-layer architecture
 

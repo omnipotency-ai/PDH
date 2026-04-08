@@ -36,6 +36,8 @@ import type * as migrations from "../migrations.js";
 import type * as profileMutations from "../profileMutations.js";
 import type * as profiles from "../profiles.js";
 import type * as search from "../search.js";
+import type * as seedClinicalData from "../seedClinicalData.js";
+import type * as seedMealTemplates from "../seedMealTemplates.js";
 import type * as seedTestData from "../seedTestData.js";
 import type * as testFixtures from "../testFixtures.js";
 import type * as validators from "../validators.js";
@@ -76,6 +78,8 @@ declare const fullApi: ApiFromModules<{
   profileMutations: typeof profileMutations;
   profiles: typeof profiles;
   search: typeof search;
+  seedClinicalData: typeof seedClinicalData;
+  seedMealTemplates: typeof seedMealTemplates;
   seedTestData: typeof seedTestData;
   testFixtures: typeof testFixtures;
   validators: typeof validators;
