@@ -31,6 +31,18 @@
 
 <!-- Implementer agents: prepend new entries HERE, above the completed summaries -->
 
+### 2026-04-08 — W5-T01 complete: Home greeting and nutrition summary
+
+- **Tasks:** W5-T01
+- **Files:** `src/pages/Home.tsx`, `docs/WIP.md`
+- **What:**
+  - Replaced the Home stub with a time-of-day greeting that uses the signed-in Clerk user's first name.
+  - Added a compact summary card that reuses `CircularProgressRing` for calorie progress and shows live calorie/fluid progress bars beside it.
+  - Wired the summary to `useNutritionData()` so it reflects synced logs and profile goals instead of placeholder values.
+- **Verification:**
+  - `bun run typecheck` PASS
+  - `bun run build` PASS
+
 ### 2026-04-08 — W3-T02/W3-T03 complete: 4-tab navigation + `/patterns` redirect
 
 - **Tasks:** W3-T02, W3-T03
