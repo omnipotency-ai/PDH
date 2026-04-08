@@ -1,26 +1,41 @@
 import { Dialog } from "@base-ui/react/dialog";
 import { useMutation, useQuery } from "convex/react";
 import { useUser } from "@clerk/clerk-react";
+import { startOfDay } from "date-fns";
 import { MessageCircle, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ConversationPanel } from "@/components/track/dr-poo/ConversationPanel";
+import { HabitDetailSheet } from "@/components/track/quick-capture/HabitDetailSheet";
+import { QuickCapture } from "@/components/track/quick-capture/QuickCapture";
 import { FoodRow } from "@/components/track/nutrition/FoodRow";
 import { LogFoodModal } from "@/components/track/nutrition/LogFoodModal";
 import { buildStagedNutritionLogData } from "@/components/track/nutrition/nutritionLogging";
 import { CircularProgressRing } from "@/components/track/nutrition/CircularProgressRing";
 import { useAiInsights } from "@/hooks/useAiInsights";
+import { useCelebration } from "@/hooks/useCelebration";
+import { useDayStats } from "@/hooks/useDayStats";
+import { useHabitStreaks } from "@/hooks/useHabitStreaks";
 import { useNutritionStore } from "@/components/track/nutrition/useNutritionStore";
 import { useNutritionData } from "@/hooks/useNutritionData";
-import { useFoodFavourites } from "@/hooks/useProfile";
+import { useFoodFavourites, useHabits } from "@/hooks/useProfile";
+import { useQuickCapture } from "@/hooks/useQuickCapture";
 import { useSlotScopedFoods } from "@/hooks/useSlotScopedFoods";
+import { normalizeFluidItemName } from "@/lib/normalizeFluidName";
 import {
   formatPortion,
   getDefaultCalories,
   titleCase,
   type MealSlot,
 } from "@/lib/nutritionUtils";
-import { useAddSyncedLog, useLatestSuccessfulAiAnalysis } from "@/lib/sync";
+import { type HabitConfig, isMovementHabit, isSleepHabit } from "@/lib/habitTemplates";
+import {
+  useAddSyncedLog,
+  useLatestSuccessfulAiAnalysis,
+  useRemoveSyncedLog,
+} from "@/lib/sync";
+import { MS_PER_DAY } from "@/lib/timeConstants";
+import { useStore } from "@/store";
 import { api } from "../../convex/_generated/api";
 
 const INITIAL_FAVOURITES_LIMIT = 7;
@@ -34,6 +49,52 @@ const MEAL_SLOT_OPTIONS: ReadonlyArray<{ slot: MealSlot; label: string }> = [
 
 type FavouriteSlotTags = Partial<Record<string, MealSlot[]>>;
 type ConversationSeed = { key: string; text: string };
+type ModifierEntryMode = "minutes" | "hours";
+
+const MODIFIER_CHIPS: ReadonlyArray<{
+  key: string;
+  label: string;
+  matcher: (habit: HabitConfig) => boolean;
+  mode?: ModifierEntryMode;
+}> = [
+  {
+    key: "sleep",
+    label: "Sleep",
+    matcher: (habit) => isSleepHabit(habit),
+    mode: "hours",
+  },
+  {
+    key: "stress",
+    label: "Stress",
+    matcher: (habit) => /stress/i.test(habit.name),
+  },
+  {
+    key: "mood",
+    label: "Mood",
+    matcher: (habit) => /mood/i.test(habit.name),
+  },
+  {
+    key: "activity",
+    label: "Activity",
+    matcher: (habit) => isMovementHabit(habit) && habit.unit === "minutes",
+    mode: "minutes",
+  },
+  {
+    key: "medication",
+    label: "Medication",
+    matcher: (habit) => /medication/i.test(habit.name),
+  },
+  {
+    key: "cigarettes",
+    label: "Cigarettes",
+    matcher: (habit) => /cigarette/i.test(habit.name),
+  },
+  {
+    key: "supplements",
+    label: "Supplements",
+    matcher: (habit) => /supplement/i.test(habit.name),
+  },
+];
 
 function getTimeOfDayGreeting(hour: number): string {
   if (hour < 12) return "Good morning";
@@ -164,20 +225,33 @@ function getFollowUpPrompt(activeMealSlot: MealSlot, hasInsight: boolean): strin
 
 export default function HomePage() {
   const { user } = useUser();
+  const now = new Date();
+  const todayStart = startOfDay(now).getTime();
+  const todayEnd = todayStart + MS_PER_DAY;
   const { totalCaloriesToday, totalFluidsMl, calorieGoal, fluidGoal, currentMealSlot } =
     useNutritionData();
+  const { habits } = useHabits();
   const latestSuccessfulAnalysis = useLatestSuccessfulAiAnalysis();
   const { hasApiKey, sendNow } = useAiInsights();
   const { favourites, isFavourite, toggleFavourite } = useFoodFavourites();
   const favouriteSlotTags = (useQuery(api.profiles.getFavouriteSlotTags, {}) ?? {}) as FavouriteSlotTags;
   const toggleFavouriteSlotTag = useMutation(api.profiles.toggleFavouriteSlotTag);
   const addSyncedLog = useAddSyncedLog();
+  const removeSyncedLog = useRemoveSyncedLog();
   const { state, dispatch, stagingTotals } = useNutritionStore();
   const [slotOverride, setSlotOverride] = useState<MealSlot | null>(null);
   const [favouritesLimit, setFavouritesLimit] = useState(INITIAL_FAVOURITES_LIMIT);
   const [conversationOpen, setConversationOpen] = useState(false);
   const [conversationSeed, setConversationSeed] = useState<ConversationSeed | null>(null);
   const [dismissedCard, setDismissedCard] = useState(false);
+  const [modifierEntry, setModifierEntry] = useState<{
+    habit: HabitConfig;
+    mode: ModifierEntryMode;
+  } | null>(null);
+  const [modifierValue, setModifierValue] = useState("");
+  const removeHabitLog = useStore((state) => state.removeHabitLog);
+  const habitLogs = useStore((state) => state.habitLogs);
+  const { celebrateGoalComplete } = useCelebration();
 
   const activeMealSlot = slotOverride ?? currentMealSlot;
   const { recentFoods, frequentFoods } = useSlotScopedFoods(activeMealSlot);
@@ -192,6 +266,55 @@ export default function HomePage() {
 
     return getFallbackDrPooPrompt(activeMealSlot);
   }, [activeMealSlot, latestInsightSummary]);
+
+  const syncedLogs = useQuery(api.logs.list, { limit: 3000 });
+  const dayLogs = useMemo(() => syncedLogs ?? [], [syncedLogs]);
+  const { todayHabitCounts, todayFluidTotalsByName } = useDayStats({
+    logs: dayLogs,
+    todayStart,
+    todayEnd,
+  });
+  const { daySummaries, streakSummaries } = useHabitStreaks({
+    habitLogs,
+    habits,
+    now,
+  });
+  const {
+    handleQuickCaptureTap,
+    handleLogSleepQuickCapture,
+    handleLogActivityQuickCapture,
+    handleLogWeightKg,
+    handleQuickCaptureLongPress,
+    handleCloseDetailSheet,
+    detailSheetHabit,
+  } = useQuickCapture({
+    afterSave: () => {},
+    celebrateGoalComplete,
+    todayHabitCounts,
+    todayFluidTotalsByName,
+    streakSummaries,
+    logs: dayLogs,
+    todayStart,
+    todayEnd,
+    removeSyncedLog,
+    removeHabitLog,
+    onRequestEdit: () => {},
+  });
+  const detailDaySummaries = useMemo(
+    () =>
+      detailSheetHabit
+        ? daySummaries.filter((summary) => summary.habitId === detailSheetHabit.id)
+        : [],
+    [daySummaries, detailSheetHabit],
+  );
+  const modifierHabits = useMemo(
+    () =>
+      MODIFIER_CHIPS.map((chip) => ({
+        ...chip,
+        habit: habits.find(chip.matcher) ?? null,
+      })),
+    [habits],
+  );
 
   useEffect(() => {
     if (state.activeMealSlot === activeMealSlot) return;
@@ -296,6 +419,42 @@ export default function HomePage() {
       toast.error(message);
     }
   }, [activeMealSlot, addSyncedLog, dispatch, state.stagingItems]);
+
+  const openModifierEntry = useCallback((habit: HabitConfig, mode: ModifierEntryMode) => {
+    setModifierEntry({ habit, mode });
+    setModifierValue(mode === "hours" ? String(habit.quickIncrement) : String(habit.quickIncrement));
+  }, []);
+
+  const handleModifierChipTap = useCallback(
+    async (habit: HabitConfig | null, mode?: ModifierEntryMode) => {
+      if (!habit) return;
+      if (mode) {
+        openModifierEntry(habit, mode);
+        return;
+      }
+      await handleQuickCaptureTap(habit);
+    },
+    [handleQuickCaptureTap, openModifierEntry],
+  );
+
+  const handleSubmitModifierEntry = useCallback(async () => {
+    if (!modifierEntry) return;
+
+    const parsed = Number(modifierValue);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      toast.error("Enter a value greater than 0.");
+      return;
+    }
+
+    if (modifierEntry.mode === "hours") {
+      await handleLogSleepQuickCapture(modifierEntry.habit, parsed);
+    } else {
+      await handleLogActivityQuickCapture(modifierEntry.habit, parsed);
+    }
+
+    setModifierEntry(null);
+    setModifierValue("");
+  }, [handleLogActivityQuickCapture, handleLogSleepQuickCapture, modifierEntry, modifierValue]);
 
   const showMoreFavourites =
     slotScopedFavourites.length > visibleFavourites.length
@@ -429,6 +588,48 @@ export default function HomePage() {
         ) : null}
       </section>
 
+      <section className="glass-card space-y-4 p-4">
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-(--text-faint)">
+            Modifiers
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {modifierHabits.map(({ key, label, habit, mode }) => (
+              <button
+                key={key}
+                type="button"
+                disabled={habit === null}
+                onClick={() => {
+                  void handleModifierChipTap(habit, mode);
+                }}
+                className="rounded-full border px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45"
+                style={{
+                  borderColor: habit ? "var(--color-border-default)" : "var(--surface-3)",
+                  backgroundColor: "var(--surface-2)",
+                  color: habit ? "var(--text)" : "var(--text-faint)",
+                }}
+                title={habit ? `Log ${label}` : `${label} isn't configured yet`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <QuickCapture
+          habits={habits}
+          todayHabitCounts={todayHabitCounts}
+          todayFluidMl={todayFluidTotalsByName}
+          onTap={(habit) => {
+            void handleQuickCaptureTap(habit);
+          }}
+          onLogSleepHours={handleLogSleepQuickCapture}
+          onLogActivityMinutes={handleLogActivityQuickCapture}
+          onLogWeightKg={handleLogWeightKg}
+          onLongPress={handleQuickCaptureLongPress}
+        />
+      </section>
+
       <HomeFoodSection
         title="Favourites"
         foods={visibleFavourites}
@@ -527,6 +728,71 @@ export default function HomePage() {
           </Dialog.Popup>
         </Dialog.Portal>
       </Dialog.Root>
+
+      <Dialog.Root
+        open={modifierEntry !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setModifierEntry(null);
+            setModifierValue("");
+          }
+        }}
+      >
+        <Dialog.Portal>
+          <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/45 backdrop-blur-sm" />
+          <Dialog.Popup className="fixed inset-x-4 top-1/2 z-50 mx-auto w-full max-w-sm -translate-y-1/2 rounded-3xl border border-[var(--color-border-default)] bg-[var(--card)] p-4 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <Dialog.Title className="font-display text-xl font-bold text-(--text)">
+                  {modifierEntry ? `Log ${modifierEntry.habit.name}` : "Log modifier"}
+                </Dialog.Title>
+                <p className="text-sm text-(--text-muted)">
+                  {modifierEntry?.mode === "hours"
+                    ? "Enter hours, then save."
+                    : "Enter minutes, then save."}
+                </p>
+              </div>
+              <Dialog.Close className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--color-border-default)] text-(--text-muted) transition-colors hover:text-(--text)">
+                <X className="h-4 w-4" />
+              </Dialog.Close>
+            </div>
+
+            <div className="space-y-3">
+              <input
+                type="number"
+                min="0"
+                step={modifierEntry?.mode === "hours" ? "0.5" : "1"}
+                value={modifierValue}
+                onChange={(event) => setModifierValue(event.target.value)}
+                className="h-12 w-full rounded-2xl border border-[var(--color-border-default)] bg-[var(--surface-1)] px-4 text-center text-lg font-medium text-(--text)"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  void handleSubmitModifierEntry();
+                }}
+                className="w-full rounded-2xl bg-[var(--section-quick)] px-4 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+              >
+                Save
+              </button>
+            </div>
+          </Dialog.Popup>
+        </Dialog.Portal>
+      </Dialog.Root>
+
+      <HabitDetailSheet
+        habit={detailSheetHabit}
+        count={detailSheetHabit ? (todayHabitCounts[detailSheetHabit.id] ?? 0) : 0}
+        {...(detailSheetHabit?.logAs === "fluid"
+          ? {
+              fluidMl:
+                todayFluidTotalsByName[normalizeFluidItemName(detailSheetHabit.name)] ?? 0,
+            }
+          : {})}
+        daySummaries={detailDaySummaries}
+        streakSummary={detailSheetHabit ? (streakSummaries[detailSheetHabit.id] ?? null) : null}
+        onClose={handleCloseDetailSheet}
+      />
     </div>
   );
 }

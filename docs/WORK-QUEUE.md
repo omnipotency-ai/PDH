@@ -64,13 +64,13 @@
 | W2-T02 | Seed ~30 post-surgery foods                             | 2    | W2-T01         | done    |         |
 | W2-T03 | Seed Coffee + Toast meal templates                      | 2    | W0-T04, W2-T02 | done    |         |
 | W2-T04 | Favourite slot auto-tag mutation                        | 2    | W0-T05         | done    |         |
-| W3-T01 | Page stubs: Home, Food, Insights                        | 3    | —              | pending |         |
-| W3-T02 | 4-tab bottom nav layout                                 | 3    | W3-T01         | pending |         |
-| W3-T03 | /patterns → /insights redirect                          | 3    | W3-T02         | pending |         |
+| W3-T01 | Page stubs: Home, Food, Insights                        | 3    | —              | done    | cdcd643 |
+| W3-T02 | 4-tab bottom nav layout                                 | 3    | W3-T01         | done    | 3f97a64 |
+| W3-T03 | /patterns → /insights redirect                          | 3    | W3-T02         | done    | 3f97a64 |
 | W4-T01 | Simplify Track to Today's Log only                      | 4    | W3-T02         | pending |         |
 | W4-T02 | Move Dr. Poo to Insights tab                            | 4    | W3-T01, W4-T01 | pending |         |
-| W5-T01 | Greeting + nutrition summary                            | 5    | W3-T02, W1-T04 | pending |         |
-| W5-T02 | Meal slots, favourites, recent, frequent                | 5    | W5-T01, W2-T04 | pending |         |
+| W5-T01 | Greeting + nutrition summary                            | 5    | W3-T02, W1-T04 | done    | 22e778c |
+| W5-T02 | Meal slots, favourites, recent, frequent                | 5    | W5-T01, W2-T04 | done    | a641f69 |
 | W5-T03 | Modifier chips + Quick Capture                          | 5    | W5-T02         | pending |         |
 | W5-T04 | Search bar + water action                               | 5    | W5-T02         | pending |         |
 | W5-T05 | Dr. Poo touchpoints                                     | 5    | W5-T01         | pending |         |
