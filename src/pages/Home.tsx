@@ -1,44 +1,59 @@
 import { Dialog } from "@base-ui/react/dialog";
-import { useMutation, useQuery } from "convex/react";
 import { useUser } from "@clerk/clerk-react";
-import { startOfDay } from "date-fns";
+import { useNavigate } from "@tanstack/react-router";
+import { useQuery } from "convex/react";
+import { addDays, differenceInCalendarDays, format, startOfDay } from "date-fns";
 import { MessageCircle, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+
 import { ConversationPanel } from "@/components/track/dr-poo/ConversationPanel";
-import { HabitDetailSheet } from "@/components/track/quick-capture/HabitDetailSheet";
-import { QuickCapture } from "@/components/track/quick-capture/QuickCapture";
-import { FoodRow } from "@/components/track/nutrition/FoodRow";
 import { LogFoodModal } from "@/components/track/nutrition/LogFoodModal";
+import { NutritionCard } from "@/components/track/nutrition/NutritionCard";
+import { NutritionCardErrorBoundary } from "@/components/track/nutrition/NutritionCardErrorBoundary";
 import { buildStagedNutritionLogData } from "@/components/track/nutrition/nutritionLogging";
-import { CircularProgressRing } from "@/components/track/nutrition/CircularProgressRing";
+import { useNutritionStore } from "@/components/track/nutrition/useNutritionStore";
+import { type BowelFormState, BowelSection } from "@/components/track/panels";
+import { QuickCapture } from "@/components/track/quick-capture";
+import { HabitDetailSheet } from "@/components/track/quick-capture/HabitDetailSheet";
+import { TodayStatusRow } from "@/components/track/TodayStatusRow";
+import { ConfettiBurst } from "@/components/ui/Confetti";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
+import { useSyncedLogsContext } from "@/contexts/SyncedLogsContext";
 import { useAiInsights } from "@/hooks/useAiInsights";
+import { useBaselineAverages } from "@/hooks/useBaselineAverages";
 import { useCelebration } from "@/hooks/useCelebration";
 import { useDayStats } from "@/hooks/useDayStats";
+import { useFoodLlmMatching } from "@/hooks/useFoodLlmMatching";
 import { useHabitStreaks } from "@/hooks/useHabitStreaks";
-import { useNutritionStore } from "@/components/track/nutrition/useNutritionStore";
+import { useLiveClock } from "@/hooks/useLiveClock";
 import { useNutritionData } from "@/hooks/useNutritionData";
 import { useFoodFavourites, useHabits } from "@/hooks/useProfile";
 import { useQuickCapture } from "@/hooks/useQuickCapture";
 import { useSlotScopedFoods } from "@/hooks/useSlotScopedFoods";
+import { useUnresolvedFoodQueue } from "@/hooks/useUnresolvedFoodQueue";
+import { useUnresolvedFoodToast } from "@/hooks/useUnresolvedFoodToast";
+import { useWeeklySummaryAutoTrigger } from "@/hooks/useWeeklySummaryAutoTrigger";
+import { bristolToConsistency, normalizeEpisodesCount } from "@/lib/analysis";
+import { formatLocalDateKey, getDateScopedTimestamp } from "@/lib/dateUtils";
+import { getErrorMessage } from "@/lib/errors";
 import { normalizeFluidItemName } from "@/lib/normalizeFluidName";
-import {
-  formatPortion,
-  getDefaultCalories,
-  titleCase,
-  type MealSlot,
-} from "@/lib/nutritionUtils";
-import { type HabitConfig, isMovementHabit, isSleepHabit } from "@/lib/habitTemplates";
-import {
-  useAddSyncedLog,
-  useLatestSuccessfulAiAnalysis,
-  useRemoveSyncedLog,
-} from "@/lib/sync";
+import { type MealSlot, titleCase } from "@/lib/nutritionUtils";
+import { useAddSyncedLog, useLatestSuccessfulAiAnalysis, useRemoveSyncedLog } from "@/lib/sync";
 import { MS_PER_DAY } from "@/lib/timeConstants";
 import { useStore } from "@/store";
 import { api } from "../../convex/_generated/api";
 
-const INITIAL_FAVOURITES_LIMIT = 7;
+// Lazy-loaded so that foodRegistry.ts is code-split
+const FoodMatchingModal = lazy(() =>
+  import("@/components/track/FoodMatchingModal").then((m) => ({
+    default: m.FoodMatchingModal,
+  })),
+);
+
+// ---------------------------------------------------------------------------
+// Constants & types
+// ---------------------------------------------------------------------------
 
 const MEAL_SLOT_OPTIONS: ReadonlyArray<{ slot: MealSlot; label: string }> = [
   { slot: "breakfast", label: "Breakfast" },
@@ -49,52 +64,10 @@ const MEAL_SLOT_OPTIONS: ReadonlyArray<{ slot: MealSlot; label: string }> = [
 
 type FavouriteSlotTags = Partial<Record<string, MealSlot[]>>;
 type ConversationSeed = { key: string; text: string };
-type ModifierEntryMode = "minutes" | "hours";
 
-const MODIFIER_CHIPS: ReadonlyArray<{
-  key: string;
-  label: string;
-  matcher: (habit: HabitConfig) => boolean;
-  mode?: ModifierEntryMode;
-}> = [
-  {
-    key: "sleep",
-    label: "Sleep",
-    matcher: (habit) => isSleepHabit(habit),
-    mode: "hours",
-  },
-  {
-    key: "stress",
-    label: "Stress",
-    matcher: (habit) => /stress/i.test(habit.name),
-  },
-  {
-    key: "mood",
-    label: "Mood",
-    matcher: (habit) => /mood/i.test(habit.name),
-  },
-  {
-    key: "activity",
-    label: "Activity",
-    matcher: (habit) => isMovementHabit(habit) && habit.unit === "minutes",
-    mode: "minutes",
-  },
-  {
-    key: "medication",
-    label: "Medication",
-    matcher: (habit) => /medication/i.test(habit.name),
-  },
-  {
-    key: "cigarettes",
-    label: "Cigarettes",
-    matcher: (habit) => /cigarette/i.test(habit.name),
-  },
-  {
-    key: "supplements",
-    label: "Supplements",
-    matcher: (habit) => /supplement/i.test(habit.name),
-  },
-];
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 function getTimeOfDayGreeting(hour: number): string {
   if (hour < 12) return "Good morning";
@@ -105,101 +78,6 @@ function getTimeOfDayGreeting(hour: number): string {
 function getDisplayName(name: string | null | undefined): string {
   const trimmed = name?.trim();
   return trimmed && trimmed.length > 0 ? trimmed : "there";
-}
-
-function SummaryBar({
-  label,
-  consumed,
-  goal,
-  unit,
-  color,
-}: {
-  label: string;
-  consumed: number;
-  goal: number;
-  unit: string;
-  color: string;
-}) {
-  const safeGoal = goal > 0 ? goal : 1;
-  const progress = Math.min(consumed / safeGoal, 1);
-
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.24em] text-(--text-faint)">
-          {label}
-        </span>
-        <span className="text-sm font-medium tabular-nums text-(--text-muted)">
-          {consumed} / {goal} {unit}
-        </span>
-      </div>
-      <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-3)]">
-        <div
-          className="h-full rounded-full transition-[width] duration-500 ease-out"
-          style={{
-            width: `${Math.round(progress * 100)}%`,
-            backgroundColor: color,
-          }}
-        />
-      </div>
-    </div>
-  );
-}
-
-function HomeFoodSection({
-  title,
-  foods,
-  emptyMessage,
-  onAdd,
-  onToggleFavourite,
-  isFavourite,
-  showMore,
-}: {
-  title: string;
-  foods: string[];
-  emptyMessage: string;
-  onAdd: (canonicalName: string) => void;
-  onToggleFavourite: (canonicalName: string) => void | Promise<void>;
-  isFavourite: (canonicalName: string) => boolean;
-  showMore?: () => void;
-}) {
-  return (
-    <section className="glass-card space-y-3 p-4">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold uppercase tracking-[0.22em] text-(--text-faint)">
-          {title}
-        </h2>
-        {showMore ? (
-          <button
-            type="button"
-            onClick={showMore}
-            className="text-xs font-medium text-(--text-muted) transition-colors hover:text-(--text)"
-          >
-            Show more
-          </button>
-        ) : null}
-      </div>
-
-      {foods.length > 0 ? (
-        <ul className="space-y-1">
-          {foods.map((canonicalName) => (
-            <FoodRow
-              key={`${title}-${canonicalName}`}
-              canonicalName={canonicalName}
-              displayName={titleCase(canonicalName)}
-              portion={formatPortion(canonicalName)}
-              calories={getDefaultCalories(canonicalName)}
-              isFavourite={isFavourite(canonicalName)}
-              onAdd={onAdd}
-              onToggleFavourite={onToggleFavourite}
-            />
-          ))}
-        </ul>
-      ) : (
-        <p className="text-sm text-(--text-muted)">{emptyMessage}</p>
-      )}
-    </section>
-  );
 }
 
 function toPreviewText(markdown: string): string {
@@ -219,102 +97,66 @@ function getFollowUpPrompt(activeMealSlot: MealSlot, hasInsight: boolean): strin
   if (hasInsight) {
     return "Can you explain that summary in more detail and tell me what to watch next?";
   }
-
   return `Can you help me think about my ${titleCase(activeMealSlot).toLowerCase()} choices today?`;
 }
 
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
+
+function getDayLabel(date: Date, todayDate: Date): string {
+  const offset = differenceInCalendarDays(date, todayDate);
+  if (offset === 0) return "Today";
+  return format(date, "EEE, MMM d");
+}
+
+function getPrevDayLabel(selectedDate: Date, todayDate: Date): string {
+  const offset = differenceInCalendarDays(selectedDate, todayDate);
+  if (offset === 0) return "Yesterday";
+  return format(addDays(selectedDate, -1), "EEEE");
+}
+
+function getNextDayLabel(selectedDate: Date, todayDate: Date): string {
+  const offset = differenceInCalendarDays(selectedDate, todayDate);
+  if (offset === -1) return "Today";
+  return format(addDays(selectedDate, 1), "EEEE");
+}
+
+// ---------------------------------------------------------------------------
+// Home page
+// ---------------------------------------------------------------------------
+
 export default function HomePage() {
   const { user } = useUser();
-  const now = new Date();
-  const todayStart = startOfDay(now).getTime();
-  const todayEnd = todayStart + MS_PER_DAY;
-  const { totalCaloriesToday, totalFluidsMl, calorieGoal, fluidGoal, currentMealSlot } =
-    useNutritionData();
-  const { habits } = useHabits();
+
+  // ── Food platform hooks ──
+  const { currentMealSlot } = useNutritionData();
   const latestSuccessfulAnalysis = useLatestSuccessfulAiAnalysis();
-  const { hasApiKey, sendNow } = useAiInsights();
-  const { favourites, isFavourite, toggleFavourite } = useFoodFavourites();
-  const favouriteSlotTags = (useQuery(api.profiles.getFavouriteSlotTags, {}) ?? {}) as FavouriteSlotTags;
-  const toggleFavouriteSlotTag = useMutation(api.profiles.toggleFavouriteSlotTag);
+  const { hasApiKey, sendNow, triggerAnalysis } = useAiInsights();
+  const { favourites } = useFoodFavourites();
+  const favouriteSlotTags = (useQuery(api.profiles.getFavouriteSlotTags, {}) ??
+    {}) as FavouriteSlotTags;
   const addSyncedLog = useAddSyncedLog();
   const removeSyncedLog = useRemoveSyncedLog();
   const { state, dispatch, stagingTotals } = useNutritionStore();
   const [slotOverride, setSlotOverride] = useState<MealSlot | null>(null);
-  const [favouritesLimit, setFavouritesLimit] = useState(INITIAL_FAVOURITES_LIMIT);
   const [conversationOpen, setConversationOpen] = useState(false);
   const [conversationSeed, setConversationSeed] = useState<ConversationSeed | null>(null);
   const [dismissedCard, setDismissedCard] = useState(false);
-  const [modifierEntry, setModifierEntry] = useState<{
-    habit: HabitConfig;
-    mode: ModifierEntryMode;
-  } | null>(null);
-  const [modifierValue, setModifierValue] = useState("");
-  const removeHabitLog = useStore((state) => state.removeHabitLog);
-  const habitLogs = useStore((state) => state.habitLogs);
-  const { celebrateGoalComplete } = useCelebration();
 
   const activeMealSlot = slotOverride ?? currentMealSlot;
   const { recentFoods, frequentFoods } = useSlotScopedFoods(activeMealSlot);
   const greeting = getTimeOfDayGreeting(new Date().getHours());
   const firstName = getDisplayName(user?.firstName);
   const latestInsightSummary = latestSuccessfulAnalysis?.insight.summary ?? null;
+
   const proactiveCardText = useMemo(() => {
     const preview = latestInsightSummary ? toPreviewText(latestInsightSummary) : "";
     if (preview.length > 0) {
       return preview.length > 150 ? `${preview.slice(0, 147).trimEnd()}...` : preview;
     }
-
     return getFallbackDrPooPrompt(activeMealSlot);
   }, [activeMealSlot, latestInsightSummary]);
-
-  const syncedLogs = useQuery(api.logs.list, { limit: 3000 });
-  const dayLogs = useMemo(() => syncedLogs ?? [], [syncedLogs]);
-  const { todayHabitCounts, todayFluidTotalsByName } = useDayStats({
-    logs: dayLogs,
-    todayStart,
-    todayEnd,
-  });
-  const { daySummaries, streakSummaries } = useHabitStreaks({
-    habitLogs,
-    habits,
-    now,
-  });
-  const {
-    handleQuickCaptureTap,
-    handleLogSleepQuickCapture,
-    handleLogActivityQuickCapture,
-    handleLogWeightKg,
-    handleQuickCaptureLongPress,
-    handleCloseDetailSheet,
-    detailSheetHabit,
-  } = useQuickCapture({
-    afterSave: () => {},
-    celebrateGoalComplete,
-    todayHabitCounts,
-    todayFluidTotalsByName,
-    streakSummaries,
-    logs: dayLogs,
-    todayStart,
-    todayEnd,
-    removeSyncedLog,
-    removeHabitLog,
-    onRequestEdit: () => {},
-  });
-  const detailDaySummaries = useMemo(
-    () =>
-      detailSheetHabit
-        ? daySummaries.filter((summary) => summary.habitId === detailSheetHabit.id)
-        : [],
-    [daySummaries, detailSheetHabit],
-  );
-  const modifierHabits = useMemo(
-    () =>
-      MODIFIER_CHIPS.map((chip) => ({
-        ...chip,
-        habit: habits.find(chip.matcher) ?? null,
-      })),
-    [habits],
-  );
 
   useEffect(() => {
     if (state.activeMealSlot === activeMealSlot) return;
@@ -322,13 +164,10 @@ export default function HomePage() {
   }, [activeMealSlot, dispatch, state.activeMealSlot]);
 
   useEffect(() => {
-    setFavouritesLimit(INITIAL_FAVOURITES_LIMIT);
-  }, [activeMealSlot]);
-
-  useEffect(() => {
     setDismissedCard(false);
-  }, [proactiveCardText]);
+  }, []);
 
+  // Spotlight foods (favourites + frequent + recent, scoped to active meal slot)
   const slotScopedFavourites = useMemo(
     () =>
       favourites.filter((canonicalName) =>
@@ -337,18 +176,12 @@ export default function HomePage() {
     [activeMealSlot, favouriteSlotTags, favourites],
   );
 
-  const visibleFavourites = useMemo(
-    () => slotScopedFavourites.slice(0, favouritesLimit),
-    [favouritesLimit, slotScopedFavourites],
-  );
-
   const visibleRecentFoods = useMemo(() => recentFoods.slice(0, 7), [recentFoods]);
   const visibleFrequentFoods = useMemo(() => frequentFoods.slice(0, 7), [frequentFoods]);
 
   const spotlightFoods = useMemo(() => {
     const seen = new Set<string>();
     const ordered: string[] = [];
-
     for (const canonicalName of [
       ...slotScopedFavourites,
       ...visibleFrequentFoods,
@@ -358,9 +191,233 @@ export default function HomePage() {
       seen.add(canonicalName);
       ordered.push(canonicalName);
     }
-
     return ordered.slice(0, 12);
   }, [slotScopedFavourites, visibleFrequentFoods, visibleRecentFoods]);
+
+  // ── Capture panel hooks (moved from Track) ──
+  const { logs } = useSyncedLogsContext();
+  const { habits } = useHabits();
+  const removeHabitLog = useStore((s) => s.removeHabitLog);
+  const habitLogs = useStore((s) => s.habitLogs);
+  const setPendingEditLogId = useStore((s) => s.setPendingEditLogId);
+  const navigate = useNavigate();
+
+  // Auto-generate weekly summary when a Sunday 18:00 boundary passes
+  useWeeklySummaryAutoTrigger();
+
+  // Auto-trigger LLM matching for food logs with unresolved items
+  useFoodLlmMatching();
+
+  const { celebration, celebrateLog, celebrateGoalComplete, clearCelebration } = useCelebration();
+
+  useLiveClock();
+  const now = new Date();
+  const [selectedDate, setSelectedDate] = useState(() => startOfDay(new Date()));
+
+  const todayStart = useMemo(() => startOfDay(now).getTime(), [now]);
+  const todayEnd = todayStart + MS_PER_DAY;
+  const todayDate = useMemo(() => startOfDay(now), [now]);
+  const dayOffset = useMemo(
+    () => differenceInCalendarDays(selectedDate, todayDate),
+    [selectedDate, todayDate],
+  );
+  const selectedStart = selectedDate.getTime();
+  const selectedEnd = addDays(selectedDate, 1).getTime();
+  const selectedCaptureTimestamp = useMemo(
+    () => (dayOffset === 0 ? undefined : getDateScopedTimestamp(selectedDate, now)),
+    [dayOffset, now, selectedDate],
+  );
+
+  // Day statistics (actual today + selected day)
+  const {
+    todayHabitCounts,
+    todayFluidTotalsByName,
+    totalFluidMl,
+    waterOnlyMl,
+    todayBmCount,
+    lastBmTimestamp,
+  } = useDayStats({ logs, todayStart, todayEnd });
+  const {
+    todayHabitCounts: selectedHabitCounts,
+    todayFluidTotalsByName: selectedFluidTotalsByName,
+  } = useDayStats({ logs, todayStart: selectedStart, todayEnd: selectedEnd });
+
+  // Destructive habit rollover toast (once per day)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const todayKey = formatLocalDateKey(todayStart);
+    const storageKey = `quick-capture-destructive-rollover:${todayKey}`;
+    if (window.localStorage.getItem(storageKey) === "shown") return;
+    window.localStorage.setItem(storageKey, "shown");
+
+    const yesterdayStart = todayStart - MS_PER_DAY;
+    const yesterdayEnd = todayStart;
+
+    const destructiveHabits = habits.filter(
+      (habit) =>
+        habit.kind === "destructive" && typeof habit.dailyCap === "number" && habit.dailyCap > 0,
+    );
+
+    if (destructiveHabits.length === 0) return;
+
+    let underCapCount = 0;
+    let zeroUseCount = 0;
+
+    for (const habit of destructiveHabits) {
+      const total = habitLogs
+        .filter(
+          (entry) =>
+            entry.habitId === habit.id && entry.at >= yesterdayStart && entry.at < yesterdayEnd,
+        )
+        .reduce((sum, entry) => sum + entry.value, 0);
+
+      if (total < (habit.dailyCap ?? 0)) underCapCount += 1;
+      if (total === 0) zeroUseCount += 1;
+    }
+
+    if (zeroUseCount > 0) {
+      const message =
+        zeroUseCount === 1
+          ? "Yesterday: zero use on one destructive habit. Excellent control."
+          : `Yesterday: zero use on ${zeroUseCount} destructive habits. Excellent control.`;
+      celebrateGoalComplete(message);
+      return;
+    }
+
+    if (underCapCount > 0) {
+      toast.success(
+        underCapCount === 1
+          ? "Yesterday: you stayed under a destructive cap. Keep that momentum."
+          : `Yesterday: you stayed under ${underCapCount} destructive caps. Keep that momentum.`,
+      );
+    }
+  }, [habits, habitLogs, todayStart, celebrateGoalComplete]);
+
+  const { daySummaries, streakSummaries } = useHabitStreaks({ habitLogs, habits, now });
+
+  // Baseline averages (side-effect-only: caches in Zustand store)
+  useBaselineAverages({
+    logs,
+    todayHabitCounts,
+    todayFluidTotalsByName,
+    todayTotalFluidMl: totalFluidMl,
+  });
+
+  // Unresolved food queue + persistent toast
+  const [reviewQueueOpen, setReviewQueueOpen] = useState(false);
+  const unresolvedQueue = useUnresolvedFoodQueue(logs);
+
+  const handleReviewUnresolved = useCallback(() => {
+    try {
+      if (unresolvedQueue.length === 0) {
+        toast.info("All food items have been resolved.");
+        return;
+      }
+      setReviewQueueOpen(true);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Unable to load unresolved items. Check connection."));
+    }
+  }, [unresolvedQueue]);
+  useUnresolvedFoodToast(logs, now.getTime(), handleReviewUnresolved);
+
+  const afterSave = useCallback(() => {
+    celebrateLog();
+  }, [celebrateLog]);
+
+  // Cross-page edit: navigate to Track with pending edit ID in Zustand store
+  const handleRequestEdit = useCallback(
+    (logId: string) => {
+      setPendingEditLogId(logId);
+      void navigate({ to: "/track" });
+    },
+    [navigate, setPendingEditLogId],
+  );
+
+  // Quick capture handlers
+  const {
+    handleQuickCaptureTap,
+    handleLogSleepQuickCapture,
+    handleLogActivityQuickCapture,
+    handleLogWeightKg,
+    handleQuickCaptureLongPress,
+    handleCloseDetailSheet,
+    detailSheetHabit,
+  } = useQuickCapture({
+    afterSave,
+    celebrateGoalComplete,
+    todayHabitCounts: selectedHabitCounts,
+    todayFluidTotalsByName: selectedFluidTotalsByName,
+    streakSummaries,
+    logs,
+    todayStart: selectedStart,
+    todayEnd: selectedEnd,
+    removeSyncedLog,
+    removeHabitLog,
+    onRequestEdit: handleRequestEdit,
+    ...(selectedCaptureTimestamp !== undefined && {
+      captureTimestamp: selectedCaptureTimestamp,
+    }),
+    captureStart: selectedStart,
+    captureEnd: selectedEnd,
+    captureOffset: dayOffset,
+  });
+
+  const detailDaySummaries = useMemo(
+    () =>
+      detailSheetHabit
+        ? daySummaries.filter((summary) => summary.habitId === detailSheetHabit.id)
+        : [],
+    [daySummaries, detailSheetHabit],
+  );
+
+  const _handleSelectDate = useCallback(
+    (date: Date) => {
+      const normalized = startOfDay(date);
+      setSelectedDate(normalized.getTime() > todayDate.getTime() ? todayDate : normalized);
+    },
+    [todayDate],
+  );
+  const handlePreviousDay = useCallback(
+    () => setSelectedDate((value) => startOfDay(addDays(value, -1))),
+    [],
+  );
+  const handleNextDay = useCallback(
+    () =>
+      setSelectedDate((value) => {
+        const next = startOfDay(addDays(value, 1));
+        return next.getTime() > todayDate.getTime() ? todayDate : next;
+      }),
+    [todayDate],
+  );
+  const handleJumpToToday = useCallback(() => setSelectedDate(todayDate), [todayDate]);
+
+  const handleLogBowel = async (bowelState: BowelFormState) => {
+    const consistencyTag = bristolToConsistency(bowelState.bristolCode);
+    const timestamp = bowelState.timestampMs ?? Date.now();
+    await addSyncedLog({
+      timestamp,
+      type: "digestion",
+      data: {
+        episodesCount: normalizeEpisodesCount(bowelState.episodesCount),
+        windowMinutes: 30,
+        urgencyTag: bowelState.urgencyTag,
+        effortTag: bowelState.effortTag,
+        consistencyTag,
+        volumeTag: bowelState.volumeTag,
+        bristolCode: bowelState.bristolCode,
+        accident: bowelState.accident,
+        notes: bowelState.notes.trim(),
+      },
+    });
+    afterSave();
+    void triggerAnalysis({
+      bristolScore: bowelState.bristolCode,
+      autoSendEnabled: true,
+    });
+  };
+
+  // ── Food platform handlers ──
 
   const handleAddAndReview = useCallback(
     (canonicalName: string) => {
@@ -368,26 +425,6 @@ export default function HomePage() {
       dispatch({ type: "OPEN_STAGING_MODAL" });
     },
     [dispatch],
-  );
-
-  const handleToggleFavourite = useCallback(
-    async (canonicalName: string) => {
-      try {
-        if (isFavourite(canonicalName)) {
-          toggleFavourite(canonicalName);
-          return;
-        }
-
-        await toggleFavouriteSlotTag({
-          canonicalName,
-          slot: activeMealSlot,
-        });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Failed to update favourites";
-        toast.error(message);
-      }
-    },
-    [activeMealSlot, isFavourite, toggleFavourite, toggleFavouriteSlotTag],
   );
 
   const handleUpdateStagedQuantity = useCallback(
@@ -420,47 +457,6 @@ export default function HomePage() {
     }
   }, [activeMealSlot, addSyncedLog, dispatch, state.stagingItems]);
 
-  const openModifierEntry = useCallback((habit: HabitConfig, mode: ModifierEntryMode) => {
-    setModifierEntry({ habit, mode });
-    setModifierValue(mode === "hours" ? String(habit.quickIncrement) : String(habit.quickIncrement));
-  }, []);
-
-  const handleModifierChipTap = useCallback(
-    async (habit: HabitConfig | null, mode?: ModifierEntryMode) => {
-      if (!habit) return;
-      if (mode) {
-        openModifierEntry(habit, mode);
-        return;
-      }
-      await handleQuickCaptureTap(habit);
-    },
-    [handleQuickCaptureTap, openModifierEntry],
-  );
-
-  const handleSubmitModifierEntry = useCallback(async () => {
-    if (!modifierEntry) return;
-
-    const parsed = Number(modifierValue);
-    if (!Number.isFinite(parsed) || parsed <= 0) {
-      toast.error("Enter a value greater than 0.");
-      return;
-    }
-
-    if (modifierEntry.mode === "hours") {
-      await handleLogSleepQuickCapture(modifierEntry.habit, parsed);
-    } else {
-      await handleLogActivityQuickCapture(modifierEntry.habit, parsed);
-    }
-
-    setModifierEntry(null);
-    setModifierValue("");
-  }, [handleLogActivityQuickCapture, handleLogSleepQuickCapture, modifierEntry, modifierValue]);
-
-  const showMoreFavourites =
-    slotScopedFavourites.length > visibleFavourites.length
-      ? () => setFavouritesLimit((current) => current + INITIAL_FAVOURITES_LIMIT)
-      : undefined;
-
   const openConversation = useCallback((text?: string) => {
     setConversationSeed(
       text
@@ -473,191 +469,95 @@ export default function HomePage() {
     setConversationOpen(true);
   }, []);
 
+  // ── Render ──
+
+  const canMoveForward = dayOffset < 0;
+
   return (
-    <div className="space-y-6">
-      <section className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-(--text-faint)">
-          Home
-        </p>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="space-y-1">
-            <h1 className="font-display text-3xl font-bold text-(--text)">
-              {greeting}, {firstName}
-            </h1>
-            <p className="max-w-prose text-sm text-(--text-muted)">
-              Your live nutrition summary updates from today&apos;s logs so you can see calories and
-              fluids at a glance before logging the next meal.
-            </p>
-          </div>
-
-          {hasApiKey ? (
-            <button
-              type="button"
-              onClick={() => openConversation()}
-              className="inline-flex items-center gap-2 rounded-full border border-[var(--section-log)]/35 bg-[var(--section-log-muted)] px-4 py-2 text-sm font-semibold text-[var(--section-log)] transition-colors hover:bg-[var(--section-log)]/15"
-            >
-              <MessageCircle className="h-4 w-4" />
-              Ask Dr. Poo
-            </button>
-          ) : null}
+    <div className="space-y-5">
+      {/* ── Greeting row ── */}
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="font-display text-2xl font-bold text-(--text)">{greeting},</p>
+          <p className="font-display text-2xl font-bold text-(--text)">{firstName}</p>
         </div>
-      </section>
-
-      <section className="glass-card space-y-4 p-4 sm:p-5" aria-label="Today nutrition summary">
-        <div className="flex items-center gap-4">
-          <div className="flex justify-center sm:justify-start">
-            <CircularProgressRing
-              value={totalCaloriesToday}
-              goal={calorieGoal}
-              color="var(--orange)"
-              size={112}
-              strokeWidth={10}
-              ariaLabel={`Calories: ${totalCaloriesToday} of ${calorieGoal} kilocalories`}
-              unitLabel="kcal"
-            />
-          </div>
-
-          <div className="min-w-0 flex-1 space-y-4">
-            <SummaryBar
-              label="Calories"
-              consumed={totalCaloriesToday}
-              goal={calorieGoal}
-              unit="kcal"
-              color="var(--orange)"
-            />
-            <SummaryBar
-              label="Fluids"
-              consumed={totalFluidsMl}
-              goal={fluidGoal}
-              unit="ml"
-              color="var(--fluid)"
-            />
-          </div>
-        </div>
-      </section>
-
-      <section className="glass-card space-y-4 p-4">
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-(--text-faint)">
-            Meal slot
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {MEAL_SLOT_OPTIONS.map(({ slot, label }) => {
-              const isActive = slot === activeMealSlot;
-
-              return (
-                <button
-                  key={slot}
-                  type="button"
-                  onClick={() => setSlotOverride(slot)}
-                  className="rounded-full border px-3 py-1.5 text-sm font-medium transition-colors"
-                  style={{
-                    borderColor: isActive ? "var(--orange)" : "var(--color-border-default)",
-                    backgroundColor: isActive
-                      ? "color-mix(in srgb, var(--orange) 16%, transparent)"
-                      : "transparent",
-                    color: isActive ? "var(--orange)" : "var(--text-muted)",
-                  }}
-                  aria-pressed={isActive}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {spotlightFoods.length > 0 ? (
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-(--text-faint)">
-              Quick picks
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {spotlightFoods.map((canonicalName) => (
-                <button
-                  key={`chip-${canonicalName}`}
-                  type="button"
-                  onClick={() => handleAddAndReview(canonicalName)}
-                  className="rounded-full border border-[var(--color-border-default)] bg-[var(--surface-2)] px-3 py-1.5 text-sm font-medium text-(--text) transition-colors hover:border-[var(--orange)] hover:text-[var(--orange)]"
-                >
-                  {titleCase(canonicalName)}
-                </button>
-              ))}
-            </div>
-          </div>
+        {hasApiKey ? (
+          <button
+            type="button"
+            onClick={() => openConversation()}
+            className="inline-flex items-center gap-2 rounded-full border border-[var(--section-log)]/35 bg-[var(--section-log-muted)] px-4 py-2 text-sm font-semibold text-[var(--section-log)] transition-colors hover:bg-[var(--section-log)]/15"
+          >
+            <MessageCircle className="h-4 w-4" />
+            Ask Dr. Poo
+          </button>
         ) : null}
-      </section>
+      </div>
 
-      <section className="glass-card space-y-4 p-4">
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-(--text-faint)">
-            Modifiers
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {modifierHabits.map(({ key, label, habit, mode }) => (
-              <button
-                key={key}
-                type="button"
-                disabled={habit === null}
-                onClick={() => {
-                  void handleModifierChipTap(habit, mode);
-                }}
-                className="rounded-full border px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45"
-                style={{
-                  borderColor: habit ? "var(--color-border-default)" : "var(--surface-3)",
-                  backgroundColor: "var(--surface-2)",
-                  color: habit ? "var(--text)" : "var(--text-faint)",
-                }}
-                title={habit ? `Log ${label}` : `${label} isn't configured yet`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <QuickCapture
-          habits={habits}
-          todayHabitCounts={todayHabitCounts}
-          todayFluidMl={todayFluidTotalsByName}
-          onTap={(habit) => {
-            void handleQuickCaptureTap(habit);
+      {/* ── Date strip ── */}
+      <div className="flex items-center justify-center gap-3">
+        <button
+          type="button"
+          onClick={handlePreviousDay}
+          aria-label="Go to previous day"
+          className="text-xs font-medium text-(--text-muted) transition-colors hover:text-(--text)"
+        >
+          {getPrevDayLabel(selectedDate, todayDate)}
+        </button>
+        <span
+          className="rounded-full border px-3 py-1 text-xs font-semibold"
+          style={{
+            backgroundColor: "color-mix(in srgb, var(--orange) 10%, var(--color-bg-elevated) 90%)",
+            borderColor: "color-mix(in srgb, var(--orange) 28%, transparent)",
+            color: "color-mix(in srgb, var(--orange) 82%, var(--color-text-primary) 18%)",
           }}
-          onLogSleepHours={handleLogSleepQuickCapture}
-          onLogActivityMinutes={handleLogActivityQuickCapture}
-          onLogWeightKg={handleLogWeightKg}
-          onLongPress={handleQuickCaptureLongPress}
+        >
+          {getDayLabel(selectedDate, todayDate)}
+        </span>
+        {canMoveForward && (
+          <button
+            type="button"
+            onClick={dayOffset === -1 ? handleJumpToToday : handleNextDay}
+            aria-label="Go to next day"
+            className="text-xs font-medium text-(--text-muted) transition-colors hover:text-(--text)"
+          >
+            {getNextDayLabel(selectedDate, todayDate)}
+          </button>
+        )}
+      </div>
+
+      {/* ── Bowel Movement ── */}
+      <ErrorBoundary label="Bowel Movement">
+        <BowelSection
+          onSave={handleLogBowel}
+          {...(selectedCaptureTimestamp !== undefined && {
+            captureTimestamp: selectedCaptureTimestamp,
+          })}
         />
-      </section>
+      </ErrorBoundary>
 
-      <HomeFoodSection
-        title="Favourites"
-        foods={visibleFavourites}
-        emptyMessage={`No favourites for ${titleCase(activeMealSlot)}`}
-        onAdd={handleAddAndReview}
-        onToggleFavourite={handleToggleFavourite}
-        isFavourite={isFavourite}
-        {...(showMoreFavourites ? { showMore: showMoreFavourites } : {})}
+      {/* ── Nutrition ── */}
+      <NutritionCardErrorBoundary>
+        <NutritionCard
+          selectedDate={selectedDate}
+          {...(selectedCaptureTimestamp !== undefined && {
+            captureTimestamp: selectedCaptureTimestamp,
+          })}
+        />
+      </NutritionCardErrorBoundary>
+
+      {/* ── Quick Capture ── */}
+      <QuickCapture
+        habits={habits}
+        todayHabitCounts={selectedHabitCounts}
+        todayFluidMl={selectedFluidTotalsByName}
+        onTap={handleQuickCaptureTap}
+        onLogSleepHours={handleLogSleepQuickCapture}
+        onLogActivityMinutes={handleLogActivityQuickCapture}
+        onLogWeightKg={handleLogWeightKg}
+        onLongPress={handleQuickCaptureLongPress}
       />
 
-      <HomeFoodSection
-        title="Recent"
-        foods={visibleRecentFoods}
-        emptyMessage={`Nothing logged recently for ${titleCase(activeMealSlot)}`}
-        onAdd={handleAddAndReview}
-        onToggleFavourite={handleToggleFavourite}
-        isFavourite={isFavourite}
-      />
-
-      <HomeFoodSection
-        title="Frequent"
-        foods={visibleFrequentFoods}
-        emptyMessage={`No frequent foods yet for ${titleCase(activeMealSlot)}`}
-        onAdd={handleAddAndReview}
-        onToggleFavourite={handleToggleFavourite}
-        isFavourite={isFavourite}
-      />
-
+      {/* ── Dr. Poo proactive card ── */}
       {hasApiKey && !dismissedCard ? (
         <section className="glass-card space-y-3 border border-[var(--section-log)]/20 p-4">
           <div className="flex items-start justify-between gap-3">
@@ -689,6 +589,70 @@ export default function HomePage() {
           </div>
         </section>
       ) : null}
+
+      {/* ── Parked sections (not final placement) ── */}
+      <section className="space-y-4 opacity-60">
+        <TodayStatusRow
+          bmCount={todayBmCount}
+          fluidTotalMl={totalFluidMl}
+          waterOnlyMl={waterOnlyMl}
+          lastBmTimestamp={lastBmTimestamp}
+          nowMs={now.getTime()}
+        />
+
+        <div className="glass-card space-y-4 p-4">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-(--text-faint)">
+              Meal slot
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {MEAL_SLOT_OPTIONS.map(({ slot, label }) => {
+                const isActive = slot === activeMealSlot;
+                return (
+                  <button
+                    key={slot}
+                    type="button"
+                    onClick={() => setSlotOverride(slot)}
+                    className="rounded-full border px-3 py-1.5 text-sm font-medium transition-colors"
+                    style={{
+                      borderColor: isActive ? "var(--orange)" : "var(--color-border-default)",
+                      backgroundColor: isActive
+                        ? "color-mix(in srgb, var(--orange) 16%, transparent)"
+                        : "transparent",
+                      color: isActive ? "var(--orange)" : "var(--text-muted)",
+                    }}
+                    aria-pressed={isActive}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {spotlightFoods.length > 0 ? (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-(--text-faint)">
+                Quick picks
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {spotlightFoods.map((canonicalName) => (
+                  <button
+                    key={`chip-${canonicalName}`}
+                    type="button"
+                    onClick={() => handleAddAndReview(canonicalName)}
+                    className="rounded-full border border-[var(--color-border-default)] bg-[var(--surface-2)] px-3 py-1.5 text-sm font-medium text-(--text) transition-colors hover:border-[var(--orange)] hover:text-[var(--orange)]"
+                  >
+                    {titleCase(canonicalName)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </section>
+
+      {/* ── Modals & overlays ── */}
 
       <LogFoodModal
         open={state.stagingModalOpen}
@@ -729,70 +693,33 @@ export default function HomePage() {
         </Dialog.Portal>
       </Dialog.Root>
 
-      <Dialog.Root
-        open={modifierEntry !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setModifierEntry(null);
-            setModifierValue("");
-          }
-        }}
-      >
-        <Dialog.Portal>
-          <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/45 backdrop-blur-sm" />
-          <Dialog.Popup className="fixed inset-x-4 top-1/2 z-50 mx-auto w-full max-w-sm -translate-y-1/2 rounded-3xl border border-[var(--color-border-default)] bg-[var(--card)] p-4 shadow-2xl">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div>
-                <Dialog.Title className="font-display text-xl font-bold text-(--text)">
-                  {modifierEntry ? `Log ${modifierEntry.habit.name}` : "Log modifier"}
-                </Dialog.Title>
-                <p className="text-sm text-(--text-muted)">
-                  {modifierEntry?.mode === "hours"
-                    ? "Enter hours, then save."
-                    : "Enter minutes, then save."}
-                </p>
-              </div>
-              <Dialog.Close className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--color-border-default)] text-(--text-muted) transition-colors hover:text-(--text)">
-                <X className="h-4 w-4" />
-              </Dialog.Close>
-            </div>
-
-            <div className="space-y-3">
-              <input
-                type="number"
-                min="0"
-                step={modifierEntry?.mode === "hours" ? "0.5" : "1"}
-                value={modifierValue}
-                onChange={(event) => setModifierValue(event.target.value)}
-                className="h-12 w-full rounded-2xl border border-[var(--color-border-default)] bg-[var(--surface-1)] px-4 text-center text-lg font-medium text-(--text)"
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  void handleSubmitModifierEntry();
-                }}
-                className="w-full rounded-2xl bg-[var(--section-quick)] px-4 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-              >
-                Save
-              </button>
-            </div>
-          </Dialog.Popup>
-        </Dialog.Portal>
-      </Dialog.Root>
+      {celebration?.confettiActive && (
+        <ConfettiBurst
+          active={celebration.confettiActive}
+          onComplete={clearCelebration}
+          originX={celebration.confettiOriginX}
+          originY={celebration.confettiOriginY}
+        />
+      )}
 
       <HabitDetailSheet
         habit={detailSheetHabit}
-        count={detailSheetHabit ? (todayHabitCounts[detailSheetHabit.id] ?? 0) : 0}
-        {...(detailSheetHabit?.logAs === "fluid"
-          ? {
-              fluidMl:
-                todayFluidTotalsByName[normalizeFluidItemName(detailSheetHabit.name)] ?? 0,
-            }
-          : {})}
+        count={detailSheetHabit ? (selectedHabitCounts[detailSheetHabit.id] ?? 0) : 0}
+        {...(detailSheetHabit?.logAs === "fluid" && {
+          fluidMl: selectedFluidTotalsByName[normalizeFluidItemName(detailSheetHabit.name)],
+        })}
         daySummaries={detailDaySummaries}
         streakSummary={detailSheetHabit ? (streakSummaries[detailSheetHabit.id] ?? null) : null}
         onClose={handleCloseDetailSheet}
       />
+
+      <Suspense fallback={null}>
+        <FoodMatchingModal
+          queue={unresolvedQueue}
+          open={reviewQueueOpen}
+          onOpenChange={setReviewQueueOpen}
+        />
+      </Suspense>
     </div>
   );
 }

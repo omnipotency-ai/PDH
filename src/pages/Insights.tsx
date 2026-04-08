@@ -1,9 +1,12 @@
 import { lazy, Suspense, useState } from "react";
+import { AiInsightsSection } from "@/components/track/dr-poo/AiInsightsSection";
+import { useAiInsights } from "@/hooks/useAiInsights";
 
 const PatternsPage = lazy(() => import("./Patterns"));
 
 export default function InsightsPage() {
   const [tab, setTab] = useState<"patterns" | "drpoo">("patterns");
+  const { sendNow } = useAiInsights();
 
   return (
     <div className="space-y-4">
@@ -37,7 +40,7 @@ export default function InsightsPage() {
           <PatternsPage />
         </Suspense>
       ) : (
-        <p className="text-sm text-(--text-muted)">Dr. Poo Report - moved here in Wave 2.</p>
+        <AiInsightsSection onSendNow={sendNow} />
       )}
     </div>
   );

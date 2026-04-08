@@ -24,6 +24,10 @@ export interface AppState {
   aiAnalysisStatus: AiAnalysisStatus;
   aiAnalysisError: string | null;
   setAiAnalysisStatus: (status: AiAnalysisStatus, error?: string) => void;
+
+  // Cross-page auto-edit (Home capture → Track log viewer)
+  pendingEditLogId: string | null;
+  setPendingEditLogId: (id: string | null) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -72,4 +76,7 @@ export const useStore = create<AppState>()((set) => ({
   aiAnalysisError: null,
   setAiAnalysisStatus: (status, error) =>
     set({ aiAnalysisStatus: status, aiAnalysisError: error ?? null }),
+
+  pendingEditLogId: null,
+  setPendingEditLogId: (id) => set({ pendingEditLogId: id }),
 }));
