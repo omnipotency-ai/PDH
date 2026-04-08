@@ -1,8 +1,9 @@
 > **Ref:** `docs/WIP.md`
-> **Updated:** 2026-04-07
-> **Version:** 3.3
+> **Updated:** 2026-04-08
+> **Version:** 3.4
 > **History:**
 >
+> - v3.4 (2026-04-08) — Food Platform master plan adopted, old plan superseded
 > - v3.3 (2026-04-07) — Tech-Debt initiative complete, collapsed to summary
 > - v3.2 (2026-04-06) — Food Page & Meal System initiative started
 > - v3.1 (2026-04-06) — Nutrition Card W4-5 collapsed to summary, initiative complete
@@ -20,14 +21,20 @@
 
 ---
 
-## Active: Food Page, Meal System & Navigation Restructure
+## Active: Food Platform & Navigation Restructure
 
-> **PRD:** `docs/prd/2026-04-06-food-page-and-meal-system.md`
-> **Plan:** `docs/plans/2026-04-06-food-page-and-meal-system.md`
-> **Execution plans:** `docs/plans/2026-04-06-food-page-and-meal-system-waves-{0-1,2-3,4-6}.json`
-> **Started:** 2026-04-06
+> **Plan:** `docs/plans/food-platform-master-plan.md`
+> **Vision:** `docs/plans/new-plan-food.md`
+> **Branch:** `odyssey/food-platform`
+> **Started:** 2026-04-08
 
 <!-- Implementer agents: prepend new entries HERE, above the completed summaries -->
+
+### 2026-04-08 — Plan superseded: Food Platform master plan
+
+Old wave JSONs (0-1, 2-3, 4-6) archived. New 8-wave plan with 31 tasks.
+Key changes: clinicalRegistry table, ingredientProfiles product catalog, productId on logs,
+server-side unified search, customPortions-first math. No code changes yet.
 
 ---
 
