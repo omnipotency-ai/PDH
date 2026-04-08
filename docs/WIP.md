@@ -31,6 +31,17 @@
 
 <!-- Implementer agents: prepend new entries HERE, above the completed summaries -->
 
+### 2026-04-08 — W5-T02 complete: Home meal slots, favourites, recent, and frequent
+
+- **Tasks:** W5-T02
+- **Files:** `src/pages/Home.tsx`, `src/hooks/useSlotScopedFoods.ts`, `docs/WIP.md`
+- **What:**
+  - Added meal-slot chips on Home with automatic defaulting from the current meal slot and manual override support.
+  - Added slot-scoped Favourites, Recent, and Frequent sections plus quick-pick chips above them for fast staging.
+  - Reused the existing nutrition staging modal flow on Home so food rows and chips can stage items and review them immediately.
+  - Replaced the broken draft `useSlotScopedFoods()` hook with a typed implementation that derives recent and frequent foods from synced logs without tripping type errors.
+- **Verification:** `bun run typecheck` PASS
+
 ### 2026-04-08 — W5-T01 complete: Home greeting and nutrition summary
 
 - **Tasks:** W5-T01
