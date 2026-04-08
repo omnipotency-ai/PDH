@@ -13,6 +13,8 @@ import { useStore } from "@/store";
 interface ConversationPanelProps {
   onSendNow?: () => void;
   replyInputRef?: RefObject<HTMLInputElement | null>;
+  initialReplyText?: string;
+  initialReplyKey?: string;
 }
 
 const COLLAPSED_MESSAGE_STYLE = {
@@ -25,7 +27,12 @@ const COLLAPSED_MESSAGE_STYLE = {
 const AI_CONTENT_MAX_CHARS = 50_000;
 const REHYPE_PLUGINS = [rehypeSanitize];
 
-export function ConversationPanel({ onSendNow, replyInputRef }: ConversationPanelProps) {
+export function ConversationPanel({
+  onSendNow,
+  replyInputRef,
+  initialReplyText,
+  initialReplyKey,
+}: ConversationPanelProps) {
   const [expandedMessageIds, setExpandedMessageIds] = useState<Set<string>>(() => new Set());
 
   // Far-future constant so stableEndMs never goes stale across the memo lifetime.
@@ -198,6 +205,8 @@ export function ConversationPanel({ onSendNow, replyInputRef }: ConversationPane
         <ReplyInput
           {...(onSendNow !== undefined && { onSendNow })}
           {...(replyInputRef !== undefined && { inputRef: replyInputRef })}
+          {...(initialReplyText !== undefined && { initialText: initialReplyText })}
+          {...(initialReplyKey !== undefined && { initialTextKey: initialReplyKey })}
         />
       </div>
     </div>

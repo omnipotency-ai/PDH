@@ -1,11 +1,15 @@
+import { Dialog } from "@base-ui/react/dialog";
 import { useMutation, useQuery } from "convex/react";
 import { useUser } from "@clerk/clerk-react";
+import { MessageCircle, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { ConversationPanel } from "@/components/track/dr-poo/ConversationPanel";
 import { FoodRow } from "@/components/track/nutrition/FoodRow";
 import { LogFoodModal } from "@/components/track/nutrition/LogFoodModal";
 import { buildStagedNutritionLogData } from "@/components/track/nutrition/nutritionLogging";
 import { CircularProgressRing } from "@/components/track/nutrition/CircularProgressRing";
+import { useAiInsights } from "@/hooks/useAiInsights";
 import { useNutritionStore } from "@/components/track/nutrition/useNutritionStore";
 import { useNutritionData } from "@/hooks/useNutritionData";
 import { useFoodFavourites } from "@/hooks/useProfile";
@@ -16,7 +20,7 @@ import {
   titleCase,
   type MealSlot,
 } from "@/lib/nutritionUtils";
-import { useAddSyncedLog } from "@/lib/sync";
+import { useAddSyncedLog, useLatestSuccessfulAiAnalysis } from "@/lib/sync";
 import { api } from "../../convex/_generated/api";
 
 const INITIAL_FAVOURITES_LIMIT = 7;
@@ -29,6 +33,7 @@ const MEAL_SLOT_OPTIONS: ReadonlyArray<{ slot: MealSlot; label: string }> = [
 ];
 
 type FavouriteSlotTags = Partial<Record<string, MealSlot[]>>;
+type ConversationSeed = { key: string; text: string };
 
 function getTimeOfDayGreeting(hour: number): string {
   if (hour < 12) return "Good morning";
@@ -136,10 +141,33 @@ function HomeFoodSection({
   );
 }
 
+function toPreviewText(markdown: string): string {
+  return markdown
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/[#>*_`~-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function getFallbackDrPooPrompt(activeMealSlot: MealSlot): string {
+  const slotLabel = titleCase(activeMealSlot);
+  return `Have you logged ${slotLabel.toLowerCase()} yet? Dr. Poo can help you think through what feels safe today.`;
+}
+
+function getFollowUpPrompt(activeMealSlot: MealSlot, hasInsight: boolean): string {
+  if (hasInsight) {
+    return "Can you explain that summary in more detail and tell me what to watch next?";
+  }
+
+  return `Can you help me think about my ${titleCase(activeMealSlot).toLowerCase()} choices today?`;
+}
+
 export default function HomePage() {
   const { user } = useUser();
   const { totalCaloriesToday, totalFluidsMl, calorieGoal, fluidGoal, currentMealSlot } =
     useNutritionData();
+  const latestSuccessfulAnalysis = useLatestSuccessfulAiAnalysis();
+  const { hasApiKey, sendNow } = useAiInsights();
   const { favourites, isFavourite, toggleFavourite } = useFoodFavourites();
   const favouriteSlotTags = (useQuery(api.profiles.getFavouriteSlotTags, {}) ?? {}) as FavouriteSlotTags;
   const toggleFavouriteSlotTag = useMutation(api.profiles.toggleFavouriteSlotTag);
@@ -147,11 +175,23 @@ export default function HomePage() {
   const { state, dispatch, stagingTotals } = useNutritionStore();
   const [slotOverride, setSlotOverride] = useState<MealSlot | null>(null);
   const [favouritesLimit, setFavouritesLimit] = useState(INITIAL_FAVOURITES_LIMIT);
+  const [conversationOpen, setConversationOpen] = useState(false);
+  const [conversationSeed, setConversationSeed] = useState<ConversationSeed | null>(null);
+  const [dismissedCard, setDismissedCard] = useState(false);
 
   const activeMealSlot = slotOverride ?? currentMealSlot;
   const { recentFoods, frequentFoods } = useSlotScopedFoods(activeMealSlot);
   const greeting = getTimeOfDayGreeting(new Date().getHours());
   const firstName = getDisplayName(user?.firstName);
+  const latestInsightSummary = latestSuccessfulAnalysis?.insight.summary ?? null;
+  const proactiveCardText = useMemo(() => {
+    const preview = latestInsightSummary ? toPreviewText(latestInsightSummary) : "";
+    if (preview.length > 0) {
+      return preview.length > 150 ? `${preview.slice(0, 147).trimEnd()}...` : preview;
+    }
+
+    return getFallbackDrPooPrompt(activeMealSlot);
+  }, [activeMealSlot, latestInsightSummary]);
 
   useEffect(() => {
     if (state.activeMealSlot === activeMealSlot) return;
@@ -161,6 +201,10 @@ export default function HomePage() {
   useEffect(() => {
     setFavouritesLimit(INITIAL_FAVOURITES_LIMIT);
   }, [activeMealSlot]);
+
+  useEffect(() => {
+    setDismissedCard(false);
+  }, [proactiveCardText]);
 
   const slotScopedFavourites = useMemo(
     () =>
@@ -258,20 +302,45 @@ export default function HomePage() {
       ? () => setFavouritesLimit((current) => current + INITIAL_FAVOURITES_LIMIT)
       : undefined;
 
+  const openConversation = useCallback((text?: string) => {
+    setConversationSeed(
+      text
+        ? {
+            key: `${Date.now()}`,
+            text,
+          }
+        : null,
+    );
+    setConversationOpen(true);
+  }, []);
+
   return (
     <div className="space-y-6">
       <section className="space-y-2">
         <p className="text-xs font-semibold uppercase tracking-[0.28em] text-(--text-faint)">
           Home
         </p>
-        <div className="space-y-1">
-          <h1 className="font-display text-3xl font-bold text-(--text)">
-            {greeting}, {firstName}
-          </h1>
-          <p className="max-w-prose text-sm text-(--text-muted)">
-            Your live nutrition summary updates from today&apos;s logs so you can see calories and
-            fluids at a glance before logging the next meal.
-          </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-1">
+            <h1 className="font-display text-3xl font-bold text-(--text)">
+              {greeting}, {firstName}
+            </h1>
+            <p className="max-w-prose text-sm text-(--text-muted)">
+              Your live nutrition summary updates from today&apos;s logs so you can see calories and
+              fluids at a glance before logging the next meal.
+            </p>
+          </div>
+
+          {hasApiKey ? (
+            <button
+              type="button"
+              onClick={() => openConversation()}
+              className="inline-flex items-center gap-2 rounded-full border border-[var(--section-log)]/35 bg-[var(--section-log-muted)] px-4 py-2 text-sm font-semibold text-[var(--section-log)] transition-colors hover:bg-[var(--section-log)]/15"
+            >
+              <MessageCircle className="h-4 w-4" />
+              Ask Dr. Poo
+            </button>
+          ) : null}
         </div>
       </section>
 
@@ -388,6 +457,38 @@ export default function HomePage() {
         isFavourite={isFavourite}
       />
 
+      {hasApiKey && !dismissedCard ? (
+        <section className="glass-card space-y-3 border border-[var(--section-log)]/20 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--section-log)]">
+                Dr. Poo
+              </p>
+              <p className="text-sm text-(--text-muted)">{proactiveCardText}</p>
+            </div>
+            <MessageCircle className="mt-0.5 h-5 w-5 shrink-0 text-[var(--section-log)]" />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setDismissedCard(true)}
+              className="rounded-full border border-[var(--color-border-default)] px-3 py-1.5 text-sm font-medium text-(--text-muted) transition-colors hover:text-(--text)"
+            >
+              Got it
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                openConversation(getFollowUpPrompt(activeMealSlot, latestInsightSummary !== null))
+              }
+              className="rounded-full bg-[var(--section-log)] px-3 py-1.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            >
+              Chat with Dr. Poo
+            </button>
+          </div>
+        </section>
+      ) : null}
+
       <LogFoodModal
         open={state.stagingModalOpen}
         stagedItems={state.stagingItems}
@@ -399,6 +500,33 @@ export default function HomePage() {
         onLogFood={handleLogStagedFood}
         onAddMore={() => dispatch({ type: "CLOSE_STAGING_MODAL" })}
       />
+
+      <Dialog.Root open={conversationOpen} onOpenChange={setConversationOpen}>
+        <Dialog.Portal>
+          <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/55 backdrop-blur-sm" />
+          <Dialog.Popup className="fixed inset-x-4 top-1/2 z-50 mx-auto w-full max-w-2xl -translate-y-1/2 rounded-3xl border border-[var(--section-log)]/20 bg-[var(--card)] p-4 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <Dialog.Title className="font-display text-xl font-bold text-(--text)">
+                  Dr. Poo
+                </Dialog.Title>
+                <p className="text-sm text-(--text-muted)">
+                  Ask a question or continue the current conversation.
+                </p>
+              </div>
+              <Dialog.Close className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--color-border-default)] text-(--text-muted) transition-colors hover:text-(--text)">
+                <X className="h-4 w-4" />
+              </Dialog.Close>
+            </div>
+
+            <ConversationPanel
+              onSendNow={sendNow}
+              {...(conversationSeed?.text ? { initialReplyText: conversationSeed.text } : {})}
+              {...(conversationSeed?.key ? { initialReplyKey: conversationSeed.key } : {})}
+            />
+          </Dialog.Popup>
+        </Dialog.Portal>
+      </Dialog.Root>
     </div>
   );
 }

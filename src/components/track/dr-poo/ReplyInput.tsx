@@ -1,6 +1,6 @@
 import { Send, Zap } from "lucide-react";
 import type { KeyboardEvent, RefObject } from "react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { usePendingReplies } from "@/hooks/usePendingReplies";
 import { useStore } from "@/store";
@@ -10,14 +10,30 @@ const DR_POO_REPLY_MAX_LENGTH = 2500;
 interface ReplyInputProps {
   onSendNow?: () => void;
   inputRef?: RefObject<HTMLInputElement | null>;
+  initialText?: string;
+  initialTextKey?: string;
 }
 
-export function ReplyInput({ onSendNow, inputRef: externalRef }: ReplyInputProps) {
+export function ReplyInput({
+  onSendNow,
+  inputRef: externalRef,
+  initialText,
+  initialTextKey,
+}: ReplyInputProps) {
   const [text, setText] = useState("");
   const { pendingReplies, addReply } = usePendingReplies();
   const aiAnalysisStatus = useStore((state) => state.aiAnalysisStatus);
   const internalRef = useRef<HTMLInputElement>(null);
   const inputRef = externalRef ?? internalRef;
+
+  useEffect(() => {
+    if (!initialTextKey || !initialText) return;
+    setText(initialText);
+    requestAnimationFrame(() => {
+      inputRef.current?.focus();
+      inputRef.current?.setSelectionRange(initialText.length, initialText.length);
+    });
+  }, [initialText, initialTextKey, inputRef]);
 
   // Hide pending replies while analysis is in flight — they've been captured
   // by runAnalysis and will be claimed by claimPendingReplies when it completes.

@@ -31,6 +31,16 @@
 
 <!-- Implementer agents: prepend new entries HERE, above the completed summaries -->
 
+### 2026-04-08 — W5-T05 complete: Home Dr. Poo touchpoints
+
+- **Tasks:** W5-T05
+- **Files:** `src/pages/Home.tsx`, `src/components/track/dr-poo/ConversationPanel.tsx`, `src/components/track/dr-poo/ReplyInput.tsx`, `docs/WIP.md`
+- **What:**
+  - Added an `Ask Dr. Poo` entrypoint near the Home greeting that opens a dedicated conversation modal.
+  - Added a proactive Dr. Poo card near the bottom of Home that shows the latest insight summary when available or a slot-aware fallback prompt otherwise.
+  - Wired `Chat with Dr. Poo` to open the conversation with a preloaded follow-up prompt by threading seed text through `ConversationPanel` and `ReplyInput`.
+- **Verification:** `bun run typecheck` PASS
+
 ### 2026-04-08 — W5-T02 complete: Home meal slots, favourites, recent, and frequent
 
 - **Tasks:** W5-T02
