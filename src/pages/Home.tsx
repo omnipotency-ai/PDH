@@ -76,7 +76,7 @@ export default function HomePage() {
       </section>
 
       <section className="glass-card space-y-4 p-4 sm:p-5" aria-label="Today nutrition summary">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+        <div className="flex items-center gap-4">
           <div className="flex justify-center sm:justify-start">
             <CircularProgressRing
               value={totalCaloriesToday}
