@@ -109,13 +109,8 @@ export function FoodFilterView({
     }
 
     // Sort by frequency descending, filter to known foods, take top N.
-    const sorted = [...countMap.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .map(([name]) => name);
-    const sortedFrequentFoods = filterToKnownFoods(sorted).slice(
-      0,
-      MAX_ITEMS_PER_TAB,
-    );
+    const sorted = [...countMap.entries()].sort((a, b) => b[1] - a[1]).map(([name]) => name);
+    const sortedFrequentFoods = filterToKnownFoods(sorted).slice(0, MAX_ITEMS_PER_TAB);
 
     return { frequentFoods: sortedFrequentFoods, frequencyCountMap: countMap };
   }, [logs]);
@@ -139,16 +134,11 @@ export function FoodFilterView({
     return names.map((canonicalName) => {
       const portion = formatPortion(canonicalName);
       const calories = getDefaultCalories(canonicalName);
-      const count =
-        activeTab === "frequent"
-          ? frequencyCountMap.get(canonicalName)
-          : undefined;
+      const count = activeTab === "frequent" ? frequencyCountMap.get(canonicalName) : undefined;
 
       // For Frequent tab, prepend the logged count to the portion string.
       const portionDisplay =
-        count != null && count > 0
-          ? `Logged ${count}x${portion ? ` · ${portion}` : ""}`
-          : portion;
+        count != null && count > 0 ? `Logged ${count}x${portion ? ` · ${portion}` : ""}` : portion;
 
       return {
         canonicalName,
@@ -213,9 +203,7 @@ export function FoodFilterView({
               <Icon className="h-3.5 w-3.5" aria-hidden="true" />
               <span>
                 {tab.label}
-                {count > 0 && (
-                  <span className="ml-1 font-normal opacity-60">({count})</span>
-                )}
+                {count > 0 && <span className="ml-1 font-normal opacity-60">({count})</span>}
               </span>
             </button>
           );

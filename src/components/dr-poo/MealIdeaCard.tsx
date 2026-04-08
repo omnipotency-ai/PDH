@@ -83,31 +83,11 @@ function extractFoodTags(items: string[]): string[] {
 
   const tagRules: Array<{ keywords: string[]; tag: string }> = [
     {
-      keywords: [
-        "chicken",
-        "fish",
-        "salmon",
-        "tuna",
-        "egg",
-        "turkey",
-        "beef",
-        "tofu",
-        "protein",
-      ],
+      keywords: ["chicken", "fish", "salmon", "tuna", "egg", "turkey", "beef", "tofu", "protein"],
       tag: "protein",
     },
     {
-      keywords: [
-        "rice",
-        "bread",
-        "pasta",
-        "oat",
-        "potato",
-        "noodle",
-        "toast",
-        "cereal",
-        "grain",
-      ],
+      keywords: ["rice", "bread", "pasta", "oat", "potato", "noodle", "toast", "cereal", "grain"],
       tag: "carbs",
     },
     {
@@ -124,29 +104,12 @@ function extractFoodTags(items: string[]): string[] {
       tag: "vegetables",
     },
     {
-      keywords: [
-        "banana",
-        "apple",
-        "berry",
-        "fruit",
-        "mango",
-        "melon",
-        "peach",
-        "pear",
-      ],
+      keywords: ["banana", "apple", "berry", "fruit", "mango", "melon", "peach", "pear"],
       tag: "fruit",
     },
     { keywords: ["yogurt", "cheese", "milk", "dairy", "cream"], tag: "dairy" },
     {
-      keywords: [
-        "fibre",
-        "fiber",
-        "whole grain",
-        "oat",
-        "bran",
-        "lentil",
-        "bean",
-      ],
+      keywords: ["fibre", "fiber", "whole grain", "oat", "bran", "lentil", "bean"],
       tag: "fibre",
     },
     {
@@ -186,10 +149,7 @@ export function MealIdeaCard({ meal }: MealIdeaCardProps) {
   const tags = extractFoodTags(meal.items);
 
   return (
-    <div
-      data-slot="meal-idea-card"
-      className="glass-card overflow-hidden rounded-2xl"
-    >
+    <div data-slot="meal-idea-card" className="glass-card overflow-hidden rounded-2xl">
       {/* Header — gradient banner with meal slot name */}
       <div className="px-4 py-3" style={{ background: slotStyle.gradient }}>
         <p
@@ -198,10 +158,7 @@ export function MealIdeaCard({ meal }: MealIdeaCardProps) {
         >
           Meal Idea
         </p>
-        <p
-          className="font-display text-base font-bold"
-          style={{ color: slotStyle.accent }}
-        >
+        <p className="font-display text-base font-bold" style={{ color: slotStyle.accent }}>
           {meal.meal}
         </p>
       </div>
@@ -210,10 +167,7 @@ export function MealIdeaCard({ meal }: MealIdeaCardProps) {
       <div className="px-4 py-3">
         <ul className="space-y-1.5">
           {meal.items.map((item) => (
-            <li
-              key={item}
-              className="flex items-start gap-2 text-sm text-[var(--text)]"
-            >
+            <li key={item} className="flex items-start gap-2 text-sm text-[var(--text)]">
               <span
                 className="mt-1.5 block h-1.5 w-1.5 shrink-0 rounded-full opacity-40"
                 style={{ backgroundColor: slotStyle.accent }}
@@ -225,9 +179,7 @@ export function MealIdeaCard({ meal }: MealIdeaCardProps) {
 
         {/* Reasoning — subtle italic explanation */}
         <div className="prose-sm mt-3 border-t border-[var(--border)] pt-2.5 text-xs text-[var(--text-muted)] [&_em]:text-[var(--text-faint)] [&_strong]:text-[var(--text)]">
-          <Markdown components={AI_MARKDOWN_COMPONENTS}>
-            {meal.reasoning}
-          </Markdown>
+          <Markdown components={AI_MARKDOWN_COMPONENTS}>{meal.reasoning}</Markdown>
         </div>
       </div>
 

@@ -21,9 +21,7 @@ export const SORT_OPTIONS = [
 
 export type SortOptionValue = (typeof SORT_OPTIONS)[number]["value"];
 
-export const SORTABLE_COLUMN_IDS = new Set<string>(
-  SORT_OPTIONS.map((o) => o.value),
-);
+export const SORTABLE_COLUMN_IDS = new Set<string>(SORT_OPTIONS.map((o) => o.value));
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -87,10 +85,7 @@ export function normalizeSorting(input: unknown): SortingState {
 
 // ── Equality helpers ──────────────────────────────────────────────────────────
 
-export function columnFiltersEqual(
-  a: ColumnFiltersState,
-  b: ColumnFiltersState,
-): boolean {
+export function columnFiltersEqual(a: ColumnFiltersState, b: ColumnFiltersState): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) {
     const fa = a[i];
@@ -116,24 +111,16 @@ export function sortingEqual(a: SortingState, b: SortingState): boolean {
 
 // ── Row-matching helpers ──────────────────────────────────────────────────────
 
-function rowMatchesStatusFilter(
-  row: FoodDatabaseRow,
-  values: string[],
-): boolean {
+function rowMatchesStatusFilter(row: FoodDatabaseRow, values: string[]): boolean {
   return values.some((value) => {
     // Handle compound values like "safe-loose" and "safe-hard"
-    if (value === "safe-loose")
-      return row.primaryStatus === "safe" && row.tendency === "loose";
-    if (value === "safe-hard")
-      return row.primaryStatus === "safe" && row.tendency === "hard";
+    if (value === "safe-loose") return row.primaryStatus === "safe" && row.tendency === "loose";
+    if (value === "safe-hard") return row.primaryStatus === "safe" && row.tendency === "hard";
     return value === row.primaryStatus;
   });
 }
 
-function rowMatchesCategoryFilter(
-  row: FoodDatabaseRow,
-  values: string[],
-): boolean {
+function rowMatchesCategoryFilter(row: FoodDatabaseRow, values: string[]): boolean {
   if (row.foodGroup === undefined) return false;
   return values.some((value) => value === row.foodGroup);
 }
@@ -143,36 +130,23 @@ function rowMatchesZoneFilter(row: FoodDatabaseRow, values: string[]): boolean {
   return values.includes(String(row.stage));
 }
 
-function rowMatchesNormalizedFilters(
-  row: FoodDatabaseRow,
-  filters: ColumnFiltersState,
-): boolean {
+function rowMatchesNormalizedFilters(row: FoodDatabaseRow, filters: ColumnFiltersState): boolean {
   for (const filter of filters) {
     const values = safeStringArray(filter.value);
     if (values.length === 0) continue;
-    if (filter.id === "status" && !rowMatchesStatusFilter(row, values))
-      return false;
-    if (filter.id === "category" && !rowMatchesCategoryFilter(row, values))
-      return false;
-    if (filter.id === "stage" && !rowMatchesZoneFilter(row, values))
-      return false;
+    if (filter.id === "status" && !rowMatchesStatusFilter(row, values)) return false;
+    if (filter.id === "category" && !rowMatchesCategoryFilter(row, values)) return false;
+    if (filter.id === "stage" && !rowMatchesZoneFilter(row, values)) return false;
   }
   return true;
 }
 
-export function rowMatchesFilters(
-  row: FoodDatabaseRow,
-  filters: ColumnFiltersState,
-): boolean {
+export function rowMatchesFilters(row: FoodDatabaseRow, filters: ColumnFiltersState): boolean {
   const normalized = normalizeColumnFilters(filters);
   return rowMatchesNormalizedFilters(row, normalized);
 }
 
-export function countRowsForView(
-  rows: readonly FoodDatabaseRow[],
-  view: SmartViewPreset,
-): number {
+export function countRowsForView(rows: readonly FoodDatabaseRow[], view: SmartViewPreset): number {
   const normalized = normalizeColumnFilters(view.columnFilters);
-  return rows.filter((row) => rowMatchesNormalizedFilters(row, normalized))
-    .length;
+  return rows.filter((row) => rowMatchesNormalizedFilters(row, normalized)).length;
 }

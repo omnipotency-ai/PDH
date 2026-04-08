@@ -17,10 +17,10 @@ export function CloudProfileSection({ isLoading }: CloudProfileSectionProps) {
       <div className="space-y-1.5 rounded-lg border border-[var(--section-appdata-border)]/70 bg-[var(--surface-0)]/40 p-3">
         <p className="text-[11px] font-semibold text-[var(--text)]">Privacy by default.</p>
         <p className="text-[11px] text-[var(--text-muted)]">
-          AI access is configured at the app level for this private deployment. The OpenAI key
-          lives in server environment variables, not in your browser or your user profile. All
-          other settings and data are stored in Convex so they survive refreshes and travel with
-          you to another device.
+          AI access is configured at the app level for this private deployment. The OpenAI key lives
+          in server environment variables, not in your browser or your user profile. All other
+          settings and data are stored in Convex so they survive refreshes and travel with you to
+          another device.
         </p>
         <p className="text-[11px] text-[var(--text-muted)]">
           Settings changes are saved to the cloud immediately. Data is encrypted in transit and at

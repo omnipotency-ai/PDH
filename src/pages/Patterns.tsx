@@ -2,14 +2,7 @@ import { getFoodEntry, pickFoodDigestionMetadata } from "@shared/foodRegistry";
 import type { ColumnFiltersState, SortingState } from "@tanstack/react-table";
 import { format } from "date-fns";
 import { Filter, Search } from "lucide-react";
-import {
-  type MouseEvent,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   buildFoodDatabaseRow,
   columnFiltersEqual,
@@ -58,8 +51,7 @@ function readSavedSmartViews(): SmartViewPreset[] {
 
     return parsed
       .map((entry): SmartViewPreset | null => {
-        if (!entry || typeof entry !== "object" || Array.isArray(entry))
-          return null;
+        if (!entry || typeof entry !== "object" || Array.isArray(entry)) return null;
         const row = entry as {
           id?: unknown;
           label?: unknown;
@@ -67,8 +59,7 @@ function readSavedSmartViews(): SmartViewPreset[] {
           sorting?: unknown;
         };
         if (typeof row.id !== "string" || row.id.length === 0) return null;
-        if (typeof row.label !== "string" || row.label.trim().length === 0)
-          return null;
+        if (typeof row.label !== "string" || row.label.trim().length === 0) return null;
         return {
           id: row.id,
           label: row.label.trim(),
@@ -117,10 +108,7 @@ function readFilterState(): {
     return {
       columnFilters: normalizeColumnFilters(obj["columnFilters"]),
       sorting: normalizeSorting(obj["sorting"]),
-      activeViewId:
-        typeof obj["activeViewId"] === "string"
-          ? obj["activeViewId"]
-          : ALL_VIEW_ID,
+      activeViewId: typeof obj["activeViewId"] === "string" ? obj["activeViewId"] : ALL_VIEW_ID,
     };
   } catch {
     return {
@@ -135,24 +123,19 @@ function readFilterState(): {
 
 function DatabaseTabContent({ rows }: { rows: FoodDatabaseRow[] }) {
   const allView = useMemo(() => makeAllView(), []);
-  const [savedViews, setSavedViews] =
-    useState<SmartViewPreset[]>(readSavedSmartViews);
+  const [savedViews, setSavedViews] = useState<SmartViewPreset[]>(readSavedSmartViews);
   const initialFilterState = useMemo(() => readFilterState(), []);
 
-  const [activeViewId, setActiveViewId] = useState<string | null>(
-    initialFilterState.activeViewId,
+  const [activeViewId, setActiveViewId] = useState<string | null>(initialFilterState.activeViewId);
+  const [appliedColumnFilters, setAppliedColumnFilters] = useState<ColumnFiltersState>(
+    initialFilterState.columnFilters,
   );
-  const [appliedColumnFilters, setAppliedColumnFilters] =
-    useState<ColumnFiltersState>(initialFilterState.columnFilters);
-  const [appliedSorting, setAppliedSorting] = useState<SortingState>(
-    initialFilterState.sorting,
-  );
+  const [appliedSorting, setAppliedSorting] = useState<SortingState>(initialFilterState.sorting);
 
-  const [draftColumnFilters, setDraftColumnFilters] =
-    useState<ColumnFiltersState>(initialFilterState.columnFilters);
-  const [draftSorting, setDraftSorting] = useState<SortingState>(
-    initialFilterState.sorting,
+  const [draftColumnFilters, setDraftColumnFilters] = useState<ColumnFiltersState>(
+    initialFilterState.columnFilters,
   );
+  const [draftSorting, setDraftSorting] = useState<SortingState>(initialFilterState.sorting);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -171,9 +154,7 @@ function DatabaseTabContent({ rows }: { rows: FoodDatabaseRow[] }) {
         sortingEqual(view.sorting, appliedSorting),
     );
     const nextActiveId = matchingView?.id ?? null;
-    setActiveViewId((current) =>
-      current === nextActiveId ? current : nextActiveId,
-    );
+    setActiveViewId((current) => (current === nextActiveId ? current : nextActiveId));
   }, [appliedColumnFilters, appliedSorting, views]);
 
   useEffect(() => {
@@ -228,8 +209,7 @@ function DatabaseTabContent({ rows }: { rows: FoodDatabaseRow[] }) {
     const prevKeys = Object.keys(prev);
     const nextKeys = Object.keys(next);
     const changed =
-      prevKeys.length !== nextKeys.length ||
-      nextKeys.some((key) => prev[key] !== next[key]);
+      prevKeys.length !== nextKeys.length || nextKeys.some((key) => prev[key] !== next[key]);
     if (!changed) return prev;
     prevCountsRef.current = next;
     return next;
@@ -308,9 +288,7 @@ function DatabaseTabContent({ rows }: { rows: FoodDatabaseRow[] }) {
 
       const normalizedFilters = normalizeColumnFilters(draftColumnFilters);
       const normalizedSorting = normalizeSorting(draftSorting);
-      const existing = savedViews.find(
-        (view) => view.label.toLowerCase() === label.toLowerCase(),
-      );
+      const existing = savedViews.find((view) => view.label.toLowerCase() === label.toLowerCase());
 
       if (existing) {
         const updated: SmartViewPreset = {
@@ -319,9 +297,7 @@ function DatabaseTabContent({ rows }: { rows: FoodDatabaseRow[] }) {
           columnFilters: normalizedFilters,
           sorting: normalizedSorting,
         };
-        setSavedViews((prev) =>
-          prev.map((view) => (view.id === existing.id ? updated : view)),
-        );
+        setSavedViews((prev) => prev.map((view) => (view.id === existing.id ? updated : view)));
         setAppliedColumnFilters(normalizedFilters);
         setAppliedSorting(normalizedSorting);
         setActiveViewId(existing.id);
@@ -457,13 +433,10 @@ export default function PatternsPage() {
       const foodEntry = getFoodEntry(stat.key);
       const zone = foodEntry?.zone ?? 3;
       const foodGroup = foodEntry?.group;
-      const digestion = foodEntry
-        ? pickFoodDigestionMetadata(foodEntry)
-        : undefined;
+      const digestion = foodEntry ? pickFoodDigestionMetadata(foodEntry) : undefined;
 
       // Resolved trials for trial history display
-      const resolvedTrials =
-        analysis.resolvedTrialsByKey.get(stat.key) ?? undefined;
+      const resolvedTrials = analysis.resolvedTrialsByKey.get(stat.key) ?? undefined;
 
       // AI assessment for the AI column
       const aiAssessment = assessmentMap.get(stat.key.toLowerCase());
@@ -487,10 +460,7 @@ export default function PatternsPage() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div
-      data-slot="patterns-page"
-      className="stagger-reveal mx-auto max-w-7xl space-y-5"
-    >
+    <div data-slot="patterns-page" className="stagger-reveal mx-auto max-w-7xl space-y-5">
       {/* Page header */}
       <header className="flex flex-wrap items-baseline gap-4">
         <h1 className="font-display text-2xl font-bold tracking-tight text-(--section-summary) md:text-3xl shrink-0">
@@ -508,8 +478,7 @@ export default function PatternsPage() {
             Explore
           </p>
           <p className="text-sm text-[var(--text-muted)]">
-            Browse your food database to see trial history, outcomes, and AI
-            assessments.
+            Browse your food database to see trial history, outcomes, and AI assessments.
           </p>
         </div>
 

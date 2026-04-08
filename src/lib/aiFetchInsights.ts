@@ -1,35 +1,4 @@
-import {
-  DEFAULT_INSIGHT_MODEL,
-  getValidInsightModel,
-  INSIGHT_MODEL_OPTIONS,
-} from "@/lib/aiModels";
-import { checkRateLimit } from "@/lib/aiRateLimiter";
-import type { AllowedAiModel, ConvexAiCaller } from "@/lib/convexAiClient";
-import { formatTime, getDaysPostOp } from "@/lib/aiUtils";
-import { debugWarn } from "@/lib/debugLog";
-import { getErrorMessage } from "@/lib/errors";
-import {
-  INPUT_SAFETY_LIMITS,
-  sanitizeUnknownStringsDeep,
-} from "@/lib/inputSafety";
-import {
-  MAX_CONVERSATION_MESSAGES,
-  buildDeltaSignals,
-  buildFoodContext,
-  buildPatientSnapshot,
-  buildRecentEvents,
-  buildSystemPrompt,
-  buildUserMessage,
-  truncateForStorage,
-} from "@/lib/aiPrompts";
-import type {
-  FoodTrialSummaryInput,
-  PreviousReport,
-  PreviousWeeklySummary,
-  SuggestionHistoryEntry,
-  WeeklyContext,
-} from "@/lib/aiPrompts";
-import type { BaselineAverages } from "@/types/domain";
+import { DEFAULT_INSIGHT_MODEL, getValidInsightModel, INSIGHT_MODEL_OPTIONS } from "@/lib/aiModels";
 import {
   enforceNovelEducationalInsight,
   isRecord,
@@ -37,16 +6,40 @@ import {
   toStringArray,
 } from "@/lib/aiParsing";
 import type {
+  FoodTrialSummaryInput,
+  PreviousReport,
+  PreviousWeeklySummary,
+  SuggestionHistoryEntry,
+  WeeklyContext,
+} from "@/lib/aiPrompts";
+import {
+  buildDeltaSignals,
+  buildFoodContext,
+  buildPatientSnapshot,
+  buildRecentEvents,
+  buildSystemPrompt,
+  buildUserMessage,
+  MAX_CONVERSATION_MESSAGES,
+  truncateForStorage,
+} from "@/lib/aiPrompts";
+import { checkRateLimit } from "@/lib/aiRateLimiter";
+import { formatTime, getDaysPostOp } from "@/lib/aiUtils";
+import type { AllowedAiModel, ConvexAiCaller } from "@/lib/convexAiClient";
+import { debugWarn } from "@/lib/debugLog";
+import { getErrorMessage } from "@/lib/errors";
+import { INPUT_SAFETY_LIMITS, sanitizeUnknownStringsDeep } from "@/lib/inputSafety";
+import type {
   AiNutritionistInsight,
   AiPreferences,
+  BaselineAverages,
   DrPooReply,
   HealthProfile,
   LogEntry,
 } from "@/types/domain";
 import { DEFAULT_AI_PREFERENCES } from "@/types/domain";
 
-export type { AiNutritionistInsight };
 export type {
+  AiNutritionistInsight,
   FoodTrialSummaryInput,
   PreviousReport,
   PreviousWeeklySummary,
@@ -238,16 +231,12 @@ export async function fetchAiInsights(
     });
 
     const estimatedTokens = messages.reduce((sum, m) => {
-      const content =
-        typeof m.content === "string" ? m.content : JSON.stringify(m.content);
+      const content = typeof m.content === "string" ? m.content : JSON.stringify(m.content);
       return sum + Math.ceil(content.length / 4);
     }, 0);
 
     if (estimatedTokens > TOKEN_WARNING_THRESHOLD) {
-      debugWarn(
-        "Dr. Poo",
-        `High token estimate (lightweight): ~${estimatedTokens} tokens.`,
-      );
+      debugWarn("Dr. Poo", `High token estimate (lightweight): ~${estimatedTokens} tokens.`);
     }
 
     const startedAt = performance.now();
@@ -262,11 +251,7 @@ export async function fetchAiInsights(
       rawContent = result.content;
     } catch (error) {
       const message = getErrorMessage(error);
-      if (
-        message.includes("401") ||
-        message.includes("Unauthorized") ||
-        message.includes("auth")
-      ) {
+      if (message.includes("401") || message.includes("Unauthorized") || message.includes("auth")) {
         throw new Error("AI nutritionist request failed. Check your API key.");
       }
       if (message.includes("429") || message.includes("rate limit")) {
@@ -287,9 +272,7 @@ export async function fetchAiInsights(
 
     const insight = parseAiInsight(parsed);
     if (!insight) {
-      throw new Error(
-        "AI nutritionist returned an unexpected response structure.",
-      );
+      throw new Error("AI nutritionist returned an unexpected response structure.");
     }
 
     if (safePatientMessages.length === 0) {
@@ -337,18 +320,9 @@ export async function fetchAiInsights(
   const weeklyDigests = safeEnhancedContext?.weeklyContext ?? [];
   const conversationHistory = safeEnhancedContext?.conversationHistory;
 
-  const patientSnapshot = buildPatientSnapshot(
-    safeHealthProfile,
-    foodTrials,
-    weeklyDigests,
-    nowMs,
-  );
+  const patientSnapshot = buildPatientSnapshot(safeHealthProfile, foodTrials, weeklyDigests, nowMs);
   const deltaSignals = buildDeltaSignals(safeLogs, foodTrials);
-  const foodContextObj = buildFoodContext(
-    foodTrials,
-    safeLogs,
-    safeHealthProfile,
-  );
+  const foodContextObj = buildFoodContext(foodTrials, safeLogs, safeHealthProfile);
 
   const systemPrompt = buildSystemPrompt(safeHealthProfile, prefs);
 
@@ -384,9 +358,7 @@ export async function fetchAiInsights(
 
   const hasPreviousResponse = previousReports.length > 0;
 
-  const suggestionHistory = groupSuggestions(
-    safeEnhancedContext?.recentSuggestions ?? [],
-  );
+  const suggestionHistory = groupSuggestions(safeEnhancedContext?.recentSuggestions ?? []);
 
   const weeklyContext: WeeklyContext[] = weeklyDigests.map((wd) => ({
     weekStart: wd.weekStart,
@@ -420,8 +392,7 @@ export async function fetchAiInsights(
   });
 
   const estimatedTokens = messages.reduce((sum, m) => {
-    const content =
-      typeof m.content === "string" ? m.content : JSON.stringify(m.content);
+    const content = typeof m.content === "string" ? m.content : JSON.stringify(m.content);
     return sum + Math.ceil(content.length / 4);
   }, 0);
 
@@ -444,11 +415,7 @@ export async function fetchAiInsights(
     rawContent = result.content;
   } catch (error) {
     const message = getErrorMessage(error);
-    if (
-      message.includes("401") ||
-      message.includes("Unauthorized") ||
-      message.includes("auth")
-    ) {
+    if (message.includes("401") || message.includes("Unauthorized") || message.includes("auth")) {
       throw new Error("AI nutritionist request failed. Check your API key.");
     }
     if (message.includes("429") || message.includes("rate limit")) {
@@ -469,9 +436,7 @@ export async function fetchAiInsights(
 
   const insight = parseAiInsight(parsed);
   if (!insight) {
-    throw new Error(
-      "AI nutritionist returned an unexpected response structure.",
-    );
+    throw new Error("AI nutritionist returned an unexpected response structure.");
   }
 
   // Belt-and-suspenders: if no patient messages were pending, force directResponseToUser to null.
@@ -479,10 +444,7 @@ export async function fetchAiInsights(
     insight.directResponseToUser = null;
   }
 
-  const enrichedInsight = enforceNovelEducationalInsight(
-    insight,
-    previousReports,
-  );
+  const enrichedInsight = enforceNovelEducationalInsight(insight, previousReports);
 
   const serialisableMessages = messages.map((m) => ({
     role: m.role,
@@ -603,11 +565,7 @@ export async function fetchWeeklySummary(
     durationMs = Math.round(performance.now() - startedAt);
   } catch (error) {
     const message = getErrorMessage(error);
-    if (
-      message.includes("401") ||
-      message.includes("Unauthorized") ||
-      message.includes("auth")
-    ) {
+    if (message.includes("401") || message.includes("Unauthorized") || message.includes("auth")) {
       throw new Error("Weekly summary failed. Check your API key.");
     }
     throw new Error(`Weekly summary failed: ${message}`);
@@ -627,9 +585,7 @@ export async function fetchWeeklySummary(
   const keyFoods = isRecord(parsed.keyFoods) ? parsed.keyFoods : null;
   const result: WeeklySummaryResult = {
     weeklySummary:
-      typeof parsed.weeklySummary === "string"
-        ? parsed.weeklySummary
-        : "No summary available.",
+      typeof parsed.weeklySummary === "string" ? parsed.weeklySummary : "No summary available.",
     keyFoods: {
       safe: toStringArray(keyFoods?.safe),
       flagged: toStringArray(keyFoods?.flagged),

@@ -109,54 +109,51 @@ export function computeDailyAverages(
 // ── Component ────────────────────────────────────────────────────────────────
 
 export function BristolTrendTile({ digestionLogs, nowMs }: BristolTrendTileProps) {
-  const { sparklinePoints, currentAverage, hasData, deltaDisplay } = useMemo(
-    () => {
-      const digestionData: Array<{ timestamp: number; bristolCode: number }> = [];
-      for (const log of digestionLogs) {
-        if (typeof log.data.bristolCode === "number") {
-          digestionData.push({
-            timestamp: log.timestamp,
-            bristolCode: log.data.bristolCode,
-          });
-        }
+  const { sparklinePoints, currentAverage, hasData, deltaDisplay } = useMemo(() => {
+    const digestionData: Array<{ timestamp: number; bristolCode: number }> = [];
+    for (const log of digestionLogs) {
+      if (typeof log.data.bristolCode === "number") {
+        digestionData.push({
+          timestamp: log.timestamp,
+          bristolCode: log.data.bristolCode,
+        });
       }
+    }
 
-      const sparklineData = computeDailyAverages(digestionData, SPARKLINE_DAYS, nowMs);
-      const sparklinePoints = sparklineData.map((d) => ({ dateKey: d.dateKey, value: d.average }));
+    const sparklineData = computeDailyAverages(digestionData, SPARKLINE_DAYS, nowMs);
+    const sparklinePoints = sparklineData.map((d) => ({ dateKey: d.dateKey, value: d.average }));
 
-      const currentCutoff = getCutoffTimestamp(nowMs, AVERAGE_DAYS);
-      const previousCutoff = getCutoffTimestamp(nowMs, AVERAGE_DAYS * 2);
+    const currentCutoff = getCutoffTimestamp(nowMs, AVERAGE_DAYS);
+    const previousCutoff = getCutoffTimestamp(nowMs, AVERAGE_DAYS * 2);
 
-      let currentSum = 0;
-      let currentCount = 0;
-      let previousSum = 0;
-      let previousCount = 0;
+    let currentSum = 0;
+    let currentCount = 0;
+    let previousSum = 0;
+    let previousCount = 0;
 
-      for (const log of digestionData) {
-        if (log.timestamp >= currentCutoff) {
-          currentSum += log.bristolCode;
-          currentCount++;
-        } else if (log.timestamp >= previousCutoff) {
-          previousSum += log.bristolCode;
-          previousCount++;
-        }
+    for (const log of digestionData) {
+      if (log.timestamp >= currentCutoff) {
+        currentSum += log.bristolCode;
+        currentCount++;
+      } else if (log.timestamp >= previousCutoff) {
+        previousSum += log.bristolCode;
+        previousCount++;
       }
+    }
 
-      const currentAverage = currentCount > 0 ? currentSum / currentCount : null;
-      const previousAverage = previousCount > 0 ? previousSum / previousCount : null;
-      const delta =
-        currentAverage !== null && previousAverage !== null ? currentAverage - previousAverage : null;
+    const currentAverage = currentCount > 0 ? currentSum / currentCount : null;
+    const previousAverage = previousCount > 0 ? previousSum / previousCount : null;
+    const delta =
+      currentAverage !== null && previousAverage !== null ? currentAverage - previousAverage : null;
 
-      return {
-        sparklinePoints,
-        currentAverage,
-        hasData: currentAverage !== null,
-        deltaDisplay:
-          delta !== null && currentAverage !== null ? getDeltaDisplay(delta, currentAverage) : null,
-      };
-    },
-    [digestionLogs, nowMs],
-  );
+    return {
+      sparklinePoints,
+      currentAverage,
+      hasData: currentAverage !== null,
+      deltaDisplay:
+        delta !== null && currentAverage !== null ? getDeltaDisplay(delta, currentAverage) : null,
+    };
+  }, [digestionLogs, nowMs]);
   const currentAverageDisplay = currentAverage ?? 0;
 
   return (

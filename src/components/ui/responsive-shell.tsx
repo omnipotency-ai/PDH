@@ -42,9 +42,7 @@ function getResponsiveShellModeFromQueries(
 
 export function useResponsiveShellMode(): ResponsiveShellMode {
   const [mode, setMode] = useState<ResponsiveShellMode>(() =>
-    typeof window === "undefined"
-      ? "mobile"
-      : getResponsiveShellMode(window.innerWidth),
+    typeof window === "undefined" ? "mobile" : getResponsiveShellMode(window.innerWidth),
   );
 
   useEffect(() => {

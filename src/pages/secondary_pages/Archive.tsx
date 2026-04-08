@@ -93,12 +93,7 @@ export default function ArchivePage() {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
       const tag = target?.tagName;
-      if (
-        tag === "INPUT" ||
-        tag === "TEXTAREA" ||
-        tag === "SELECT" ||
-        target?.isContentEditable
-      ) {
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target?.isContentEditable) {
         return;
       }
       if (e.key === "ArrowLeft") handlePrev();

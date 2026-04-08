@@ -1,12 +1,8 @@
-import {
-  createRootRoute,
-  createRoute,
-  createRouter,
-  Outlet,
-} from "@tanstack/react-router";
+import { createRootRoute, createRoute, createRouter, Outlet } from "@tanstack/react-router";
 import { lazy, Suspense } from "react";
 import { AppLayout, withBoundary } from "@/components/layout";
 import { Toaster } from "@/components/ui/sonner";
+
 const TrackPage = lazy(() => import("./pages/Track"));
 const PatternsPage = lazy(() => import("./pages/Patterns"));
 const SettingsPage = lazy(() => import("./pages/Settings"));
@@ -18,13 +14,7 @@ const rootRoute = createRootRoute({
   component: () => (
     <>
       <Outlet />
-      <Toaster
-        position="top-center"
-        duration={4000}
-        richColors
-        expand
-        visibleToasts={5}
-      />
+      <Toaster position="top-center" duration={4000} richColors expand visibleToasts={5} />
     </>
   ),
 });

@@ -121,7 +121,7 @@ export function AiSuggestionsCard({
 
   const body = (
     <div className="space-y-3">
-        <p className="text-xs text-[var(--text-muted)]">
+      <p className="text-xs text-[var(--text-muted)]">
         {isAiConfigured
           ? "Get AI-powered target and cap adjustments based on your last 14 days."
           : "Get data-driven target and cap adjustments based on your last 14 days."}

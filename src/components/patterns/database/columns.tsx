@@ -1,14 +1,14 @@
 import type { FoodDigestionMetadata, FoodGroup } from "@shared/foodRegistry";
 import type { ColumnDef } from "@tanstack/react-table";
-import { useCurrentMinute } from "@/hooks/useCurrentMinute";
-import { formatRelativeTime } from "@/lib/dateUtils";
 import { AiBadge } from "@/components/patterns/database/AiBadge";
 import { BristolBreakdown } from "@/components/patterns/database/BristolBreakdown";
 import type { StatusFilterValue } from "@/components/patterns/database/FilterSheet";
 import { coerceFilterValues } from "@/components/patterns/database/filterUtils";
 import { StatusBadge } from "@/components/patterns/database/StatusBadge";
 import { TrendIndicator } from "@/components/patterns/database/TrendIndicator";
+import { useCurrentMinute } from "@/hooks/useCurrentMinute";
 import type { FoodStat, FoodStatus, LocalTrialRecord } from "@/lib/analysis";
+import { formatRelativeTime } from "@/lib/dateUtils";
 import { computeBristolAverage } from "@/lib/foodStatusThresholds";
 import type { FoodPrimaryStatus, FoodTendency } from "@/types/domain";
 import { GROUP_COLORS } from "@/types/domain";
@@ -143,9 +143,7 @@ export function buildColumns(): ColumnDef<FoodDatabaseRow>[] {
         const { name, overrideStatus } = row.original;
         return (
           <div data-slot="food-cell" className="flex items-center gap-1.5">
-            <span className="font-display text-sm font-semibold text-[var(--text)]">
-              {name}
-            </span>
+            <span className="font-display text-sm font-semibold text-[var(--text)]">{name}</span>
             {overrideStatus !== undefined && (
               <span className="inline-flex shrink-0 items-center rounded border border-slate-600 bg-slate-800 px-1 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wide text-slate-300">
                 Manual
@@ -165,19 +163,14 @@ export function buildColumns(): ColumnDef<FoodDatabaseRow>[] {
       cell: ({ row }) => {
         const { stage } = row.original;
         if (stage === undefined) {
-          return (
-            <span className="font-mono text-xs text-[var(--text-faint)]">
-              &mdash;
-            </span>
-          );
+          return <span className="font-mono text-xs text-[var(--text-faint)]">&mdash;</span>;
         }
         return (
           <span
             data-slot="stage-cell"
             className="inline-flex h-6 w-6 items-center justify-center rounded-full font-mono text-xs font-bold"
             style={{
-              background:
-                "color-mix(in srgb, var(--text-muted) 15%, transparent)",
+              background: "color-mix(in srgb, var(--text-muted) 15%, transparent)",
               color: "var(--text-muted)",
             }}
           >
@@ -213,10 +206,8 @@ export function buildColumns(): ColumnDef<FoodDatabaseRow>[] {
         if (selected.length === 0) return true;
         const { primaryStatus, tendency } = row.original;
         return selected.some((value) => {
-          if (value === "safe-loose")
-            return primaryStatus === "safe" && tendency === "loose";
-          if (value === "safe-hard")
-            return primaryStatus === "safe" && tendency === "hard";
+          if (value === "safe-loose") return primaryStatus === "safe" && tendency === "loose";
+          if (value === "safe-hard") return primaryStatus === "safe" && tendency === "hard";
           return value === primaryStatus;
         });
       },
@@ -231,11 +222,7 @@ export function buildColumns(): ColumnDef<FoodDatabaseRow>[] {
       cell: ({ row }) => {
         const { foodGroup } = row.original;
         if (foodGroup === undefined) {
-          return (
-            <span className="font-mono text-xs text-[var(--text-faint)]">
-              &mdash;
-            </span>
-          );
+          return <span className="font-mono text-xs text-[var(--text-faint)]">&mdash;</span>;
         }
         const colors = GROUP_COLORS[foodGroup];
         return (
@@ -255,10 +242,7 @@ export function buildColumns(): ColumnDef<FoodDatabaseRow>[] {
       filterFn: (row, _columnId, filterValue) => {
         const selected = coerceFilterValues<FoodGroup>(filterValue);
         if (selected.length === 0) return true;
-        return (
-          row.original.foodGroup !== undefined &&
-          selected.includes(row.original.foodGroup)
-        );
+        return row.original.foodGroup !== undefined && selected.includes(row.original.foodGroup);
       },
     },
 
@@ -272,11 +256,7 @@ export function buildColumns(): ColumnDef<FoodDatabaseRow>[] {
         const raw = getValue();
         const avg = typeof raw === "number" ? raw : null;
         if (avg === null) {
-          return (
-            <span className="font-mono text-xs text-[var(--text-faint)]">
-              &mdash;
-            </span>
-          );
+          return <span className="font-mono text-xs text-[var(--text-faint)]">&mdash;</span>;
         }
         return (
           <span
@@ -300,18 +280,11 @@ export function buildColumns(): ColumnDef<FoodDatabaseRow>[] {
       cell: ({ row }) => {
         const { avgTransitMinutes } = row.original;
         if (avgTransitMinutes === null) {
-          return (
-            <span className="font-mono text-xs text-[var(--text-faint)]">
-              &mdash;
-            </span>
-          );
+          return <span className="font-mono text-xs text-[var(--text-faint)]">&mdash;</span>;
         }
         const hours = Math.round(avgTransitMinutes / 6) / 10;
         return (
-          <span
-            data-slot="transit-avg-cell"
-            className="font-mono text-sm text-[var(--text-muted)]"
-          >
+          <span data-slot="transit-avg-cell" className="font-mono text-sm text-[var(--text-muted)]">
             {hours}h
           </span>
         );
@@ -328,10 +301,7 @@ export function buildColumns(): ColumnDef<FoodDatabaseRow>[] {
       cell: ({ row }) => {
         const { resolvedTransits, totalTrials } = row.original;
         return (
-          <span
-            data-slot="trials-cell"
-            className="font-mono text-sm text-[var(--text-muted)]"
-          >
+          <span data-slot="trials-cell" className="font-mono text-sm text-[var(--text-muted)]">
             {resolvedTransits}
             <span className="text-[var(--text-faint)]">/{totalTrials}</span>
           </span>
@@ -349,10 +319,7 @@ export function buildColumns(): ColumnDef<FoodDatabaseRow>[] {
       cell: ({ row }) => {
         const { lastTrialAt } = row.original;
         return (
-          <span
-            data-slot="last-tested-cell"
-            className="font-mono text-xs text-[var(--text-muted)]"
-          >
+          <span data-slot="last-tested-cell" className="font-mono text-xs text-[var(--text-muted)]">
             <RelativeTime timestamp={lastTrialAt} />
           </span>
         );
@@ -369,11 +336,7 @@ export function buildColumns(): ColumnDef<FoodDatabaseRow>[] {
       cell: ({ row }) => {
         const { aiVerdict } = row.original;
         if (aiVerdict === undefined) {
-          return (
-            <span className="font-mono text-xs text-[var(--text-faint)]">
-              &mdash;
-            </span>
-          );
+          return <span className="font-mono text-xs text-[var(--text-faint)]">&mdash;</span>;
         }
         return <AiBadge type={aiVerdict} />;
       },

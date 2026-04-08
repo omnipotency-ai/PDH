@@ -5,10 +5,7 @@ import { MS_PER_DAY, MS_PER_HOUR, MS_PER_MINUTE } from "@/lib/timeConstants";
  * Accepts an optional `nowMs` so callers can pass a stable clock value.
  * Returns "Never" when the timestamp is 0 or missing.
  */
-export function formatRelativeTime(
-  timestamp: number,
-  nowMs: number = Date.now(),
-): string {
+export function formatRelativeTime(timestamp: number, nowMs: number = Date.now()): string {
   if (timestamp <= 0) return "Never";
 
   const diff = nowMs - timestamp;
@@ -54,10 +51,7 @@ export function getDateScopedTimestamp(
   date: Date,
   referenceInput: Date | number = Date.now(),
 ): number {
-  const reference =
-    typeof referenceInput === "number"
-      ? new Date(referenceInput)
-      : referenceInput;
+  const reference = typeof referenceInput === "number" ? new Date(referenceInput) : referenceInput;
   const scoped = new Date(date);
   scoped.setHours(
     reference.getHours(),

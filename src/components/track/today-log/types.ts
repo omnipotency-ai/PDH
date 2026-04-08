@@ -4,8 +4,8 @@ import type { DisplayWeightUnit } from "@/lib/units";
 import type {
   FluidLog,
   FoodLog,
-  LiquidLog,
   HabitLogData,
+  LiquidLog,
   LogDataMap,
   LogType,
   WeightLog,
@@ -89,11 +89,7 @@ export interface TodayLogProps {
   onNextDay: () => void;
   onJumpToToday: () => void;
   onDelete: (id: string) => Promise<void>;
-  onSave: (
-    id: string,
-    data: LogUpdateData,
-    timestamp?: number,
-  ) => Promise<void>;
+  onSave: (id: string, data: LogUpdateData, timestamp?: number) => Promise<void>;
   /** When set, the LogEntry with this ID will auto-open in edit mode. */
   autoEditId?: string | null;
   /** Called after auto-edit is activated so the parent can clear the ID. */

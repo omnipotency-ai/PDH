@@ -1,16 +1,12 @@
 import { useCallback } from "react";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
-import { useAiConfig } from "@/hooks/useAiConfig";
 import { useProfileContext } from "@/contexts/ProfileContext";
+import { useAiConfig } from "@/hooks/useAiConfig";
 import { useAiPreferences, useHealthProfile, useUnitSystem } from "@/hooks/useProfile";
 import { getErrorMessage } from "@/lib/errors";
 import { THEME_STORAGE_KEY } from "@/lib/storageKeys";
-import {
-  useDeleteAllSyncedData,
-  useExportBackup,
-  useSyncedLogCount,
-} from "@/lib/sync";
+import { useDeleteAllSyncedData, useExportBackup, useSyncedLogCount } from "@/lib/sync";
 import type { HealthProfile } from "@/types/domain";
 import {
   ArtificialIntelligenceSection,

@@ -2,18 +2,15 @@
  * Weekly digest, weekly summary, and date-range query hooks.
  */
 
-import { useMutation, useQuery } from "convex/react";
 import { getWeekStart } from "@shared/weekUtils";
+import { useMutation, useQuery } from "convex/react";
 import { sanitizeUnknownStringsDeep } from "@/lib/inputSafety";
 import { api } from "../../convex/_generated/api";
 
 // ─── Weekly digest hooks ─────────────────────────────────────────────────────
 
 export function useWeeklyDigests(limit?: number) {
-  return useQuery(
-    api.aggregateQueries.allWeeklyDigests,
-    limit !== undefined ? { limit } : {},
-  );
+  return useQuery(api.aggregateQueries.allWeeklyDigests, limit !== undefined ? { limit } : {});
 }
 
 /** Compute Monday 00:00:00.000 UTC for the current week. */
@@ -28,11 +25,7 @@ export function useCurrentWeekDigest() {
 
 // ─── Weekly summary data hooks ───────────────────────────────────────────────
 
-export function useConversationsByDateRange(
-  startMs: number,
-  endMs: number,
-  limit?: number,
-) {
+export function useConversationsByDateRange(startMs: number, endMs: number, limit?: number) {
   return useQuery(api.conversations.listByDateRange, {
     startMs,
     endMs,
