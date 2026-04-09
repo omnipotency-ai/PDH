@@ -9,7 +9,7 @@
  */
 /// <reference types="vite/client" />
 import { convexTest } from "convex-test";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { api } from "../_generated/api";
 import { type MealSlot, toggleSlotTagPure } from "../profiles";
 import schema from "../schema";
@@ -30,6 +30,11 @@ async function seedProfile(t: ReturnType<typeof convexTest>, userId: string) {
       updatedAt: Date.now(),
     });
   });
+}
+
+/** Create a fresh convexTest instance. Each test gets its own isolated DB. */
+function makeT() {
+  return convexTest(schema, modules);
 }
 
 // ---------------------------------------------------------------------------
@@ -140,8 +145,13 @@ describe("toggleSlotTagPure", () => {
 // ---------------------------------------------------------------------------
 
 describe("toggleFavouriteSlotTag mutation", () => {
+  let t: ReturnType<typeof makeT>;
+
+  beforeEach(() => {
+    t = makeT();
+  });
+
   it("adds a slot tag and syncs foodFavourites", async () => {
-    const t = convexTest(schema, modules);
     const userId = "slot-tag-add-user";
     await seedProfile(t, userId);
 
@@ -167,7 +177,6 @@ describe("toggleFavouriteSlotTag mutation", () => {
   });
 
   it("toggles off an existing slot tag", async () => {
-    const t = convexTest(schema, modules);
     const userId = "slot-tag-remove-user";
     await seedProfile(t, userId);
 
@@ -201,8 +210,6 @@ describe("toggleFavouriteSlotTag mutation", () => {
   });
 
   it("throws when not authenticated", async () => {
-    const t = convexTest(schema, modules);
-
     await expect(
       t.mutation(api.profiles.toggleFavouriteSlotTag, {
         canonicalName: "porridge",
@@ -213,8 +220,13 @@ describe("toggleFavouriteSlotTag mutation", () => {
 });
 
 describe("getFavouriteSlotTags query", () => {
+  let t: ReturnType<typeof makeT>;
+
+  beforeEach(() => {
+    t = makeT();
+  });
+
   it("returns empty object when no tags set", async () => {
-    const t = convexTest(schema, modules);
     const userId = "slot-tag-query-empty";
     await seedProfile(t, userId);
 
@@ -226,7 +238,6 @@ describe("getFavouriteSlotTags query", () => {
   });
 
   it("returns the full tags record after mutations", async () => {
-    const t = convexTest(schema, modules);
     const userId = "slot-tag-query-full";
     await seedProfile(t, userId);
 
@@ -262,8 +273,6 @@ describe("getFavouriteSlotTags query", () => {
   });
 
   it("throws when not authenticated", async () => {
-    const t = convexTest(schema, modules);
-
     await expect(
       t.query(api.profiles.getFavouriteSlotTags, {}),
     ).rejects.toThrow("Not authenticated");

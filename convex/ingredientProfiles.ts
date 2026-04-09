@@ -121,6 +121,15 @@ export const upsert = mutation({
     if (!canonicalName) {
       throw new Error("canonicalName is required.");
     }
+    if (canonicalName.length > 256) {
+      throw new Error("canonicalName too long (max 256 chars)");
+    }
+    if (args.displayName !== undefined && args.displayName.length > 256) {
+      throw new Error("displayName too long (max 256 chars)");
+    }
+    if (args.productName != null && args.productName.length > 512) {
+      throw new Error("productName too long (max 512 chars)");
+    }
     const projection = getCanonicalFoodProjection(canonicalName);
 
     // Validate customPortions early — applies to both create and update paths.
@@ -159,6 +168,10 @@ export const upsert = mutation({
     const displayName =
       baseDisplay || existing?.displayName || toTitleCase(canonicalName);
 
+    // For optional fields that have no meaningful null value, the same
+    // double-guard pattern is used on both update and create paths: include the
+    // field only when the caller passed a non-null value. Passing null is treated
+    // as "clear/omit the field" in both paths, consistent with exactOptionalPropertyTypes.
     const patchData = {
       displayName,
       ...(args.tags !== undefined && {
@@ -186,19 +199,22 @@ export const upsert = mutation({
       ...(args.customPortions !== undefined && {
         customPortions: args.customPortions,
       }),
-      ...(args.productName !== undefined && {
-        productName: args.productName === null ? undefined : args.productName,
-      }),
-      ...(args.barcode !== undefined && {
-        barcode: args.barcode === null ? undefined : args.barcode,
-      }),
-      ...(args.registryId !== undefined && {
-        registryId: args.registryId === null ? undefined : args.registryId,
-      }),
-      ...(args.toleranceStatus !== undefined && {
-        toleranceStatus:
-          args.toleranceStatus === null ? undefined : args.toleranceStatus,
-      }),
+      ...(args.productName !== undefined &&
+        args.productName !== null && {
+          productName: args.productName,
+        }),
+      ...(args.barcode !== undefined &&
+        args.barcode !== null && {
+          barcode: args.barcode,
+        }),
+      ...(args.registryId !== undefined &&
+        args.registryId !== null && {
+          registryId: args.registryId,
+        }),
+      ...(args.toleranceStatus !== undefined &&
+        args.toleranceStatus !== null && {
+          toleranceStatus: args.toleranceStatus,
+        }),
       updatedAt: args.now,
     };
 
@@ -263,6 +279,12 @@ export const upsert = mutation({
   },
 });
 
+/**
+ * IMPORTANT: Removing an ingredient profile does NOT cascade-delete food log
+ * entries that reference this ingredient. Before calling remove(), verify there
+ * are no existing foodLogs entries referencing this profile. Orphaned log entries
+ * will retain the ingredient name string but lose profile linkage.
+ */
 export const remove = mutation({
   args: { id: v.id("ingredientProfiles") },
   handler: async (ctx, args) => {
@@ -304,6 +326,9 @@ export const updatePortions = mutation({
     customPortions: v.array(customPortionValidator),
   },
   handler: async (ctx, args) => {
+    if (args.customPortions.length === 0) {
+      throw new Error("customPortions must have at least one entry");
+    }
     const { userId } = await requireAuth(ctx);
     const row = await ctx.db.get(args.id);
     if (!row || row.userId !== userId) throw new Error("Not found");

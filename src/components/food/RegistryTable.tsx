@@ -92,7 +92,11 @@ function ZoneBadge({ zone }: { zone: Zone | undefined }) {
 
 // ── Source badge (read-only) ────────────────────────────────────────────────
 
-function SourceBadge({ source }: { source: "manual" | "openfoodfacts" | null }) {
+function SourceBadge({
+  source,
+}: {
+  source: "manual" | "openfoodfacts" | null;
+}) {
   if (source === null) {
     return <span className="text-xs text-[var(--text-faint)]">{"\u2014"}</span>;
   }
@@ -107,11 +111,14 @@ function SourceBadge({ source }: { source: "manual" | "openfoodfacts" | null }) 
 // ── RegistryTable ───────────────────────────────────────────────────────────
 
 export function RegistryTable() {
+  // TODO(M-D): Add server-side pagination when dataset exceeds ~500 rows
   const profiles = useQuery(api.ingredientProfiles.list);
   const registryEntries = useQuery(api.clinicalRegistry.list);
   const upsert = useMutation(api.ingredientProfiles.upsert);
   const remove = useMutation(api.ingredientProfiles.remove);
-  const setToleranceStatus = useMutation(api.ingredientProfiles.setToleranceStatus);
+  const setToleranceStatus = useMutation(
+    api.ingredientProfiles.setToleranceStatus,
+  );
 
   const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -135,7 +142,8 @@ export function RegistryTable() {
   const rows: RegistryRow[] = useMemo(() => {
     if (profiles === undefined) return [];
     return profiles.map((p) => {
-      const registryEntry = p.registryId !== undefined ? registryMap.get(p.registryId) : undefined;
+      const registryEntry =
+        p.registryId !== undefined ? registryMap.get(p.registryId) : undefined;
       return {
         _id: p._id,
         canonicalName: p.canonicalName,
@@ -209,7 +217,12 @@ export function RegistryTable() {
               onSave={async (value) => {
                 await setToleranceStatus({
                   id: row.original._id,
-                  status: value as "building" | "like" | "dislike" | "watch" | "avoid",
+                  status: value as
+                    | "building"
+                    | "like"
+                    | "dislike"
+                    | "watch"
+                    | "avoid",
                 });
               }}
             />
@@ -362,7 +375,8 @@ export function RegistryTable() {
     getPaginationRowModel: getPaginationRowModel(),
     getRowId: (row) => row._id,
     globalFilterFn: (row, _columnId, filterValue) => {
-      if (typeof filterValue !== "string" || filterValue.length === 0) return true;
+      if (typeof filterValue !== "string" || filterValue.length === 0)
+        return true;
       const query = filterValue.toLowerCase();
       return (
         row.original.displayName.toLowerCase().includes(query) ||
@@ -387,7 +401,8 @@ export function RegistryTable() {
 
   const isLoading = profiles === undefined || registryEntries === undefined;
   const isEmpty = !isLoading && profiles.length === 0;
-  const hasNoResults = !isLoading && !isEmpty && table.getRowModel().rows.length === 0;
+  const hasNoResults =
+    !isLoading && !isEmpty && table.getRowModel().rows.length === 0;
 
   return (
     <div data-slot="registry-table" className="flex flex-col gap-3">
@@ -449,12 +464,18 @@ export function RegistryTable() {
                           onClick={header.column.getToggleSortingHandler()}
                           className="flex items-center gap-1 font-mono text-[10px] font-bold uppercase tracking-widest text-[var(--text-faint)] transition-colors hover:text-[var(--text)]"
                         >
-                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          {flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
                           <SortIndicator direction={sorted} />
                         </button>
                       ) : (
                         <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-[var(--text-faint)]">
-                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          {flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
                         </span>
                       )}
                     </th>
@@ -472,7 +493,10 @@ export function RegistryTable() {
               <tr>
                 <td colSpan={columns.length} className="px-3 py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
-                    <Utensils size={32} className="text-[var(--text-faint)] opacity-40" />
+                    <Utensils
+                      size={32}
+                      className="text-[var(--text-faint)] opacity-40"
+                    />
                     <p className="font-mono text-sm text-[var(--text-faint)]">
                       No foods in your registry yet
                     </p>
@@ -499,8 +523,13 @@ export function RegistryTable() {
               <tr>
                 <td colSpan={columns.length} className="px-3 py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
-                    <Search size={32} className="text-[var(--text-faint)] opacity-40" />
-                    <p className="font-mono text-sm text-[var(--text-faint)]">No results found</p>
+                    <Search
+                      size={32}
+                      className="text-[var(--text-faint)] opacity-40"
+                    />
+                    <p className="font-mono text-sm text-[var(--text-faint)]">
+                      No results found
+                    </p>
                     <button
                       type="button"
                       onClick={() => setGlobalFilter("")}
@@ -527,7 +556,10 @@ export function RegistryTable() {
                           "sticky left-0 z-[1] bg-[var(--surface-1)] transition-colors after:absolute after:inset-y-0 after:right-0 after:w-px after:bg-[var(--border)]",
                       )}
                     >
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext(),
+                      )}
                     </td>
                   ))}
                 </tr>

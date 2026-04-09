@@ -33,6 +33,10 @@
   3. Initiative row stays with final status
   4. Plan goes to `docs/plans/archive/`
 
+**Table columns:** `Task` = wave+task ID (e.g. W2-T03), `Title` = what it does, `Wave` = execution phase (higher waves depend on lower), `Depends On` = prerequisite task IDs, `Status` = pending/done/blocked, `Commit` = short hash when done. To add a new task: append a row under the correct wave, assign the next available ID, and list any blockers in Depends On.
+
+**Wave numbering note:** The Food Platform initiative uses W0-W7 (8 waves). The original plan doc referenced W0-W6 (7 waves); W7 was added during master-plan consolidation to hold cross-cutting polish tasks. W3/W4/W5 rows were backfilled for historical tracking — commits reference actual implementation dates.
+
 ---
 
 ## Active: Food Platform & Navigation Restructure

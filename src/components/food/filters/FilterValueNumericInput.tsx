@@ -3,10 +3,17 @@
  *
  * Used for Fibre (g) and Calories filters where the user enters a threshold
  * value instead of selecting from a combobox.
+ *
+ * TODO: Consider merging FilterValueCombobox + FilterValueNumericInput into a
+ * union FilterValueInput component with a discriminated `kind` prop.
  */
 
 import { useCallback, useState } from "react";
 import { cn } from "@/lib/utils";
+
+/** Acceptable range for nutritional threshold values (g or kcal). */
+const NUMERIC_MIN = 0;
+const NUMERIC_MAX = 10000;
 
 interface FilterValueNumericInputProps {
   value: number | undefined;
@@ -20,7 +27,9 @@ export function FilterValueNumericInput({
   placeholder = "0",
 }: FilterValueNumericInputProps) {
   // Keep local string state to allow intermediate editing (e.g., clearing the field)
-  const [localValue, setLocalValue] = useState(value !== undefined ? String(value) : "");
+  const [localValue, setLocalValue] = useState(
+    value !== undefined ? String(value) : "",
+  );
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -33,9 +42,10 @@ export function FilterValueNumericInput({
       }
 
       const parsed = Number.parseFloat(raw);
-      if (!Number.isNaN(parsed)) {
-        onChange(parsed);
-      }
+      // Reject NaN, Infinity, -Infinity, and out-of-range values
+      if (!Number.isFinite(parsed)) return;
+      if (parsed < NUMERIC_MIN || parsed > NUMERIC_MAX) return;
+      onChange(parsed);
     },
     [onChange],
   );

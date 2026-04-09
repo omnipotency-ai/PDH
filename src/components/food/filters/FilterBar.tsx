@@ -15,6 +15,9 @@ import { FilterChip } from "./FilterChip";
 import type { FilterState, FilterType } from "./filterTypes";
 import { getDefaultOperator } from "./filterTypes";
 
+// TODO(M-FF): Sync filter state to URL params for shareable/persistent filters
+// FilterBar is controlled — URL sync would be implemented at the call site (ZonesTable/RegistryTable)
+// by serialising `filters` to search params and reading them back on mount.
 interface FilterBarProps {
   filters: FilterState[];
   onFiltersChange: (filters: FilterState[]) => void;
@@ -62,6 +65,10 @@ export function FilterBar({ filters, onFiltersChange }: FilterBarProps) {
       role="toolbar"
       aria-label="Active filters"
     >
+      {filters.length === 0 && (
+        <span className="text-xs text-[var(--text-faint)]">No active filters</span>
+      )}
+
       <AnimatePresence mode="popLayout">
         {filters.map((filter) => (
           <motion.div
@@ -81,7 +88,10 @@ export function FilterBar({ filters, onFiltersChange }: FilterBarProps) {
         ))}
       </AnimatePresence>
 
-      <FilterAddPopover onAdd={handleAddFilter} activeFilterTypes={activeFilterTypes} />
+      <FilterAddPopover
+        onAdd={handleAddFilter}
+        activeFilterTypes={activeFilterTypes}
+      />
     </div>
   );
 }

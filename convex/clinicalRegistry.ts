@@ -113,7 +113,9 @@ export const create = mutation({
       ...(args.defaultPortionG !== undefined && {
         defaultPortionG: args.defaultPortionG,
       }),
-      ...(args.naturalUnit !== undefined && { naturalUnit: args.naturalUnit }),
+      ...(trimmedNaturalUnit !== undefined && {
+        naturalUnit: trimmedNaturalUnit,
+      }),
       ...(args.unitWeightG !== undefined && { unitWeightG: args.unitWeightG }),
       ...(args.osmoticEffect !== undefined && {
         osmoticEffect: args.osmoticEffect,

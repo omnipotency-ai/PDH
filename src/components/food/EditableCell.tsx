@@ -14,10 +14,20 @@ interface EditableCellProps {
 /**
  * Inline-editable text cell for TanStack React Table.
  * Click to edit, blur/Enter to save, Escape to cancel.
+ * Keeps the editor open on save failure and shows an error message.
  */
 export function EditableCell({ value, onSave, placeholder, className }: EditableCellProps) {
-  const { isEditing, editValue, startEdit, cancelEdit, commitEdit, setEditValue, inputRef } =
-    useInlineEdit({ initialValue: value, onSave });
+  const {
+    isEditing,
+    editValue,
+    error,
+    startEdit,
+    cancelEdit,
+    commitEdit,
+    setEditValue,
+    clearError,
+    inputRef,
+  } = useInlineEdit({ initialValue: value, onSave });
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
@@ -31,22 +41,29 @@ export function EditableCell({ value, onSave, placeholder, className }: Editable
 
   if (isEditing) {
     return (
-      <input
-        ref={inputRef as React.RefObject<HTMLInputElement>}
-        data-slot="editable-cell"
-        type="text"
-        value={editValue}
-        onChange={(e) => setEditValue(e.target.value)}
-        onBlur={() => void commitEdit()}
-        onKeyDown={handleKeyDown}
-        className={cn(
-          "w-full min-w-0 rounded-md bg-transparent px-1.5 py-0.5 text-sm text-[var(--text)]",
-          "ring-1 ring-[var(--border)] outline-none",
-          "focus-visible:ring-[var(--ring)]",
-          className,
-        )}
-        {...(placeholder !== undefined && { placeholder })}
-      />
+      <div data-slot="editable-cell" className="flex flex-col gap-0.5">
+        <input
+          ref={inputRef as React.RefObject<HTMLInputElement>}
+          type="text"
+          value={editValue}
+          onChange={(e) => {
+            setEditValue(e.target.value);
+            if (error !== null) clearError();
+          }}
+          onBlur={() => void commitEdit()}
+          onKeyDown={handleKeyDown}
+          className={cn(
+            "w-full min-w-0 rounded-md bg-transparent px-1.5 py-0.5 text-sm text-[var(--text)]",
+            "ring-1 outline-none",
+            error !== null
+              ? "ring-red-500 focus-visible:ring-red-500"
+              : "ring-[var(--border)] focus-visible:ring-[var(--ring)]",
+            className,
+          )}
+          {...(placeholder !== undefined && { placeholder })}
+        />
+        {error !== null && <span className="text-xs text-red-500">{error}</span>}
+      </div>
     );
   }
 

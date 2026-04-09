@@ -20,9 +20,11 @@ interface EditableSelectCellProps {
  * Inline-editable select cell for TanStack React Table.
  * Renders as a styled badge/chip. On click, opens a native <select>.
  * On change, calls onSave immediately (no confirm step).
+ * Keeps the select open on save failure and shows an error message.
  */
 export function EditableSelectCell({ value, options, onSave, className }: EditableSelectCellProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const selectRef = useRef<HTMLSelectElement | null>(null);
 
   const currentOption = options.find((o) => o.value === value);
@@ -37,58 +39,73 @@ export function EditableSelectCell({ value, options, onSave, className }: Editab
   }, [isEditing]);
 
   const startEdit = useCallback(() => {
+    setError(null);
     setIsEditing(true);
   }, []);
 
   const handleChange = useCallback(
     async (e: React.ChangeEvent<HTMLSelectElement>) => {
       const newValue = e.target.value;
-      setIsEditing(false);
 
       if (newValue !== (value ?? "")) {
+        // Attempt save first. Only close on success; keep open and show error on failure.
         try {
           await onSave(newValue);
-        } catch {
-          // Save failed — parent still holds old value, UI will reflect it.
+          setError(null);
+          setIsEditing(false);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "Save failed");
+          // isEditing remains true — user can retry or press Escape to cancel.
         }
+      } else {
+        setIsEditing(false);
       }
     },
     [value, onSave],
   );
 
   const handleBlur = useCallback(() => {
-    setIsEditing(false);
-  }, []);
+    // Only close on blur when no error is showing.
+    // If an error is displayed the user needs to see it; Escape will dismiss.
+    if (error === null) {
+      setIsEditing(false);
+    }
+  }, [error]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLSelectElement>) => {
     if (e.key === "Escape") {
       e.preventDefault();
+      setError(null);
       setIsEditing(false);
     }
   }, []);
 
   if (isEditing) {
     return (
-      <select
-        ref={selectRef}
-        data-slot="editable-select-cell"
-        value={value ?? ""}
-        onChange={(e) => void handleChange(e)}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
-        className={cn(
-          "w-full min-w-0 rounded-md bg-transparent px-1 py-0.5 text-sm text-[var(--text)]",
-          "ring-1 ring-[var(--border)] outline-none",
-          "focus-visible:ring-[var(--ring)]",
-          className,
-        )}
-      >
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+      <div data-slot="editable-select-cell" className="flex flex-col gap-0.5">
+        <select
+          ref={selectRef}
+          value={value ?? ""}
+          onChange={(e) => void handleChange(e)}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          className={cn(
+            "w-full min-w-0 rounded-md bg-transparent px-1 py-0.5 text-sm text-[var(--text)]",
+            "ring-1 outline-none",
+            error !== null
+              ? "ring-red-500 focus-visible:ring-red-500"
+              : "ring-[var(--border)] focus-visible:ring-[var(--ring)]",
+            className,
+          )}
+        >
+          {options.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+        {error !== null && <span className="text-xs text-red-500">{error}</span>}
+      </div>
     );
   }
 

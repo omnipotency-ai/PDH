@@ -88,8 +88,7 @@ Focus on changed files only. Don't review unchanged code.
 - UI elements that imply features not yet built (buttons, icons, menu items that do nothing or lead nowhere) — erodes user trust (HIGH)
 - Unused or partially-wired features: state/refs/handlers built but never connected to UI, or UI that calls stubs (HIGH)
 - Empty states missing or unhelpful (e.g., blank screen instead of "no data yet" message)
-- Destructive actions without confirmation (delete, clear, reset)
-- Loading/error states missing or misleading (showing "saved" when nothing happened)
+- Loading/error states missing or misleading (showing "saved" when nothing happened) — CLAUDE.md mandates these as core requirements
 - Inconsistent terminology between UI labels and domain concepts
 
 **Quality (varies):**
