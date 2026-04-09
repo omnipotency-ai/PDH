@@ -1,5 +1,8 @@
 import { useState } from "react";
 
+import { RegistryTable } from "@/components/food/RegistryTable";
+import { ZonesTable } from "@/components/food/ZonesTable";
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type FoodTab = "registry" | "zones" | "portions";
@@ -63,7 +66,9 @@ export default function FoodPage() {
         role="tabpanel"
         aria-label={`${activeTab} tab content`}
       >
-        <TabPlaceholder tab={activeTab} />
+        {activeTab === "registry" && <RegistryTable />}
+        {activeTab === "zones" && <ZonesTable />}
+        {activeTab === "portions" && <TabPlaceholder tab={activeTab} />}
       </div>
     </div>
   );

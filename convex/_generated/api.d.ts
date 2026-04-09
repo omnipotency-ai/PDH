@@ -13,6 +13,7 @@ import type * as ai from "../ai.js";
 import type * as aiAnalyses from "../aiAnalyses.js";
 import type * as appConfig from "../appConfig.js";
 import type * as backup from "../backup.js";
+import type * as clinicalRegistry from "../clinicalRegistry.js";
 import type * as computeAggregates from "../computeAggregates.js";
 import type * as conversations from "../conversations.js";
 import type * as extractInsightData from "../extractInsightData.js";
@@ -55,6 +56,7 @@ declare const fullApi: ApiFromModules<{
   aiAnalyses: typeof aiAnalyses;
   appConfig: typeof appConfig;
   backup: typeof backup;
+  clinicalRegistry: typeof clinicalRegistry;
   computeAggregates: typeof computeAggregates;
   conversations: typeof conversations;
   extractInsightData: typeof extractInsightData;
