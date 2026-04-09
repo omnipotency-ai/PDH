@@ -2,14 +2,18 @@ import { UserButton } from "@clerk/clerk-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Settings } from "lucide-react";
 import ModeToggle from "@/components/mode-toggle";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export function GlobalHeader() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/6 bg-[rgba(255,255,255,0.7)] backdrop-blur-xl backdrop-saturate-150 dark:bg-[rgba(12,20,32,0.7)]">
-      <div className="mx-auto w-full max-w-440 px-4 py-2.5">
+      <div className="mx-auto w-full max-w-2xl px-4 py-2.5">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
           {/* Logo area */}
           <Tooltip>
@@ -32,7 +36,10 @@ export function GlobalHeader() {
                 </div>
               </Link>
             </TooltipTrigger>
-            <TooltipContent side="bottom" className={pathname === "/" ? "" : "hidden"}>
+            <TooltipContent
+              side="bottom"
+              className={pathname === "/" ? "" : "hidden"}
+            >
               Home
             </TooltipContent>
           </Tooltip>

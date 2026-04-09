@@ -26,7 +26,7 @@ import {
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
-export type NutritionView = "none" | "favourites" | "foodFilter" | "calorieDetail";
+export type NutritionView = "none" | "quickPicks" | "favourites" | "foodFilter" | "calorieDetail";
 
 export interface StagedItem {
   /** Unique ID for this staging row. */
@@ -67,8 +67,8 @@ export interface NutritionState {
   waterModalOpen: boolean;
   /** Auto-detected from time, user can override. */
   activeMealSlot: MealSlot;
-  /** For browsing logs by slot. */
-  filterMealSlot: MealSlot;
+  /** Slot filter for Quick Picks / Favourites / Browse. null = show all slots. */
+  slotFilter: MealSlot | null;
   /** Set when ADJUST_STAGING_PORTION removes an item (portion <= 0). Consuming component reads + toasts, then resets on next action. */
   lastRemovedItem: string | null;
 }
@@ -85,7 +85,7 @@ export type NutritionAction =
   | { type: "OPEN_WATER_MODAL" }
   | { type: "CLOSE_WATER_MODAL" }
   | { type: "SET_ACTIVE_MEAL_SLOT"; slot: MealSlot }
-  | { type: "SET_FILTER_MEAL_SLOT"; slot: MealSlot }
+  | { type: "TOGGLE_SLOT_FILTER"; slot: MealSlot }
   | { type: "RESET_AFTER_LOG" };
 
 export interface StagingTotals {
@@ -299,10 +299,11 @@ export function nutritionReducer(state: NutritionState, action: NutritionAction)
       return { ...base, waterModalOpen: false };
 
     case "SET_ACTIVE_MEAL_SLOT":
-      return { ...base, activeMealSlot: action.slot };
+      return { ...base, activeMealSlot: action.slot, slotFilter: action.slot };
 
-    case "SET_FILTER_MEAL_SLOT":
-      return { ...base, filterMealSlot: action.slot };
+    case "TOGGLE_SLOT_FILTER":
+      // Tap active slot → deselect (null = all slots). Tap different → select.
+      return { ...base, slotFilter: base.slotFilter === action.slot ? null : action.slot };
 
     case "RESET_AFTER_LOG":
       return {
@@ -348,7 +349,7 @@ function createInitialState(): NutritionState {
     stagingModalOpen: false,
     waterModalOpen: false,
     activeMealSlot: getMealSlot(Date.now()),
-    filterMealSlot: "breakfast",
+    slotFilter: getMealSlot(Date.now()),
     lastRemovedItem: null,
   };
 }

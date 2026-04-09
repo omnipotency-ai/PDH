@@ -2,7 +2,10 @@ import type { MealSlot } from "@/lib/nutritionUtils";
 import type { FoodLogData } from "@/types/domain";
 import type { StagedItem } from "./useNutritionStore";
 
-export function buildRawNutritionLogData(rawInput: string, mealSlot: MealSlot): FoodLogData | null {
+export function buildRawNutritionLogData(
+  rawInput: string,
+  mealSlot: MealSlot,
+): FoodLogData | null {
   const trimmed = rawInput.trim();
   if (!trimmed) return null;
 
@@ -45,6 +48,7 @@ export function buildStagedNutritionLogData(
           parsedName: item.displayName,
           quantity: count,
           unit: unitAbbrev,
+          resolvedBy: "registry" as const,
           ...(item.productId ? { productId: item.productId } : {}),
         };
       }
@@ -54,6 +58,7 @@ export function buildStagedNutritionLogData(
         parsedName: item.displayName,
         quantity: item.portionG,
         unit: item.isLiquid ? "ml" : "g",
+        resolvedBy: "registry" as const,
         ...(item.productId ? { productId: item.productId } : {}),
       };
     }),

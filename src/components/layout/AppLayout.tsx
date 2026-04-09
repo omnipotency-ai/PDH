@@ -36,17 +36,20 @@ const NAV_ITEMS = [
 ] as const;
 
 function BottomTabBar() {
-  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
 
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-50 border-t border-white/6 bg-[rgba(255,255,255,0.9)] backdrop-blur-xl dark:bg-[rgba(12,20,32,0.9)]"
       aria-label="Main navigation"
     >
-      <div className="mx-auto flex w-full max-w-440 items-center justify-around px-2 py-1.5">
+      <div className="mx-auto flex w-full max-w-2xl items-center justify-around px-2 py-1.5">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
-          const isActive = item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
+          const isActive =
+            item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
 
           return (
             <Link
@@ -88,7 +91,7 @@ export function AppLayout() {
       <Authenticated>
         <ProfileProvider>
           <GlobalHeader />
-          <main className="relative z-10 mx-auto w-full max-w-440 px-4 py-4 pb-20">
+          <main className="relative z-10 mx-auto w-full max-w-2xl px-4 py-4 pb-20">
             {requiresSyncedLogs ? (
               <SyncedLogsProvider>
                 <Outlet />
@@ -112,7 +115,9 @@ export function AppLayout() {
           <h1 className="bg-linear-to-r from-(--teal) to-(--section-food) bg-clip-text font-display text-2xl font-extrabold tracking-tight text-transparent">
             PDH
           </h1>
-          <p className="text-sm text-(--text-muted)">Sign in to access the app</p>
+          <p className="text-sm text-(--text-muted)">
+            Sign in to access the app
+          </p>
           <SignInButton mode="modal">
             <button
               type="button"

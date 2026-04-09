@@ -1,22 +1,17 @@
 import { Dialog } from "@base-ui/react/dialog";
 import { useUser } from "@clerk/clerk-react";
 import { useNavigate } from "@tanstack/react-router";
-import { useQuery } from "convex/react";
 import { addDays, differenceInCalendarDays, format, startOfDay } from "date-fns";
 import { MessageCircle, X } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { ConversationPanel } from "@/components/track/dr-poo/ConversationPanel";
-import { LogFoodModal } from "@/components/track/nutrition/LogFoodModal";
 import { NutritionCard } from "@/components/track/nutrition/NutritionCard";
 import { NutritionCardErrorBoundary } from "@/components/track/nutrition/NutritionCardErrorBoundary";
-import { buildStagedNutritionLogData } from "@/components/track/nutrition/nutritionLogging";
-import { useNutritionStore } from "@/components/track/nutrition/useNutritionStore";
 import { type BowelFormState, BowelSection } from "@/components/track/panels";
 import { QuickCapture } from "@/components/track/quick-capture";
 import { HabitDetailSheet } from "@/components/track/quick-capture/HabitDetailSheet";
-import { TodayStatusRow } from "@/components/track/TodayStatusRow";
 import { ConfettiBurst } from "@/components/ui/Confetti";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { useSyncedLogsContext } from "@/contexts/SyncedLogsContext";
@@ -28,9 +23,8 @@ import { useFoodLlmMatching } from "@/hooks/useFoodLlmMatching";
 import { useHabitStreaks } from "@/hooks/useHabitStreaks";
 import { useLiveClock } from "@/hooks/useLiveClock";
 import { useNutritionData } from "@/hooks/useNutritionData";
-import { useFoodFavourites, useHabits } from "@/hooks/useProfile";
+import { useHabits } from "@/hooks/useProfile";
 import { useQuickCapture } from "@/hooks/useQuickCapture";
-import { useSlotScopedFoods } from "@/hooks/useSlotScopedFoods";
 import { useUnresolvedFoodQueue } from "@/hooks/useUnresolvedFoodQueue";
 import { useUnresolvedFoodToast } from "@/hooks/useUnresolvedFoodToast";
 import { useWeeklySummaryAutoTrigger } from "@/hooks/useWeeklySummaryAutoTrigger";
@@ -42,7 +36,6 @@ import { type MealSlot, titleCase } from "@/lib/nutritionUtils";
 import { useAddSyncedLog, useLatestSuccessfulAiAnalysis, useRemoveSyncedLog } from "@/lib/sync";
 import { MS_PER_DAY } from "@/lib/timeConstants";
 import { useStore } from "@/store";
-import { api } from "../../convex/_generated/api";
 
 // Lazy-loaded so that foodRegistry.ts is code-split
 const FoodMatchingModal = lazy(() =>
@@ -55,14 +48,6 @@ const FoodMatchingModal = lazy(() =>
 // Constants & types
 // ---------------------------------------------------------------------------
 
-const MEAL_SLOT_OPTIONS: ReadonlyArray<{ slot: MealSlot; label: string }> = [
-  { slot: "breakfast", label: "Breakfast" },
-  { slot: "lunch", label: "Lunch" },
-  { slot: "dinner", label: "Dinner" },
-  { slot: "snack", label: "Snack" },
-];
-
-type FavouriteSlotTags = Partial<Record<string, MealSlot[]>>;
 type ConversationSeed = { key: string; text: string };
 
 // ---------------------------------------------------------------------------
@@ -133,19 +118,12 @@ export default function HomePage() {
   const { currentMealSlot } = useNutritionData();
   const latestSuccessfulAnalysis = useLatestSuccessfulAiAnalysis();
   const { hasApiKey, sendNow, triggerAnalysis } = useAiInsights();
-  const { favourites } = useFoodFavourites();
-  const favouriteSlotTags = (useQuery(api.profiles.getFavouriteSlotTags, {}) ??
-    {}) as FavouriteSlotTags;
   const addSyncedLog = useAddSyncedLog();
   const removeSyncedLog = useRemoveSyncedLog();
-  const { state, dispatch, stagingTotals } = useNutritionStore();
-  const [slotOverride, setSlotOverride] = useState<MealSlot | null>(null);
   const [conversationOpen, setConversationOpen] = useState(false);
   const [conversationSeed, setConversationSeed] = useState<ConversationSeed | null>(null);
   const [dismissedCard, setDismissedCard] = useState(false);
 
-  const activeMealSlot = slotOverride ?? currentMealSlot;
-  const { recentFoods, frequentFoods } = useSlotScopedFoods(activeMealSlot);
   const greeting = getTimeOfDayGreeting(new Date().getHours());
   const firstName = getDisplayName(user?.firstName);
   const latestInsightSummary = latestSuccessfulAnalysis?.insight.summary ?? null;
@@ -155,44 +133,12 @@ export default function HomePage() {
     if (preview.length > 0) {
       return preview.length > 150 ? `${preview.slice(0, 147).trimEnd()}...` : preview;
     }
-    return getFallbackDrPooPrompt(activeMealSlot);
-  }, [activeMealSlot, latestInsightSummary]);
-
-  useEffect(() => {
-    if (state.activeMealSlot === activeMealSlot) return;
-    dispatch({ type: "SET_ACTIVE_MEAL_SLOT", slot: activeMealSlot });
-  }, [activeMealSlot, dispatch, state.activeMealSlot]);
+    return getFallbackDrPooPrompt(currentMealSlot);
+  }, [currentMealSlot, latestInsightSummary]);
 
   useEffect(() => {
     setDismissedCard(false);
   }, []);
-
-  // Spotlight foods (favourites + frequent + recent, scoped to active meal slot)
-  const slotScopedFavourites = useMemo(
-    () =>
-      favourites.filter((canonicalName) =>
-        (favouriteSlotTags[canonicalName] ?? []).includes(activeMealSlot),
-      ),
-    [activeMealSlot, favouriteSlotTags, favourites],
-  );
-
-  const visibleRecentFoods = useMemo(() => recentFoods.slice(0, 7), [recentFoods]);
-  const visibleFrequentFoods = useMemo(() => frequentFoods.slice(0, 7), [frequentFoods]);
-
-  const spotlightFoods = useMemo(() => {
-    const seen = new Set<string>();
-    const ordered: string[] = [];
-    for (const canonicalName of [
-      ...slotScopedFavourites,
-      ...visibleFrequentFoods,
-      ...visibleRecentFoods,
-    ]) {
-      if (seen.has(canonicalName)) continue;
-      seen.add(canonicalName);
-      ordered.push(canonicalName);
-    }
-    return ordered.slice(0, 12);
-  }, [slotScopedFavourites, visibleFrequentFoods, visibleRecentFoods]);
 
   // ── Capture panel hooks (moved from Track) ──
   const { logs } = useSyncedLogsContext();
@@ -229,14 +175,11 @@ export default function HomePage() {
   );
 
   // Day statistics (actual today + selected day)
-  const {
-    todayHabitCounts,
-    todayFluidTotalsByName,
-    totalFluidMl,
-    waterOnlyMl,
-    todayBmCount,
-    lastBmTimestamp,
-  } = useDayStats({ logs, todayStart, todayEnd });
+  const { todayHabitCounts, todayFluidTotalsByName, totalFluidMl } = useDayStats({
+    logs,
+    todayStart,
+    todayEnd,
+  });
   const {
     todayHabitCounts: selectedHabitCounts,
     todayFluidTotalsByName: selectedFluidTotalsByName,
@@ -417,46 +360,6 @@ export default function HomePage() {
     });
   };
 
-  // ── Food platform handlers ──
-
-  const handleAddAndReview = useCallback(
-    (canonicalName: string) => {
-      dispatch({ type: "ADD_TO_STAGING", canonicalName });
-      dispatch({ type: "OPEN_STAGING_MODAL" });
-    },
-    [dispatch],
-  );
-
-  const handleUpdateStagedQuantity = useCallback(
-    (id: string, newQuantity: number) => {
-      const item = state.stagingItems.find((entry) => entry.id === id);
-      if (!item) return;
-
-      dispatch({
-        type: "ADJUST_STAGING_PORTION",
-        id,
-        delta: newQuantity - item.portionG,
-      });
-    },
-    [dispatch, state.stagingItems],
-  );
-
-  const handleLogStagedFood = useCallback(async () => {
-    try {
-      const data = buildStagedNutritionLogData(state.stagingItems, activeMealSlot);
-      await addSyncedLog({
-        timestamp: Date.now(),
-        type: "food",
-        data,
-      });
-      toast(`${state.stagingItems.length} item(s) logged`);
-      dispatch({ type: "RESET_AFTER_LOG" });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to log food";
-      toast.error(message);
-    }
-  }, [activeMealSlot, addSyncedLog, dispatch, state.stagingItems]);
-
   const openConversation = useCallback((text?: string) => {
     setConversationSeed(
       text
@@ -580,7 +483,7 @@ export default function HomePage() {
             <button
               type="button"
               onClick={() =>
-                openConversation(getFollowUpPrompt(activeMealSlot, latestInsightSummary !== null))
+                openConversation(getFollowUpPrompt(currentMealSlot, latestInsightSummary !== null))
               }
               className="rounded-full bg-[var(--section-log)] px-3 py-1.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
             >
@@ -590,81 +493,7 @@ export default function HomePage() {
         </section>
       ) : null}
 
-      {/* ── Parked sections (not final placement) ── */}
-      <section className="space-y-4 opacity-60">
-        <TodayStatusRow
-          bmCount={todayBmCount}
-          fluidTotalMl={totalFluidMl}
-          waterOnlyMl={waterOnlyMl}
-          lastBmTimestamp={lastBmTimestamp}
-          nowMs={now.getTime()}
-        />
-
-        <div className="glass-card space-y-4 p-4">
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-(--text-faint)">
-              Meal slot
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {MEAL_SLOT_OPTIONS.map(({ slot, label }) => {
-                const isActive = slot === activeMealSlot;
-                return (
-                  <button
-                    key={slot}
-                    type="button"
-                    onClick={() => setSlotOverride(slot)}
-                    className="rounded-full border px-3 py-1.5 text-sm font-medium transition-colors"
-                    style={{
-                      borderColor: isActive ? "var(--orange)" : "var(--color-border-default)",
-                      backgroundColor: isActive
-                        ? "color-mix(in srgb, var(--orange) 16%, transparent)"
-                        : "transparent",
-                      color: isActive ? "var(--orange)" : "var(--text-muted)",
-                    }}
-                    aria-pressed={isActive}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {spotlightFoods.length > 0 ? (
-            <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-(--text-faint)">
-                Quick picks
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {spotlightFoods.map((canonicalName) => (
-                  <button
-                    key={`chip-${canonicalName}`}
-                    type="button"
-                    onClick={() => handleAddAndReview(canonicalName)}
-                    className="rounded-full border border-[var(--color-border-default)] bg-[var(--surface-2)] px-3 py-1.5 text-sm font-medium text-(--text) transition-colors hover:border-[var(--orange)] hover:text-[var(--orange)]"
-                  >
-                    {titleCase(canonicalName)}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-        </div>
-      </section>
-
       {/* ── Modals & overlays ── */}
-
-      <LogFoodModal
-        open={state.stagingModalOpen}
-        stagedItems={state.stagingItems}
-        stagingTotals={stagingTotals}
-        onClose={() => dispatch({ type: "CLOSE_STAGING_MODAL" })}
-        onRemoveItem={(id) => dispatch({ type: "REMOVE_FROM_STAGING", id })}
-        onUpdateQuantity={handleUpdateStagedQuantity}
-        onClearAll={() => dispatch({ type: "CLEAR_STAGING" })}
-        onLogFood={handleLogStagedFood}
-        onAddMore={() => dispatch({ type: "CLOSE_STAGING_MODAL" })}
-      />
 
       <Dialog.Root open={conversationOpen} onOpenChange={setConversationOpen}>
         <Dialog.Portal>

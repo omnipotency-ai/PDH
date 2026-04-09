@@ -1,8 +1,20 @@
 import { format } from "date-fns";
-import { AlertCircle, Check, CircleDashed, FileText, Loader2, Trash2, X } from "lucide-react";
+import {
+  AlertCircle,
+  Check,
+  CircleDashed,
+  FileText,
+  Loader2,
+  Trash2,
+  X,
+} from "lucide-react";
 import { lazy, Suspense, useCallback, useState } from "react";
 import { RawInputEditModal } from "@/components/track/RawInputEditModal";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { getItemMacros } from "@/lib/nutritionUtils";
 import type { FoodItem, FoodLogData } from "@/types/domain";
 import {
@@ -27,7 +39,13 @@ const FoodMatchingModal = lazy(() =>
 
 // ── Resolution status indicator ──────────────────────────────────────────
 
-function ResolutionDot({ item, onTapToMatch }: { item: FoodItem; onTapToMatch?: () => void }) {
+function ResolutionDot({
+  item,
+  onTapToMatch,
+}: {
+  item: FoodItem;
+  onTapToMatch?: () => void;
+}) {
   const status = getFoodItemResolutionStatus(item);
 
   if (status === "resolved") {
@@ -100,7 +118,10 @@ function ResolutionDot({ item, onTapToMatch }: { item: FoodItem; onTapToMatch?: 
 
 // ── Meal slot badge ─────────────────────────────────────────────────────
 
-const MEAL_SLOT_STYLES: Record<string, { bg: string; text: string; label: string }> = {
+const MEAL_SLOT_STYLES: Record<
+  string,
+  { bg: string; text: string; label: string }
+> = {
   breakfast: {
     bg: "bg-amber-500/15",
     text: "text-amber-600 dark:text-amber-400",
@@ -154,14 +175,19 @@ function ItemPortionCalorie({ item }: { item: FoodItem }) {
       className="ml-auto flex flex-shrink-0 items-center gap-1 text-[10px] text-[var(--color-text-tertiary)] opacity-60"
     >
       {portionText && <span>{portionText}</span>}
-      {portionText && calorieText && <span className="opacity-40">&middot;</span>}
+      {portionText && calorieText && (
+        <span className="opacity-40">&middot;</span>
+      )}
       {calorieText && <span>{calorieText}</span>}
     </span>
   );
 }
 
 /** Build a human-readable portion string from item data. */
-function buildPortionText(item: FoodItem, effectivePortionG: number): string | null {
+function buildPortionText(
+  item: FoodItem,
+  effectivePortionG: number,
+): string | null {
   const unit = String(item.unit ?? "")
     .trim()
     .toLowerCase();
@@ -179,19 +205,28 @@ function buildPortionText(item: FoodItem, effectivePortionG: number): string | n
     }
     // Has quantity but non-standard unit (e.g., "sl", "pc", "cup") — expand to readable form
     if (unit) {
-      const UNIT_DISPLAY_MAP: Record<string, { singular: string; plural: string }> = {
+      const UNIT_DISPLAY_MAP: Record<
+        string,
+        { singular: string; plural: string }
+      > = {
         sl: { singular: "slice", plural: "slices" },
         pc: { singular: "piece", plural: "pieces" },
         cup: { singular: "cup", plural: "cups" },
         tbsp: { singular: "tbsp", plural: "tbsp" },
         tsp: { singular: "tsp", plural: "tsp" },
+        half: { singular: "half", plural: "halves" },
+        patty: { singular: "patty", plural: "patties" },
+        chili: { singular: "chili", plural: "chilies" },
       };
       const display = UNIT_DISPLAY_MAP[unit];
-      if (display) {
-        const label = qty === 1 ? display.singular : display.plural;
-        return `${qty} ${label} (${Math.round(effectivePortionG)}g)`;
-      }
-      return `${qty} ${unit} (${Math.round(effectivePortionG)}g)`;
+      const label = display
+        ? qty === 1
+          ? display.singular
+          : display.plural
+        : qty === 1
+          ? unit
+          : `${unit}s`;
+      return `${qty} ${label} (${Math.round(effectivePortionG)}g)`;
     }
     // Quantity without unit — show as grams (the default assumption)
     return `${Math.round(qty)}g`;
@@ -211,7 +246,13 @@ function buildPortionText(item: FoodItem, effectivePortionG: number): string | n
 
 // ── Single food item line ────────────────────────────────────────────────
 
-function FoodItemLine({ item, onTapToMatch }: { item: FoodItem; onTapToMatch?: () => void }) {
+function FoodItemLine({
+  item,
+  onTapToMatch,
+}: {
+  item: FoodItem;
+  onTapToMatch?: () => void;
+}) {
   const displayName = getFoodItemDisplayName(item);
   const status = getFoodItemResolutionStatus(item);
 
@@ -222,7 +263,9 @@ function FoodItemLine({ item, onTapToMatch }: { item: FoodItem; onTapToMatch?: (
     .trim()
     .toLowerCase();
   const showCanonicalInline =
-    status === "resolved" && canonicalName !== null && canonicalName.toLowerCase() !== bareName;
+    status === "resolved" &&
+    canonicalName !== null &&
+    canonicalName.toLowerCase() !== bareName;
 
   const textColorClass =
     status === "expired"
@@ -231,11 +274,16 @@ function FoodItemLine({ item, onTapToMatch }: { item: FoodItem; onTapToMatch?: (
 
   return (
     <div className="flex items-center gap-1.5">
-      <ResolutionDot item={item} {...(onTapToMatch !== undefined && { onTapToMatch })} />
+      <ResolutionDot
+        item={item}
+        {...(onTapToMatch !== undefined && { onTapToMatch })}
+      />
       <span className={`min-w-0 truncate text-xs ${textColorClass}`}>
         {displayName}
         {showCanonicalInline && (
-          <span className="ml-1 text-[10px] text-emerald-500/70">({canonicalName})</span>
+          <span className="ml-1 text-[10px] text-emerald-500/70">
+            ({canonicalName})
+          </span>
         )}
       </span>
       <ItemPortionCalorie item={item} />
@@ -323,9 +371,16 @@ function FoodProcessingView({ entry }: { entry: FoodPipelineLog }) {
 
 // ── Main component ───────────────────────────────────────────────────────
 
-export function FoodSubRow({ entry }: { key?: string | number; entry: FoodPipelineLog }) {
+export function FoodSubRow({
+  entry,
+}: {
+  key?: string | number;
+  entry: FoodPipelineLog;
+}) {
   const [rawInputModalOpen, setRawInputModalOpen] = useState(false);
-  const [matchingItemIndex, setMatchingItemIndex] = useState<number | null>(null);
+  const [matchingItemIndex, setMatchingItemIndex] = useState<number | null>(
+    null,
+  );
   const [draftItems, setDraftItems] = useState<DraftItem[]>([]);
 
   const isProcessing = isFoodLogProcessing(entry);
@@ -335,7 +390,13 @@ export function FoodSubRow({ entry }: { key?: string | number; entry: FoodPipeli
     const items = entry.data.items;
     return items.map((item) => ({
       id: crypto.randomUUID(),
-      name: String(item?.parsedName ?? item?.name ?? item?.rawName ?? item?.userSegment ?? ""),
+      name: String(
+        item?.parsedName ??
+          item?.name ??
+          item?.rawName ??
+          item?.userSegment ??
+          "",
+      ),
       quantity:
         item?.quantity != null && Number.isFinite(Number(item.quantity))
           ? String(item.quantity)
@@ -362,11 +423,16 @@ export function FoodSubRow({ entry }: { key?: string | number; entry: FoodPipeli
             "",
         ).trim();
         const draftName = draft.name.trim();
-        const nameChanged = draftName.toLowerCase() !== originalName.toLowerCase();
+        const nameChanged =
+          draftName.toLowerCase() !== originalName.toLowerCase();
         return {
           ...(original ?? {}),
           parsedName: draftName,
-          userSegment: [draft.quantity || null, draft.unit.trim() || null, draftName]
+          userSegment: [
+            draft.quantity || null,
+            draft.unit.trim() || null,
+            draftName,
+          ]
             .filter(Boolean)
             .join(" "),
           ...(nameChanged && { resolvedBy: "user" as const }),
@@ -433,7 +499,9 @@ export function FoodSubRow({ entry }: { key?: string | number; entry: FoodPipeli
             {draftItems.length > 1 && (
               <button
                 type="button"
-                onClick={() => setDraftItems(draftItems.filter((d) => d.id !== draft.id))}
+                onClick={() =>
+                  setDraftItems(draftItems.filter((d) => d.id !== draft.id))
+                }
                 className="flex h-6 w-6 items-center justify-center rounded text-[var(--color-text-tertiary)] hover:text-red-400"
               >
                 <X className="h-3 w-3" />
@@ -471,7 +539,9 @@ export function FoodSubRow({ entry }: { key?: string | number; entry: FoodPipeli
             <p className="font-mono text-xs text-[var(--color-text-tertiary)]">
               {format(entry.timestamp, "HH:mm")}
             </p>
-            {entry.data.mealSlot != null && <MealSlotBadge slot={entry.data.mealSlot} />}
+            {entry.data.mealSlot != null && (
+              <MealSlotBadge slot={entry.data.mealSlot} />
+            )}
           </div>
 
           {/* Per-item resolution indicators */}
@@ -479,7 +549,12 @@ export function FoodSubRow({ entry }: { key?: string | number; entry: FoodPipeli
             <div className="mt-0.5 space-y-0.5">
               {entry.data.items.map((item, index) => (
                 <FoodItemLine
-                  key={item.userSegment ?? item.parsedName ?? item.name ?? `item-${index}`}
+                  key={
+                    item.userSegment ??
+                    item.parsedName ??
+                    item.name ??
+                    `item-${index}`
+                  }
                   item={item}
                   onTapToMatch={() => setMatchingItemIndex(index)}
                 />
@@ -491,11 +566,16 @@ export function FoodSubRow({ entry }: { key?: string | number; entry: FoodPipeli
           {entry.data.items.length === 0 && detail && (
             <Tooltip>
               <TooltipTrigger
-                render={<p className="mt-0.5 truncate text-xs text-[var(--color-text-tertiary)]" />}
+                render={
+                  <p className="mt-0.5 truncate text-xs text-[var(--color-text-tertiary)]" />
+                }
               >
                 {detailPreview}
               </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-[56ch] text-sm leading-snug">
+              <TooltipContent
+                side="top"
+                className="max-w-[56ch] text-sm leading-snug"
+              >
                 {detail}
               </TooltipContent>
             </Tooltip>
@@ -523,7 +603,9 @@ export function FoodSubRow({ entry }: { key?: string | number; entry: FoodPipeli
                 logId={entry.id}
                 itemIndex={matchingItemIndex}
                 item={entry.data.items[matchingItemIndex]}
-                foodName={getFoodItemDisplayName(entry.data.items[matchingItemIndex])}
+                foodName={getFoodItemDisplayName(
+                  entry.data.items[matchingItemIndex],
+                )}
                 rawInput={entry.data.rawInput ?? ""}
                 logTimestamp={entry.timestamp}
                 {...(entry.data.notes !== undefined && {

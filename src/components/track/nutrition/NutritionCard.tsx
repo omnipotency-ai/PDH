@@ -11,7 +11,7 @@
  */
 
 import { FOOD_PORTION_DATA } from "@shared/foodPortionData";
-import { FOOD_REGISTRY, type FoodRegistryEntry } from "@shared/foodRegistryData";
+import type { FoodRegistryEntry } from "@shared/foodRegistryData";
 import { format, isSameDay } from "date-fns";
 import {
   Camera,
@@ -22,6 +22,7 @@ import {
   SlidersHorizontal,
   UtensilsCrossed,
   X,
+  Zap,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -29,7 +30,7 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { useNutritionData } from "@/hooks/useNutritionData";
 import { useFoodFavourites } from "@/hooks/useProfile";
 import { getErrorMessage } from "@/lib/errors";
-import { filterToKnownFoods, titleCase } from "@/lib/nutritionUtils";
+import { titleCase } from "@/lib/nutritionUtils";
 import { useAddSyncedLog, useRemoveSyncedLog } from "@/lib/sync";
 import { getZoneBadgeBackground } from "@/lib/zoneColors";
 import { CalorieDetailView } from "./CalorieDetailView";
@@ -37,23 +38,11 @@ import { CircularProgressRing } from "./CircularProgressRing";
 import { FavouritesView } from "./FavouritesView";
 import { FoodFilterView } from "./FoodFilterView";
 import { LogFoodModal } from "./LogFoodModal";
+import { MealSlotToggle } from "./MealSlotToggle";
 import { buildRawNutritionLogData, buildStagedNutritionLogData } from "./nutritionLogging";
+import { QuickPicksView } from "./QuickPicksView";
 import { useNutritionStore } from "./useNutritionStore";
 import { WaterModal } from "./WaterModal";
-
-// ── Constants ────────────────────────────────────────────────────────────────
-
-/** Subcategories that represent non-water drinks in the food registry. */
-const DRINK_SUBCATEGORIES = new Set(["hot_drink", "juice", "fizzy_drink"]);
-
-/**
- * Common drinks from the food registry, filtered to only entries that
- * also have portion data (so they can be staged). Computed once at
- * module load — the registry is static.
- */
-const _COMMON_DRINKS: ReadonlyArray<FoodRegistryEntry> = FOOD_REGISTRY.filter(
-  (entry) => DRINK_SUBCATEGORIES.has(entry.subcategory) && FOOD_PORTION_DATA.has(entry.canonical),
-);
 
 // ── Nutrition Summary Bar ────────────────────────────────────────────────────
 
@@ -164,7 +153,7 @@ function NutritionSearchInput({
 
 // ── Search Result Row ────────────────────────────────────────────────────────
 
-function SearchResultRow({
+function _SearchResultRow({
   entry,
   isFavourite,
   onSelect,
@@ -329,13 +318,8 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
   }, []);
 
   // Filter recentFoods to only those with known portion data
-  const knownRecentFoods = useMemo(() => filterToKnownFoods(recentFoods), [recentFoods]);
-
   // Whether the search zero-state is active (focused, empty query)
   const showSearchZeroState = searchFocused && state.searchQuery.trim().length === 0;
-
-  // Whether to show the recent foods section within the zero-state
-  const _showRecentZeroState = showSearchZeroState && knownRecentFoods.length > 0;
   const surfaceSlot =
     state.view !== "none"
       ? undefined
@@ -547,10 +531,10 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
 
   const hasSearchResults = state.searchQuery.trim().length >= 3 && searchResults.length > 0;
 
-  const hasSearchQueryButNoResults =
+  const _hasSearchQueryButNoResults =
     state.searchQuery.trim().length >= 3 && searchResults.length === 0;
 
-  const isTypingShortQuery =
+  const _isTypingShortQuery =
     state.searchQuery.trim().length > 0 && state.searchQuery.trim().length < 3;
 
   const selectedDateLabel =
@@ -560,9 +544,24 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
 
   // ── Header icons ─────────────────────────────────────────────────────────
 
+  const handleToggleSlotFilter = useCallback(
+    (slot: import("@/lib/nutritionUtils").MealSlot) => {
+      dispatch({ type: "TOGGLE_SLOT_FILTER", slot });
+    },
+    [dispatch],
+  );
+
   const headerIcons = useMemo(
     () => (
       <div className="ml-auto flex items-center gap-3">
+        <button
+          type="button"
+          className="rounded-md p-1 transition-colors hover:bg-[var(--surface-2)]"
+          aria-label="Quick picks"
+          onClick={() => dispatch({ type: "SET_VIEW", view: "quickPicks" })}
+        >
+          <Zap className="h-5 w-5" style={{ color: "var(--orange)" }} />
+        </button>
         <button
           type="button"
           className="rounded-md p-1 transition-colors hover:bg-[var(--surface-2)]"
@@ -672,57 +671,28 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
           </button>
         </div>
 
-        {/* ── Logging to: Meal label — only visible when search/filter/favorites active ─── */}
+        {/* ── Meal slot toggle + "Logging to" — visible when expanded ─── */}
         {surfaceSlot !== "collapsed-view" && (
-          <span data-slot="meal-slot-label" className="text-xs text-[var(--text-muted)]">
-            Logging to: {titleCase(state.activeMealSlot)}
-            {selectedDateLabel ? ` · ${selectedDateLabel}` : ""}
-          </span>
+          <div className="space-y-1.5">
+            <MealSlotToggle activeSlot={state.slotFilter} onToggle={handleToggleSlotFilter} />
+            <span data-slot="meal-slot-label" className="block text-xs text-[var(--text-muted)]">
+              Logging to: {titleCase(state.activeMealSlot)}
+              {selectedDateLabel ? ` · ${selectedDateLabel}` : ""}
+            </span>
+          </div>
         )}
       </div>
 
-      {/* ── SEARCH ZERO-STATE
-      {showRecentZeroState && (
-        <div data-slot="recent-foods" className="space-y-1">
-          <h3 className="px-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-            Recent
-          </h3>
-          <ul className="max-h-64 space-y-0.5 overflow-y-auto" aria-label="Recent foods">
-            {knownRecentFoods.slice(0, 10).map((canonical) => (
-              <FoodRow
-                key={canonical}
-                canonicalName={canonical}
-                displayName={titleCase(canonical)}
-                portion={formatPortion(canonical)}
-                calories={getDefaultCalories(canonical)}
-                onAdd={handleAddToStaging}
-              />
-            ))}
-          </ul>
-        </div>
+      {/* ── Quick Picks — auto on search focus (zero-state) or via ⚡ icon ─── */}
+      {(showSearchZeroState || state.view === "quickPicks") && (
+        <QuickPicksView
+          slotFilter={state.slotFilter}
+          activeMealSlot={state.activeMealSlot}
+          onAddToStaging={handleAddToStaging}
+        />
       )}
 
-      {showSearchZeroState && COMMON_DRINKS.length > 0 && (
-        <div data-slot="common-drinks" className="space-y-1">
-          <h3 className="px-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-            Common Drinks
-          </h3>
-          <ul className="space-y-0.5" aria-label="Common drinks">
-            {COMMON_DRINKS.map((entry) => (
-              <FoodRow
-                key={entry.canonical}
-                canonicalName={entry.canonical}
-                displayName={titleCase(entry.canonical)}
-                portion={formatPortion(entry.canonical)}
-                calories={getDefaultCalories(entry.canonical)}
-                onAdd={handleAddToStaging}
-              />
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* ── SEARCH RESULTS — inline, shown when query has results ─── */}
+      {/* ── SEARCH RESULTS
       {isTypingShortQuery && (
         <p className="px-3 py-2 text-xs text-[var(--text-faint)]">
           Type at least 3 characters to search, or press Enter to send the text to the meal parser.
