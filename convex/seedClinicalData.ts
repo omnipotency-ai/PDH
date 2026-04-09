@@ -9,11 +9,17 @@
  * are inserted.
  */
 import { v } from "convex/values";
-import { FOOD_PORTION_DATA } from "../shared/foodPortionData";
 import type { PortionData } from "../shared/foodPortionData";
-import { FOOD_REGISTRY } from "../shared/foodRegistryData";
+import { FOOD_PORTION_DATA } from "../shared/foodPortionData";
 import type { FoodRegistryEntry } from "../shared/foodRegistryData";
+import { FOOD_REGISTRY } from "../shared/foodRegistryData";
+import type { Doc } from "./_generated/dataModel";
 import { internalMutation } from "./_generated/server";
+
+type ClinicalRegistryRow = Omit<
+  Doc<"clinicalRegistry">,
+  "_id" | "_creationTime"
+>;
 
 // ── Pure mapping helper (exported for testing) ────────────────────────────────
 
@@ -25,7 +31,7 @@ export function mapRegistryEntryToRow(
   entry: FoodRegistryEntry,
   portion: PortionData | undefined,
   now: number,
-): Record<string, unknown> {
+): ClinicalRegistryRow {
   return {
     canonicalName: entry.canonical,
     zone: entry.zone,
@@ -119,7 +125,7 @@ export const seedClinicalRegistry = internalMutation({
         await ctx.db.patch(existing[0]._id, patchFields);
         updated++;
       } else {
-        await ctx.db.insert("clinicalRegistry", row as never);
+        await ctx.db.insert("clinicalRegistry", row);
         inserted++;
       }
     }

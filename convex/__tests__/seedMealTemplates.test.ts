@@ -2,14 +2,16 @@ import { convexTest } from "convex-test";
 import { describe, expect, it } from "vitest";
 import { internal } from "../_generated/api";
 import schema from "../schema";
-import { buildMealTemplateRows, MEAL_TEMPLATE_DEFINITIONS } from "../seedMealTemplates";
+import {
+  buildMealTemplateRows,
+  MEAL_TEMPLATE_DEFINITIONS,
+} from "../seedMealTemplates";
 
 describe("MEAL_TEMPLATE_DEFINITIONS", () => {
   it("defines the expected canonical templates and breakfast defaults", () => {
-    expect(MEAL_TEMPLATE_DEFINITIONS.map((template) => template.canonicalName)).toEqual([
-      "coffee + toast",
-      "toast + spread",
-    ]);
+    expect(
+      MEAL_TEMPLATE_DEFINITIONS.map((template) => template.canonicalName),
+    ).toEqual(["coffee + toast", "toast + spread"]);
 
     expect(MEAL_TEMPLATE_DEFINITIONS[0]).toMatchObject({
       type: "composite",
@@ -59,11 +61,19 @@ describe("MEAL_TEMPLATE_DEFINITIONS", () => {
 describe("seedMealTemplates", () => {
   it("seeds both composite templates for a user", async () => {
     const t = convexTest(schema);
-    const result = await t.mutation(internal.seedMealTemplates.seedMealTemplates, {
-      userId: "user-123",
-    });
+    const result = await t.mutation(
+      internal.seedMealTemplates.seedMealTemplates,
+      {
+        userId: "user-123",
+      },
+    );
 
-    expect(result).toEqual({ inserted: 2, skipped: 0, total: 2 });
+    expect(result).toEqual({
+      inserted: 2,
+      skipped: 0,
+      total: 2,
+      dryRun: false,
+    });
 
     const rows = await t.run(async (ctx) =>
       ctx.db
@@ -78,7 +88,9 @@ describe("seedMealTemplates", () => {
     ]);
     expect(rows.every((row) => row.type === "composite")).toBe(true);
 
-    const coffeeToast = rows.find((row) => row.canonicalName === "coffee + toast");
+    const coffeeToast = rows.find(
+      (row) => row.canonicalName === "coffee + toast",
+    );
     expect(coffeeToast?.structuredIngredients).toEqual([
       { canonicalName: "coffee", quantity: 200, unit: "ml" },
       { canonicalName: "toast", quantity: 2, unit: "slice" },
@@ -104,7 +116,9 @@ describe("seedMealTemplates", () => {
         canonicalName: "coffee + toast",
         type: "composite",
         ingredients: ["coffee"],
-        structuredIngredients: [{ canonicalName: "coffee", quantity: 150, unit: "ml" }],
+        structuredIngredients: [
+          { canonicalName: "coffee", quantity: 150, unit: "ml" },
+        ],
         modifiers: [],
         sizes: [],
         slotDefaults: [],
@@ -112,15 +126,26 @@ describe("seedMealTemplates", () => {
       });
     });
 
-    const first = await t.mutation(internal.seedMealTemplates.seedMealTemplates, {
-      userId,
-    });
-    const second = await t.mutation(internal.seedMealTemplates.seedMealTemplates, {
-      userId,
-    });
+    const first = await t.mutation(
+      internal.seedMealTemplates.seedMealTemplates,
+      {
+        userId,
+      },
+    );
+    const second = await t.mutation(
+      internal.seedMealTemplates.seedMealTemplates,
+      {
+        userId,
+      },
+    );
 
-    expect(first).toEqual({ inserted: 1, skipped: 1, total: 2 });
-    expect(second).toEqual({ inserted: 0, skipped: 2, total: 2 });
+    expect(first).toEqual({ inserted: 1, skipped: 1, total: 2, dryRun: false });
+    expect(second).toEqual({
+      inserted: 0,
+      skipped: 2,
+      total: 2,
+      dryRun: false,
+    });
 
     const rows = await t.run(async (ctx) =>
       ctx.db
@@ -131,7 +156,9 @@ describe("seedMealTemplates", () => {
 
     expect(rows).toHaveLength(2);
 
-    const coffeeToast = rows.find((row) => row.canonicalName === "coffee + toast");
+    const coffeeToast = rows.find(
+      (row) => row.canonicalName === "coffee + toast",
+    );
     expect(coffeeToast?.createdAt).toBe(1);
     expect(coffeeToast?.ingredients).toEqual(["coffee"]);
     expect(coffeeToast?.structuredIngredients).toEqual([

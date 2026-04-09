@@ -159,10 +159,16 @@ export function OFFImportDialog({ open, onOpenChange }: OFFImportDialogProps) {
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const isActiveRef = useRef(false);
   // Incremented each time a search starts; the async callback checks its
   // generation matches before committing state, preventing stale updates
   // after the dialog closes or a new search supersedes the in-flight one.
   const searchGenRef = useRef(0);
+  const barcodeLookupGenRef = useRef(0);
+
+  useEffect(() => {
+    isActiveRef.current = open;
+  }, [open]);
 
   // Focus input on open
   useEffect(() => {
@@ -179,9 +185,12 @@ export function OFFImportDialog({ open, onOpenChange }: OFFImportDialogProps) {
       onOpenChange(nextOpen);
       if (!nextOpen) {
         // Invalidate any in-flight search so it won't update state.
+        isActiveRef.current = false;
         searchGenRef.current += 1;
+        barcodeLookupGenRef.current += 1;
         setQuery("");
         setResults([]);
+        setSearching(false);
         setSearchError(null);
         setImportState({});
         setShowScanner(false);
@@ -233,7 +242,9 @@ export function OFFImportDialog({ open, onOpenChange }: OFFImportDialogProps) {
   // Cleanup debounce on unmount
   useEffect(() => {
     return () => {
+      isActiveRef.current = false;
       searchGenRef.current += 1; // prevent any in-flight update from firing
+      barcodeLookupGenRef.current += 1;
       if (debounceRef.current !== null) {
         clearTimeout(debounceRef.current);
       }
@@ -258,8 +269,10 @@ export function OFFImportDialog({ open, onOpenChange }: OFFImportDialogProps) {
           nutritionPer100g: result.nutritionPer100g,
           now: Date.now(),
         });
+        if (!isActiveRef.current) return;
         setImportState((prev) => ({ ...prev, [result.externalId]: "done" }));
       } catch {
+        if (!isActiveRef.current) return;
         // On failure, clear the importing state so the user can retry
         setImportState((prev) => {
           const next = { ...prev };
@@ -273,12 +286,14 @@ export function OFFImportDialog({ open, onOpenChange }: OFFImportDialogProps) {
 
   const handleBarcodeScan = useCallback(
     async (barcode: string) => {
+      const gen = ++barcodeLookupGenRef.current;
       setShowScanner(false);
       setScanLooking(true);
       setSearchError(null);
 
       try {
         const result = await lookupBarcode({ barcode });
+        if (!isActiveRef.current || gen !== barcodeLookupGenRef.current) return;
         if (result) {
           setResults([result as OFFResult]);
           setQuery(result.displayName);
@@ -287,9 +302,12 @@ export function OFFImportDialog({ open, onOpenChange }: OFFImportDialogProps) {
           setResults([]);
         }
       } catch {
+        if (!isActiveRef.current || gen !== barcodeLookupGenRef.current) return;
         setSearchError("Barcode lookup failed. Check your connection.");
       } finally {
-        setScanLooking(false);
+        if (isActiveRef.current && gen === barcodeLookupGenRef.current) {
+          setScanLooking(false);
+        }
       }
     },
     [lookupBarcode],

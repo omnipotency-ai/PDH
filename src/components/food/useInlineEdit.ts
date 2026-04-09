@@ -25,14 +25,12 @@ interface UseInlineEditReturn {
  * Manages per-cell inline edit state: click to edit, blur/Enter to save, Escape to cancel.
  * The editor stays open on save failure and exposes an error message for the caller to display.
  */
-export function useInlineEdit({
-  initialValue,
-  onSave,
-}: UseInlineEditOptions): UseInlineEditReturn {
+export function useInlineEdit({ initialValue, onSave }: UseInlineEditOptions): UseInlineEditReturn {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(initialValue);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | HTMLSelectElement | null>(null);
+  const inFlightSaveRef = useRef<Promise<void> | null>(null);
 
   // Keep editValue in sync with external value changes when not actively editing.
   useEffect(() => {
@@ -69,24 +67,36 @@ export function useInlineEdit({
   }, [initialValue]);
 
   const commitEdit = useCallback(async () => {
+    if (inFlightSaveRef.current !== null) {
+      return inFlightSaveRef.current;
+    }
+
     const trimmed = editValue.trim();
 
     // No change — just close the editor.
     if (trimmed === initialValue) {
+      setError(null);
       setIsEditing(false);
       return;
     }
 
     // Attempt save first. Only close the editor on success.
     // On failure, keep the editor open and surface the error so the user can retry or cancel.
-    try {
-      await onSave(trimmed);
-      setError(null);
-      setIsEditing(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
-      // isEditing remains true — user can retry or press Escape to cancel.
-    }
+    const savePromise = (async () => {
+      try {
+        await onSave(trimmed);
+        setError(null);
+        setIsEditing(false);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Save failed");
+        // isEditing remains true — user can retry or press Escape to cancel.
+      } finally {
+        inFlightSaveRef.current = null;
+      }
+    })();
+
+    inFlightSaveRef.current = savePromise;
+    await savePromise;
   }, [editValue, initialValue, onSave]);
 
   return {

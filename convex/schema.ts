@@ -64,13 +64,7 @@ export default defineSchema({
     group: foodGroupValidator,
     line: foodLineValidator,
     lineOrder: v.number(),
-    macros: v.array(
-      v.union(
-        v.literal("protein"),
-        v.literal("carbohydrate"),
-        v.literal("fat"),
-      ),
-    ),
+    macros: v.array(v.union(v.literal("protein"), v.literal("carbohydrate"), v.literal("fat"))),
     notes: v.optional(v.string()),
     defaultPortionG: v.optional(v.number()),
     naturalUnit: v.optional(v.string()),
@@ -89,8 +83,7 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_canonicalName", ["canonicalName"])
-    .index("by_zone", ["zone"])
-    .index("by_group_and_line", ["group", "line"]),
+    .index("by_zone", ["zone"]),
 
   foodAliases: defineTable({
     aliasText: v.string(),
@@ -140,12 +133,8 @@ export default defineSchema({
     quantity: v.union(v.number(), v.null()),
     unit: v.union(v.string(), v.null()),
     preparation: v.optional(v.string()),
-    recoveryStage: v.optional(
-      v.union(v.literal(1), v.literal(2), v.literal(3)),
-    ),
-    spiceLevel: v.optional(
-      v.union(v.literal("plain"), v.literal("mild"), v.literal("spicy")),
-    ),
+    recoveryStage: v.optional(v.union(v.literal(1), v.literal(2), v.literal(3))),
+    spiceLevel: v.optional(v.union(v.literal("plain"), v.literal("mild"), v.literal("spicy"))),
     createdAt: v.number(),
   })
     .index("by_userId", ["userId"])
@@ -280,9 +269,7 @@ export default defineSchema({
       v.literal("trial_next"),
     ),
     // Only for culprits
-    confidence: v.optional(
-      v.union(v.literal("high"), v.literal("medium"), v.literal("low")),
-    ),
+    confidence: v.optional(v.union(v.literal("high"), v.literal("medium"), v.literal("low"))),
     causalRole: v.optional(foodAssessmentCausalRoleValidator),
     changeType: v.optional(foodAssessmentChangeTypeValidator),
     modifierSummary: v.optional(v.string()),
@@ -328,9 +315,7 @@ export default defineSchema({
       v.literal("trial_next"),
       v.literal("none"),
     ),
-    latestConfidence: v.optional(
-      v.union(v.literal("high"), v.literal("medium"), v.literal("low")),
-    ),
+    latestConfidence: v.optional(v.union(v.literal("high"), v.literal("medium"), v.literal("low"))),
     totalAssessments: v.number(),
     culpritCount: v.number(),
     safeCount: v.number(),
@@ -400,11 +385,7 @@ export default defineSchema({
 
   profiles: defineTable({
     userId: v.string(),
-    unitSystem: v.union(
-      v.literal("metric"),
-      v.literal("imperial_us"),
-      v.literal("imperial_uk"),
-    ),
+    unitSystem: v.union(v.literal("metric"), v.literal("imperial_us"), v.literal("imperial_uk")),
     habits: storedProfileHabitsValidator,
     fluidPresets: v.optional(storedFluidPresetsValidator),
     sleepGoal: v.optional(sleepGoalValidator),
@@ -423,9 +404,7 @@ export default defineSchema({
     nutritionGoals: v.optional(nutritionGoalsValidator),
     foodFavourites: v.optional(v.array(v.string())),
     // W0-T05: Per-favourite slot tags (e.g. "porridge" -> ["breakfast"]).
-    foodFavouriteSlotTags: v.optional(
-      v.record(v.string(), v.array(mealSlotValidator)),
-    ),
+    foodFavouriteSlotTags: v.optional(v.record(v.string(), v.array(mealSlotValidator))),
     // Server-side AI rate limit state, keyed by feature type.
     // Survives page reload. Updated by the chatCompletion action.
     aiRateLimits: v.optional(aiRateLimitsValidator),
@@ -454,11 +433,7 @@ export default defineSchema({
     note: v.optional(v.string()),
     logId: v.optional(v.string()),
     itemIndex: v.optional(v.number()),
-    status: v.union(
-      v.literal("pending"),
-      v.literal("approved"),
-      v.literal("rejected"),
-    ),
+    status: v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected")),
     createdAt: v.number(),
   })
     .index("by_userId", ["userId"])

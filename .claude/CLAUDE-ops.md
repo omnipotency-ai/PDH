@@ -13,7 +13,9 @@ alwaysApply: false
 
 ## Destructive Operations
 
-**Always confirm before deleting data.** Before ANY destructive database operation (delete, clear, wipe, reset): (1) confirm the exact target with the user, (2) ask if backups exist — user backups are NOT automatic, (3) scope deletions narrowly (by time range, marker, or specific IDs — never blanket-delete "all records for user X").
+Primary destructive-operation policy lives in `CLAUDE.md`.
+
+When dashboard work includes a destructive step, follow the `CLAUDE.md` safety rules first, then use the dashboard procedure that best narrows the scope.
 
 ## Cross-Tool Collaboration
 

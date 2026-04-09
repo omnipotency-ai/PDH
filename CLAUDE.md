@@ -19,6 +19,15 @@ The app helps users understand food-to-bowel-movement transit timing and emergin
 
 **Never perform destructive data operations (delete, clear, reset) without explicitly confirming the target user ID and scope with the user first.** Always scope destructive operations to test data only.
 
+### Destructive Operations
+
+- **Always confirm** the target userId and environment (dev/prod) before running any delete, clear, reset, or seed-overwrite operation.
+- **Never wipe production data** without an explicit, unambiguous instruction that names the table, user, and scope.
+- **Seed scripts are idempotent by design** — re-running them must be safe. If a seed script is not idempotent, fix it before running it.
+- **`clinicalRegistry` is permanent medical truth** — never wipe it during AI/embedding maintenance. If accidentally deleted, rebuild by re-running `seedClinicalData` (see `convex/seedClinicalData.ts`).
+
+See `.claude/CLAUDE-ops.md` for full dashboard procedures and cross-tool coordination details.
+
 ---
 
 ## Core Engineering Requirements

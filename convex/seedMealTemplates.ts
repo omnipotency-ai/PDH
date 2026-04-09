@@ -106,8 +106,12 @@ export function buildMealTemplateRows(userId: string, now: number) {
 export const seedMealTemplates = internalMutation({
   args: {
     userId: v.string(),
+    dryRun: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    // Run with dryRun: true first to preview changes before committing.
+    // Always confirm the target userId before running on production data.
+    const dryRun = args.dryRun ?? false;
     const now = Date.now();
     let inserted = 0;
     let skipped = 0;
@@ -122,7 +126,11 @@ export const seedMealTemplates = internalMutation({
         .take(20);
 
       if (existingRows.length === 0) {
-        await ctx.db.insert("foodLibrary", row);
+        if (!dryRun) {
+          await ctx.db.insert("foodLibrary", row);
+        } else {
+          console.log(`[dryRun] Would insert ${row.canonicalName}`);
+        }
         inserted += 1;
         continue;
       }
@@ -134,8 +142,12 @@ export const seedMealTemplates = internalMutation({
             a.createdAt - b.createdAt || a._creationTime - b._creationTime,
         );
 
-      for (const duplicate of duplicates) {
-        await ctx.db.delete(duplicate._id);
+      for (const doc of duplicates) {
+        if (!dryRun) {
+          await ctx.db.delete(doc._id);
+        } else {
+          console.log(`[dryRun] Would delete ${doc._id}`);
+        }
       }
 
       skipped += 1;
@@ -145,6 +157,7 @@ export const seedMealTemplates = internalMutation({
       inserted,
       skipped,
       total: inserted + skipped,
+      dryRun,
     };
   },
 });
