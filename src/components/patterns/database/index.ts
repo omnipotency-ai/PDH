@@ -5,6 +5,7 @@ export {
   buildFoodDatabaseRow,
   type FoodDatabaseRow,
   type OverrideStatus,
+  type ToleranceStatus,
 } from "@/components/patterns/database/columns";
 export { DatabaseTable } from "@/components/patterns/database/DatabaseTable";
 export {

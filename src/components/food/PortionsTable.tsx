@@ -9,7 +9,15 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { useMutation, useQuery } from "convex/react";
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  Ruler,
+  Search,
+} from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { api } from "../../../convex/_generated/api";
@@ -35,6 +43,32 @@ function SortIndicator({ direction }: { direction: false | SortDirection }) {
 // ── Page size options ───────────────────────────────────────────────────────
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
+
+// ── Skeleton loading rows ───────────────────────────────────────────────────
+
+function SkeletonRows({ columnCount }: { columnCount: number }) {
+  const widths = ["w-32", "w-20", "w-16", "w-12"];
+  return (
+    <>
+      {Array.from({ length: 5 }).map((_, rowIdx) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: stable skeleton indices
+        <tr key={rowIdx} className="border-b border-[var(--border)]">
+          {Array.from({ length: columnCount }).map((_, colIdx) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: stable skeleton indices
+            <td key={colIdx} className="px-3 py-2.5">
+              <div
+                className={cn(
+                  "h-4 animate-pulse rounded bg-[var(--surface-2)]",
+                  widths[(rowIdx + colIdx) % widths.length],
+                )}
+              />
+            </td>
+          ))}
+        </tr>
+      ))}
+    </>
+  );
+}
 
 // ── System default badge ────────────────────────────────────────────────────
 
@@ -272,14 +306,9 @@ export function PortionsTable() {
   const pageCount = table.getPageCount();
   const totalRows = table.getFilteredRowModel().rows.length;
 
-  // Loading state
-  if (profiles === undefined) {
-    return (
-      <div data-slot="portions-table" className="flex items-center justify-center py-12">
-        <span className="font-mono text-sm text-[var(--text-faint)]">Loading portions...</span>
-      </div>
-    );
-  }
+  const isLoading = profiles === undefined;
+  const isEmpty = !isLoading && rows.length === 0;
+  const hasNoResults = !isLoading && !isEmpty && table.getRowModel().rows.length === 0;
 
   return (
     <div data-slot="portions-table" className="flex flex-col gap-3">
@@ -305,7 +334,7 @@ export function PortionsTable() {
         <AddRowButton
           onAdd={handleAddPortion}
           label="Add Portion"
-          disabled={profiles.length === 0}
+          disabled={isLoading || profiles.length === 0}
         />
       </div>
 
@@ -316,14 +345,19 @@ export function PortionsTable() {
           <thead className="sticky top-0 z-10 bg-[var(--surface-2)]">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
+                {headerGroup.headers.map((header, colIdx) => {
                   const canSort = header.column.getCanSort();
                   const sorted = header.column.getIsSorted();
+                  const isFirstCol = colIdx === 0;
 
                   return (
                     <th
                       key={header.id}
-                      className="px-3 py-2.5 text-left"
+                      className={cn(
+                        "px-3 py-2.5 text-left",
+                        isFirstCol &&
+                          "sticky left-0 z-20 bg-[var(--surface-2)] after:absolute after:inset-y-0 after:right-0 after:w-px after:bg-[var(--border)]",
+                      )}
                       style={{ width: header.getSize() }}
                       {...(canSort && {
                         "aria-sort":
@@ -357,15 +391,41 @@ export function PortionsTable() {
 
           {/* Body */}
           <tbody>
-            {table.getRowModel().rows.length === 0 ? (
+            {isLoading ? (
+              <SkeletonRows columnCount={columns.length} />
+            ) : isEmpty ? (
               <tr>
-                <td
-                  colSpan={columns.length}
-                  className="px-3 py-12 text-center font-mono text-sm text-[var(--text-faint)]"
-                >
-                  {rows.length === 0
-                    ? "No portions defined yet. Add your first custom portion."
-                    : "No portions found."}
+                <td colSpan={columns.length} className="px-3 py-16 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <Ruler size={32} className="text-[var(--text-faint)] opacity-40" />
+                    <p className="font-mono text-sm text-[var(--text-faint)]">
+                      No portions defined yet
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => void handleAddPortion()}
+                      disabled={profiles.length === 0}
+                      className="rounded-lg bg-[var(--surface-2)] px-4 py-2 text-sm font-medium text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-3)] hover:text-[var(--text)] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Add your first custom portion
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ) : hasNoResults ? (
+              <tr>
+                <td colSpan={columns.length} className="px-3 py-16 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <Search size={32} className="text-[var(--text-faint)] opacity-40" />
+                    <p className="font-mono text-sm text-[var(--text-faint)]">No results found</p>
+                    <button
+                      type="button"
+                      onClick={() => setGlobalFilter("")}
+                      className="rounded-lg bg-[var(--surface-2)] px-4 py-2 text-sm font-medium text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-3)] hover:text-[var(--text)]"
+                    >
+                      Clear search
+                    </button>
+                  </div>
                 </td>
               </tr>
             ) : (
@@ -380,8 +440,15 @@ export function PortionsTable() {
                       : "hover:bg-[var(--surface-2)]/70",
                   )}
                 >
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-3 py-2">
+                  {row.getVisibleCells().map((cell, colIdx) => (
+                    <td
+                      key={cell.id}
+                      className={cn(
+                        "px-3 py-2",
+                        colIdx === 0 &&
+                          "sticky left-0 z-[1] bg-[var(--surface-1)] transition-colors after:absolute after:inset-y-0 after:right-0 after:w-px after:bg-[var(--border)]",
+                      )}
+                    >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}
@@ -392,71 +459,76 @@ export function PortionsTable() {
         </table>
       </div>
 
-      {/* Pagination controls */}
-      <div data-slot="portions-pagination" className="flex items-center justify-between gap-4 px-1">
-        {/* Row count summary */}
-        <span className="font-mono text-xs text-[var(--text-faint)]">
-          {totalRows === 0
-            ? "0 rows"
-            : `${pageIndex * pageSize + 1}\u2013${Math.min(
-                (pageIndex + 1) * pageSize,
-                totalRows,
-              )} of ${totalRows}`}
-        </span>
+      {/* Pagination controls — only show when data is loaded */}
+      {!isLoading && (
+        <div
+          data-slot="portions-pagination"
+          className="flex items-center justify-between gap-4 px-1"
+        >
+          {/* Row count summary */}
+          <span className="font-mono text-xs text-[var(--text-faint)]">
+            {totalRows === 0
+              ? "0 rows"
+              : `${pageIndex * pageSize + 1}\u2013${Math.min(
+                  (pageIndex + 1) * pageSize,
+                  totalRows,
+                )} of ${totalRows}`}
+          </span>
 
-        <div className="flex items-center gap-3">
-          {/* Page size selector */}
-          <div className="flex items-center gap-1.5">
-            <label
-              htmlFor="portions-page-size"
-              className="font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)]"
-            >
-              Rows
-            </label>
-            <select
-              id="portions-page-size"
-              value={pageSize}
-              onChange={(e) => {
-                table.setPageSize(Number(e.target.value));
-              }}
-              className="rounded border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 font-mono text-xs text-[var(--text-muted)] focus:border-[var(--border-strong)] focus:outline-none"
-            >
-              {PAGE_SIZE_OPTIONS.map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
-          </div>
+          <div className="flex items-center gap-3">
+            {/* Page size selector */}
+            <div className="flex items-center gap-1.5">
+              <label
+                htmlFor="portions-page-size"
+                className="font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)]"
+              >
+                Rows
+              </label>
+              <select
+                id="portions-page-size"
+                value={pageSize}
+                onChange={(e) => {
+                  table.setPageSize(Number(e.target.value));
+                }}
+                className="rounded border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 font-mono text-xs text-[var(--text-muted)] focus:border-[var(--border-strong)] focus:outline-none"
+              >
+                {PAGE_SIZE_OPTIONS.map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          {/* Page navigation */}
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-              className="inline-flex size-7 min-h-11 min-w-11 items-center justify-center rounded border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-3)] hover:text-[var(--text)] disabled:cursor-not-allowed disabled:opacity-30"
-              aria-label="Previous page"
-            >
-              <ChevronLeft size={14} />
-            </button>
+            {/* Page navigation */}
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+                className="inline-flex size-7 min-h-11 min-w-11 items-center justify-center rounded border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-3)] hover:text-[var(--text)] disabled:cursor-not-allowed disabled:opacity-30"
+                aria-label="Previous page"
+              >
+                <ChevronLeft size={14} />
+              </button>
 
-            <span className="px-2 font-mono text-xs text-[var(--text-muted)]">
-              {pageCount === 0 ? "0 / 0" : `${pageIndex + 1} / ${pageCount}`}
-            </span>
+              <span className="px-2 font-mono text-xs text-[var(--text-muted)]">
+                {pageCount === 0 ? "0 / 0" : `${pageIndex + 1} / ${pageCount}`}
+              </span>
 
-            <button
-              type="button"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-              className="inline-flex size-7 min-h-11 min-w-11 items-center justify-center rounded border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-3)] hover:text-[var(--text)] disabled:cursor-not-allowed disabled:opacity-30"
-              aria-label="Next page"
-            >
-              <ChevronRight size={14} />
-            </button>
+              <button
+                type="button"
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+                className="inline-flex size-7 min-h-11 min-w-11 items-center justify-center rounded border border-[var(--surface-2)] text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-3)] hover:text-[var(--text)] disabled:cursor-not-allowed disabled:opacity-30"
+                aria-label="Next page"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

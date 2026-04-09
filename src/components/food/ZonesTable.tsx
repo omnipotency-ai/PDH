@@ -8,11 +8,22 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { useMutation, useQuery } from "convex/react";
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  ListFilter,
+  Search,
+} from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 
 import { cn } from "@/lib/utils";
 import { api } from "../../../convex/_generated/api";
+import { FilterBar } from "./filters/FilterBar";
+import type { FilterState } from "./filters/filterTypes";
+import { applyFilters } from "./filters/filterTypes";
 import { AddRowButton } from "./TableActions";
 import type { ZoneRow } from "./zonesColumns";
 import { getZonesColumns } from "./zonesColumns";
@@ -29,6 +40,32 @@ function SortIndicator({ direction }: { direction: false | SortDirection }) {
   return <ArrowUpDown size={12} className="shrink-0 opacity-30" />;
 }
 
+// ── Skeleton loading rows ───────────────────────────────────────────────────
+
+function SkeletonRows({ columnCount }: { columnCount: number }) {
+  const widths = ["w-32", "w-12", "w-20", "w-24", "w-16", "w-20"];
+  return (
+    <>
+      {Array.from({ length: 5 }).map((_, rowIdx) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: stable skeleton indices
+        <tr key={rowIdx} className="border-b border-[var(--border)]">
+          {Array.from({ length: columnCount }).map((_, colIdx) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: stable skeleton indices
+            <td key={colIdx} className="px-3 py-2.5">
+              <div
+                className={cn(
+                  "h-4 animate-pulse rounded bg-[var(--surface-2)]",
+                  widths[(rowIdx + colIdx) % widths.length],
+                )}
+              />
+            </td>
+          ))}
+        </tr>
+      ))}
+    </>
+  );
+}
+
 // ── Page size options ───────────────────────────────────────────────────────
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
@@ -43,9 +80,10 @@ export function ZonesTable() {
 
   const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [filters, setFilters] = useState<FilterState[]>([]);
 
   // Transform query results to ZoneRow[]
-  const rows: ZoneRow[] = useMemo(() => {
+  const allRows: ZoneRow[] = useMemo(() => {
     if (data === undefined) return [];
     return data.map((entry) => ({
       _id: entry._id,
@@ -80,6 +118,9 @@ export function ZonesTable() {
       ...(entry.notes !== undefined && { notes: entry.notes }),
     }));
   }, [data]);
+
+  // Apply FilterBar filters before passing to TanStack table
+  const rows: ZoneRow[] = useMemo(() => applyFilters(allRows, filters), [allRows, filters]);
 
   // Build columns with mutation callbacks
   const columns = useMemo(
@@ -131,14 +172,10 @@ export function ZonesTable() {
   const pageCount = table.getPageCount();
   const totalRows = table.getFilteredRowModel().rows.length;
 
-  // Loading state
-  if (data === undefined) {
-    return (
-      <div data-slot="zones-table" className="flex items-center justify-center py-12">
-        <span className="font-mono text-sm text-[var(--text-faint)]">Loading zones...</span>
-      </div>
-    );
-  }
+  const isLoading = data === undefined;
+  const isEmpty = !isLoading && data.length === 0;
+  const isFiltered = globalFilter.length > 0 || filters.length > 0;
+  const hasNoResults = !isLoading && !isEmpty && table.getRowModel().rows.length === 0;
 
   return (
     <div data-slot="zones-table" className="flex flex-col gap-3">
@@ -164,6 +201,9 @@ export function ZonesTable() {
         <AddRowButton onAdd={handleAddZone} label="Add Zone" />
       </div>
 
+      {/* Filter bar */}
+      <FilterBar filters={filters} onFiltersChange={setFilters} />
+
       {/* Scrollable table container */}
       <div className="overflow-x-auto rounded-lg border border-[var(--border)] bg-[var(--surface-1)]">
         <table className="w-full min-w-[1400px] border-collapse">
@@ -171,14 +211,19 @@ export function ZonesTable() {
           <thead className="sticky top-0 z-10 bg-[var(--surface-2)]">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
+                {headerGroup.headers.map((header, colIdx) => {
                   const canSort = header.column.getCanSort();
                   const sorted = header.column.getIsSorted();
+                  const isFirstCol = colIdx === 0;
 
                   return (
                     <th
                       key={header.id}
-                      className="px-3 py-2.5 text-left"
+                      className={cn(
+                        "px-3 py-2.5 text-left",
+                        isFirstCol &&
+                          "sticky left-0 z-20 bg-[var(--surface-2)] after:absolute after:inset-y-0 after:right-0 after:w-px after:bg-[var(--border)]",
+                      )}
                       style={{ width: header.getSize() }}
                       {...(canSort && {
                         "aria-sort":
@@ -212,15 +257,43 @@ export function ZonesTable() {
 
           {/* Body */}
           <tbody>
-            {table.getRowModel().rows.length === 0 ? (
+            {isLoading ? (
+              <SkeletonRows columnCount={columns.length} />
+            ) : isEmpty ? (
               <tr>
-                <td
-                  colSpan={columns.length}
-                  className="px-3 py-12 text-center font-mono text-sm text-[var(--text-faint)]"
-                >
-                  {data.length === 0
-                    ? "No zone entries yet. Add your first zone entry."
-                    : "No zone entries found."}
+                <td colSpan={columns.length} className="px-3 py-16 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <ListFilter size={32} className="text-[var(--text-faint)] opacity-40" />
+                    <p className="font-mono text-sm text-[var(--text-faint)]">
+                      No zone entries yet
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => void handleAddZone()}
+                      className="rounded-lg bg-[var(--surface-2)] px-4 py-2 text-sm font-medium text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-3)] hover:text-[var(--text)]"
+                    >
+                      Add your first zone entry
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ) : hasNoResults ? (
+              <tr>
+                <td colSpan={columns.length} className="px-3 py-16 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <Search size={32} className="text-[var(--text-faint)] opacity-40" />
+                    <p className="font-mono text-sm text-[var(--text-faint)]">No results found</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGlobalFilter("");
+                        setFilters([]);
+                      }}
+                      className="rounded-lg bg-[var(--surface-2)] px-4 py-2 text-sm font-medium text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-3)] hover:text-[var(--text)]"
+                    >
+                      Clear {isFiltered ? "search and filters" : "search"}
+                    </button>
+                  </div>
                 </td>
               </tr>
             ) : (
@@ -230,8 +303,15 @@ export function ZonesTable() {
                   data-slot="zones-row"
                   className="border-b border-[var(--border)] transition-colors hover:bg-[var(--surface-2)]/70"
                 >
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-3 py-2">
+                  {row.getVisibleCells().map((cell, colIdx) => (
+                    <td
+                      key={cell.id}
+                      className={cn(
+                        "px-3 py-2",
+                        colIdx === 0 &&
+                          "sticky left-0 z-[1] bg-[var(--surface-1)] transition-colors group-hover:bg-[var(--surface-2)]/70 after:absolute after:inset-y-0 after:right-0 after:w-px after:bg-[var(--border)]",
+                      )}
+                    >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}
@@ -242,71 +322,73 @@ export function ZonesTable() {
         </table>
       </div>
 
-      {/* Pagination controls */}
-      <div data-slot="zones-pagination" className="flex items-center justify-between gap-4 px-1">
-        {/* Row count summary */}
-        <span className="font-mono text-xs text-[var(--text-faint)]">
-          {totalRows === 0
-            ? "0 rows"
-            : `${pageIndex * pageSize + 1}\u2013${Math.min(
-                (pageIndex + 1) * pageSize,
-                totalRows,
-              )} of ${totalRows}`}
-        </span>
+      {/* Pagination controls — only show when data is loaded */}
+      {!isLoading && (
+        <div data-slot="zones-pagination" className="flex items-center justify-between gap-4 px-1">
+          {/* Row count summary */}
+          <span className="font-mono text-xs text-[var(--text-faint)]">
+            {totalRows === 0
+              ? "0 rows"
+              : `${pageIndex * pageSize + 1}\u2013${Math.min(
+                  (pageIndex + 1) * pageSize,
+                  totalRows,
+                )} of ${totalRows}`}
+          </span>
 
-        <div className="flex items-center gap-3">
-          {/* Page size selector */}
-          <div className="flex items-center gap-1.5">
-            <label
-              htmlFor="zones-page-size"
-              className="font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)]"
-            >
-              Rows
-            </label>
-            <select
-              id="zones-page-size"
-              value={pageSize}
-              onChange={(e) => {
-                table.setPageSize(Number(e.target.value));
-              }}
-              className="rounded border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 font-mono text-xs text-[var(--text-muted)] focus:border-[var(--border-strong)] focus:outline-none"
-            >
-              {PAGE_SIZE_OPTIONS.map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
-          </div>
+          <div className="flex items-center gap-3">
+            {/* Page size selector */}
+            <div className="flex items-center gap-1.5">
+              <label
+                htmlFor="zones-page-size"
+                className="font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)]"
+              >
+                Rows
+              </label>
+              <select
+                id="zones-page-size"
+                value={pageSize}
+                onChange={(e) => {
+                  table.setPageSize(Number(e.target.value));
+                }}
+                className="rounded border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 font-mono text-xs text-[var(--text-muted)] focus:border-[var(--border-strong)] focus:outline-none"
+              >
+                {PAGE_SIZE_OPTIONS.map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          {/* Page navigation */}
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-              className="inline-flex size-7 min-h-11 min-w-11 items-center justify-center rounded border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-3)] hover:text-[var(--text)] disabled:cursor-not-allowed disabled:opacity-30"
-              aria-label="Previous page"
-            >
-              <ChevronLeft size={14} />
-            </button>
+            {/* Page navigation */}
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+                className="inline-flex size-7 min-h-11 min-w-11 items-center justify-center rounded border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-3)] hover:text-[var(--text)] disabled:cursor-not-allowed disabled:opacity-30"
+                aria-label="Previous page"
+              >
+                <ChevronLeft size={14} />
+              </button>
 
-            <span className="px-2 font-mono text-xs text-[var(--text-muted)]">
-              {pageCount === 0 ? "0 / 0" : `${pageIndex + 1} / ${pageCount}`}
-            </span>
+              <span className="px-2 font-mono text-xs text-[var(--text-muted)]">
+                {pageCount === 0 ? "0 / 0" : `${pageIndex + 1} / ${pageCount}`}
+              </span>
 
-            <button
-              type="button"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-              className="inline-flex size-7 min-h-11 min-w-11 items-center justify-center rounded border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-3)] hover:text-[var(--text)] disabled:cursor-not-allowed disabled:opacity-30"
-              aria-label="Next page"
-            >
-              <ChevronRight size={14} />
-            </button>
+              <button
+                type="button"
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+                className="inline-flex size-7 min-h-11 min-w-11 items-center justify-center rounded border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-3)] hover:text-[var(--text)] disabled:cursor-not-allowed disabled:opacity-30"
+                aria-label="Next page"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
