@@ -1,11 +1,24 @@
 import { Dialog } from "@base-ui/react/dialog";
 import { useUser } from "@clerk/clerk-react";
 import { useNavigate } from "@tanstack/react-router";
-import { addDays, differenceInCalendarDays, format, startOfDay } from "date-fns";
+import {
+  addDays,
+  differenceInCalendarDays,
+  format,
+  startOfDay,
+} from "date-fns";
 import { MessageCircle, X } from "lucide-react";
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { toast } from "sonner";
 
+import { DatePillHeader } from "@/components/layout/DatePillHeader";
 import { ConversationPanel } from "@/components/track/dr-poo/ConversationPanel";
 import { NutritionCard } from "@/components/track/nutrition/NutritionCard";
 import { NutritionCardErrorBoundary } from "@/components/track/nutrition/NutritionCardErrorBoundary";
@@ -33,7 +46,11 @@ import { formatLocalDateKey, getDateScopedTimestamp } from "@/lib/dateUtils";
 import { getErrorMessage } from "@/lib/errors";
 import { normalizeFluidItemName } from "@/lib/normalizeFluidName";
 import { type MealSlot, titleCase } from "@/lib/nutritionUtils";
-import { useAddSyncedLog, useLatestSuccessfulAiAnalysis, useRemoveSyncedLog } from "@/lib/sync";
+import {
+  useAddSyncedLog,
+  useLatestSuccessfulAiAnalysis,
+  useRemoveSyncedLog,
+} from "@/lib/sync";
 import { MS_PER_DAY } from "@/lib/timeConstants";
 import { useStore } from "@/store";
 
@@ -78,7 +95,10 @@ function getFallbackDrPooPrompt(activeMealSlot: MealSlot): string {
   return `Have you logged ${slotLabel.toLowerCase()} yet? Dr. Poo can help you think through what feels safe today.`;
 }
 
-function getFollowUpPrompt(activeMealSlot: MealSlot, hasInsight: boolean): string {
+function getFollowUpPrompt(
+  activeMealSlot: MealSlot,
+  hasInsight: boolean,
+): string {
   if (hasInsight) {
     return "Can you explain that summary in more detail and tell me what to watch next?";
   }
@@ -121,17 +141,23 @@ export default function HomePage() {
   const addSyncedLog = useAddSyncedLog();
   const removeSyncedLog = useRemoveSyncedLog();
   const [conversationOpen, setConversationOpen] = useState(false);
-  const [conversationSeed, setConversationSeed] = useState<ConversationSeed | null>(null);
+  const [conversationSeed, setConversationSeed] =
+    useState<ConversationSeed | null>(null);
   const [dismissedCard, setDismissedCard] = useState(false);
 
   const greeting = getTimeOfDayGreeting(new Date().getHours());
   const firstName = getDisplayName(user?.firstName);
-  const latestInsightSummary = latestSuccessfulAnalysis?.insight.summary ?? null;
+  const latestInsightSummary =
+    latestSuccessfulAnalysis?.insight.summary ?? null;
 
   const proactiveCardText = useMemo(() => {
-    const preview = latestInsightSummary ? toPreviewText(latestInsightSummary) : "";
+    const preview = latestInsightSummary
+      ? toPreviewText(latestInsightSummary)
+      : "";
     if (preview.length > 0) {
-      return preview.length > 150 ? `${preview.slice(0, 147).trimEnd()}...` : preview;
+      return preview.length > 150
+        ? `${preview.slice(0, 147).trimEnd()}...`
+        : preview;
     }
     return getFallbackDrPooPrompt(currentMealSlot);
   }, [currentMealSlot, latestInsightSummary]);
@@ -154,11 +180,14 @@ export default function HomePage() {
   // Auto-trigger LLM matching for food logs with unresolved items
   useFoodLlmMatching();
 
-  const { celebration, celebrateLog, celebrateGoalComplete, clearCelebration } = useCelebration();
+  const { celebration, celebrateLog, celebrateGoalComplete, clearCelebration } =
+    useCelebration();
 
   useLiveClock();
   const now = new Date();
-  const [selectedDate, setSelectedDate] = useState(() => startOfDay(new Date()));
+  const [selectedDate, setSelectedDate] = useState(() =>
+    startOfDay(new Date()),
+  );
 
   const todayStart = useMemo(() => startOfDay(now).getTime(), [now]);
   const todayEnd = todayStart + MS_PER_DAY;
@@ -170,16 +199,18 @@ export default function HomePage() {
   const selectedStart = selectedDate.getTime();
   const selectedEnd = addDays(selectedDate, 1).getTime();
   const selectedCaptureTimestamp = useMemo(
-    () => (dayOffset === 0 ? undefined : getDateScopedTimestamp(selectedDate, now)),
+    () =>
+      dayOffset === 0 ? undefined : getDateScopedTimestamp(selectedDate, now),
     [dayOffset, now, selectedDate],
   );
 
   // Day statistics (actual today + selected day)
-  const { todayHabitCounts, todayFluidTotalsByName, totalFluidMl } = useDayStats({
-    logs,
-    todayStart,
-    todayEnd,
-  });
+  const { todayHabitCounts, todayFluidTotalsByName, totalFluidMl } =
+    useDayStats({
+      logs,
+      todayStart,
+      todayEnd,
+    });
   const {
     todayHabitCounts: selectedHabitCounts,
     todayFluidTotalsByName: selectedFluidTotalsByName,
@@ -199,7 +230,9 @@ export default function HomePage() {
 
     const destructiveHabits = habits.filter(
       (habit) =>
-        habit.kind === "destructive" && typeof habit.dailyCap === "number" && habit.dailyCap > 0,
+        habit.kind === "destructive" &&
+        typeof habit.dailyCap === "number" &&
+        habit.dailyCap > 0,
     );
 
     if (destructiveHabits.length === 0) return;
@@ -211,7 +244,9 @@ export default function HomePage() {
       const total = habitLogs
         .filter(
           (entry) =>
-            entry.habitId === habit.id && entry.at >= yesterdayStart && entry.at < yesterdayEnd,
+            entry.habitId === habit.id &&
+            entry.at >= yesterdayStart &&
+            entry.at < yesterdayEnd,
         )
         .reduce((sum, entry) => sum + entry.value, 0);
 
@@ -237,7 +272,11 @@ export default function HomePage() {
     }
   }, [habits, habitLogs, todayStart, celebrateGoalComplete]);
 
-  const { daySummaries, streakSummaries } = useHabitStreaks({ habitLogs, habits, now });
+  const { daySummaries, streakSummaries } = useHabitStreaks({
+    habitLogs,
+    habits,
+    now,
+  });
 
   // Baseline averages (side-effect-only: caches in Zustand store)
   useBaselineAverages({
@@ -259,7 +298,12 @@ export default function HomePage() {
       }
       setReviewQueueOpen(true);
     } catch (err: unknown) {
-      toast.error(getErrorMessage(err, "Unable to load unresolved items. Check connection."));
+      toast.error(
+        getErrorMessage(
+          err,
+          "Unable to load unresolved items. Check connection.",
+        ),
+      );
     }
   }, [unresolvedQueue]);
   useUnresolvedFoodToast(logs, now.getTime(), handleReviewUnresolved);
@@ -309,7 +353,9 @@ export default function HomePage() {
   const detailDaySummaries = useMemo(
     () =>
       detailSheetHabit
-        ? daySummaries.filter((summary) => summary.habitId === detailSheetHabit.id)
+        ? daySummaries.filter(
+            (summary) => summary.habitId === detailSheetHabit.id,
+          )
         : [],
     [daySummaries, detailSheetHabit],
   );
@@ -317,7 +363,9 @@ export default function HomePage() {
   const _handleSelectDate = useCallback(
     (date: Date) => {
       const normalized = startOfDay(date);
-      setSelectedDate(normalized.getTime() > todayDate.getTime() ? todayDate : normalized);
+      setSelectedDate(
+        normalized.getTime() > todayDate.getTime() ? todayDate : normalized,
+      );
     },
     [todayDate],
   );
@@ -333,7 +381,10 @@ export default function HomePage() {
       }),
     [todayDate],
   );
-  const handleJumpToToday = useCallback(() => setSelectedDate(todayDate), [todayDate]);
+  const handleJumpToToday = useCallback(
+    () => setSelectedDate(todayDate),
+    [todayDate],
+  );
 
   const handleLogBowel = async (bowelState: BowelFormState) => {
     const consistencyTag = bristolToConsistency(bowelState.bristolCode);
@@ -378,11 +429,17 @@ export default function HomePage() {
 
   return (
     <div className="space-y-5">
+      <DatePillHeader />
+
       {/* ── Greeting row ── */}
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="font-display text-2xl font-bold text-(--text)">{greeting},</p>
-          <p className="font-display text-2xl font-bold text-(--text)">{firstName}</p>
+          <p className="font-display text-2xl font-bold text-(--text)">
+            {greeting},
+          </p>
+          <p className="font-display text-2xl font-bold text-(--text)">
+            {firstName}
+          </p>
         </div>
         {hasApiKey ? (
           <button
@@ -409,9 +466,11 @@ export default function HomePage() {
         <span
           className="rounded-full border px-3 py-1 text-xs font-semibold"
           style={{
-            backgroundColor: "color-mix(in srgb, var(--orange) 10%, var(--color-bg-elevated) 90%)",
+            backgroundColor:
+              "color-mix(in srgb, var(--orange) 10%, var(--color-bg-elevated) 90%)",
             borderColor: "color-mix(in srgb, var(--orange) 28%, transparent)",
-            color: "color-mix(in srgb, var(--orange) 82%, var(--color-text-primary) 18%)",
+            color:
+              "color-mix(in srgb, var(--orange) 82%, var(--color-text-primary) 18%)",
           }}
         >
           {getDayLabel(selectedDate, todayDate)}
@@ -483,7 +542,12 @@ export default function HomePage() {
             <button
               type="button"
               onClick={() =>
-                openConversation(getFollowUpPrompt(currentMealSlot, latestInsightSummary !== null))
+                openConversation(
+                  getFollowUpPrompt(
+                    currentMealSlot,
+                    latestInsightSummary !== null,
+                  ),
+                )
               }
               className="rounded-full bg-[var(--section-log)] px-3 py-1.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
             >
@@ -515,8 +579,12 @@ export default function HomePage() {
 
             <ConversationPanel
               onSendNow={sendNow}
-              {...(conversationSeed?.text ? { initialReplyText: conversationSeed.text } : {})}
-              {...(conversationSeed?.key ? { initialReplyKey: conversationSeed.key } : {})}
+              {...(conversationSeed?.text
+                ? { initialReplyText: conversationSeed.text }
+                : {})}
+              {...(conversationSeed?.key
+                ? { initialReplyKey: conversationSeed.key }
+                : {})}
             />
           </Dialog.Popup>
         </Dialog.Portal>
@@ -533,12 +601,21 @@ export default function HomePage() {
 
       <HabitDetailSheet
         habit={detailSheetHabit}
-        count={detailSheetHabit ? (selectedHabitCounts[detailSheetHabit.id] ?? 0) : 0}
+        count={
+          detailSheetHabit ? (selectedHabitCounts[detailSheetHabit.id] ?? 0) : 0
+        }
         {...(detailSheetHabit?.logAs === "fluid" && {
-          fluidMl: selectedFluidTotalsByName[normalizeFluidItemName(detailSheetHabit.name)],
+          fluidMl:
+            selectedFluidTotalsByName[
+              normalizeFluidItemName(detailSheetHabit.name)
+            ],
         })}
         daySummaries={detailDaySummaries}
-        streakSummary={detailSheetHabit ? (streakSummaries[detailSheetHabit.id] ?? null) : null}
+        streakSummary={
+          detailSheetHabit
+            ? (streakSummaries[detailSheetHabit.id] ?? null)
+            : null
+        }
         onClose={handleCloseDetailSheet}
       />
 

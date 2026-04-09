@@ -1,3 +1,4 @@
+import { addDays, startOfDay } from "date-fns";
 import { create } from "zustand";
 import type { HabitLog } from "@/lib/habitTemplates";
 import type { AiAnalysisStatus, BaselineAverages } from "@/types/domain";
@@ -7,6 +8,13 @@ import type { AiAnalysisStatus, BaselineAverages } from "@/types/domain";
 // ---------------------------------------------------------------------------
 
 export interface AppState {
+  // Active date — shared across Home and Track pages
+  activeDate: Date;
+  setActiveDate: (d: Date) => void;
+  goToToday: () => void;
+  goBack: () => void;
+  goForward: () => void;
+
   // Habit logs (in-memory, populated by SyncedLogsContext from Convex)
   habitLogs: HabitLog[];
   addHabitLog: (log: HabitLog) => void;
@@ -35,6 +43,25 @@ export interface AppState {
 // ---------------------------------------------------------------------------
 
 export const useStore = create<AppState>()((set) => ({
+  // Active date
+  activeDate: startOfDay(new Date()),
+  setActiveDate: (d) => {
+    const today = startOfDay(new Date());
+    const normalized = startOfDay(d);
+    set({
+      activeDate: normalized.getTime() > today.getTime() ? today : normalized,
+    });
+  },
+  goToToday: () => set({ activeDate: startOfDay(new Date()) }),
+  goBack: () =>
+    set((state) => ({ activeDate: startOfDay(addDays(state.activeDate, -1)) })),
+  goForward: () =>
+    set((state) => {
+      const today = startOfDay(new Date());
+      const next = startOfDay(addDays(state.activeDate, 1));
+      return { activeDate: next.getTime() > today.getTime() ? today : next };
+    }),
+
   // Habit logs
   habitLogs: [],
   addHabitLog: (log) =>
@@ -47,10 +74,15 @@ export const useStore = create<AppState>()((set) => ({
     }),
   removeHabitLog: (habitId, at) =>
     set((state) => {
-      const idx = state.habitLogs.findIndex((log) => log.habitId === habitId && log.at === at);
+      const idx = state.habitLogs.findIndex(
+        (log) => log.habitId === habitId && log.at === at,
+      );
       if (idx === -1) return state;
       return {
-        habitLogs: [...state.habitLogs.slice(0, idx), ...state.habitLogs.slice(idx + 1)],
+        habitLogs: [
+          ...state.habitLogs.slice(0, idx),
+          ...state.habitLogs.slice(idx + 1),
+        ],
       };
     }),
 
