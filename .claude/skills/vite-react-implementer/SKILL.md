@@ -186,3 +186,26 @@ The codebase is **actively being refactored**. Surrounding code may reflect old 
 - **Shared tests:** `shared/__tests__/` — pure function testing, no mocks
 - **Hook tests:** `src/hooks/__tests__/` — extract pure functions for testing
 - **E2E tests:** `e2e/` — Playwright, Clerk auth setup, role queries preferred, timestamp-based isolation
+
+---
+
+## Hook Patterns
+
+Key custom hooks in `src/hooks/` — check before creating new ones:
+
+| Hook                            | Purpose                                                                                      |
+| ------------------------------- | -------------------------------------------------------------------------------------------- |
+| `useNutritionData`              | Read-only: derives calorie/macro summaries from SyncedLogs + profile goals                   |
+| `useFoodData`                   | Convex-first food search: merges clinicalRegistry + ingredientProfiles + static fallback     |
+| `useProfile`                    | Thin wrapper around ProfileContext; exports `useHabits`, `useHealthProfile`, `useUnitSystem` |
+| `useHabitLog`                   | Writes habit log entries; handles toasts and increment logic                                 |
+| `useHabitStreaks`               | Computes streak and day summary from habit logs                                              |
+| `useDayStats`                   | Aggregates episodes, activity, and sleep for a given day                                     |
+| `useSlotScopedFoods`            | Derives recent/frequent foods filtered by meal slot from SyncedLogs                          |
+| `useUnresolvedFoodQueue`        | Returns food log items that still need resolution (pending/low-confidence)                   |
+| `useQuickCapture`               | Handles quick-capture chip interactions and celebration triggers                             |
+| `useAiInsights`                 | Triggers AI analysis action and tracks loading/result state                                  |
+| `useMediaQuery` / `useIsMobile` | Responsive breakpoint detection (SSR-safe)                                                   |
+| `useLongPress`                  | Unified tap + long-press handler for habit chips                                             |
+| `usePendingReplies`             | Tracks optimistic Dr. Poo reply state                                                        |
+| `useDetailSheetController`      | Controls open/close state for log detail sheets                                              |

@@ -15,7 +15,7 @@ export const unifiedFoodSearch = query({
     if (!identity) return [];
 
     const limit = args.limit ?? 30;
-    const queryLower = args.query.toLowerCase();
+    const normalizedQuery = args.query.trim().toLowerCase();
     const results: Array<{
       canonicalName: string;
       source: "user" | "clinical";
@@ -34,8 +34,8 @@ export const unifiedFoodSearch = query({
 
     for (const p of userProducts) {
       if (
-        p.canonicalName.toLowerCase().includes(queryLower) ||
-        p.productName?.toLowerCase().includes(queryLower)
+        p.canonicalName.toLowerCase().includes(normalizedQuery) ||
+        p.productName?.toLowerCase().includes(normalizedQuery)
       ) {
         if (!seen.has(p.canonicalName)) {
           seen.add(p.canonicalName);
@@ -53,7 +53,7 @@ export const unifiedFoodSearch = query({
     const clinicalEntries = await ctx.db.query("clinicalRegistry").take(500);
 
     for (const entry of clinicalEntries) {
-      if (entry.canonicalName.toLowerCase().includes(queryLower)) {
+      if (entry.canonicalName.toLowerCase().includes(normalizedQuery)) {
         if (!seen.has(entry.canonicalName)) {
           seen.add(entry.canonicalName);
           results.push({

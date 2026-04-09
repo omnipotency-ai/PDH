@@ -17,8 +17,8 @@ export const list = query({
   args: {},
   handler: async (ctx) => {
     await requireAuth(ctx);
-    // clinicalRegistry is a shared reference table (not user-scoped),
-    // so collecting all rows is acceptable.
+    // Shared reference table (not user-scoped), but auth still required
+    // to prevent anonymous data scraping of the clinical baseline.
     const rows = await ctx.db.query("clinicalRegistry").collect();
     return rows.sort((a, b) => {
       if (a.zone !== b.zone) return a.zone - b.zone;
@@ -78,22 +78,29 @@ export const create = mutation({
   handler: async (ctx, args) => {
     await requireAuth(ctx);
 
+    // Validate and normalize string inputs
+    const trimmedName = args.canonicalName.trim();
+    if (!trimmedName) throw new Error("canonicalName must be non-empty");
+    if (trimmedName.length > 256)
+      throw new Error("canonicalName too long (max 256 chars)");
+    const trimmedNaturalUnit = args.naturalUnit?.trim();
+    if (trimmedNaturalUnit !== undefined && !trimmedNaturalUnit)
+      throw new Error("naturalUnit must be non-empty if provided");
+
     // Check canonicalName uniqueness
     const existing = await ctx.db
       .query("clinicalRegistry")
-      .withIndex("by_canonicalName", (q) =>
-        q.eq("canonicalName", args.canonicalName),
-      )
+      .withIndex("by_canonicalName", (q) => q.eq("canonicalName", trimmedName))
       .first();
     if (existing) {
       throw new Error(
-        `Clinical registry entry already exists for "${args.canonicalName}"`,
+        `Clinical registry entry already exists for "${trimmedName}"`,
       );
     }
 
     const now = Date.now();
     return await ctx.db.insert("clinicalRegistry", {
-      canonicalName: args.canonicalName,
+      canonicalName: trimmedName,
       zone: args.zone,
       category: args.category,
       subcategory: args.subcategory,

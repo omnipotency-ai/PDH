@@ -29,6 +29,7 @@ import type * as ingredientProfiles from "../ingredientProfiles.js";
 import type * as lib_apiKeys from "../lib/apiKeys.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_coerce from "../lib/coerce.js";
+import type * as lib_ingredientNutritionHelpers from "../lib/ingredientNutritionHelpers.js";
 import type * as lib_inputSafety from "../lib/inputSafety.js";
 import type * as lib_knownFoods from "../lib/knownFoods.js";
 import type * as lib_openai from "../lib/openai.js";
@@ -72,6 +73,7 @@ declare const fullApi: ApiFromModules<{
   "lib/apiKeys": typeof lib_apiKeys;
   "lib/auth": typeof lib_auth;
   "lib/coerce": typeof lib_coerce;
+  "lib/ingredientNutritionHelpers": typeof lib_ingredientNutritionHelpers;
   "lib/inputSafety": typeof lib_inputSafety;
   "lib/knownFoods": typeof lib_knownFoods;
   "lib/openai": typeof lib_openai;

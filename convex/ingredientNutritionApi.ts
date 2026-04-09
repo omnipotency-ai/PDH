@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { action } from "./_generated/server";
 import { requireAuth } from "./lib/auth";
 import { asNumber, asStringArray, asTrimmedString } from "./lib/coerce";
+import { isValidGtinBarcode, normalizeBarcode } from "./lib/ingredientNutritionHelpers";
 
 // Reasonable upper bounds per 100g to catch malformed OFF data.
 const NUTRIENT_MAX: Record<string, number> = {
@@ -16,6 +17,8 @@ const NUTRIENT_MAX: Record<string, number> = {
   proteinG: 100,
   saltG: 100,
 };
+
+const OFF_TIMEOUT_MS = 10_000;
 
 function readNutrient(
   nutriments: Record<string, unknown>,
@@ -32,6 +35,37 @@ function readNutrient(
   return null;
 }
 
+async function fetchOpenFoodFacts(
+  url: string,
+  userAgent: string,
+  options: { httpErrorMode: "null" | "throw"; errorMessage?: string },
+): Promise<Response | null> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), OFF_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "User-Agent": userAgent,
+      },
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      if (options.httpErrorMode === "throw") {
+        throw new Error(
+          options.errorMessage ?? `OpenFoodFacts lookup failed (${response.status}).`,
+        );
+      }
+      return null;
+    }
+
+    return response;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 export const lookupBarcode = action({
   args: {
     barcode: v.string(),
@@ -39,29 +73,17 @@ export const lookupBarcode = action({
   handler: async (ctx, args) => {
     await requireAuth(ctx);
 
-    const barcode = args.barcode.trim().replace(/\D/g, "");
-    if (barcode.length < 8 || barcode.length > 14) {
+    const barcode = normalizeBarcode(args.barcode);
+    if (!isValidGtinBarcode(barcode)) {
       return null;
     }
 
     const url = `https://world.openfoodfacts.org/api/v2/product/${barcode}.json?fields=code,product_name,brands,ingredients_text,categories_tags,nutriments`;
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10_000);
-    let response: Response;
-    try {
-      response = await fetch(url, {
-        method: "GET",
-        headers: {
-          "User-Agent": "PDH/1.0 (barcode lookup)",
-        },
-        signal: controller.signal,
-      });
-    } finally {
-      clearTimeout(timeoutId);
-    }
-
-    if (!response.ok) {
+    const response = await fetchOpenFoodFacts(url, "PDH/1.0 (barcode lookup)", {
+      httpErrorMode: "null",
+    });
+    if (response === null) {
       return null;
     }
 
@@ -99,29 +121,17 @@ export const lookupBarcode = action({
         maxItems: 20,
       }),
       nutritionPer100g: {
-        kcal: readNutrient(
-          nutriments,
-          ["energy-kcal_100g", "energy-kcal"],
-          "kcal",
-        ),
+        kcal: readNutrient(nutriments, ["energy-kcal_100g", "energy-kcal"], "kcal"),
         fatG: readNutrient(nutriments, ["fat_100g", "fat"], "fatG"),
         saturatedFatG: readNutrient(
           nutriments,
           ["saturated-fat_100g", "saturated-fat"],
           "saturatedFatG",
         ),
-        carbsG: readNutrient(
-          nutriments,
-          ["carbohydrates_100g", "carbohydrates"],
-          "carbsG",
-        ),
+        carbsG: readNutrient(nutriments, ["carbohydrates_100g", "carbohydrates"], "carbsG"),
         sugarsG: readNutrient(nutriments, ["sugars_100g", "sugars"], "sugarsG"),
         fiberG: readNutrient(nutriments, ["fiber_100g", "fiber"], "fiberG"),
-        proteinG: readNutrient(
-          nutriments,
-          ["proteins_100g", "proteins"],
-          "proteinG",
-        ),
+        proteinG: readNutrient(nutriments, ["proteins_100g", "proteins"], "proteinG"),
         saltG: readNutrient(nutriments, ["salt_100g", "salt"], "saltG"),
       },
     };
@@ -150,33 +160,21 @@ export const searchOpenFoodFacts = action({
     url.searchParams.set("page_size", String(limit));
     url.searchParams.set(
       "fields",
-      [
-        "code",
-        "product_name",
-        "brands",
-        "ingredients_text",
-        "categories_tags",
-        "nutriments",
-      ].join(","),
+      ["code", "product_name", "brands", "ingredients_text", "categories_tags", "nutriments"].join(
+        ",",
+      ),
     );
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10_000);
-    let response: Response;
-    try {
-      response = await fetch(url.toString(), {
-        method: "GET",
-        headers: {
-          "User-Agent": "PDH/1.0 (ingredient nutrition lookup)",
-        },
-        signal: controller.signal,
-      });
-    } finally {
-      clearTimeout(timeoutId);
-    }
-
-    if (!response.ok) {
-      throw new Error(`OpenFoodFacts lookup failed (${response.status}).`);
+    const response = await fetchOpenFoodFacts(
+      url.toString(),
+      "PDH/1.0 (ingredient nutrition lookup)",
+      {
+        httpErrorMode: "throw",
+        errorMessage: "OpenFoodFacts lookup failed",
+      },
+    );
+    if (response === null) {
+      throw new Error("OpenFoodFacts lookup failed.");
     }
 
     const payload = (await response.json()) as {
@@ -198,11 +196,9 @@ export const searchOpenFoodFacts = action({
 
         return {
           externalId:
-            asTrimmedString(row.code, { normalizeWhitespace: true }) ??
-            displayName.toLowerCase(),
+            asTrimmedString(row.code, { normalizeWhitespace: true }) ?? displayName.toLowerCase(),
           displayName,
-          brand:
-            asTrimmedString(row.brands, { normalizeWhitespace: true }) ?? null,
+          brand: asTrimmedString(row.brands, { normalizeWhitespace: true }) ?? null,
           ingredientsText:
             asTrimmedString(row.ingredients_text, {
               normalizeWhitespace: true,
@@ -213,33 +209,17 @@ export const searchOpenFoodFacts = action({
             maxItems: 20,
           }),
           nutritionPer100g: {
-            kcal: readNutrient(
-              nutriments,
-              ["energy-kcal_100g", "energy-kcal"],
-              "kcal",
-            ),
+            kcal: readNutrient(nutriments, ["energy-kcal_100g", "energy-kcal"], "kcal"),
             fatG: readNutrient(nutriments, ["fat_100g", "fat"], "fatG"),
             saturatedFatG: readNutrient(
               nutriments,
               ["saturated-fat_100g", "saturated-fat"],
               "saturatedFatG",
             ),
-            carbsG: readNutrient(
-              nutriments,
-              ["carbohydrates_100g", "carbohydrates"],
-              "carbsG",
-            ),
-            sugarsG: readNutrient(
-              nutriments,
-              ["sugars_100g", "sugars"],
-              "sugarsG",
-            ),
+            carbsG: readNutrient(nutriments, ["carbohydrates_100g", "carbohydrates"], "carbsG"),
+            sugarsG: readNutrient(nutriments, ["sugars_100g", "sugars"], "sugarsG"),
             fiberG: readNutrient(nutriments, ["fiber_100g", "fiber"], "fiberG"),
-            proteinG: readNutrient(
-              nutriments,
-              ["proteins_100g", "proteins"],
-              "proteinG",
-            ),
+            proteinG: readNutrient(nutriments, ["proteins_100g", "proteins"], "proteinG"),
             saltG: readNutrient(nutriments, ["salt_100g", "salt"], "saltG"),
           },
         };

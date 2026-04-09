@@ -10,20 +10,28 @@ interface UseInlineEditOptions {
 interface UseInlineEditReturn {
   isEditing: boolean;
   editValue: string;
+  /** Non-null when the last save attempt failed. Shown by the cell as an error message. */
+  error: string | null;
   startEdit: () => void;
   cancelEdit: () => void;
   commitEdit: () => Promise<void>;
   setEditValue: (v: string) => void;
+  /** Clears a displayed error without cancelling the edit. */
+  clearError: () => void;
   inputRef: React.RefObject<HTMLInputElement | HTMLSelectElement | null>;
 }
 
 /**
  * Manages per-cell inline edit state: click to edit, blur/Enter to save, Escape to cancel.
- * Handles optimistic display and reverts on save failure.
+ * The editor stays open on save failure and exposes an error message for the caller to display.
  */
-export function useInlineEdit({ initialValue, onSave }: UseInlineEditOptions): UseInlineEditReturn {
+export function useInlineEdit({
+  initialValue,
+  onSave,
+}: UseInlineEditOptions): UseInlineEditReturn {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(initialValue);
+  const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | HTMLSelectElement | null>(null);
 
   // Keep editValue in sync with external value changes when not actively editing.
@@ -44,13 +52,19 @@ export function useInlineEdit({ initialValue, onSave }: UseInlineEditOptions): U
     }
   }, [isEditing]);
 
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
+
   const startEdit = useCallback(() => {
     setEditValue(initialValue);
+    setError(null);
     setIsEditing(true);
   }, [initialValue]);
 
   const cancelEdit = useCallback(() => {
     setEditValue(initialValue);
+    setError(null);
     setIsEditing(false);
   }, [initialValue]);
 
@@ -63,25 +77,27 @@ export function useInlineEdit({ initialValue, onSave }: UseInlineEditOptions): U
       return;
     }
 
-    // Optimistically close editor with new value.
-    setIsEditing(false);
-
+    // Attempt save first. Only close the editor on success.
+    // On failure, keep the editor open and surface the error so the user can retry or cancel.
     try {
       await onSave(trimmed);
-    } catch {
-      // Revert on failure — the parent will still hold the old value,
-      // so editValue resets via the useEffect sync above.
-      setEditValue(initialValue);
+      setError(null);
+      setIsEditing(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Save failed");
+      // isEditing remains true — user can retry or press Escape to cancel.
     }
   }, [editValue, initialValue, onSave]);
 
   return {
     isEditing,
     editValue,
+    error,
     startEdit,
     cancelEdit,
     commitEdit,
     setEditValue,
+    clearError,
     inputRef,
   };
 }

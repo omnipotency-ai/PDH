@@ -1,4 +1,4 @@
-import type { SortDirection, SortingState } from "@tanstack/react-table";
+import type { SortingState } from "@tanstack/react-table";
 import {
   flexRender,
   getCoreRowModel,
@@ -8,15 +8,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { useMutation, useQuery } from "convex/react";
-import {
-  ArrowDown,
-  ArrowUp,
-  ArrowUpDown,
-  ChevronLeft,
-  ChevronRight,
-  ListFilter,
-  Search,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, ListFilter, Search } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 
 import { cn } from "@/lib/utils";
@@ -25,46 +17,9 @@ import { FilterBar } from "./filters/FilterBar";
 import type { FilterState } from "./filters/filterTypes";
 import { applyFilters } from "./filters/filterTypes";
 import { AddRowButton } from "./TableActions";
+import { SkeletonRows, SortIndicator } from "./tableUtils";
 import type { ZoneRow } from "./zonesColumns";
 import { getZonesColumns } from "./zonesColumns";
-
-// ── Sort indicator ──────────────────────────────────────────────────────────
-
-function SortIndicator({ direction }: { direction: false | SortDirection }) {
-  if (direction === "asc") {
-    return <ArrowUp size={12} className="shrink-0" />;
-  }
-  if (direction === "desc") {
-    return <ArrowDown size={12} className="shrink-0" />;
-  }
-  return <ArrowUpDown size={12} className="shrink-0 opacity-30" />;
-}
-
-// ── Skeleton loading rows ───────────────────────────────────────────────────
-
-function SkeletonRows({ columnCount }: { columnCount: number }) {
-  const widths = ["w-32", "w-12", "w-20", "w-24", "w-16", "w-20"];
-  return (
-    <>
-      {Array.from({ length: 5 }).map((_, rowIdx) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: stable skeleton indices
-        <tr key={rowIdx} className="border-b border-[var(--border)]">
-          {Array.from({ length: columnCount }).map((_, colIdx) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: stable skeleton indices
-            <td key={colIdx} className="px-3 py-2.5">
-              <div
-                className={cn(
-                  "h-4 animate-pulse rounded bg-[var(--surface-2)]",
-                  widths[(rowIdx + colIdx) % widths.length],
-                )}
-              />
-            </td>
-          ))}
-        </tr>
-      ))}
-    </>
-  );
-}
 
 // ── Page size options ───────────────────────────────────────────────────────
 
@@ -121,7 +76,10 @@ export function ZonesTable() {
   }, [data]);
 
   // Apply FilterBar filters before passing to TanStack table
-  const rows: ZoneRow[] = useMemo(() => applyFilters(allRows, filters), [allRows, filters]);
+  const rows: ZoneRow[] = useMemo(
+    () => applyFilters(allRows, filters),
+    [allRows, filters],
+  );
 
   // Build columns with mutation callbacks
   const columns = useMemo(
@@ -154,7 +112,8 @@ export function ZonesTable() {
     getPaginationRowModel: getPaginationRowModel(),
     getRowId: (row) => row._id,
     globalFilterFn: (row, _columnId, filterValue) => {
-      if (typeof filterValue !== "string" || filterValue.length === 0) return true;
+      if (typeof filterValue !== "string" || filterValue.length === 0)
+        return true;
       const query = filterValue.toLowerCase();
       return row.original.canonicalName.toLowerCase().includes(query);
     },
@@ -176,7 +135,8 @@ export function ZonesTable() {
   const isLoading = data === undefined;
   const isEmpty = !isLoading && data.length === 0;
   const isFiltered = globalFilter.length > 0 || filters.length > 0;
-  const hasNoResults = !isLoading && !isEmpty && table.getRowModel().rows.length === 0;
+  const hasNoResults =
+    !isLoading && !isEmpty && table.getRowModel().rows.length === 0;
 
   return (
     <div data-slot="zones-table" className="flex flex-col gap-3">
@@ -241,12 +201,18 @@ export function ZonesTable() {
                           onClick={header.column.getToggleSortingHandler()}
                           className="flex items-center gap-1 font-mono text-[10px] font-bold uppercase tracking-widest text-[var(--text-faint)] transition-colors hover:text-[var(--text)]"
                         >
-                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          {flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
                           <SortIndicator direction={sorted} />
                         </button>
                       ) : (
                         <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-[var(--text-faint)]">
-                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          {flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
                         </span>
                       )}
                     </th>
@@ -264,7 +230,10 @@ export function ZonesTable() {
               <tr>
                 <td colSpan={columns.length} className="px-3 py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
-                    <ListFilter size={32} className="text-[var(--text-faint)] opacity-40" />
+                    <ListFilter
+                      size={32}
+                      className="text-[var(--text-faint)] opacity-40"
+                    />
                     <p className="font-mono text-sm text-[var(--text-faint)]">
                       No zone entries yet
                     </p>
@@ -282,8 +251,13 @@ export function ZonesTable() {
               <tr>
                 <td colSpan={columns.length} className="px-3 py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
-                    <Search size={32} className="text-[var(--text-faint)] opacity-40" />
-                    <p className="font-mono text-sm text-[var(--text-faint)]">No results found</p>
+                    <Search
+                      size={32}
+                      className="text-[var(--text-faint)] opacity-40"
+                    />
+                    <p className="font-mono text-sm text-[var(--text-faint)]">
+                      No results found
+                    </p>
                     <button
                       type="button"
                       onClick={() => {
@@ -313,7 +287,10 @@ export function ZonesTable() {
                           "sticky left-0 z-[1] bg-[var(--surface-1)] transition-colors group-hover:bg-[var(--surface-2)]/70 after:absolute after:inset-y-0 after:right-0 after:w-px after:bg-[var(--border)]",
                       )}
                     >
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext(),
+                      )}
                     </td>
                   ))}
                 </tr>
@@ -325,7 +302,10 @@ export function ZonesTable() {
 
       {/* Pagination controls — only show when data is loaded */}
       {!isLoading && (
-        <div data-slot="zones-pagination" className="flex items-center justify-between gap-4 px-1">
+        <div
+          data-slot="zones-pagination"
+          className="flex items-center justify-between gap-4 px-1"
+        >
           {/* Row count summary */}
           <span className="font-mono text-xs text-[var(--text-faint)]">
             {totalRows === 0
