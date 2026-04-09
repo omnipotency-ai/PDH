@@ -1,10 +1,4 @@
 {
-  "_comments": [
-    "CSP: script-src includes 'unsafe-inline' — known Vite limitation (inline module bootstrap), accepted risk.",
-    "CSP: Clerk domains: https://*.clerk.accounts.dev (dev), https://*.clerk.com (Clerk CDN), https://clerk.cacatraca.omnipotency.ai (production custom domain).",
-    "CSP: All AI calls go through Convex actions — no direct browser-to-OpenAI connections needed.",
-    "Permissions-Policy: microphone=(self) is intentional — required for the planned voice logging feature."
-  ],
   "headers": [
     {
       "source": "/(.*)",
