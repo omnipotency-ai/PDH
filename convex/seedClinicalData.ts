@@ -9,8 +9,10 @@
  * are inserted.
  */
 import { v } from "convex/values";
-import type { FoodRegistryEntry } from "../shared/foodRegistryData";
+import { FOOD_PORTION_DATA } from "../shared/foodPortionData";
 import type { PortionData } from "../shared/foodPortionData";
+import { FOOD_REGISTRY } from "../shared/foodRegistryData";
+import type { FoodRegistryEntry } from "../shared/foodRegistryData";
 import { internalMutation } from "./_generated/server";
 
 // ── Pure mapping helper (exported for testing) ────────────────────────────────
@@ -85,11 +87,6 @@ export const seedClinicalRegistry = internalMutation({
     dryRun: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    // Dynamic imports: keeps the static data out of the Convex module graph
-    // unless this mutation is actually invoked.
-    const { FOOD_REGISTRY } = await import("../shared/foodRegistryData");
-    const { FOOD_PORTION_DATA } = await import("../shared/foodPortionData");
-
     const now = Date.now();
     let inserted = 0;
     let updated = 0;
