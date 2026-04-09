@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { PortionsTable } from "@/components/food/PortionsTable";
 import { RegistryTable } from "@/components/food/RegistryTable";
 import { ZonesTable } from "@/components/food/ZonesTable";
 
@@ -61,27 +62,11 @@ export default function FoodPage() {
       </div>
 
       {/* Tab panels */}
-      <div
-        id={`food-panel-${activeTab}`}
-        role="tabpanel"
-        aria-label={`${activeTab} tab content`}
-      >
+      <div id={`food-panel-${activeTab}`} role="tabpanel" aria-label={`${activeTab} tab content`}>
         {activeTab === "registry" && <RegistryTable />}
         {activeTab === "zones" && <ZonesTable />}
-        {activeTab === "portions" && <TabPlaceholder tab={activeTab} />}
+        {activeTab === "portions" && <PortionsTable />}
       </div>
     </div>
   );
-}
-
-// ── TabPlaceholder ────────────────────────────────────────────────────────────
-
-function TabPlaceholder({ tab }: { tab: FoodTab }) {
-  const messages: Record<FoodTab, string> = {
-    registry: "Registry table coming soon.",
-    zones: "Zones view coming soon.",
-    portions: "Portions editor coming soon.",
-  };
-
-  return <p className="text-sm text-(--text-muted)">{messages[tab]}</p>;
 }

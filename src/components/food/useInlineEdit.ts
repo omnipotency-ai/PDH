@@ -21,10 +21,7 @@ interface UseInlineEditReturn {
  * Manages per-cell inline edit state: click to edit, blur/Enter to save, Escape to cancel.
  * Handles optimistic display and reverts on save failure.
  */
-export function useInlineEdit({
-  initialValue,
-  onSave,
-}: UseInlineEditOptions): UseInlineEditReturn {
+export function useInlineEdit({ initialValue, onSave }: UseInlineEditOptions): UseInlineEditReturn {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(initialValue);
   const inputRef = useRef<HTMLInputElement | HTMLSelectElement | null>(null);

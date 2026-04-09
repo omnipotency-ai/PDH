@@ -23,13 +23,7 @@ export type RegistryRow = {
   registryId: Id<"clinicalRegistry"> | undefined;
   zoneName: string | undefined;
   zone: 1 | 2 | 3 | undefined;
-  toleranceStatus:
-    | "building"
-    | "like"
-    | "dislike"
-    | "watch"
-    | "avoid"
-    | undefined;
+  toleranceStatus: "building" | "like" | "dislike" | "watch" | "avoid" | undefined;
   /** Full nutrition object for mutation spread. */
   nutritionPer100g: {
     kcal: number | null;

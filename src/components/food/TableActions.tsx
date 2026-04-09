@@ -17,11 +17,7 @@ interface RowDeleteButtonProps {
  * Row-level delete button with inline confirmation.
  * First click shows "Delete?" with Cancel/Confirm. No browser alerts.
  */
-export function RowDeleteButton({
-  onDelete,
-  disabled,
-  className,
-}: RowDeleteButtonProps) {
+export function RowDeleteButton({ onDelete, disabled, className }: RowDeleteButtonProps) {
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -115,12 +111,7 @@ interface AddRowButtonProps {
 /**
  * Table-level "Add" button. Renders a compact `+ Add` control.
  */
-export function AddRowButton({
-  onAdd,
-  disabled,
-  label = "Add",
-  className,
-}: AddRowButtonProps) {
+export function AddRowButton({ onAdd, disabled, label = "Add", className }: AddRowButtonProps) {
   const [adding, setAdding] = useState(false);
 
   const handleClick = useCallback(async () => {

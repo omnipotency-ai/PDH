@@ -13,14 +13,9 @@ interface EditableNumberCellProps {
 }
 
 /** Format a number for display: no trailing zeros, null shows empty. */
-function formatDisplay(
-  value: number | null,
-  suffix: string | undefined,
-): string {
+function formatDisplay(value: number | null, suffix: string | undefined): string {
   if (value === null) return "";
-  const formatted = Number.isInteger(value)
-    ? String(value)
-    : String(parseFloat(value.toFixed(4)));
+  const formatted = Number.isInteger(value) ? String(value) : String(parseFloat(value.toFixed(4)));
   if (suffix !== undefined) {
     return `${formatted}${suffix}`;
   }
@@ -56,15 +51,8 @@ export function EditableNumberCell({
     await onSave(parsed);
   };
 
-  const {
-    isEditing,
-    editValue,
-    startEdit,
-    cancelEdit,
-    commitEdit,
-    setEditValue,
-    inputRef,
-  } = useInlineEdit({ initialValue: stringValue, onSave: handleSave });
+  const { isEditing, editValue, startEdit, cancelEdit, commitEdit, setEditValue, inputRef } =
+    useInlineEdit({ initialValue: stringValue, onSave: handleSave });
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {

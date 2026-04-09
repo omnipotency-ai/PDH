@@ -21,12 +21,7 @@ interface EditableSelectCellProps {
  * Renders as a styled badge/chip. On click, opens a native <select>.
  * On change, calls onSave immediately (no confirm step).
  */
-export function EditableSelectCell({
-  value,
-  options,
-  onSave,
-  className,
-}: EditableSelectCellProps) {
+export function EditableSelectCell({ value, options, onSave, className }: EditableSelectCellProps) {
   const [isEditing, setIsEditing] = useState(false);
   const selectRef = useRef<HTMLSelectElement | null>(null);
 
@@ -65,15 +60,12 @@ export function EditableSelectCell({
     setIsEditing(false);
   }, []);
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLSelectElement>) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        setIsEditing(false);
-      }
-    },
-    [],
-  );
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLSelectElement>) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      setIsEditing(false);
+    }
+  }, []);
 
   if (isEditing) {
     return (

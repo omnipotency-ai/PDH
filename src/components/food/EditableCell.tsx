@@ -15,21 +15,9 @@ interface EditableCellProps {
  * Inline-editable text cell for TanStack React Table.
  * Click to edit, blur/Enter to save, Escape to cancel.
  */
-export function EditableCell({
-  value,
-  onSave,
-  placeholder,
-  className,
-}: EditableCellProps) {
-  const {
-    isEditing,
-    editValue,
-    startEdit,
-    cancelEdit,
-    commitEdit,
-    setEditValue,
-    inputRef,
-  } = useInlineEdit({ initialValue: value, onSave });
+export function EditableCell({ value, onSave, placeholder, className }: EditableCellProps) {
+  const { isEditing, editValue, startEdit, cancelEdit, commitEdit, setEditValue, inputRef } =
+    useInlineEdit({ initialValue: value, onSave });
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {

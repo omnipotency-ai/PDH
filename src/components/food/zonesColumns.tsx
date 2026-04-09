@@ -1,5 +1,3 @@
-import type { ColumnDef } from "@tanstack/react-table";
-import type { Id } from "../../../convex/_generated/dataModel";
 import type {
   FoodCategory,
   FoodGasLevel,
@@ -9,6 +7,8 @@ import type {
   FoodRiskLevel,
   FoodSubcategory,
 } from "@shared/foodRegistryData";
+import type { ColumnDef } from "@tanstack/react-table";
+import type { Id } from "../../../convex/_generated/dataModel";
 import { EditableCell } from "./EditableCell";
 import { EditableNumberCell } from "./EditableNumberCell";
 import { EditableSelectCell } from "./EditableSelectCell";
@@ -139,9 +139,7 @@ function getZoneSelectOptions(): SelectOption[] {
 // ── Mutation callbacks type ─────────────────────────────────────────────────
 
 export interface ZonesMutations {
-  update: (
-    args: Record<string, unknown> & { id: Id<"clinicalRegistry"> },
-  ) => Promise<null>;
+  update: (args: Record<string, unknown> & { id: Id<"clinicalRegistry"> }) => Promise<null>;
   remove: (args: { id: Id<"clinicalRegistry"> }) => Promise<null>;
 }
 
@@ -151,9 +149,7 @@ export interface ZonesMutations {
  * Build column definitions for the Zones table.
  * Accepts mutation callbacks so cells can trigger inline edits.
  */
-export function getZonesColumns(
-  mutations: ZonesMutations,
-): ColumnDef<ZoneRow>[] {
+export function getZonesColumns(mutations: ZonesMutations): ColumnDef<ZoneRow>[] {
   const { update, remove } = mutations;
 
   return [

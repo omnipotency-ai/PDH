@@ -8,14 +8,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { useMutation, useQuery } from "convex/react";
-import {
-  ArrowDown,
-  ArrowUp,
-  ArrowUpDown,
-  ChevronLeft,
-  ChevronRight,
-  Search,
-} from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 
 import { cn } from "@/lib/utils";
@@ -119,8 +112,7 @@ export function ZonesTable() {
     getPaginationRowModel: getPaginationRowModel(),
     getRowId: (row) => row._id,
     globalFilterFn: (row, _columnId, filterValue) => {
-      if (typeof filterValue !== "string" || filterValue.length === 0)
-        return true;
+      if (typeof filterValue !== "string" || filterValue.length === 0) return true;
       const query = filterValue.toLowerCase();
       return row.original.canonicalName.toLowerCase().includes(query);
     },
@@ -142,13 +134,8 @@ export function ZonesTable() {
   // Loading state
   if (data === undefined) {
     return (
-      <div
-        data-slot="zones-table"
-        className="flex items-center justify-center py-12"
-      >
-        <span className="font-mono text-sm text-[var(--text-faint)]">
-          Loading zones...
-        </span>
+      <div data-slot="zones-table" className="flex items-center justify-center py-12">
+        <span className="font-mono text-sm text-[var(--text-faint)]">Loading zones...</span>
       </div>
     );
   }
@@ -208,18 +195,12 @@ export function ZonesTable() {
                           onClick={header.column.getToggleSortingHandler()}
                           className="flex items-center gap-1 font-mono text-[10px] font-bold uppercase tracking-widest text-[var(--text-faint)] transition-colors hover:text-[var(--text)]"
                         >
-                          {flexRender(
-                            header.column.columnDef.header,
-                            header.getContext(),
-                          )}
+                          {flexRender(header.column.columnDef.header, header.getContext())}
                           <SortIndicator direction={sorted} />
                         </button>
                       ) : (
                         <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-[var(--text-faint)]">
-                          {flexRender(
-                            header.column.columnDef.header,
-                            header.getContext(),
-                          )}
+                          {flexRender(header.column.columnDef.header, header.getContext())}
                         </span>
                       )}
                     </th>
@@ -251,10 +232,7 @@ export function ZonesTable() {
                 >
                   {row.getVisibleCells().map((cell) => (
                     <td key={cell.id} className="px-3 py-2">
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}
                 </tr>
@@ -265,10 +243,7 @@ export function ZonesTable() {
       </div>
 
       {/* Pagination controls */}
-      <div
-        data-slot="zones-pagination"
-        className="flex items-center justify-between gap-4 px-1"
-      >
+      <div data-slot="zones-pagination" className="flex items-center justify-between gap-4 px-1">
         {/* Row count summary */}
         <span className="font-mono text-xs text-[var(--text-faint)]">
           {totalRows === 0

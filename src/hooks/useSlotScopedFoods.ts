@@ -40,7 +40,10 @@ export function useSlotScopedFoods(activeMealSlot: MealSlot): SlotScopedFoods {
         }
 
         frequencyMap.set(canonicalName, (frequencyMap.get(canonicalName) ?? 0) + 1);
-        lastSeenMap.set(canonicalName, Math.max(lastSeenMap.get(canonicalName) ?? 0, log.timestamp));
+        lastSeenMap.set(
+          canonicalName,
+          Math.max(lastSeenMap.get(canonicalName) ?? 0, log.timestamp),
+        );
       }
     }
 
