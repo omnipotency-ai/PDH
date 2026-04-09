@@ -123,6 +123,13 @@ export const upsert = mutation({
     }
     const projection = getCanonicalFoodProjection(canonicalName);
 
+    // Validate customPortions early — applies to both create and update paths.
+    if (args.customPortions !== undefined) {
+      for (const p of args.customPortions) {
+        if (p.weightG <= 0) throw new Error("Portion weight must be positive.");
+      }
+    }
+
     const existing = await ctx.db
       .query("ingredientProfiles")
       .withIndex("by_userId_canonicalName", (q) =>

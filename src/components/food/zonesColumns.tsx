@@ -26,6 +26,7 @@ export interface ZoneRow {
   group: FoodGroup;
   line: FoodLine;
   lineOrder: number;
+  macros: Array<"protein" | "carbohydrate" | "fat">;
   osmoticEffect?: FoodRiskLevel;
   totalResidue?: FoodResidueLevel;
   gasProducing?: FoodGasLevel;

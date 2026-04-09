@@ -94,6 +94,7 @@ export function ZonesTable() {
       group: entry.group,
       line: entry.line,
       lineOrder: entry.lineOrder,
+      macros: entry.macros,
       ...(entry.osmoticEffect !== undefined && {
         osmoticEffect: entry.osmoticEffect,
       }),

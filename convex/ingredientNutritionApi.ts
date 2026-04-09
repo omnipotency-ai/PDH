@@ -5,13 +5,29 @@ import { action } from "./_generated/server";
 import { requireAuth } from "./lib/auth";
 import { asNumber, asStringArray, asTrimmedString } from "./lib/coerce";
 
+// Reasonable upper bounds per 100g to catch malformed OFF data.
+const NUTRIENT_MAX: Record<string, number> = {
+  kcal: 9000, // pure fat ~900 kcal/100g; 9000 gives headroom for errors
+  fatG: 100,
+  saturatedFatG: 100,
+  carbsG: 100,
+  sugarsG: 100,
+  fiberG: 100,
+  proteinG: 100,
+  saltG: 100,
+};
+
 function readNutrient(
   nutriments: Record<string, unknown>,
   keys: string[],
+  maxKey?: keyof typeof NUTRIENT_MAX,
 ): number | null {
   for (const key of keys) {
     const value = asNumber(nutriments[key], { coerceString: true });
-    if (value !== undefined) return value;
+    if (value === undefined) continue;
+    if (!Number.isFinite(value) || value < 0) return null;
+    if (maxKey !== undefined && value > NUTRIENT_MAX[maxKey]) return null;
+    return value;
   }
   return null;
 }
@@ -83,20 +99,30 @@ export const lookupBarcode = action({
         maxItems: 20,
       }),
       nutritionPer100g: {
-        kcal: readNutrient(nutriments, ["energy-kcal_100g", "energy-kcal"]),
-        fatG: readNutrient(nutriments, ["fat_100g", "fat"]),
-        saturatedFatG: readNutrient(nutriments, [
-          "saturated-fat_100g",
-          "saturated-fat",
-        ]),
-        carbsG: readNutrient(nutriments, [
-          "carbohydrates_100g",
-          "carbohydrates",
-        ]),
-        sugarsG: readNutrient(nutriments, ["sugars_100g", "sugars"]),
-        fiberG: readNutrient(nutriments, ["fiber_100g", "fiber"]),
-        proteinG: readNutrient(nutriments, ["proteins_100g", "proteins"]),
-        saltG: readNutrient(nutriments, ["salt_100g", "salt"]),
+        kcal: readNutrient(
+          nutriments,
+          ["energy-kcal_100g", "energy-kcal"],
+          "kcal",
+        ),
+        fatG: readNutrient(nutriments, ["fat_100g", "fat"], "fatG"),
+        saturatedFatG: readNutrient(
+          nutriments,
+          ["saturated-fat_100g", "saturated-fat"],
+          "saturatedFatG",
+        ),
+        carbsG: readNutrient(
+          nutriments,
+          ["carbohydrates_100g", "carbohydrates"],
+          "carbsG",
+        ),
+        sugarsG: readNutrient(nutriments, ["sugars_100g", "sugars"], "sugarsG"),
+        fiberG: readNutrient(nutriments, ["fiber_100g", "fiber"], "fiberG"),
+        proteinG: readNutrient(
+          nutriments,
+          ["proteins_100g", "proteins"],
+          "proteinG",
+        ),
+        saltG: readNutrient(nutriments, ["salt_100g", "salt"], "saltG"),
       },
     };
   },
@@ -187,20 +213,34 @@ export const searchOpenFoodFacts = action({
             maxItems: 20,
           }),
           nutritionPer100g: {
-            kcal: readNutrient(nutriments, ["energy-kcal_100g", "energy-kcal"]),
-            fatG: readNutrient(nutriments, ["fat_100g", "fat"]),
-            saturatedFatG: readNutrient(nutriments, [
-              "saturated-fat_100g",
-              "saturated-fat",
-            ]),
-            carbsG: readNutrient(nutriments, [
-              "carbohydrates_100g",
-              "carbohydrates",
-            ]),
-            sugarsG: readNutrient(nutriments, ["sugars_100g", "sugars"]),
-            fiberG: readNutrient(nutriments, ["fiber_100g", "fiber"]),
-            proteinG: readNutrient(nutriments, ["proteins_100g", "proteins"]),
-            saltG: readNutrient(nutriments, ["salt_100g", "salt"]),
+            kcal: readNutrient(
+              nutriments,
+              ["energy-kcal_100g", "energy-kcal"],
+              "kcal",
+            ),
+            fatG: readNutrient(nutriments, ["fat_100g", "fat"], "fatG"),
+            saturatedFatG: readNutrient(
+              nutriments,
+              ["saturated-fat_100g", "saturated-fat"],
+              "saturatedFatG",
+            ),
+            carbsG: readNutrient(
+              nutriments,
+              ["carbohydrates_100g", "carbohydrates"],
+              "carbsG",
+            ),
+            sugarsG: readNutrient(
+              nutriments,
+              ["sugars_100g", "sugars"],
+              "sugarsG",
+            ),
+            fiberG: readNutrient(nutriments, ["fiber_100g", "fiber"], "fiberG"),
+            proteinG: readNutrient(
+              nutriments,
+              ["proteins_100g", "proteins"],
+              "proteinG",
+            ),
+            saltG: readNutrient(nutriments, ["salt_100g", "salt"], "saltG"),
           },
         };
       })

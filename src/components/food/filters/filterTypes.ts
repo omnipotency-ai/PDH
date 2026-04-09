@@ -294,8 +294,7 @@ function getRowValue(row: ZoneRow, filterType: FilterType): string[] | number | 
       // ZoneRow doesn't have a type field yet; return null for unmatched
       return null;
     case FilterType.MACROS:
-      // ZoneRow doesn't have macros; return null
-      return null;
+      return row.macros.length > 0 ? row.macros : null;
     case FilterType.SUBCATEGORY:
       return [row.subcategory];
     case FilterType.STATUS:

@@ -29,62 +29,65 @@ export type MealTemplateSeedDefinition = {
   slotDefaults: SlotDefaultSeed[];
 };
 
-export const MEAL_TEMPLATE_DEFINITIONS: ReadonlyArray<MealTemplateSeedDefinition> = [
-  {
-    canonicalName: "coffee + toast",
-    type: "composite",
-    ingredients: ["coffee", "toast"],
-    structuredIngredients: [
-      { canonicalName: "coffee", quantity: 200, unit: "ml" },
-      { canonicalName: "toast", quantity: 2, unit: "slice" },
-    ],
-    modifiers: [
-      { canonicalName: "milk", quantity: 30, unit: "ml", isDefault: false },
-      { canonicalName: "sugar", quantity: 1, unit: "tsp", isDefault: false },
-      { canonicalName: "butter", quantity: 1, unit: "tsp", isDefault: false },
-      { canonicalName: "jam", quantity: 1, unit: "tsp", isDefault: false },
-    ],
-    sizes: [],
-    slotDefaults: [
-      {
-        slot: "breakfast",
-        overrides: [
-          { canonicalName: "coffee", quantity: 200, unit: "ml" },
-          { canonicalName: "toast", quantity: 2, unit: "slice" },
-        ],
-      },
-    ],
-  },
-  {
-    canonicalName: "toast + spread",
-    type: "composite",
-    ingredients: ["toast"],
-    structuredIngredients: [{ canonicalName: "toast", quantity: 2, unit: "slice" }],
-    modifiers: [
-      { canonicalName: "butter", quantity: 1, unit: "tsp", isDefault: false },
-      { canonicalName: "jam", quantity: 1, unit: "tsp", isDefault: false },
-      {
-        canonicalName: "peanut butter",
-        quantity: 1,
-        unit: "tsp",
-        isDefault: false,
-      },
-      {
-        canonicalName: "cream cheese",
-        quantity: 1,
-        unit: "tbsp",
-        isDefault: false,
-      },
-    ],
-    sizes: [],
-    slotDefaults: [
-      {
-        slot: "breakfast",
-        overrides: [{ canonicalName: "toast", quantity: 2, unit: "slice" }],
-      },
-    ],
-  },
-];
+export const MEAL_TEMPLATE_DEFINITIONS: ReadonlyArray<MealTemplateSeedDefinition> =
+  [
+    {
+      canonicalName: "coffee + toast",
+      type: "composite",
+      ingredients: ["coffee", "toast"],
+      structuredIngredients: [
+        { canonicalName: "coffee", quantity: 200, unit: "ml" },
+        { canonicalName: "toast", quantity: 2, unit: "slice" },
+      ],
+      modifiers: [
+        { canonicalName: "milk", quantity: 30, unit: "ml", isDefault: false },
+        { canonicalName: "sugar", quantity: 1, unit: "tsp", isDefault: false },
+        { canonicalName: "butter", quantity: 1, unit: "tsp", isDefault: false },
+        { canonicalName: "jam", quantity: 1, unit: "tsp", isDefault: false },
+      ],
+      sizes: [],
+      slotDefaults: [
+        {
+          slot: "breakfast",
+          overrides: [
+            { canonicalName: "coffee", quantity: 200, unit: "ml" },
+            { canonicalName: "toast", quantity: 2, unit: "slice" },
+          ],
+        },
+      ],
+    },
+    {
+      canonicalName: "toast + spread",
+      type: "composite",
+      ingredients: ["toast"],
+      structuredIngredients: [
+        { canonicalName: "toast", quantity: 2, unit: "slice" },
+      ],
+      modifiers: [
+        { canonicalName: "butter", quantity: 1, unit: "tsp", isDefault: false },
+        { canonicalName: "jam", quantity: 1, unit: "tsp", isDefault: false },
+        {
+          canonicalName: "peanut butter",
+          quantity: 1,
+          unit: "tsp",
+          isDefault: false,
+        },
+        {
+          canonicalName: "cream cheese",
+          quantity: 1,
+          unit: "tbsp",
+          isDefault: false,
+        },
+      ],
+      sizes: [],
+      slotDefaults: [
+        {
+          slot: "breakfast",
+          overrides: [{ canonicalName: "toast", quantity: 2, unit: "slice" }],
+        },
+      ],
+    },
+  ];
 
 export function buildMealTemplateRows(userId: string, now: number) {
   return MEAL_TEMPLATE_DEFINITIONS.map((definition) => ({
@@ -110,12 +113,13 @@ export const seedMealTemplates = internalMutation({
     let skipped = 0;
 
     for (const row of buildMealTemplateRows(args.userId, now)) {
+      // .take(20) is a safe upper bound — dedup logic keeps oldest, deletes rest.
       const existingRows = await ctx.db
         .query("foodLibrary")
         .withIndex("by_userId_name", (q) =>
           q.eq("userId", args.userId).eq("canonicalName", row.canonicalName),
         )
-        .collect();
+        .take(20);
 
       if (existingRows.length === 0) {
         await ctx.db.insert("foodLibrary", row);
@@ -125,7 +129,10 @@ export const seedMealTemplates = internalMutation({
 
       const [_keeper, ...duplicates] = existingRows
         .slice()
-        .sort((a, b) => a.createdAt - b.createdAt || a._creationTime - b._creationTime);
+        .sort(
+          (a, b) =>
+            a.createdAt - b.createdAt || a._creationTime - b._creationTime,
+        );
 
       for (const duplicate of duplicates) {
         await ctx.db.delete(duplicate._id);

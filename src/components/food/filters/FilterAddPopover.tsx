@@ -32,6 +32,22 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { FilterType } from "./filterTypes";
 
+// Filter types whose backing data fields are not yet populated in ZoneRow.
+// These are shown in the popover but disabled to prevent silent empty-result bugs.
+// These filter types have no backing field in clinicalRegistry yet.
+// They show in the popover as disabled ("soon") to avoid silent empty-result bugs.
+// Unlock each type here once its schema field + seed data is populated.
+const UNAVAILABLE_FILTER_TYPES = new Set<FilterType>([
+  FilterType.TYPE,
+  FilterType.STATUS,
+  FilterType.MECHANICAL_FORM,
+  FilterType.COOKING_METHOD,
+  FilterType.SKIN,
+  FilterType.FODMAP_LEVEL,
+  FilterType.KCAL,
+  FilterType.TAGS,
+]);
+
 // ── Popover Group Definitions ──────────────────────────────────────────────
 
 interface FilterTypeEntry {
@@ -116,18 +132,27 @@ export function FilterAddPopover({ onAdd, activeFilterTypes }: FilterAddPopoverP
 
               {group.map((entry) => {
                 const isActive = activeFilterTypes.includes(entry.type);
+                const isUnavailable = UNAVAILABLE_FILTER_TYPES.has(entry.type);
+                const isDisabled = isActive || isUnavailable;
 
                 return (
                   <button
                     key={entry.type}
                     type="button"
-                    onClick={() => handleSelect(entry.type)}
+                    onClick={isDisabled ? undefined : () => handleSelect(entry.type)}
+                    disabled={isDisabled}
                     className={cn(
                       "flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-xs",
-                      "transition-colors hover:bg-[var(--surface-2)]",
-                      isActive ? "text-[var(--text-faint)] opacity-60" : "text-[var(--text-muted)]",
+                      "transition-colors",
+                      isDisabled
+                        ? "cursor-not-allowed opacity-40"
+                        : "text-[var(--text-muted)] hover:bg-[var(--surface-2)]",
                     )}
-                    aria-label={`Add ${entry.type} filter`}
+                    aria-label={
+                      isUnavailable
+                        ? `${entry.type} filter (not yet available)`
+                        : `Add ${entry.type} filter`
+                    }
                   >
                     <span className="flex shrink-0 items-center text-[var(--text-faint)]">
                       {entry.icon}
@@ -136,6 +161,11 @@ export function FilterAddPopover({ onAdd, activeFilterTypes }: FilterAddPopoverP
                     {isActive && (
                       <span className="ml-auto font-mono text-[9px] uppercase tracking-wider text-[var(--text-faint)]">
                         active
+                      </span>
+                    )}
+                    {isUnavailable && (
+                      <span className="ml-auto font-mono text-[9px] uppercase tracking-wider text-[var(--text-faint)]">
+                        soon
                       </span>
                     )}
                   </button>

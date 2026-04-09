@@ -159,6 +159,10 @@ export function OFFImportDialog({ open, onOpenChange }: OFFImportDialogProps) {
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Incremented each time a search starts; the async callback checks its
+  // generation matches before committing state, preventing stale updates
+  // after the dialog closes or a new search supersedes the in-flight one.
+  const searchGenRef = useRef(0);
 
   // Focus input on open
   useEffect(() => {
@@ -174,6 +178,8 @@ export function OFFImportDialog({ open, onOpenChange }: OFFImportDialogProps) {
     (nextOpen: boolean) => {
       onOpenChange(nextOpen);
       if (!nextOpen) {
+        // Invalidate any in-flight search so it won't update state.
+        searchGenRef.current += 1;
         setQuery("");
         setResults([]);
         setSearchError(null);
@@ -206,15 +212,18 @@ export function OFFImportDialog({ open, onOpenChange }: OFFImportDialogProps) {
       }
 
       setSearching(true);
+      const gen = ++searchGenRef.current;
       debounceRef.current = setTimeout(async () => {
         try {
           const rows = await searchOFF({ query: value.trim(), limit: 8 });
+          if (gen !== searchGenRef.current) return; // superseded or dialog closed
           setResults(rows as OFFResult[]);
         } catch {
+          if (gen !== searchGenRef.current) return;
           setSearchError("Search failed. Check your connection and try again.");
           setResults([]);
         } finally {
-          setSearching(false);
+          if (gen === searchGenRef.current) setSearching(false);
         }
       }, 400);
     },
@@ -224,6 +233,7 @@ export function OFFImportDialog({ open, onOpenChange }: OFFImportDialogProps) {
   // Cleanup debounce on unmount
   useEffect(() => {
     return () => {
+      searchGenRef.current += 1; // prevent any in-flight update from firing
       if (debounceRef.current !== null) {
         clearTimeout(debounceRef.current);
       }
