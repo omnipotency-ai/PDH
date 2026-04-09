@@ -32,7 +32,11 @@ import {
   routeFoodMatchConfidence,
   searchFoodDocuments,
 } from "../shared/foodMatching";
-import { getFoodZone, isCanonicalFood } from "../shared/foodRegistry";
+import {
+  getFoodZone,
+  FOOD_PORTION_DATA,
+  isCanonicalFood,
+} from "../shared/foodRegistry";
 import { isFoodPipelineType } from "../shared/logTypeUtils";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -853,18 +857,36 @@ async function fetchLlmFallbackChoice(
 // Matching helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
+function inferNaturalUnit(
+  canonicalName: string,
+  phraseUnit: string | null,
+): { unit: string | null; defaultPortionDisplay?: string } {
+  if (phraseUnit !== null) return { unit: phraseUnit };
+  const portion = FOOD_PORTION_DATA.get(canonicalName);
+  if (!portion?.naturalUnit) return { unit: null };
+  return {
+    unit: portion.naturalUnit,
+    defaultPortionDisplay: `${portion.defaultPortionG}${portion.naturalUnit === "ml" ? "ml" : "g"}`,
+  };
+}
+
 function toResolvedItem(
   phrase: PreprocessedFoodPhrase,
   candidate: FoodMatchCandidate,
   resolvedBy: "registry" | "llm",
 ): ProcessedFoodItem {
   const zone = getFoodZone(candidate.canonicalName);
+  const { unit, defaultPortionDisplay } = inferNaturalUnit(
+    candidate.canonicalName,
+    phrase.unit,
+  );
   return {
     userSegment: phrase.rawPhrase,
     parsedName: phrase.parsedName,
     quantity: phrase.quantity,
-    unit: phrase.unit,
+    unit,
     ...(phrase.quantityText !== null && { quantityText: phrase.quantityText }),
+    ...(defaultPortionDisplay !== undefined && { defaultPortionDisplay }),
     canonicalName: candidate.canonicalName,
     resolvedBy,
     ...(zone !== undefined && { recoveryStage: zone }),

@@ -41,8 +41,7 @@ function findGroupKeyForLogId(
         break;
       case "activity":
       case "sleep":
-        if (item.entries.some((e) => e.id === logId))
-          return `activity_${item.groupKey}`;
+        if (item.entries.some((e) => e.id === logId)) return `activity_${item.groupKey}`;
         break;
       case "weight":
         if (item.entries.some((e) => e.id === logId)) return "weight";
@@ -88,22 +87,15 @@ export function TodayLog({
   autoEditId,
   onAutoEditHandled,
 }: TodayLogProps) {
-  const sorted = useMemo(
-    () => [...logs].sort((a, b) => b.timestamp - a.timestamp),
-    [logs],
-  );
-  const displayItems = useMemo(
-    () => groupLogEntries(sorted, habits),
-    [sorted, habits],
-  );
+  const sorted = useMemo(() => [...logs].sort((a, b) => b.timestamp - a.timestamp), [logs]);
+  const displayItems = useMemo(() => groupLogEntries(sorted, habits), [sorted, habits]);
 
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   // Auto-expand the group containing the autoEditId entry
   const lastAutoExpandedRef = useRef<string | null>(null);
   useEffect(() => {
-    if (autoEditId == null || autoEditId === lastAutoExpandedRef.current)
-      return;
+    if (autoEditId == null || autoEditId === lastAutoExpandedRef.current) return;
     lastAutoExpandedRef.current = autoEditId;
     const groupKey = findGroupKeyForLogId(displayItems, autoEditId);
     if (groupKey != null) {
@@ -140,30 +132,19 @@ export function TodayLog({
   const canMoveForward = dayOffset < 0;
   const title = getTodayLogTitle(dayOffset);
 
-  const prevDayLabel =
-    dayOffset === 0 ? "Yesterday" : format(addDays(selectedDate, -1), "EEEE");
+  const prevDayLabel = dayOffset === 0 ? "Yesterday" : format(addDays(selectedDate, -1), "EEEE");
   const centerLabel = getTodayLogCenterLabel(selectedDate, dayOffset);
-  const nextDayLabel =
-    dayOffset === -1 ? "Today" : format(addDays(selectedDate, 1), "EEEE");
+  const nextDayLabel = dayOffset === -1 ? "Today" : format(addDays(selectedDate, 1), "EEEE");
   const handleNextDay = getNextDayAction(dayOffset, onJumpToToday, onNextDay);
 
   const header = (
     <div className="mb-2 space-y-1">
       <div className="flex items-center justify-between gap-2">
         <div className="section-header !mb-0">
-          <div
-            className="section-icon"
-            style={{ backgroundColor: "var(--section-log-muted)" }}
-          >
-            <NotebookPen
-              className="h-4 w-4"
-              style={{ color: "var(--section-log)" }}
-            />
+          <div className="section-icon" style={{ backgroundColor: "var(--section-log-muted)" }}>
+            <NotebookPen className="h-4 w-4" style={{ color: "var(--section-log)" }} />
           </div>
-          <span
-            className="section-title"
-            style={{ color: "var(--section-log)" }}
-          >
+          <span className="section-title" style={{ color: "var(--section-log)" }}>
             {title}
           </span>
         </div>
@@ -187,10 +168,8 @@ export function TodayLog({
           style={{
             backgroundColor:
               "color-mix(in srgb, var(--section-log) 10%, var(--color-bg-elevated) 90%)",
-            borderColor:
-              "color-mix(in srgb, var(--section-log) 28%, transparent)",
-            color:
-              "color-mix(in srgb, var(--section-log) 82%, var(--color-text-primary) 18%)",
+            borderColor: "color-mix(in srgb, var(--section-log) 28%, transparent)",
+            color: "color-mix(in srgb, var(--section-log) 82%, var(--color-text-primary) 18%)",
           }}
         >
           {centerLabel}
@@ -209,10 +188,7 @@ export function TodayLog({
     </div>
   );
 
-  const actionsValue = useMemo(
-    () => ({ onDelete, onSave }),
-    [onDelete, onSave],
-  );
+  const actionsValue = useMemo(() => ({ onDelete, onSave }), [onDelete, onSave]);
 
   if (sorted.length === 0) {
     return (
@@ -233,9 +209,7 @@ export function TodayLog({
       <TodayLogActionsProvider value={actionsValue}>
         <section
           className={`glass-card glass-card-log rounded-2xl p-4 ${
-            constrainHeight
-              ? "flex h-full min-h-0 flex-1 flex-col overflow-hidden"
-              : ""
+            constrainHeight ? "flex h-full min-h-0 flex-1 flex-col overflow-hidden" : ""
           }`}
         >
           {header}
@@ -251,13 +225,7 @@ export function TodayLog({
               {displayItems.map((item) => {
                 switch (item.kind) {
                   case "individual":
-                    return (
-                      <LogEntry
-                        key={item.log.id}
-                        log={item.log}
-                        habits={habits}
-                      />
-                    );
+                    return <LogEntry key={item.log.id} log={item.log} habits={habits} />;
                   case "counter_habit":
                     return (
                       <CounterHabitRow
@@ -302,12 +270,8 @@ export function TodayLog({
                       <ActivityGroupRow
                         key={`activity-group-${item.groupKey}`}
                         group={item}
-                        expanded={expandedGroups.has(
-                          `activity_${item.groupKey}`,
-                        )}
-                        onToggle={() =>
-                          toggleGroup(`activity_${item.groupKey}`)
-                        }
+                        expanded={expandedGroups.has(`activity_${item.groupKey}`)}
+                        onToggle={() => toggleGroup(`activity_${item.groupKey}`)}
                       />
                     );
                   case "weight":

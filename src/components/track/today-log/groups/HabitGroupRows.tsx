@@ -3,11 +3,7 @@ import { Activity, Check, ChevronDown } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { toast } from "sonner";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { getErrorMessage } from "@/lib/errors";
 import { getHabitIcon } from "@/lib/habitIcons";
 import type { HabitConfig } from "@/lib/habitTemplates";
@@ -29,12 +25,7 @@ interface CounterHabitRowProps {
   onToggle: () => void;
 }
 
-export function CounterHabitRow({
-  group,
-  habits,
-  expanded,
-  onToggle,
-}: CounterHabitRowProps) {
+export function CounterHabitRow({ group, habits, expanded, onToggle }: CounterHabitRowProps) {
   const firstEntry = group.entries[0];
   const firstHabitData = firstEntry?.type === "habit" ? firstEntry.data : null;
   const habitConfig = habits.find(
@@ -74,9 +65,7 @@ export function CounterHabitRow({
           )}
         </div>
         <div className="flex flex-shrink-0 items-center gap-2">
-          <span
-            className={`font-mono text-sm font-bold tabular-nums ${toneClassName}`}
-          >
+          <span className={`font-mono text-sm font-bold tabular-nums ${toneClassName}`}>
             {group.entries.length}
           </span>
           <motion.div
@@ -119,12 +108,7 @@ interface EventHabitRowProps {
   onToggle: () => void;
 }
 
-export function EventHabitRow({
-  group,
-  habits,
-  expanded,
-  onToggle,
-}: EventHabitRowProps) {
+export function EventHabitRow({ group, habits, expanded, onToggle }: EventHabitRowProps) {
   const { onDelete } = useTodayLogActions();
   const firstEntry = group.entries[0];
   const firstHabitData = firstEntry?.type === "habit" ? firstEntry.data : null;
@@ -142,9 +126,7 @@ export function EventHabitRow({
   const handleUncheckAll = async () => {
     setUnchecking(true);
     try {
-      const results = await Promise.allSettled(
-        group.entries.map((entry) => onDelete(entry.id)),
-      );
+      const results = await Promise.allSettled(group.entries.map((entry) => onDelete(entry.id)));
       const failures = results.filter((r) => r.status === "rejected");
       if (failures.length > 0) {
         const msg =

@@ -1648,3 +1648,133 @@ export const backfillFluidToLiquid = internalMutation({
     };
   },
 });
+
+// ---------------------------------------------------------------------------
+// migrateOverridesToProfiles
+//
+// One-time migration: copies ingredientOverrides rows into
+// ingredientProfiles.toleranceStatus.
+//
+// Status mapping:
+//   ingredientOverrides.status  →  ingredientProfiles.toleranceStatus
+//   "safe"                      →  "like"
+//   "watch"                     →  "watch"
+//   "avoid"                     →  "avoid"
+//
+// For each override:
+//   - If a matching ingredientProfiles row (same userId + canonicalName)
+//     already exists, patch its toleranceStatus (only if not already set).
+//   - If no profile row exists, create a stub profile so the status has a
+//     home. Stub displayName = the canonicalName (can be cleaned up later).
+//
+// Safe to re-run: already-migrated rows are skipped (overrideAlreadySet).
+// Batch-paginates through ingredientOverrides so it handles large datasets.
+// ---------------------------------------------------------------------------
+
+export const migrateOverridesToProfiles = internalMutation({
+  args: {
+    cursor: v.optional(v.string()),
+    batchSize: v.optional(v.number()),
+    dryRun: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const batchSize = Math.min(Math.max(args.batchSize ?? 50, 1), 100);
+    const dryRun = args.dryRun ?? false;
+
+    const page = await ctx.db.query("ingredientOverrides").paginate({
+      cursor: args.cursor ?? null,
+      numItems: batchSize,
+    });
+
+    let profilePatched = 0;
+    let stubCreated = 0;
+    let skipped = 0;
+
+    for (const override of page.page) {
+      const { userId, canonicalName, status } = override;
+
+      const toleranceStatus =
+        status === "safe" ? "like" : status === "watch" ? "watch" : "avoid";
+
+      // Look for an existing profile row.
+      const existing = await ctx.db
+        .query("ingredientProfiles")
+        .withIndex("by_userId_canonicalName", (q) =>
+          q.eq("userId", userId).eq("canonicalName", canonicalName),
+        )
+        .first();
+
+      if (existing !== null) {
+        if (existing.toleranceStatus !== undefined) {
+          // Already set — skip to preserve any manually-set value.
+          skipped++;
+          continue;
+        }
+        if (!dryRun) {
+          await ctx.db.patch(existing._id, {
+            toleranceStatus,
+            updatedAt: Date.now(),
+          });
+        }
+        profilePatched++;
+      } else {
+        // No profile yet — create a stub so the status has a home.
+        if (!dryRun) {
+          const now = Date.now();
+          await ctx.db.insert("ingredientProfiles", {
+            userId,
+            canonicalName,
+            displayName: canonicalName,
+            tags: [],
+            foodGroup: null,
+            foodLine: null,
+            lowResidue: null,
+            source: null,
+            externalId: null,
+            ingredientsText: null,
+            nutritionPer100g: {
+              kcal: null,
+              fatG: null,
+              saturatedFatG: null,
+              carbsG: null,
+              sugarsG: null,
+              fiberG: null,
+              proteinG: null,
+              saltG: null,
+            },
+            toleranceStatus,
+            createdAt: now,
+            updatedAt: now,
+          });
+        }
+        stubCreated++;
+      }
+    }
+
+    // Schedule continuation if more pages remain.
+    if (!page.isDone) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.migrations.migrateOverridesToProfiles,
+        {
+          cursor: page.continueCursor,
+          ...(args.batchSize !== undefined && { batchSize: args.batchSize }),
+          ...(args.dryRun !== undefined && { dryRun: args.dryRun }),
+        },
+      );
+    }
+
+    const status = page.isDone ? "complete" : "scheduling_next_batch";
+    console.log(
+      `[migrateOverridesToProfiles] dryRun=${dryRun}, profilePatched=${profilePatched}, stubCreated=${stubCreated}, skipped=${skipped}, status=${status}`,
+    );
+
+    return {
+      profilePatched,
+      stubCreated,
+      skipped,
+      continueCursor: page.continueCursor,
+      isDone: page.isDone,
+    };
+  },
+});

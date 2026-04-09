@@ -5,6 +5,7 @@ export {
   buildFoodDatabaseRow,
   type FoodDatabaseRow,
   type OverrideStatus,
+  type ToleranceStatus,
 } from "@/components/patterns/database/columns";
 export { DatabaseTable } from "@/components/patterns/database/DatabaseTable";
 export {
@@ -16,6 +17,11 @@ export {
   type Trend,
 } from "@/components/patterns/database/foodSafetyUtils";
 export {
+  SmartViews,
+  type SmartViewsProps,
+} from "@/components/patterns/database/SmartViews";
+export { StatusBadge } from "@/components/patterns/database/StatusBadge";
+export {
   columnFiltersEqual,
   countRowsForView,
   normalizeColumnFilters,
@@ -24,11 +30,6 @@ export {
   type SmartViewPreset,
   sortingEqual,
 } from "@/components/patterns/database/smartViewUtils";
-export {
-  SmartViews,
-  type SmartViewsProps,
-} from "@/components/patterns/database/SmartViews";
-export { StatusBadge } from "@/components/patterns/database/StatusBadge";
 export { TrendIndicator } from "@/components/patterns/database/TrendIndicator";
 export {
   TrialHistorySubRow,

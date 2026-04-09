@@ -44,6 +44,7 @@ interface CircularProgressRingProps {
   size?: number;
   strokeWidth?: number;
   ariaLabel?: string;
+  unitLabel?: string;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -66,6 +67,7 @@ export function CircularProgressRing({
   size = DEFAULTS.SIZE,
   strokeWidth = DEFAULTS.STROKE,
   ariaLabel,
+  unitLabel = "ml",
 }: CircularProgressRingProps) {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -213,7 +215,7 @@ export function CircularProgressRing({
           {value}
         </span>
         <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-          / {goal} ml
+          / {goal} {unitLabel}
         </span>
       </div>
     </div>

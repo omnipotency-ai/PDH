@@ -1,8 +1,9 @@
 > **Ref:** `docs/ROADMAP.md`
-> **Updated:** 2026-04-07
-> **Version:** 2.3
+> **Updated:** 2026-04-08
+> **Version:** 2.4
 > **History:**
 >
+> - v2.4 (2026-04-08) — Food Platform master plan adopted, old Food Page initiative superseded, Food Registry absorbed
 > - v2.3 (2026-04-07) — Tech-Debt initiative marked Done, ~30 resolved standalone items moved to Removed
 > - v2.2 (2026-04-06) — Food Page & Meal System initiative activated, Navigation Restructure superseded
 > - v2.1 (2026-04-06) — added planning triage notes from completed roadmap mapping reports
@@ -42,9 +43,10 @@ Chip-based, slot-aware meal builder replacing the old single text field. Nutriti
 
 ### Food Registry & Filter Overhaul
 
-> **Status:** Planned
+> **Status:** Superseded
 > **Plan:** `docs/plans/data-integration-plan.md` (Waves 2-4)
 > **Filter bar plan:** `docs/plans/filter-prompt.md` (Wave 2 detail)
+> **Superseded by:** Food Platform & Navigation Restructure (2026-04-08). Scope absorbed into the 8-wave master plan.
 
 Rebuild the food registry data model (composite keys, new enums, zones, FODMAP, nutrition columns) and the multi-filter system on Patterns page. Includes external nutrition DB integration (McCance & Widdowson / USDA / Open Food Facts).
 
@@ -137,15 +139,29 @@ Product barcode scan to look up or create foods in the registry. Separate from p
 
 ### Food Page, Meal System & Navigation Restructure
 
-> **Status:** In Work Queue — plan active
+> **Status:** In Work Queue — plan superseded
 > **PRD:** `docs/prd/2026-04-06-food-page-and-meal-system.md`
 > **Plan:** `docs/plans/2026-04-06-food-page-and-meal-system.md`
-> **Execution plans:** `docs/plans/2026-04-06-food-page-and-meal-system-waves-{0-1,2-3,4-6}.json`
-> **Branch:** TBD (create at execution time)
+> **Execution plans:** archived to `docs/plans/archive/`
+> **Superseded by:** Food Platform & Navigation Restructure (2026-04-08). Old wave JSONs archived.
 
 Replace current 3-tab nav (Track / Patterns / Settings) with 4-tab bottom bar (Home / Track / Food / Insights) + header settings. Home = lightning-fast logging. Track = Today's Log only. Food = deep management with search, favourites, filter, editing, backfill. Insights = Patterns + Dr. Poo Report sub-tabs. Schema extensions for composite meal templates (deferred UI), slot-scoped favourite tagging, seed data for ~30 post-surgery foods.
 
 7 waves (W0-W6), 22 tasks. Waves 7-9 (meal system UI, AI text parser, voice capture) deferred.
+
+---
+
+### Food Platform & Navigation Restructure
+
+> **Status:** In Work Queue — plan active
+> **Plan:** `docs/plans/food-platform-master-plan.md`
+> **Vision:** `docs/plans/new-plan-food.md`
+> **Data shapes:** `docs/reference/data-shapes-snapshot.md`
+> **Branch:** `odyssey/food-platform`
+
+3-layer architecture (clinicalRegistry + ingredientProfiles + OpenFoodFacts API).
+8 waves (W0-W7), 31 tasks. Merges bug fixes, data migration, nav restructure, Food page, product management.
+Supersedes old waves-0-6 JSON plans (archived 2026-04-08).
 
 ---
 

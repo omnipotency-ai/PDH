@@ -20,9 +20,9 @@ describe("FOOD_PORTION_DATA", () => {
     }
   });
 
-  it("has exactly 147 entries matching the registry size", () => {
+  it("has exactly 149 entries matching the registry size", () => {
     expect(FOOD_PORTION_DATA.size).toBe(FOOD_REGISTRY.length);
-    expect(FOOD_PORTION_DATA.size).toBe(147);
+    expect(FOOD_PORTION_DATA.size).toBe(149);
   });
 
   it("every entry has defaultPortionG greater than 0", () => {

@@ -1,8 +1,10 @@
 > **Ref:** `docs/WIP.md`
-> **Updated:** 2026-04-07
-> **Version:** 3.3
+> **Updated:** 2026-04-08
+> **Version:** 3.5
 > **History:**
 >
+> - v3.5 (2026-04-08) — logged Wave 2 data seeding and meal template execution
+> - v3.4 (2026-04-08) — Food Platform master plan adopted, old plan superseded
 > - v3.3 (2026-04-07) — Tech-Debt initiative complete, collapsed to summary
 > - v3.2 (2026-04-06) — Food Page & Meal System initiative started
 > - v3.1 (2026-04-06) — Nutrition Card W4-5 collapsed to summary, initiative complete
@@ -20,14 +22,127 @@
 
 ---
 
-## Active: Food Page, Meal System & Navigation Restructure
+## Active: Food Platform & Navigation Restructure
 
-> **PRD:** `docs/prd/2026-04-06-food-page-and-meal-system.md`
-> **Plan:** `docs/plans/2026-04-06-food-page-and-meal-system.md`
-> **Execution plans:** `docs/plans/2026-04-06-food-page-and-meal-system-waves-{0-1,2-3,4-6}.json`
-> **Started:** 2026-04-06
+> **Plan:** `docs/plans/food-platform-master-plan.md`
+> **Vision:** `docs/plans/new-plan-food.md`
+> **Branch:** `odyssey/food-platform`
+> **Started:** 2026-04-08
 
 <!-- Implementer agents: prepend new entries HERE, above the completed summaries -->
+
+### 2026-04-08 — W4-T01/T02 complete: Page reorganization
+
+- **Tasks:** W4-T01, W4-T02
+- **Commit:** `6faa28a`
+- **What:**
+  - Slimmed Track to Today's Log with date picker and log CRUD only
+  - Moved capture panels (BowelSection, NutritionCard, QuickCapture) to Home
+  - Wired AiInsightsSection into Insights/Dr. Poo Report tab
+  - Added pendingEditLogId store field for cross-page Home→Track auto-edit
+
+### 2026-04-08 — W5-T03 complete: Quick capture modifiers + unit labels
+
+- **Tasks:** W5-T03
+- **Commit:** `d14b307`
+- **What:**
+  - Integrated quick capture modifier chips and configurable unit labels on Home
+  - Added CircularProgressRing improvements for progress tracking
+
+### 2026-04-08 — W5-T05 complete: Home Dr. Poo touchpoints
+
+- **Tasks:** W5-T05
+- **Files:** `src/pages/Home.tsx`, `src/components/track/dr-poo/ConversationPanel.tsx`, `src/components/track/dr-poo/ReplyInput.tsx`, `docs/WIP.md`
+- **What:**
+  - Added an `Ask Dr. Poo` entrypoint near the Home greeting that opens a dedicated conversation modal.
+  - Added a proactive Dr. Poo card near the bottom of Home that shows the latest insight summary when available or a slot-aware fallback prompt otherwise.
+  - Wired `Chat with Dr. Poo` to open the conversation with a preloaded follow-up prompt by threading seed text through `ConversationPanel` and `ReplyInput`.
+- **Verification:** `bun run typecheck` PASS
+
+### 2026-04-08 — W5-T02 complete: Home meal slots, favourites, recent, and frequent
+
+- **Tasks:** W5-T02
+- **Files:** `src/pages/Home.tsx`, `src/hooks/useSlotScopedFoods.ts`, `docs/WIP.md`
+- **What:**
+  - Added meal-slot chips on Home with automatic defaulting from the current meal slot and manual override support.
+  - Added slot-scoped Favourites, Recent, and Frequent sections plus quick-pick chips above them for fast staging.
+  - Reused the existing nutrition staging modal flow on Home so food rows and chips can stage items and review them immediately.
+  - Replaced the broken draft `useSlotScopedFoods()` hook with a typed implementation that derives recent and frequent foods from synced logs without tripping type errors.
+- **Verification:** `bun run typecheck` PASS
+
+### 2026-04-08 — W5-T01 complete: Home greeting and nutrition summary
+
+- **Tasks:** W5-T01
+- **Files:** `src/pages/Home.tsx`, `docs/WIP.md`
+- **What:**
+  - Replaced the Home stub with a time-of-day greeting that uses the signed-in Clerk user's first name.
+  - Added a compact summary card that reuses `CircularProgressRing` for calorie progress and shows live calorie/fluid progress bars beside it.
+  - Wired the summary to `useNutritionData()` so it reflects synced logs and profile goals instead of placeholder values.
+- **Verification:**
+  - `bun run typecheck` PASS
+  - `bun run build` PASS
+
+### 2026-04-08 — W3-T02/W3-T03 complete: 4-tab navigation + `/patterns` redirect
+
+- **Tasks:** W3-T02, W3-T03
+- **Files:** `src/routeTree.tsx`, `src/components/layout/AppLayout.tsx`, `src/components/layout/GlobalHeader.tsx`, `docs/WIP.md`
+- **What:**
+  - Swapped the root route from Track to the new lazy-loaded Home page and added lazy-loaded `/food` and `/insights` routes.
+  - Moved primary navigation into a fixed bottom tab bar with Home, Track, Food, and Insights tabs plus active-state highlighting.
+  - Expanded `requiresSyncedLogs` so the new main routes and existing secondary routes retain synced-log context.
+  - Removed the header nav, kept the logo, mode toggle, settings gear, and user button, and redirected `/patterns` to `/insights`.
+- **Verification:**
+  - `bun run typecheck` PASS
+  - `bun run build` PASS
+
+### 2026-04-08 — W3-T01 complete: Home, Food, and Insights page stubs
+
+- **Tasks:** W3-T01
+- **Files:** `src/pages/Home.tsx`, `src/pages/Food.tsx`, `src/pages/Insights.tsx`, `docs/WIP.md`
+- **What:**
+  - Replaced the full Home page implementation with the requested stub shell.
+  - Confirmed the Food page already matched the requested stub shape and left it unchanged.
+  - Kept the Insights page as the required lazy-loaded tab shell with `Patterns` and `Dr. Poo Report`.
+- **Verification:** `bun run typecheck` PASS
+
+### 2026-04-08 — Wave 2 complete: core food seed coverage + meal template seeding
+
+- **Tasks:** W2-T02, W2-T03 (W2-T01 and W2-T04 already present on branch and confirmed in queue)
+- **Files:** `shared/foodRegistryData.ts`, `shared/foodPortionData.ts`, `src/lib/nutritionUtils.ts`, `src/lib/__tests__/nutritionUtils.test.ts`, `convex/seedMealTemplates.ts`, `convex/__tests__/seedMealTemplates.test.ts`, `convex/_generated/api.d.ts`
+- **What:**
+  - Added explicit `sugar` and `peanut butter` canonicals with USDA-backed portion/macro data.
+  - Filled the remaining Wave 2 target-food gaps through canonical aliases (`lean meat`, `cheese`, `pumpkin`, `potato`, `pepper`, `herbs`, `wraps`) so the static registry now covers the full core post-surgery list.
+  - Extended `PortionData` with explicit spoon-density fields and updated `getEffectivePortionG()` to use tsp/tbsp weights for density-sensitive foods such as butter, jam, peanut butter, cream cheese, olive oil, sugar, salt, and black pepper.
+  - Added the `seedMealTemplates` internal mutation with per-user, idempotent seeding for `"coffee + toast"` and `"toast + spread"`, including breakfast slot defaults and optional modifiers.
+  - Added targeted Vitest coverage for the new spoon-density math and for meal-template seed idempotency.
+- **Verification:**
+  - `bun x convex codegen`
+  - `bun x vitest run src/lib/__tests__/nutritionUtils.test.ts convex/__tests__/seedClinicalData.test.ts convex/__tests__/seedMealTemplates.test.ts`
+  - `bun run typecheck`
+  - `bun x vitest run convex/foodLibrary.test.ts`
+  - `bun run build`
+- **Decisions:**
+  - Split `peanut butter` out from the broader `smooth nut butter` canonical so meal templates and common user input can use an exact staple food name, while almond/cashew-style entries still map to the generic smooth nut-butter bucket.
+
+### 2026-04-08 — Wave 0 complete: Schema widening for 3-layer architecture
+
+- **Tasks:** W0-T01 through W0-T05 (all 5 Wave 0 tasks)
+- **Files:** `convex/schema.ts`, `convex/validators.ts`
+- **What:**
+  - W0-T01: Created `clinicalRegistry` table (24 fields, 3 indexes) — global medical truth layer
+  - W0-T02: Extended `ingredientProfiles` with `customPortions`, `productName`, `barcode`, `registryId`
+  - W0-T03: Added `productId` to `logs` table (historical calorie integrity)
+  - W0-T04: Extended `foodLibrary` with `structuredIngredients`, `modifiers`, `sizes`, `slotDefaults`
+  - W0-T05: Added `foodFavouriteSlotTags` to `profiles`
+  - Created 13 new validators in `convex/validators.ts` (food categories, risk levels, portions, meal structures)
+- **Verification:** typecheck PASS, build PASS, 1432 vitest PASS, 135 E2E PASS (5 pre-existing flaky), schema push PASS
+- **Decisions:** Used `foodRiskLevelValidator` with 6 values (matching `FoodRiskLevel` source type) instead of plan's 4 values — plan said "mirror them from source"
+
+### 2026-04-08 — Plan superseded: Food Platform master plan
+
+Old wave JSONs (0-1, 2-3, 4-6) archived. New 8-wave plan with 31 tasks.
+Key changes: clinicalRegistry table, ingredientProfiles product catalog, productId on logs,
+server-side unified search, customPortions-first math. No code changes yet.
 
 ---
 

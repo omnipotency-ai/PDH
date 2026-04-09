@@ -66,9 +66,7 @@ export function getLastHalfWeekBoundary(nowMs: number = Date.now()): Date {
 function getNextHalfWeekBoundaryMs(nowMs: number): number {
   const lastBoundary = getLastHalfWeekBoundary(nowMs);
   const nextBoundary = new Date(lastBoundary);
-  nextBoundary.setDate(
-    nextBoundary.getDate() + (lastBoundary.getDay() === 0 ? 3 : 4),
-  );
+  nextBoundary.setDate(nextBoundary.getDate() + (lastBoundary.getDay() === 0 ? 3 : 4));
   return nextBoundary.getTime();
 }
 

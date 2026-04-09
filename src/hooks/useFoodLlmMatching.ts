@@ -19,8 +19,8 @@ import { isFoodPipelineType } from "@shared/logTypeUtils";
 import { useAction } from "convex/react";
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
-import { useAiConfig } from "@/hooks/useAiConfig";
 import { useSyncedLogsContext } from "@/contexts/SyncedLogsContext";
+import { useAiConfig } from "@/hooks/useAiConfig";
 import { asConvexId, type SyncedLog } from "@/lib/sync";
 import { SIX_HOURS_MS } from "@/lib/timeConstants";
 import type { FoodItem, FoodLog, LiquidLog } from "@/types/domain";
@@ -44,7 +44,10 @@ function isItemUnresolvedForLlm(item: FoodItem): boolean {
  * Find food logs that have unresolved items needing LLM matching.
  * Only considers logs from the last 6 hours (the processing window).
  */
-function findLogsNeedingLlmMatching(logs: SyncedLog[], nowMs: number): (FoodLog | LiquidLog)[] {
+function findLogsNeedingLlmMatching(
+  logs: SyncedLog[],
+  nowMs: number,
+): (FoodLog | LiquidLog)[] {
   const result: (FoodLog | LiquidLog)[] = [];
 
   for (const log of logs) {
@@ -71,9 +74,10 @@ function findLogsNeedingLlmMatching(logs: SyncedLog[], nowMs: number): (FoodLog 
 /**
  * Automatically triggers LLM matching for food logs with unresolved items.
  *
- * Call this hook from the Track page. It monitors the user's food logs,
- * detects unresolved items, and sends them to OpenAI for matching.
- * Each log is only sent once per component mount.
+ * Used in: src/pages/Home.tsx (mounted at the top level of the Home/Track page)
+ *
+ * It monitors the user's food logs, detects unresolved items, and sends them
+ * to OpenAI for matching. Each log is only sent once per component mount.
  */
 export function useFoodLlmMatching(): void {
   const { logs } = useSyncedLogsContext();
@@ -127,9 +131,12 @@ export function useFoodLlmMatching(): void {
         .then((result) => {
           if (result.matched > 0) {
             const foodWord = result.matched === 1 ? "food" : "foods";
-            toast.success(`${result.matched} ${foodWord} matched automatically`, {
-              id: toastId,
-            });
+            toast.success(
+              `${result.matched} ${foodWord} matched automatically`,
+              {
+                id: toastId,
+              },
+            );
           } else {
             // Nothing matched — dismiss the loading toast silently.
             // The unresolved toast from useUnresolvedFoodToast will guide the user.
@@ -138,7 +145,9 @@ export function useFoodLlmMatching(): void {
         })
         .catch((err: unknown) => {
           const message = err instanceof Error ? err.message : "Unknown error";
-          console.error(`LLM food matching failed for log ${foodLog.id}: ${message}`);
+          console.error(
+            `LLM food matching failed for log ${foodLog.id}: ${message}`,
+          );
 
           // Non-retryable errors: don't remove from sent set (prevents retry loops)
           const isNonRetryable =
@@ -148,9 +157,12 @@ export function useFoodLlmMatching(): void {
 
           if (isNonRetryable) {
             if (message.includes("AI is not configured for this deployment")) {
-              toast.error("AI matching is not configured for this deployment.", {
-                id: toastId,
-              });
+              toast.error(
+                "AI matching is not configured for this deployment.",
+                {
+                  id: toastId,
+                },
+              );
             } else {
               toast.dismiss(toastId);
             }

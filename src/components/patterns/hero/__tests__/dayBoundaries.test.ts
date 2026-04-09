@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { computeDailyAverages } from "../BristolTrendTile";
 import { computeDailyCounts } from "../BmFrequencyTile";
+import { computeDailyAverages } from "../BristolTrendTile";
 import { getCutoffTimestamp, getRecentDateKeys } from "../utils";
 
 describe("hero day boundaries", () => {

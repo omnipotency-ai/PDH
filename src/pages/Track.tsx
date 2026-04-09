@@ -1,52 +1,21 @@
 import { addDays, differenceInCalendarDays, format, startOfDay } from "date-fns";
 import { CalendarDays } from "lucide-react";
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { AiInsightsSection } from "@/components/track/dr-poo/AiInsightsSection";
 
-// Lazy-loaded so that foodRegistry.ts (2858 lines of static data) is code-split
-// into a separate chunk and not bundled into the initial JS payload.
-const FoodMatchingModal = lazy(() =>
-  import("@/components/track/FoodMatchingModal").then((m) => ({
-    default: m.FoodMatchingModal,
-  })),
-);
-
-import { NutritionCard } from "@/components/track/nutrition/NutritionCard";
-import { NutritionCardErrorBoundary } from "@/components/track/nutrition/NutritionCardErrorBoundary";
-import { type BowelFormState, BowelSection } from "@/components/track/panels";
-import { QuickCapture } from "@/components/track/quick-capture";
-import { HabitDetailSheet } from "@/components/track/quick-capture/HabitDetailSheet";
-import { TodayStatusRow } from "@/components/track/TodayStatusRow";
 import { TodayLog } from "@/components/track/today-log";
 import { Button } from "@/components/ui/button";
-import { ConfettiBurst } from "@/components/ui/Confetti";
 import { Calendar } from "@/components/ui/calendar";
-import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useResponsiveShellMode } from "@/components/ui/responsive-shell";
 import { useSyncedLogsContext } from "@/contexts/SyncedLogsContext";
-import { useAiInsights } from "@/hooks/useAiInsights";
-import { useBaselineAverages } from "@/hooks/useBaselineAverages";
-import { useCelebration } from "@/hooks/useCelebration";
-import { useDayStats } from "@/hooks/useDayStats";
-import { useFoodLlmMatching } from "@/hooks/useFoodLlmMatching";
-import { useHabitStreaks } from "@/hooks/useHabitStreaks";
 import { useLiveClock } from "@/hooks/useLiveClock";
 import { useHabits, useUnitSystem } from "@/hooks/useProfile";
-import { useQuickCapture } from "@/hooks/useQuickCapture";
-import { useUnresolvedFoodQueue } from "@/hooks/useUnresolvedFoodQueue";
-import { useUnresolvedFoodToast } from "@/hooks/useUnresolvedFoodToast";
-import { useWeeklySummaryAutoTrigger } from "@/hooks/useWeeklySummaryAutoTrigger";
 import { normalizeActivityTypeKey } from "@/lib/activityTypeUtils";
-import { bristolToConsistency, normalizeEpisodesCount } from "@/lib/analysis";
-import { formatLocalDateKey, getDateScopedTimestamp } from "@/lib/dateUtils";
 import { getErrorMessage } from "@/lib/errors";
 import type { HabitConfig } from "@/lib/habitTemplates";
 import { isSleepHabit } from "@/lib/habitTemplates";
 import { normalizeFluidItemName } from "@/lib/normalizeFluidName";
-import { useAddSyncedLog, useRemoveSyncedLog, useUpdateSyncedLog } from "@/lib/sync";
-import { MS_PER_DAY } from "@/lib/timeConstants";
+import { useRemoveSyncedLog, useUpdateSyncedLog } from "@/lib/sync";
 import { getDisplayWeightUnit } from "@/lib/units";
 import { useStore } from "@/store";
 import type {
@@ -58,6 +27,10 @@ import type {
 } from "@/types/domain";
 
 type LogPayloadData = LogDataMap[LogType];
+
+// ---------------------------------------------------------------------------
+// Date picker
+// ---------------------------------------------------------------------------
 
 function TrackDatePicker({
   selectedDate,
@@ -103,6 +76,10 @@ function TrackDatePicker({
   );
 }
 
+// ---------------------------------------------------------------------------
+// Helpers (shared with save handler)
+// ---------------------------------------------------------------------------
+
 function getHabitsForActivityType(habits: HabitConfig[], activityType: string): HabitConfig[] {
   if (activityType === "sleep") {
     return habits.filter((habit) => isSleepHabit(habit));
@@ -114,37 +91,29 @@ function getActivityHabitLogValue(habit: HabitConfig, durationMinutes: number): 
   return habit.unit === "hours" ? Math.round((durationMinutes / 60) * 100) / 100 : durationMinutes;
 }
 
+// ---------------------------------------------------------------------------
+// Track page — log viewer + CRUD
+// ---------------------------------------------------------------------------
+
 export default function TrackPage() {
   const { logs } = useSyncedLogsContext();
-  const addSyncedLog = useAddSyncedLog();
   const removeSyncedLog = useRemoveSyncedLog();
   const updateSyncedLog = useUpdateSyncedLog();
 
   const { habits } = useHabits();
-
   const addHabitLog = useStore((state) => state.addHabitLog);
   const removeHabitLog = useStore((state) => state.removeHabitLog);
   const { unitSystem } = useUnitSystem();
   const weightUnit = getDisplayWeightUnit(unitSystem);
-  const { sendNow, triggerAnalysis } = useAiInsights();
 
-  // Auto-generate weekly summary when a Sunday 18:00 boundary passes
-  useWeeklySummaryAutoTrigger();
+  // Pending edit from cross-page navigation (Home → Track)
+  const pendingEditLogId = useStore((s) => s.pendingEditLogId);
+  const setPendingEditLogId = useStore((s) => s.setPendingEditLogId);
 
-  // Auto-trigger LLM matching for food logs with unresolved items (no-op if no API key)
-  useFoodLlmMatching();
-
-  const { celebration, celebrateLog, celebrateGoalComplete, clearCelebration } = useCelebration();
-
-  // useLiveClock fires once per minute, aligned to the clock minute.
-  // On each tick we derive a fresh `now` from Date so all downstream
-  // computations (todayStart, selectedDate, formatted header) stay current.
   useLiveClock();
   const now = new Date();
   const [selectedDate, setSelectedDate] = useState(() => startOfDay(new Date()));
 
-  const todayStart = useMemo(() => startOfDay(now).getTime(), [now]);
-  const todayEnd = todayStart + MS_PER_DAY;
   const todayDate = useMemo(() => startOfDay(now), [now]);
   const dayOffset = useMemo(
     () => differenceInCalendarDays(selectedDate, todayDate),
@@ -152,179 +121,31 @@ export default function TrackPage() {
   );
   const selectedStart = selectedDate.getTime();
   const selectedEnd = addDays(selectedDate, 1).getTime();
-  const selectedCaptureTimestamp = useMemo(
-    () => (dayOffset === 0 ? undefined : getDateScopedTimestamp(selectedDate, now)),
-    [dayOffset, now, selectedDate],
-  );
-
-  // --- Day statistics (actual today + selected day) ---
-  const {
-    todayHabitCounts,
-    todayFluidTotalsByName,
-    totalFluidMl,
-    waterOnlyMl,
-    todayBmCount,
-    lastBmTimestamp,
-  } = useDayStats({ logs, todayStart, todayEnd });
-  const {
-    todayHabitCounts: selectedHabitCounts,
-    todayFluidTotalsByName: selectedFluidTotalsByName,
-  } = useDayStats({ logs, todayStart: selectedStart, todayEnd: selectedEnd });
 
   const selectedLogs = useMemo(
     () => logs.filter((log) => log.timestamp >= selectedStart && log.timestamp < selectedEnd),
     [logs, selectedStart, selectedEnd],
   );
 
-  // --- Habit aggregate data for streaks, detail sheet, and coaching ---
-
-  const habitLogs = useStore((s) => s.habitLogs);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const todayKey = formatLocalDateKey(todayStart);
-    const storageKey = `quick-capture-destructive-rollover:${todayKey}`;
-    if (window.localStorage.getItem(storageKey) === "shown") return;
-    window.localStorage.setItem(storageKey, "shown");
-
-    const yesterdayStart = todayStart - MS_PER_DAY;
-    const yesterdayEnd = todayStart;
-
-    const destructiveHabits = habits.filter(
-      (habit) =>
-        habit.kind === "destructive" && typeof habit.dailyCap === "number" && habit.dailyCap > 0,
-    );
-
-    if (destructiveHabits.length === 0) return;
-
-    let underCapCount = 0;
-    let zeroUseCount = 0;
-
-    for (const habit of destructiveHabits) {
-      const total = habitLogs
-        .filter(
-          (entry) =>
-            entry.habitId === habit.id && entry.at >= yesterdayStart && entry.at < yesterdayEnd,
-        )
-        .reduce((sum, entry) => sum + entry.value, 0);
-
-      if (total < (habit.dailyCap ?? 0)) underCapCount += 1;
-      if (total === 0) zeroUseCount += 1;
-    }
-
-    if (zeroUseCount > 0) {
-      const message =
-        zeroUseCount === 1
-          ? "Yesterday: zero use on one destructive habit. Excellent control."
-          : `Yesterday: zero use on ${zeroUseCount} destructive habits. Excellent control.`;
-      celebrateGoalComplete(message);
-      return;
-    }
-
-    if (underCapCount > 0) {
-      toast.success(
-        underCapCount === 1
-          ? "Yesterday: you stayed under a destructive cap. Keep that momentum."
-          : `Yesterday: you stayed under ${underCapCount} destructive caps. Keep that momentum.`,
-      );
-    }
-  }, [habits, habitLogs, todayStart, celebrateGoalComplete]);
-
-  const { daySummaries, streakSummaries } = useHabitStreaks({
-    habitLogs,
-    habits,
-    now,
-  });
-
-  // --- Baseline averages + scheduled insights (replaces old coaching strip) ---
-  // Side-effect-only: computes and caches baselines in Zustand store.
-  // The return value is consumed by other hooks via the store, not directly here.
-  useBaselineAverages({
-    logs,
-    todayHabitCounts,
-    todayFluidTotalsByName,
-    todayTotalFluidMl: totalFluidMl,
-  });
-
-  // --- Persistent toast for unresolved food items (0-6 hour window) ---
-  const [reviewQueueOpen, setReviewQueueOpen] = useState(false);
-  const unresolvedQueue = useUnresolvedFoodQueue(logs);
-
-  const handleReviewUnresolved = useCallback(() => {
-    try {
-      if (unresolvedQueue.length === 0) {
-        toast.info("All food items have been resolved.");
-        return;
-      }
-      setReviewQueueOpen(true);
-    } catch (err: unknown) {
-      toast.error(getErrorMessage(err, "Unable to load unresolved items. Check connection."));
-    }
-  }, [unresolvedQueue]);
-  useUnresolvedFoodToast(logs, now.getTime(), handleReviewUnresolved);
-
-  const afterSave = useCallback(() => {
-    celebrateLog();
-  }, [celebrateLog]);
-
-  // --- Auto-edit state: set by toast "Edit" button, consumed by TodayLog ---
+  // --- Auto-edit state ---
   const [autoEditLogId, setAutoEditLogId] = useState<string | null>(null);
 
-  const handleRequestEdit = useCallback(
-    (logId: string, captureOffset = 0) => {
-      const matchingLog = logs.find((entry) => entry.id === logId);
-      const nextDate = matchingLog
-        ? startOfDay(new Date(matchingLog.timestamp))
-        : startOfDay(addDays(new Date(), captureOffset));
-      setSelectedDate(nextDate);
-      setAutoEditLogId(logId);
-    },
-    [logs],
-  );
+  // Consume pending edit from Zustand store (cross-page navigation from Home)
+  useEffect(() => {
+    if (pendingEditLogId === null) return;
+    const matchingLog = logs.find((entry) => entry.id === pendingEditLogId);
+    if (matchingLog) {
+      setSelectedDate(startOfDay(new Date(matchingLog.timestamp)));
+    }
+    setAutoEditLogId(pendingEditLogId);
+    setPendingEditLogId(null);
+  }, [pendingEditLogId, logs, setPendingEditLogId]);
 
   const handleAutoEditHandled = useCallback(() => {
     setAutoEditLogId(null);
   }, []);
 
-  // --- Quick capture handlers (extracted hook) ---
-  const {
-    handleQuickCaptureTap,
-    handleLogSleepQuickCapture,
-    handleLogActivityQuickCapture,
-    handleLogWeightKg,
-    handleQuickCaptureLongPress,
-    handleCloseDetailSheet,
-    detailSheetHabit,
-  } = useQuickCapture({
-    afterSave,
-    celebrateGoalComplete,
-    todayHabitCounts: selectedHabitCounts,
-    todayFluidTotalsByName: selectedFluidTotalsByName,
-    streakSummaries,
-    logs,
-    todayStart: selectedStart,
-    todayEnd: selectedEnd,
-    removeSyncedLog,
-    removeHabitLog,
-    onRequestEdit: handleRequestEdit,
-    ...(selectedCaptureTimestamp !== undefined && {
-      captureTimestamp: selectedCaptureTimestamp,
-    }),
-    captureStart: selectedStart,
-    captureEnd: selectedEnd,
-    captureOffset: dayOffset,
-  });
-
-  // Detail day summaries for habit detail sheet (depends on daySummaries from useHabitStreaks)
-  const detailDaySummaries = useMemo(
-    () =>
-      detailSheetHabit
-        ? daySummaries.filter((summary) => summary.habitId === detailSheetHabit.id)
-        : [],
-    [daySummaries, detailSheetHabit],
-  );
-
+  // --- Date navigation ---
   const handlePreviousDay = useCallback(
     () => setSelectedDate((value) => startOfDay(addDays(value, -1))),
     [],
@@ -346,30 +167,7 @@ export default function TrackPage() {
     [todayDate],
   );
 
-  const handleLogBowel = async (state: BowelFormState) => {
-    const consistencyTag = bristolToConsistency(state.bristolCode);
-    const timestamp = state.timestampMs ?? Date.now();
-    await addSyncedLog({
-      timestamp,
-      type: "digestion",
-      data: {
-        episodesCount: normalizeEpisodesCount(state.episodesCount),
-        windowMinutes: 30,
-        urgencyTag: state.urgencyTag,
-        effortTag: state.effortTag,
-        consistencyTag,
-        volumeTag: state.volumeTag,
-        bristolCode: state.bristolCode,
-        accident: state.accident,
-        notes: state.notes.trim(),
-      },
-    });
-    afterSave();
-    void triggerAnalysis({
-      bristolScore: state.bristolCode,
-      autoSendEnabled: true,
-    });
-  };
+  // --- Log CRUD ---
 
   const handleDelete = async (id: string) => {
     try {
@@ -523,144 +321,39 @@ export default function TrackPage() {
     }
   };
 
-  const responsiveMode = useResponsiveShellMode();
-  const isMobile = responsiveMode === "mobile";
-  const isTablet = responsiveMode === "tablet";
-  const isDesktop = responsiveMode === "desktop";
-
-  // Shared component instances rendered conditionally per layout
-  const todayStatusRow = (
-    <TodayStatusRow
-      bmCount={todayBmCount}
-      fluidTotalMl={totalFluidMl}
-      waterOnlyMl={waterOnlyMl}
-      lastBmTimestamp={lastBmTimestamp}
-      nowMs={now.getTime()}
-    />
-  );
-
-  const quickCapture = (
-    <QuickCapture
-      habits={habits}
-      todayHabitCounts={selectedHabitCounts}
-      todayFluidMl={selectedFluidTotalsByName}
-      onTap={handleQuickCaptureTap}
-      onLogSleepHours={handleLogSleepQuickCapture}
-      onLogActivityMinutes={handleLogActivityQuickCapture}
-      onLogWeightKg={handleLogWeightKg}
-      onLongPress={handleQuickCaptureLongPress}
-    />
-  );
-
-  const aiInsightsSection = <AiInsightsSection onSendNow={sendNow} />;
-
-  const todayLog = (
-    <TodayLog
-      logs={selectedLogs}
-      habits={habits}
-      weightUnit={weightUnit}
-      constrainHeight={isDesktop}
-      selectedDate={selectedDate}
-      dayOffset={dayOffset}
-      onPreviousDay={handlePreviousDay}
-      onNextDay={handleNextDay}
-      onJumpToToday={handleJumpToToday}
-      onDelete={handleDelete}
-      onSave={handleSave}
-      autoEditId={autoEditLogId}
-      onAutoEditHandled={handleAutoEditHandled}
-    />
-  );
-
   return (
-    <div className="mx-auto max-w-440 pb-8">
+    <div className="pb-8">
       <header className="mb-3">
-        <div className="grid grid-cols-1 items-baseline gap-5 md:grid-cols-2 xl:grid-cols-[3fr_4fr_3fr]">
-          <div className="flex flex-wrap items-baseline gap-4">
-            <h1 className="font-display text-2xl font-bold tracking-tight text-teal-600 dark:text-teal-400 md:text-3xl shrink-0">
-              Track
-            </h1>
-            <p className="font-monaco text-xs uppercase tracking-[0.2em] text-teal-600 dark:text-teal-400 shrink-0">
-              {format(now, "E · d MMMM · HH:mm")}
-            </p>
-            <TrackDatePicker
-              selectedDate={selectedDate}
-              todayDate={todayDate}
-              onSelect={handleSelectDate}
-            />
-          </div>
-          <div className="flex justify-center">{todayStatusRow}</div>
-          {isDesktop && <div />}
+        <div className="flex flex-wrap items-baseline gap-4">
+          <h1 className="font-display text-2xl font-bold tracking-tight text-teal-600 dark:text-teal-400 md:text-3xl shrink-0">
+            Track
+          </h1>
+          <p className="font-monaco text-xs uppercase tracking-[0.2em] text-teal-600 dark:text-teal-400 shrink-0">
+            {format(now, "E · d MMMM · HH:mm")}
+          </p>
+          <TrackDatePicker
+            selectedDate={selectedDate}
+            todayDate={todayDate}
+            onSelect={handleSelectDate}
+          />
         </div>
       </header>
 
-      <div className="stagger-reveal grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-[3fr_4fr_3fr] xl:items-start">
-        {/* ── Column 1: Input forms ── */}
-        <section className="space-y-3 min-w-0">
-          <NutritionCardErrorBoundary>
-            <NutritionCard
-              selectedDate={selectedDate}
-              {...(selectedCaptureTimestamp !== undefined && {
-                captureTimestamp: selectedCaptureTimestamp,
-              })}
-            />
-          </NutritionCardErrorBoundary>
-          <ErrorBoundary label="Bowel Movement">
-            <BowelSection
-              onSave={handleLogBowel}
-              {...(selectedCaptureTimestamp !== undefined && {
-                captureTimestamp: selectedCaptureTimestamp,
-              })}
-            />
-          </ErrorBoundary>
-          {quickCapture}
-          {!isDesktop && aiInsightsSection}
-        </section>
-
-        {/* ── Tablet (md): Column 2 = TodayLog ── */}
-        {isTablet && <section className="space-y-5 min-w-0">{todayLog}</section>}
-
-        {/* ── Desktop (xl): Column 2 = AiInsights ── */}
-        {isDesktop && <section className="space-y-5 min-w-0">{aiInsightsSection}</section>}
-
-        {/* ── Mobile: TodayLog below inputs ── */}
-        {isMobile && <aside className="space-y-5 min-w-0">{todayLog}</aside>}
-
-        {/* ── Desktop (xl): Column 3 = TodayLog ── */}
-        {isDesktop && (
-          <aside className="min-w-0 self-start xl:sticky xl:top-4 xl:flex xl:h-[calc(100vh-2rem)] xl:flex-col xl:overflow-hidden">
-            {todayLog}
-          </aside>
-        )}
-      </div>
-
-      {celebration?.confettiActive && (
-        <ConfettiBurst
-          active={celebration.confettiActive}
-          onComplete={clearCelebration}
-          originX={celebration.confettiOriginX}
-          originY={celebration.confettiOriginY}
-        />
-      )}
-
-      <HabitDetailSheet
-        habit={detailSheetHabit}
-        count={detailSheetHabit ? (selectedHabitCounts[detailSheetHabit.id] ?? 0) : 0}
-        {...(detailSheetHabit?.logAs === "fluid" && {
-          fluidMl: selectedFluidTotalsByName[normalizeFluidItemName(detailSheetHabit.name)],
-        })}
-        daySummaries={detailDaySummaries}
-        streakSummary={detailSheetHabit ? (streakSummaries[detailSheetHabit.id] ?? null) : null}
-        onClose={handleCloseDetailSheet}
+      <TodayLog
+        logs={selectedLogs}
+        habits={habits}
+        weightUnit={weightUnit}
+        constrainHeight={false}
+        selectedDate={selectedDate}
+        dayOffset={dayOffset}
+        onPreviousDay={handlePreviousDay}
+        onNextDay={handleNextDay}
+        onJumpToToday={handleJumpToToday}
+        onDelete={handleDelete}
+        onSave={handleSave}
+        autoEditId={autoEditLogId}
+        onAutoEditHandled={handleAutoEditHandled}
       />
-
-      <Suspense fallback={null}>
-        <FoodMatchingModal
-          queue={unresolvedQueue}
-          open={reviewQueueOpen}
-          onOpenChange={setReviewQueueOpen}
-        />
-      </Suspense>
     </div>
   );
 }

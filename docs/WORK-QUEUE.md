@@ -1,8 +1,10 @@
 > **Ref:** `docs/WORK-QUEUE.md`
-> **Updated:** 2026-04-07
-> **Version:** 3.3
+> **Updated:** 2026-04-08
+> **Version:** 3.5
 > **History:**
 >
+> - v3.5 (2026-04-08) — Backfill commit hashes for W2-W5, mark W4-T01/T02, W5-T03/T05 done from git history
+> - v3.4 (2026-04-08) — Food Platform master plan adopted (31 tasks, 8 waves), old 22-task plan superseded
 > - v3.3 (2026-04-07) — Tech-Debt initiative marked complete, task rows removed, resolved ROADMAP items updated
 > - v3.2 (2026-04-06) — Food Page & Meal System initiative added (22 tasks, 7 waves)
 > - v3.1 (2026-04-06) — Nutrition Card initiative marked complete, task rows removed
@@ -31,47 +33,60 @@
   3. Initiative row stays with final status
   4. Plan goes to `docs/plans/archive/`
 
+**Table columns:** `Task` = wave+task ID (e.g. W2-T03), `Title` = what it does, `Wave` = execution phase (higher waves depend on lower), `Depends On` = prerequisite task IDs, `Status` = pending/done/blocked, `Commit` = short hash when done. To add a new task: append a row under the correct wave, assign the next available ID, and list any blockers in Depends On.
+
+**Wave numbering note:** The Food Platform initiative uses W0-W7 (8 waves). The original plan doc referenced W0-W6 (7 waves); W7 was added during master-plan consolidation to hold cross-cutting polish tasks. W3/W4/W5 rows were backfilled for historical tracking — commits reference actual implementation dates.
+
 ---
 
-## Active: Food Page, Meal System & Navigation Restructure
+## Active: Food Platform & Navigation Restructure
 
 > **Status:** ACTIVE
 > **PRD:** [`2026-04-06-food-page-and-meal-system.md`](prd/2026-04-06-food-page-and-meal-system.md)
-> **Plan:** [`2026-04-06-food-page-and-meal-system.md`](plans/2026-04-06-food-page-and-meal-system.md)
-> **Execution plans:** `docs/plans/2026-04-06-food-page-and-meal-system-waves-{0-1,2-3,4-6}.json`
-> **Branch:** TBD (create at execution time)
+> **Plan:** [`food-platform-master-plan.md`](plans/food-platform-master-plan.md)
+> **Vision:** [`new-plan-food.md`](plans/new-plan-food.md)
+> **Branch:** `odyssey/food-platform`
+> **Supersedes:** Food Page, Meal System & Navigation Restructure (old wave JSONs archived 2026-04-08)
 
 ### Roadmap items folded in
 
-- WQ-090 — TrackPage eagerly imported (addressed by W1-T02: Track moves to /track, lazy-loadable)
+- WQ-090 — TrackPage eagerly imported (addressed by W3-T02: Track moves to /track, lazy-loadable)
 
 ### Tasks
 
-| Task   | Title                                               | Wave | Depends On     | Status  | Commit |
-| ------ | --------------------------------------------------- | ---- | -------------- | ------- | ------ |
-| W0-T01 | Extend foodLibrary for composite meals              | 0    | —              | pending |        |
-| W0-T02 | Add tspToGrams to ingredientProfiles                | 0    | W0-T01         | pending |        |
-| W0-T03 | Add foodFavouriteSlotTags to profiles               | 0    | W0-T01         | pending |        |
-| W0-T04 | Mutation: auto-tag favourite slot associations      | 0    | W0-T03         | pending |        |
-| W1-T01 | Create page stubs (Home, Food, Insights)            | 1    | W0-T04         | pending |        |
-| W1-T02 | Restructure route tree to 4-tab bottom nav          | 1    | W1-T01         | pending |        |
-| W1-T03 | Add /patterns → /insights redirect                  | 1    | W1-T02         | pending |        |
-| W2-T01 | Simplify Track page to Today's Log only             | 2    | W1-T02         | pending |        |
-| W2-T02 | Move Dr. Poo Report into Insights page              | 2    | W1-T01, W2-T01 | pending |        |
-| W3-T01 | Home page: greeting + nutrition summary             | 3    | W1-T02         | pending |        |
-| W3-T02 | Home page: slot chips, favourites, recent, frequent | 3    | W3-T01         | pending |        |
-| W3-T03 | Home page: modifier chips + Quick Capture           | 3    | W3-T02         | pending |        |
-| W3-T04 | Home page: search bar + water quick-action          | 3    | W3-T02         | pending |        |
-| W3-T05 | Home page: Dr. Poo touchpoints                      | 3    | W3-T01         | pending |        |
-| W4-T01 | Audit + fix heart toggle everywhere                 | 4    | W3-T02, W5-T03 | pending |        |
-| W4-T02 | Plus button stages + auto-opens modal               | 4    | W3-T02, W5-T01 | pending |        |
-| W5-T01 | Food page shell + view switcher + backfill picker   | 5    | W1-T02         | pending |        |
-| W5-T02 | Food page search view (no cap)                      | 5    | W5-T01         | pending |        |
-| W5-T03 | Food page favourites view + slot filtering          | 5    | W5-T01         | pending |        |
-| W5-T04 | Food page filter view (recent/frequent/zone)        | 5    | W5-T01         | pending |        |
-| W5-T05 | Food detail editing modal                           | 5    | W5-T02         | pending |        |
-| W6-T01 | Populate registry with ~30 post-surgery foods       | 6    | W5-T02         | pending |        |
-| W6-T02 | Seed Coffee + Toast meal templates                  | 6    | W0-T01, W6-T01 | pending |        |
+| Task   | Title                                                   | Wave | Depends On     | Status  | Commit  |
+| ------ | ------------------------------------------------------- | ---- | -------------- | ------- | ------- |
+| W0-T01 | Create clinicalRegistry table                           | 0    | —              | done    | 33e17cc |
+| W0-T02 | Extend ingredientProfiles with product catalog fields   | 0    | —              | done    | 33e17cc |
+| W0-T03 | Add productId to logs table                             | 0    | —              | done    | 33e17cc |
+| W0-T04 | Extend foodLibrary for composite meals                  | 0    | —              | done    | 33e17cc |
+| W0-T05 | Add foodFavouriteSlotTags to profiles                   | 0    | —              | done    | 33e17cc |
+| W1-T01 | Fix getEffectivePortionG to be unit-aware               | 1    | W0-T02         | done    | e51f4e6 |
+| W1-T02 | Fix buildStagedNutritionLogData to preserve units       | 1    | W1-T01         | done    | e51f4e6 |
+| W1-T03 | Fix buildPortionText display for discrete units         | 1    | W1-T01         | done    | e51f4e6 |
+| W1-T04 | Create useFoodData hook (Convex-first, static fallback) | 1    | W0-T01, W0-T02 | done    | e51f4e6 |
+| W2-T01 | Registry → clinicalRegistry seed script                 | 2    | W0-T01         | done    | 701ec6e |
+| W2-T02 | Seed ~30 post-surgery foods                             | 2    | W2-T01         | done    | c62b4b3 |
+| W2-T03 | Seed Coffee + Toast meal templates                      | 2    | W0-T04, W2-T02 | done    | c62b4b3 |
+| W2-T04 | Favourite slot auto-tag mutation                        | 2    | W0-T05         | done    | a0d2ccb |
+| W3-T01 | Page stubs: Home, Food, Insights                        | 3    | —              | done    | cdcd643 |
+| W3-T02 | 4-tab bottom nav layout                                 | 3    | W3-T01         | done    | 3f97a64 |
+| W3-T03 | /patterns → /insights redirect                          | 3    | W3-T02         | done    | 3f97a64 |
+| W4-T01 | Simplify Track to Today's Log only                      | 4    | W3-T02         | done    | 6faa28a |
+| W4-T02 | Move Dr. Poo to Insights tab                            | 4    | W3-T01, W4-T01 | done    | 6faa28a |
+| W5-T01 | Greeting + nutrition summary                            | 5    | W3-T02, W1-T04 | done    | 22e778c |
+| W5-T02 | Meal slots, favourites, recent, frequent                | 5    | W5-T01, W2-T04 | done    | a641f69 |
+| W5-T03 | Modifier chips + Quick Capture                          | 5    | W5-T02         | done    | d14b307 |
+| W5-T04 | Search bar + water action                               | 5    | W5-T02         | pending |         |
+| W5-T05 | Dr. Poo touchpoints                                     | 5    | W5-T01         | done    | b06371b |
+| W6-T01 | Food page shell + view switcher + backfill picker       | 6    | W3-T02, W1-T04 | pending |         |
+| W6-T02 | Search view (Convex-backed, no cap)                     | 6    | W6-T01         | pending |         |
+| W6-T03 | Favourites view with slot filtering                     | 6    | W6-T01         | pending |         |
+| W6-T04 | Filter view (recent/frequent/zone)                      | 6    | W6-T01         | pending |         |
+| W6-T05 | Food detail modal + custom portions                     | 6    | W6-T02         | pending |         |
+| W6-T06 | OpenFoodFacts "Add Product" flow                        | 6    | W6-T05         | pending |         |
+| W7-T01 | Heart toggle audit (every FoodRow)                      | 7    | W5-T02, W6-T03 | pending |         |
+| W7-T02 | Plus button → auto-stage + open modal                   | 7    | W5-T02, W6-T01 | pending |         |
 
 ---
 

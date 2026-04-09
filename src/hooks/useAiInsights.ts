@@ -1,8 +1,8 @@
 import { useAction, useMutation } from "convex/react";
 import { useCallback, useMemo, useRef } from "react";
 import { toast } from "sonner";
-import { useAiConfig } from "@/hooks/useAiConfig";
 import { useSyncedLogsContext } from "@/contexts/SyncedLogsContext";
+import { useAiConfig } from "@/hooks/useAiConfig";
 import { usePendingReplies } from "@/hooks/usePendingReplies";
 import { useAiPreferences, useHealthProfile } from "@/hooks/useProfile";
 import { getLastHalfWeekBoundary } from "@/hooks/useWeeklySummaryAutoTrigger";

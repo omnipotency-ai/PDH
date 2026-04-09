@@ -1,7 +1,4 @@
-import type {
-  AiNutritionistInsight,
-  StructuredFoodAssessment,
-} from "@/types/domain";
+import type { AiNutritionistInsight, StructuredFoodAssessment } from "@/types/domain";
 import type { PreviousReport } from "./aiPrompts";
 
 // ─── Type guards ──────────────────────────────────────────────────────────────
@@ -19,9 +16,7 @@ export function toStringArray(value: unknown): string[] {
 
 // ─── Educational insight deduplication ────────────────────────────────────────
 
-type EducationalInsightValue = NonNullable<
-  AiNutritionistInsight["educationalInsight"]
->;
+type EducationalInsightValue = NonNullable<AiNutritionistInsight["educationalInsight"]>;
 
 function normalizeEducationalKey(value: string): string {
   return value
@@ -34,9 +29,7 @@ function educationalKey(insight: EducationalInsightValue): string {
   return `${normalizeEducationalKey(insight.topic)}|${normalizeEducationalKey(insight.fact)}`;
 }
 
-function collectEducationalKeys(
-  previousReports: PreviousReport[],
-): Set<string> {
+function collectEducationalKeys(previousReports: PreviousReport[]): Set<string> {
   const seen = new Set<string>();
   for (const report of previousReports) {
     const insight = report.insight.educationalInsight;
@@ -77,9 +70,7 @@ export function parseAiInsight(raw: unknown): AiNutritionistInsight | null {
 
   // Parse the new directResponseToUser field
   const directResponseToUser: string | null =
-    typeof raw.directResponseToUser === "string"
-      ? raw.directResponseToUser
-      : null;
+    typeof raw.directResponseToUser === "string" ? raw.directResponseToUser : null;
 
   // Parse educationalInsight
   const rawEduInsight = raw.educationalInsight;
@@ -95,8 +86,7 @@ export function parseAiInsight(raw: unknown): AiNutritionistInsight | null {
 
   return {
     directResponseToUser,
-    summary:
-      typeof raw.summary === "string" ? raw.summary : "No summary available.",
+    summary: typeof raw.summary === "string" ? raw.summary : "No summary available.",
     suggestions: toStringArray(raw.suggestions),
     clinicalReasoning,
     educationalInsight,
@@ -125,9 +115,7 @@ export function parseAiInsight(raw: unknown): AiNutritionistInsight | null {
       : [],
     suspectedCulprits: Array.isArray(raw.suspectedCulprits)
       ? raw.suspectedCulprits.filter(
-          (
-            item: unknown,
-          ): item is AiNutritionistInsight["suspectedCulprits"][number] =>
+          (item: unknown): item is AiNutritionistInsight["suspectedCulprits"][number] =>
             isRecord(item) &&
             typeof item.food === "string" &&
             typeof item.confidence === "string" &&

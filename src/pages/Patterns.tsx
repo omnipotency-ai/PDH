@@ -1,15 +1,9 @@
-import { getFoodEntry, pickFoodDigestionMetadata } from "@shared/foodRegistry";
+import type { FoodDigestionMetadata, FoodGroup } from "@shared/foodRegistry";
 import type { ColumnFiltersState, SortingState } from "@tanstack/react-table";
+import { useQuery } from "convex/react";
 import { format } from "date-fns";
 import { Filter, Search } from "lucide-react";
-import {
-  type MouseEvent,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   buildFoodDatabaseRow,
   columnFiltersEqual,
@@ -23,11 +17,13 @@ import {
   type SmartViewPreset,
   SmartViews,
   sortingEqual,
+  type ToleranceStatus,
 } from "@/components/patterns/database";
 import { HeroStrip } from "@/components/patterns/hero";
 import { useAnalyzedFoodStats } from "@/hooks/useAnalyzedFoodStats";
 import { useLiveClock } from "@/hooks/useLiveClock";
 import { useMappedAssessments } from "@/hooks/useMappedAssessments";
+import { api } from "../../convex/_generated/api";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -58,8 +54,7 @@ function readSavedSmartViews(): SmartViewPreset[] {
 
     return parsed
       .map((entry): SmartViewPreset | null => {
-        if (!entry || typeof entry !== "object" || Array.isArray(entry))
-          return null;
+        if (!entry || typeof entry !== "object" || Array.isArray(entry)) return null;
         const row = entry as {
           id?: unknown;
           label?: unknown;
@@ -67,8 +62,7 @@ function readSavedSmartViews(): SmartViewPreset[] {
           sorting?: unknown;
         };
         if (typeof row.id !== "string" || row.id.length === 0) return null;
-        if (typeof row.label !== "string" || row.label.trim().length === 0)
-          return null;
+        if (typeof row.label !== "string" || row.label.trim().length === 0) return null;
         return {
           id: row.id,
           label: row.label.trim(),
@@ -117,10 +111,7 @@ function readFilterState(): {
     return {
       columnFilters: normalizeColumnFilters(obj["columnFilters"]),
       sorting: normalizeSorting(obj["sorting"]),
-      activeViewId:
-        typeof obj["activeViewId"] === "string"
-          ? obj["activeViewId"]
-          : ALL_VIEW_ID,
+      activeViewId: typeof obj["activeViewId"] === "string" ? obj["activeViewId"] : ALL_VIEW_ID,
     };
   } catch {
     return {
@@ -135,24 +126,19 @@ function readFilterState(): {
 
 function DatabaseTabContent({ rows }: { rows: FoodDatabaseRow[] }) {
   const allView = useMemo(() => makeAllView(), []);
-  const [savedViews, setSavedViews] =
-    useState<SmartViewPreset[]>(readSavedSmartViews);
+  const [savedViews, setSavedViews] = useState<SmartViewPreset[]>(readSavedSmartViews);
   const initialFilterState = useMemo(() => readFilterState(), []);
 
-  const [activeViewId, setActiveViewId] = useState<string | null>(
-    initialFilterState.activeViewId,
+  const [activeViewId, setActiveViewId] = useState<string | null>(initialFilterState.activeViewId);
+  const [appliedColumnFilters, setAppliedColumnFilters] = useState<ColumnFiltersState>(
+    initialFilterState.columnFilters,
   );
-  const [appliedColumnFilters, setAppliedColumnFilters] =
-    useState<ColumnFiltersState>(initialFilterState.columnFilters);
-  const [appliedSorting, setAppliedSorting] = useState<SortingState>(
-    initialFilterState.sorting,
-  );
+  const [appliedSorting, setAppliedSorting] = useState<SortingState>(initialFilterState.sorting);
 
-  const [draftColumnFilters, setDraftColumnFilters] =
-    useState<ColumnFiltersState>(initialFilterState.columnFilters);
-  const [draftSorting, setDraftSorting] = useState<SortingState>(
-    initialFilterState.sorting,
+  const [draftColumnFilters, setDraftColumnFilters] = useState<ColumnFiltersState>(
+    initialFilterState.columnFilters,
   );
+  const [draftSorting, setDraftSorting] = useState<SortingState>(initialFilterState.sorting);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -171,9 +157,7 @@ function DatabaseTabContent({ rows }: { rows: FoodDatabaseRow[] }) {
         sortingEqual(view.sorting, appliedSorting),
     );
     const nextActiveId = matchingView?.id ?? null;
-    setActiveViewId((current) =>
-      current === nextActiveId ? current : nextActiveId,
-    );
+    setActiveViewId((current) => (current === nextActiveId ? current : nextActiveId));
   }, [appliedColumnFilters, appliedSorting, views]);
 
   useEffect(() => {
@@ -228,8 +212,7 @@ function DatabaseTabContent({ rows }: { rows: FoodDatabaseRow[] }) {
     const prevKeys = Object.keys(prev);
     const nextKeys = Object.keys(next);
     const changed =
-      prevKeys.length !== nextKeys.length ||
-      nextKeys.some((key) => prev[key] !== next[key]);
+      prevKeys.length !== nextKeys.length || nextKeys.some((key) => prev[key] !== next[key]);
     if (!changed) return prev;
     prevCountsRef.current = next;
     return next;
@@ -308,9 +291,7 @@ function DatabaseTabContent({ rows }: { rows: FoodDatabaseRow[] }) {
 
       const normalizedFilters = normalizeColumnFilters(draftColumnFilters);
       const normalizedSorting = normalizeSorting(draftSorting);
-      const existing = savedViews.find(
-        (view) => view.label.toLowerCase() === label.toLowerCase(),
-      );
+      const existing = savedViews.find((view) => view.label.toLowerCase() === label.toLowerCase());
 
       if (existing) {
         const updated: SmartViewPreset = {
@@ -319,9 +300,7 @@ function DatabaseTabContent({ rows }: { rows: FoodDatabaseRow[] }) {
           columnFilters: normalizedFilters,
           sorting: normalizedSorting,
         };
-        setSavedViews((prev) =>
-          prev.map((view) => (view.id === existing.id ? updated : view)),
-        );
+        setSavedViews((prev) => prev.map((view) => (view.id === existing.id ? updated : view)));
         setAppliedColumnFilters(normalizedFilters);
         setAppliedSorting(normalizedSorting);
         setActiveViewId(existing.id);
@@ -411,6 +390,58 @@ function DatabaseTabContent({ rows }: { rows: FoodDatabaseRow[] }) {
   );
 }
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Build a FoodDigestionMetadata object from a clinical registry row's fields.
+ * Returns undefined when no relevant digestion fields are present.
+ */
+function buildDigestionMetadata(row: {
+  osmoticEffect?: string;
+  totalResidue?: string;
+  fiberTotalApproxG?: number;
+  fiberInsolubleLevel?: string;
+  fiberSolubleLevel?: string;
+  gasProducing?: string;
+  irritantLoad?: string;
+  highFatRisk?: string;
+  lactoseRisk?: string;
+}): FoodDigestionMetadata | undefined {
+  // Conditional spreads avoid setting undefined on optional keys, satisfying
+  // exactOptionalPropertyTypes. The cast to FoodDigestionMetadata is safe
+  // because each value is narrowed to the correct literal union before spread.
+  const metadata = {
+    ...(row.osmoticEffect !== undefined && {
+      osmoticEffect: row.osmoticEffect as FoodDigestionMetadata["osmoticEffect"],
+    }),
+    ...(row.totalResidue !== undefined && {
+      totalResidue: row.totalResidue as FoodDigestionMetadata["totalResidue"],
+    }),
+    ...(row.fiberTotalApproxG !== undefined && {
+      fiberTotalApproxG: row.fiberTotalApproxG,
+    }),
+    ...(row.fiberInsolubleLevel !== undefined && {
+      fiberInsolubleLevel: row.fiberInsolubleLevel as FoodDigestionMetadata["fiberInsolubleLevel"],
+    }),
+    ...(row.fiberSolubleLevel !== undefined && {
+      fiberSolubleLevel: row.fiberSolubleLevel as FoodDigestionMetadata["fiberSolubleLevel"],
+    }),
+    ...(row.gasProducing !== undefined && {
+      gasProducing: row.gasProducing as FoodDigestionMetadata["gasProducing"],
+    }),
+    ...(row.irritantLoad !== undefined && {
+      irritantLoad: row.irritantLoad as FoodDigestionMetadata["irritantLoad"],
+    }),
+    ...(row.highFatRisk !== undefined && {
+      highFatRisk: row.highFatRisk as FoodDigestionMetadata["highFatRisk"],
+    }),
+    ...(row.lactoseRisk !== undefined && {
+      lactoseRisk: row.lactoseRisk as FoodDigestionMetadata["lactoseRisk"],
+    }),
+  };
+  return Object.keys(metadata).length > 0 ? (metadata as FoodDigestionMetadata) : undefined;
+}
+
 // ── Today Label (isolated timer to avoid full-page re-renders) ──────────────
 
 function TodayLabel() {
@@ -429,6 +460,46 @@ function TodayLabel() {
 export default function PatternsPage() {
   const analysis = useAnalyzedFoodStats();
   const mappedAssessments = useMappedAssessments();
+
+  // ── Live Convex data ──────────────────────────────────────────────────────
+  const clinicalRegistryRows = useQuery(api.clinicalRegistry.list);
+  const ingredientProfileRows = useQuery(api.ingredientProfiles.list);
+
+  // Build O(1) lookup map: canonicalName (lowercase) → registry row.
+  const registryByName = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        zone: 1 | 2 | 3;
+        group: FoodGroup;
+        notes?: string;
+        osmoticEffect?: string;
+        totalResidue?: string;
+        fiberTotalApproxG?: number;
+        fiberInsolubleLevel?: string;
+        fiberSolubleLevel?: string;
+        gasProducing?: string;
+        irritantLoad?: string;
+        highFatRisk?: string;
+        lactoseRisk?: string;
+      }
+    >();
+    for (const row of clinicalRegistryRows ?? []) {
+      map.set(row.canonicalName.toLowerCase(), row);
+    }
+    return map;
+  }, [clinicalRegistryRows]);
+
+  // Build O(1) lookup map: canonicalName (lowercase) → toleranceStatus.
+  const toleranceByName = useMemo(() => {
+    const map = new Map<string, ToleranceStatus>();
+    for (const profile of ingredientProfileRows ?? []) {
+      if (profile.toleranceStatus !== undefined) {
+        map.set(profile.canonicalName.toLowerCase(), profile.toleranceStatus as ToleranceStatus);
+      }
+    }
+    return map;
+  }, [ingredientProfileRows]);
 
   const databaseRows = useMemo(() => {
     // Build assessment lookup by canonical name (lowercase) for AI column.
@@ -454,27 +525,33 @@ export default function PatternsPage() {
     }
 
     return analysis.foodStats.map((stat) => {
-      const foodEntry = getFoodEntry(stat.key);
-      const zone = foodEntry?.zone ?? 3;
-      const foodGroup = foodEntry?.group;
-      const digestion = foodEntry
-        ? pickFoodDigestionMetadata(foodEntry)
+      const key = stat.key.toLowerCase();
+      const registryEntry = registryByName.get(key);
+
+      // Zone defaults to 3 (experimental) when not in the clinical registry.
+      const zone = registryEntry?.zone ?? 3;
+      const foodGroup = registryEntry?.group;
+
+      // Build digestion metadata from registry fields when present.
+      const digestion: FoodDigestionMetadata | undefined = registryEntry
+        ? buildDigestionMetadata(registryEntry)
         : undefined;
 
+      const registryNotes = registryEntry?.notes;
+      const toleranceStatus = toleranceByName.get(key);
+
       // Resolved trials for trial history display
-      const resolvedTrials =
-        analysis.resolvedTrialsByKey.get(stat.key) ?? undefined;
+      const resolvedTrials = analysis.resolvedTrialsByKey.get(stat.key) ?? undefined;
 
       // AI assessment for the AI column
-      const aiAssessment = assessmentMap.get(stat.key.toLowerCase());
+      const aiAssessment = assessmentMap.get(key);
 
       return buildFoodDatabaseRow(stat, {
         stage: zone,
         ...(foodGroup !== undefined && { foodGroup }),
         ...(digestion !== undefined && { digestion }),
-        ...(foodEntry?.notes !== undefined && {
-          registryNotes: foodEntry.notes,
-        }),
+        ...(registryNotes !== undefined && { registryNotes }),
+        ...(toleranceStatus !== undefined && { toleranceStatus }),
         ...(resolvedTrials !== undefined && { resolvedTrials }),
         ...(aiAssessment !== undefined && {
           aiVerdict: aiAssessment.verdict,
@@ -482,15 +559,46 @@ export default function PatternsPage() {
         }),
       });
     });
-  }, [analysis.foodStats, analysis.resolvedTrialsByKey, mappedAssessments]);
+  }, [
+    analysis.foodStats,
+    analysis.resolvedTrialsByKey,
+    mappedAssessments,
+    registryByName,
+    toleranceByName,
+  ]);
+
+  // ── Zone transit aggregation ──────────────────────────────────────────────
+  // Group rows by zone and compute average transit time per zone.
+  const zoneTransitSummary = useMemo(() => {
+    const buckets: Record<number, { totalMinutes: number; count: number }> = {
+      1: { totalMinutes: 0, count: 0 },
+      2: { totalMinutes: 0, count: 0 },
+      3: { totalMinutes: 0, count: 0 },
+    };
+
+    for (const row of databaseRows) {
+      const zone = row.stage ?? 3;
+      const bucket = buckets[zone];
+      if (bucket !== undefined && row.avgTransitMinutes !== null) {
+        bucket.totalMinutes += row.avgTransitMinutes;
+        bucket.count += 1;
+      }
+    }
+
+    return ([1, 2, 3] as const).map((zone) => {
+      const bucket = buckets[zone];
+      const avgHours =
+        bucket !== undefined && bucket.count > 0
+          ? Math.round(bucket.totalMinutes / bucket.count / 6) / 10
+          : null;
+      return { zone, avgHours, count: bucket?.count ?? 0 };
+    });
+  }, [databaseRows]);
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div
-      data-slot="patterns-page"
-      className="stagger-reveal mx-auto max-w-7xl space-y-5"
-    >
+    <div data-slot="patterns-page" className="stagger-reveal mx-auto max-w-7xl space-y-5">
       {/* Page header */}
       <header className="flex flex-wrap items-baseline gap-4">
         <h1 className="font-display text-2xl font-bold tracking-tight text-(--section-summary) md:text-3xl shrink-0">
@@ -502,14 +610,40 @@ export default function PatternsPage() {
       {/* Hero strip — always visible at top */}
       <HeroStrip />
 
+      {/* Zone transit summary strip */}
+      <div
+        data-slot="zone-transit-summary"
+        className="grid grid-cols-3 gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-3"
+      >
+        {zoneTransitSummary.map(({ zone, avgHours, count }) => (
+          <div key={zone} className="flex flex-col items-center gap-0.5 py-1">
+            <span
+              className="inline-flex h-6 w-6 items-center justify-center rounded-full font-mono text-xs font-bold"
+              style={{
+                background: "color-mix(in srgb, var(--text-muted) 15%, transparent)",
+                color: "var(--text-muted)",
+              }}
+            >
+              {zone}
+            </span>
+            <span className="font-mono text-sm font-bold text-[var(--text)]">
+              {avgHours !== null ? `${avgHours}h` : "—"}
+            </span>
+            <span className="font-mono text-[10px] text-[var(--text-faint)]">avg transit</span>
+            <span className="font-mono text-[10px] text-[var(--text-faint)]">
+              {count} food{count !== 1 ? "s" : ""}
+            </span>
+          </div>
+        ))}
+      </div>
+
       <section>
         <div className="mb-3">
           <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-[var(--text-faint)]">
             Explore
           </p>
           <p className="text-sm text-[var(--text-muted)]">
-            Browse your food database to see trial history, outcomes, and AI
-            assessments.
+            Browse your food database to see trial history, outcomes, and AI assessments.
           </p>
         </div>
 

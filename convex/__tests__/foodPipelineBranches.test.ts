@@ -126,7 +126,7 @@ describe("quantity extraction", () => {
       expect(items).toHaveLength(1);
       expect(items[0].parsedName).toBe("toast");
       expect(items[0].quantity).toBe(4);
-      expect(items[0].unit).toBeNull();
+      expect(items[0].unit).toBe("slice");
       expect(items[0].userSegment).toBe("4 toast");
     });
   });
@@ -224,7 +224,7 @@ describe("quantity extraction", () => {
       expect(items).toHaveLength(1);
       expect(items[0].parsedName).toBe("honey");
       expect(items[0].quantity).toBeNull();
-      expect(items[0].unit).toBeNull();
+      expect(items[0].unit).toBe("tbsp");
     });
   });
 });

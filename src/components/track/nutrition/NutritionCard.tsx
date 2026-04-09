@@ -11,7 +11,7 @@
  */
 
 import { FOOD_PORTION_DATA } from "@shared/foodPortionData";
-import { FOOD_REGISTRY, type FoodRegistryEntry } from "@shared/foodRegistryData";
+import type { FoodRegistryEntry } from "@shared/foodRegistryData";
 import { format, isSameDay } from "date-fns";
 import {
   Camera,
@@ -22,6 +22,7 @@ import {
   SlidersHorizontal,
   UtensilsCrossed,
   X,
+  Zap,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -29,204 +30,58 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { useNutritionData } from "@/hooks/useNutritionData";
 import { useFoodFavourites } from "@/hooks/useProfile";
 import { getErrorMessage } from "@/lib/errors";
-import {
-  filterToKnownFoods,
-  formatPortion,
-  getDefaultCalories,
-  titleCase,
-} from "@/lib/nutritionUtils";
+import { titleCase } from "@/lib/nutritionUtils";
 import { useAddSyncedLog, useRemoveSyncedLog } from "@/lib/sync";
 import { getZoneBadgeBackground } from "@/lib/zoneColors";
 import { CalorieDetailView } from "./CalorieDetailView";
+import { CircularProgressRing } from "./CircularProgressRing";
 import { FavouritesView } from "./FavouritesView";
 import { FoodFilterView } from "./FoodFilterView";
-import { FoodRow } from "./FoodRow";
 import { LogFoodModal } from "./LogFoodModal";
+import { MealSlotToggle } from "./MealSlotToggle";
 import { buildRawNutritionLogData, buildStagedNutritionLogData } from "./nutritionLogging";
+import { QuickPicksView } from "./QuickPicksView";
 import { useNutritionStore } from "./useNutritionStore";
 import { WaterModal } from "./WaterModal";
 
-// ── Constants ────────────────────────────────────────────────────────────────
+// ── Nutrition Summary Bar ────────────────────────────────────────────────────
 
-/** Subcategories that represent non-water drinks in the food registry. */
-const DRINK_SUBCATEGORIES = new Set(["hot_drink", "juice", "fizzy_drink"]);
-
-/**
- * Common drinks from the food registry, filtered to only entries that
- * also have portion data (so they can be staged). Computed once at
- * module load — the registry is static.
- */
-const COMMON_DRINKS: ReadonlyArray<FoodRegistryEntry> = FOOD_REGISTRY.filter(
-  (entry) => DRINK_SUBCATEGORIES.has(entry.subcategory) && FOOD_PORTION_DATA.has(entry.canonical),
-);
-
-/** SVG calorie ring dimensions. */
-const RING_SIZE = 72;
-const RING_STROKE = 7;
-const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2;
-const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
-
-// ── Calorie Ring ─────────────────────────────────────────────────────────────
-
-function CalorieRing({
+function NutritionSummaryBar({
+  label,
   consumed,
   goal,
-  onExpand,
+  unit,
+  color,
 }: {
+  label: string;
   consumed: number;
   goal: number;
-  onExpand: () => void;
+  unit: string;
+  color: string;
 }) {
-  const remaining = Math.max(0, goal - consumed);
-  const progress = goal > 0 ? Math.min(consumed / goal, 1) : 0;
-  const strokeDashoffset = RING_CIRCUMFERENCE * (1 - progress);
+  const safeGoal = goal > 0 ? goal : 1;
+  const progress = Math.min(consumed / safeGoal, 1);
 
   return (
-    <button
-      type="button"
-      data-slot="calorie-ring"
-      className="group flex items-center gap-4 rounded-lg transition-colors hover:bg-[var(--surface-2)]"
-      onClick={onExpand}
-      aria-label={`${remaining} calories remaining of ${goal} calorie goal. Tap to expand.`}
-    >
-      {/* Ring */}
-      <div className="relative shrink-0">
-        <svg
-          width={RING_SIZE}
-          height={RING_SIZE}
-          viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
-          className="-rotate-90"
-          aria-hidden="true"
-        >
-          {/* Background track */}
-          <circle
-            cx={RING_SIZE / 2}
-            cy={RING_SIZE / 2}
-            r={RING_RADIUS}
-            fill="none"
-            stroke="var(--surface-3)"
-            strokeWidth={RING_STROKE}
-          />
-          {/* Progress arc */}
-          <circle
-            cx={RING_SIZE / 2}
-            cy={RING_SIZE / 2}
-            r={RING_RADIUS}
-            fill="none"
-            stroke="var(--orange)"
-            strokeWidth={RING_STROKE}
-            strokeDasharray={RING_CIRCUMFERENCE}
-            strokeDashoffset={strokeDashoffset}
-            strokeLinecap="round"
-            className="transition-[stroke-dashoffset] duration-500 ease-out"
-          />
-        </svg>
-        {/* Center text inside ring */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-sm font-bold text-[var(--text)]">{remaining}</span>
-          <span className="text-[10px] text-[var(--text-faint)]">left</span>
-        </div>
+    <div className="space-y-1">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--text-faint)]">
+          {label}
+        </span>
+        <span className="text-sm font-medium tabular-nums text-[var(--text-muted)]">
+          {consumed} / {goal} {unit}
+        </span>
       </div>
-
-      {/* Stats beside ring + progress bar below text */}
-      <div className="flex flex-1 flex-col items-start gap-1.5 text-left">
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-xl font-bold text-[var(--text)]">{consumed}</span>
-          <span className="text-xs text-[var(--text-muted)]">/ {goal} kcal</span>
-        </div>
-        <CalorieProgressBar consumed={consumed} goal={goal} />
-      </div>
-    </button>
-  );
-}
-
-// ── Calorie Progress Bar ────────────────────────────────────────────────────
-
-function CalorieProgressBar({ consumed, goal }: { consumed: number; goal: number }) {
-  const progress = goal > 0 ? Math.min(consumed / goal, 1) : 0;
-  const percentage = Math.round(progress * 100);
-
-  return (
-    <div
-      data-slot="calorie-progress"
-      className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface-3)]"
-      role="progressbar"
-      aria-valuenow={percentage}
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-label={`Calorie progress: ${percentage}%`}
-    >
-      <div
-        className="h-full rounded-full transition-[width] duration-500 ease-out"
-        style={{
-          width: `${percentage}%`,
-          backgroundColor: "var(--orange)",
-        }}
-      />
-    </div>
-  );
-}
-
-// ── Water Progress Row ───────────────────────────────────────────────────────
-
-function WaterProgressRow({
-  intakeMl,
-  waterMl,
-  goalMl,
-  onOpenModal,
-}: {
-  /** Total fluid intake (water + coffee + tea + all fluids). */
-  intakeMl: number;
-  /** Water-only subset of intakeMl. */
-  waterMl: number;
-  goalMl: number;
-  onOpenModal: () => void;
-}) {
-  const progress = goalMl > 0 ? Math.min(intakeMl / goalMl, 1) : 0;
-  const waterProgress = goalMl > 0 ? Math.min(waterMl / goalMl, 1) : 0;
-  const percentage = Math.round(progress * 100);
-
-  return (
-    <button
-      type="button"
-      data-slot="water-progress"
-      className="group flex w-full items-center gap-2 rounded-lg transition-colors hover:bg-[var(--surface-2)]"
-      onClick={onOpenModal}
-      aria-label={`Fluids: ${intakeMl} ml of ${goalMl} ml (water: ${waterMl} ml). Tap to log water.`}
-    >
-      <Droplets className="h-5 w-5 shrink-0" style={{ color: "var(--water)" }} aria-hidden="true" />
-      <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-        Fluids
-      </span>
-      <span className="shrink-0 text-xs text-[var(--text-muted)]">
-        {intakeMl}/{goalMl}ml
-      </span>
-      <div
-        className="relative h-2 flex-1 overflow-hidden rounded-full bg-[var(--surface-3)]"
-        role="progressbar"
-        aria-valuenow={percentage}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-label={`Fluid progress: ${percentage}%`}
-      >
-        {/* Total fluids bar (teal) */}
+      <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-3)]">
         <div
-          className="absolute inset-y-0 left-0 rounded-full transition-[width] duration-500 ease-out"
+          className="h-full rounded-full transition-[width] duration-500 ease-out"
           style={{
             width: `${Math.round(progress * 100)}%`,
-            backgroundColor: "var(--fluid)",
-          }}
-        />
-        {/* Water subset bar (sky blue, drawn over) */}
-        <div
-          className="absolute inset-y-0 left-0 rounded-full transition-[width] duration-500 ease-out"
-          style={{
-            width: `${Math.round(waterProgress * 100)}%`,
-            backgroundColor: "var(--water)",
+            backgroundColor: color,
           }}
         />
       </div>
-    </button>
+    </div>
   );
 }
 
@@ -298,7 +153,7 @@ function NutritionSearchInput({
 
 // ── Search Result Row ────────────────────────────────────────────────────────
 
-function SearchResultRow({
+function _SearchResultRow({
   entry,
   isFavourite,
   onSelect,
@@ -463,13 +318,8 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
   }, []);
 
   // Filter recentFoods to only those with known portion data
-  const knownRecentFoods = useMemo(() => filterToKnownFoods(recentFoods), [recentFoods]);
-
   // Whether the search zero-state is active (focused, empty query)
   const showSearchZeroState = searchFocused && state.searchQuery.trim().length === 0;
-
-  // Whether to show the recent foods section within the zero-state
-  const showRecentZeroState = showSearchZeroState && knownRecentFoods.length > 0;
   const surfaceSlot =
     state.view !== "none"
       ? undefined
@@ -681,10 +531,10 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
 
   const hasSearchResults = state.searchQuery.trim().length >= 3 && searchResults.length > 0;
 
-  const hasSearchQueryButNoResults =
+  const _hasSearchQueryButNoResults =
     state.searchQuery.trim().length >= 3 && searchResults.length === 0;
 
-  const isTypingShortQuery =
+  const _isTypingShortQuery =
     state.searchQuery.trim().length > 0 && state.searchQuery.trim().length < 3;
 
   const selectedDateLabel =
@@ -694,9 +544,24 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
 
   // ── Header icons ─────────────────────────────────────────────────────────
 
+  const handleToggleSlotFilter = useCallback(
+    (slot: import("@/lib/nutritionUtils").MealSlot) => {
+      dispatch({ type: "TOGGLE_SLOT_FILTER", slot });
+    },
+    [dispatch],
+  );
+
   const headerIcons = useMemo(
     () => (
       <div className="ml-auto flex items-center gap-3">
+        <button
+          type="button"
+          className="rounded-md p-1 transition-colors hover:bg-[var(--surface-2)]"
+          aria-label="Quick picks"
+          onClick={() => dispatch({ type: "SET_VIEW", view: "quickPicks" })}
+        >
+          <Zap className="h-5 w-5" style={{ color: "var(--orange)" }} />
+        </button>
         <button
           type="button"
           className="rounded-md p-1 transition-colors hover:bg-[var(--surface-2)]"
@@ -743,12 +608,39 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
         {headerIcons}
       </SectionHeader>
 
-      {/* ── ALWAYS VISIBLE: Calorie ring ─── */}
-      <CalorieRing
-        consumed={totalCaloriesToday}
-        goal={calorieGoal}
-        onExpand={handleExpandCalories}
-      />
+      {/* ── Nutrition summary: ring + calorie/fluid bars ─── */}
+      <button
+        type="button"
+        className="flex w-full items-center gap-4 rounded-lg transition-colors hover:bg-[var(--surface-2)]"
+        onClick={handleExpandCalories}
+        aria-label={`${Math.max(0, calorieGoal - totalCaloriesToday)} calories remaining. Tap to expand.`}
+      >
+        <CircularProgressRing
+          value={totalCaloriesToday}
+          goal={calorieGoal}
+          color="var(--orange)"
+          size={80}
+          strokeWidth={8}
+          ariaLabel={`Calories: ${totalCaloriesToday} of ${calorieGoal} kilocalories`}
+          unitLabel="kcal"
+        />
+        <div className="min-w-0 flex-1 space-y-3">
+          <NutritionSummaryBar
+            label="Calories"
+            consumed={totalCaloriesToday}
+            goal={calorieGoal}
+            unit="kcal"
+            color="var(--orange)"
+          />
+          <NutritionSummaryBar
+            label="Fluids"
+            consumed={totalFluidsMl}
+            goal={fluidGoal}
+            unit="ml"
+            color="var(--fluid)"
+          />
+        </div>
+      </button>
 
       {/* ── Search + Log Food button state container ─── */}
       <div {...(surfaceSlot !== undefined && { "data-slot": surfaceSlot })} className="space-y-3">
@@ -779,65 +671,28 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
           </button>
         </div>
 
-        {/* ── Logging to: Meal label — only visible when search/filter/favorites active ─── */}
+        {/* ── Meal slot toggle + "Logging to" — visible when expanded ─── */}
         {surfaceSlot !== "collapsed-view" && (
-          <span data-slot="meal-slot-label" className="text-xs text-[var(--text-muted)]">
-            Logging to: {titleCase(state.activeMealSlot)}
-            {selectedDateLabel ? ` · ${selectedDateLabel}` : ""}
-          </span>
+          <div className="space-y-1.5">
+            <MealSlotToggle activeSlot={state.slotFilter} onToggle={handleToggleSlotFilter} />
+            <span data-slot="meal-slot-label" className="block text-xs text-[var(--text-muted)]">
+              Logging to: {titleCase(state.activeMealSlot)}
+              {selectedDateLabel ? ` · ${selectedDateLabel}` : ""}
+            </span>
+          </div>
         )}
       </div>
 
-      {/* ── ALWAYS VISIBLE: Water progress row ─── */}
-      <WaterProgressRow
-        intakeMl={totalFluidsMl}
-        waterMl={waterOnlyMl}
-        goalMl={fluidGoal}
-        onOpenModal={handleOpenWater}
-      />
-
-      {/* ── SEARCH ZERO-STATE — recent foods + common drinks when focused with empty query ─── */}
-      {showRecentZeroState && (
-        <div data-slot="recent-foods" className="space-y-1">
-          <h3 className="px-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-            Recent
-          </h3>
-          <ul className="max-h-64 space-y-0.5 overflow-y-auto" aria-label="Recent foods">
-            {knownRecentFoods.slice(0, 10).map((canonical) => (
-              <FoodRow
-                key={canonical}
-                canonicalName={canonical}
-                displayName={titleCase(canonical)}
-                portion={formatPortion(canonical)}
-                calories={getDefaultCalories(canonical)}
-                onAdd={handleAddToStaging}
-              />
-            ))}
-          </ul>
-        </div>
+      {/* ── Quick Picks — auto on search focus (zero-state) or via ⚡ icon ─── */}
+      {(showSearchZeroState || state.view === "quickPicks") && (
+        <QuickPicksView
+          slotFilter={state.slotFilter}
+          activeMealSlot={state.activeMealSlot}
+          onAddToStaging={handleAddToStaging}
+        />
       )}
 
-      {showSearchZeroState && COMMON_DRINKS.length > 0 && (
-        <div data-slot="common-drinks" className="space-y-1">
-          <h3 className="px-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-            Common Drinks
-          </h3>
-          <ul className="space-y-0.5" aria-label="Common drinks">
-            {COMMON_DRINKS.map((entry) => (
-              <FoodRow
-                key={entry.canonical}
-                canonicalName={entry.canonical}
-                displayName={titleCase(entry.canonical)}
-                portion={formatPortion(entry.canonical)}
-                calories={getDefaultCalories(entry.canonical)}
-                onAdd={handleAddToStaging}
-              />
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* ── SEARCH RESULTS — inline, shown when query has results ─── */}
+      {/* ── SEARCH RESULTS
       {isTypingShortQuery && (
         <p className="px-3 py-2 text-xs text-[var(--text-faint)]">
           Type at least 3 characters to search, or press Enter to send the text to the meal parser.

@@ -27,7 +27,7 @@ function makeState(overrides?: Partial<NutritionState>): NutritionState {
     stagingModalOpen: false,
     waterModalOpen: false,
     activeMealSlot: "snack",
-    filterMealSlot: "breakfast",
+    slotFilter: "snack",
     lastRemovedItem: null,
     ...overrides,
   };
@@ -521,16 +521,25 @@ describe("reducer SET_ACTIVE_MEAL_SLOT", () => {
   });
 });
 
-// ── Reducer: SET_FILTER_MEAL_SLOT ───────────────────────────────────────────
+// ── Reducer: TOGGLE_SLOT_FILTER ──────────────────────────────────────────
 
-describe("reducer SET_FILTER_MEAL_SLOT", () => {
-  it("changes the filter meal slot", () => {
-    const state = makeState({ filterMealSlot: "breakfast" });
+describe("reducer TOGGLE_SLOT_FILTER", () => {
+  it("selects a different slot", () => {
+    const state = makeState({ slotFilter: "breakfast" });
     const next = nutritionReducer(state, {
-      type: "SET_FILTER_MEAL_SLOT",
+      type: "TOGGLE_SLOT_FILTER",
       slot: "dinner",
     });
-    expect(next.filterMealSlot).toBe("dinner");
+    expect(next.slotFilter).toBe("dinner");
+  });
+
+  it("deselects when tapping the active slot (toggle off)", () => {
+    const state = makeState({ slotFilter: "dinner" });
+    const next = nutritionReducer(state, {
+      type: "TOGGLE_SLOT_FILTER",
+      slot: "dinner",
+    });
+    expect(next.slotFilter).toBeNull();
   });
 });
 
@@ -557,13 +566,13 @@ describe("reducer RESET_AFTER_LOG", () => {
     const state = makeState({
       waterModalOpen: true,
       activeMealSlot: "lunch",
-      filterMealSlot: "dinner",
+      slotFilter: "dinner",
     });
     const next = nutritionReducer(state, { type: "RESET_AFTER_LOG" });
 
     expect(next.waterModalOpen).toBe(true);
     expect(next.activeMealSlot).toBe("lunch");
-    expect(next.filterMealSlot).toBe("dinner");
+    expect(next.slotFilter).toBe("dinner");
   });
 });
 

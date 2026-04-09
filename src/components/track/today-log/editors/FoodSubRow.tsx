@@ -177,9 +177,27 @@ function buildPortionText(item: FoodItem, effectivePortionG: number): string | n
       const gValue = unit === "kg" ? qty * 1000 : qty;
       return `${Math.round(gValue)}g`;
     }
-    // Has quantity but non-standard unit (e.g., "slices", "cups") — show as-is
+    // Has quantity but non-standard unit (e.g., "sl", "pc", "cup") — expand to readable form
     if (unit) {
-      return `${qty}${unit}`;
+      const UNIT_DISPLAY_MAP: Record<string, { singular: string; plural: string }> = {
+        sl: { singular: "slice", plural: "slices" },
+        pc: { singular: "piece", plural: "pieces" },
+        cup: { singular: "cup", plural: "cups" },
+        tbsp: { singular: "tbsp", plural: "tbsp" },
+        tsp: { singular: "tsp", plural: "tsp" },
+        half: { singular: "half", plural: "halves" },
+        patty: { singular: "patty", plural: "patties" },
+        chili: { singular: "chili", plural: "chilies" },
+      };
+      const display = UNIT_DISPLAY_MAP[unit];
+      const label = display
+        ? qty === 1
+          ? display.singular
+          : display.plural
+        : qty === 1
+          ? unit
+          : `${unit}s`;
+      return `${qty} ${label} (${Math.round(effectivePortionG)}g)`;
     }
     // Quantity without unit — show as grams (the default assumption)
     return `${Math.round(qty)}g`;

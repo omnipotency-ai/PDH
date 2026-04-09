@@ -32,11 +32,7 @@ function randomBetween(min: number, max: number): number {
   return Math.random() * (max - min) + min;
 }
 
-function createParticles(
-  count: number,
-  originX: number,
-  originY: number,
-): Particle[] {
+function createParticles(count: number, originX: number, originY: number): Particle[] {
   return Array.from({ length: count }, (_, i) => ({
     id: i,
     emoji: CONFETTI_EMOJIS[Math.floor(Math.random() * CONFETTI_EMOJIS.length)],
@@ -78,9 +74,7 @@ export function ConfettiBurst({
 
   useEffect(() => {
     if (active) {
-      const prefersReducedMotion = window.matchMedia(
-        "(prefers-reduced-motion: reduce)",
-      ).matches;
+      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
       // Skip particle generation entirely for reduced motion
       if (prefersReducedMotion) {

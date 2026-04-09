@@ -1,0 +1,163 @@
+import { v } from "convex/values";
+import { internalMutation } from "./_generated/server";
+
+export type StructuredIngredientSeed = {
+  canonicalName: string;
+  quantity: number;
+  unit: string;
+};
+
+export type MealModifierSeed = StructuredIngredientSeed & {
+  isDefault: boolean;
+};
+
+export type SlotDefaultSeed = {
+  slot: "breakfast" | "lunch" | "dinner" | "snack";
+  overrides: StructuredIngredientSeed[];
+};
+
+export type MealTemplateSeedDefinition = {
+  canonicalName: string;
+  type: "composite";
+  ingredients: string[];
+  structuredIngredients: StructuredIngredientSeed[];
+  modifiers: MealModifierSeed[];
+  sizes: Array<{
+    name: string;
+    adjustments: StructuredIngredientSeed[];
+  }>;
+  slotDefaults: SlotDefaultSeed[];
+};
+
+export const MEAL_TEMPLATE_DEFINITIONS: ReadonlyArray<MealTemplateSeedDefinition> =
+  [
+    {
+      canonicalName: "coffee + toast",
+      type: "composite",
+      ingredients: ["coffee", "toast"],
+      structuredIngredients: [
+        { canonicalName: "coffee", quantity: 200, unit: "ml" },
+        { canonicalName: "toast", quantity: 2, unit: "slice" },
+      ],
+      modifiers: [
+        { canonicalName: "milk", quantity: 30, unit: "ml", isDefault: false },
+        { canonicalName: "sugar", quantity: 1, unit: "tsp", isDefault: false },
+        { canonicalName: "butter", quantity: 1, unit: "tsp", isDefault: false },
+        { canonicalName: "jam", quantity: 1, unit: "tsp", isDefault: false },
+      ],
+      sizes: [],
+      slotDefaults: [
+        {
+          slot: "breakfast",
+          overrides: [
+            { canonicalName: "coffee", quantity: 200, unit: "ml" },
+            { canonicalName: "toast", quantity: 2, unit: "slice" },
+          ],
+        },
+      ],
+    },
+    {
+      canonicalName: "toast + spread",
+      type: "composite",
+      ingredients: ["toast"],
+      structuredIngredients: [
+        { canonicalName: "toast", quantity: 2, unit: "slice" },
+      ],
+      modifiers: [
+        { canonicalName: "butter", quantity: 1, unit: "tsp", isDefault: false },
+        { canonicalName: "jam", quantity: 1, unit: "tsp", isDefault: false },
+        {
+          canonicalName: "peanut butter",
+          quantity: 1,
+          unit: "tsp",
+          isDefault: false,
+        },
+        {
+          canonicalName: "cream cheese",
+          quantity: 1,
+          unit: "tbsp",
+          isDefault: false,
+        },
+      ],
+      sizes: [],
+      slotDefaults: [
+        {
+          slot: "breakfast",
+          overrides: [{ canonicalName: "toast", quantity: 2, unit: "slice" }],
+        },
+      ],
+    },
+  ];
+
+export function buildMealTemplateRows(userId: string, now: number) {
+  return MEAL_TEMPLATE_DEFINITIONS.map((definition) => ({
+    userId,
+    canonicalName: definition.canonicalName,
+    type: definition.type,
+    ingredients: definition.ingredients,
+    structuredIngredients: definition.structuredIngredients,
+    modifiers: definition.modifiers,
+    sizes: definition.sizes,
+    slotDefaults: definition.slotDefaults,
+    createdAt: now,
+  }));
+}
+
+export const seedMealTemplates = internalMutation({
+  args: {
+    userId: v.string(),
+    dryRun: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    // Run with dryRun: true first to preview changes before committing.
+    // Always confirm the target userId before running on production data.
+    const dryRun = args.dryRun ?? false;
+    const now = Date.now();
+    let inserted = 0;
+    let skipped = 0;
+
+    for (const row of buildMealTemplateRows(args.userId, now)) {
+      // .take(20) is a safe upper bound — dedup logic keeps oldest, deletes rest.
+      const existingRows = await ctx.db
+        .query("foodLibrary")
+        .withIndex("by_userId_name", (q) =>
+          q.eq("userId", args.userId).eq("canonicalName", row.canonicalName),
+        )
+        .take(20);
+
+      if (existingRows.length === 0) {
+        if (!dryRun) {
+          await ctx.db.insert("foodLibrary", row);
+        } else {
+          console.log(`[dryRun] Would insert ${row.canonicalName}`);
+        }
+        inserted += 1;
+        continue;
+      }
+
+      const [_keeper, ...duplicates] = existingRows
+        .slice()
+        .sort(
+          (a, b) =>
+            a.createdAt - b.createdAt || a._creationTime - b._creationTime,
+        );
+
+      for (const doc of duplicates) {
+        if (!dryRun) {
+          await ctx.db.delete(doc._id);
+        } else {
+          console.log(`[dryRun] Would delete ${doc._id}`);
+        }
+      }
+
+      skipped += 1;
+    }
+
+    return {
+      inserted,
+      skipped,
+      total: inserted + skipped,
+      dryRun,
+    };
+  },
+});

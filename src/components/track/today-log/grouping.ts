@@ -1,5 +1,5 @@
-import { type HabitConfig, isCheckboxHabit } from "@/lib/habitTemplates";
 import { isFoodPipelineType } from "@shared/logTypeUtils";
+import { type HabitConfig, isCheckboxHabit } from "@/lib/habitTemplates";
 import type { SyncedLog } from "@/lib/sync";
 import type { FluidLog, WeightLog } from "@/types/domain";
 import type { DisplayItem, FoodPipelineLog } from "./types";
@@ -29,7 +29,10 @@ function sumFluidMl(entries: FluidLog[]): number {
   return total;
 }
 
-function resolveHabitGroupKey(habits: HabitConfig[], log: Extract<SyncedLog, { type: "habit" }>): string {
+function resolveHabitGroupKey(
+  habits: HabitConfig[],
+  log: Extract<SyncedLog, { type: "habit" }>,
+): string {
   const habitId = String(log.data?.habitId ?? "").trim();
   const name = String(log.data?.name ?? "").trim();
   const matchedHabit =
