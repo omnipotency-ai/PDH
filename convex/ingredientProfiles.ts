@@ -3,6 +3,7 @@ import { resolveCanonicalFoodName } from "../shared/foodCanonicalName";
 import { getCanonicalFoodProjection } from "../shared/foodProjection";
 import { mutation, query } from "./_generated/server";
 import { requireAuth } from "./lib/auth";
+import { customPortionValidator } from "./validators";
 
 export function normalizeIngredientProfileTag(value: string): string {
   return value.toLowerCase().trim().replace(/\s+/g, " ");
@@ -97,6 +98,20 @@ export const upsert = mutation({
     externalId: v.optional(v.union(v.string(), v.null())),
     ingredientsText: v.optional(v.union(v.string(), v.null())),
     nutritionPer100g: v.optional(nutritionPatchValidator),
+    customPortions: v.optional(v.array(customPortionValidator)),
+    productName: v.optional(v.union(v.string(), v.null())),
+    barcode: v.optional(v.union(v.string(), v.null())),
+    registryId: v.optional(v.union(v.id("clinicalRegistry"), v.null())),
+    toleranceStatus: v.optional(
+      v.union(
+        v.literal("building"),
+        v.literal("like"),
+        v.literal("dislike"),
+        v.literal("watch"),
+        v.literal("avoid"),
+        v.null(),
+      ),
+    ),
     now: v.number(),
   },
   handler: async (ctx, args) => {
@@ -161,6 +176,22 @@ export const upsert = mutation({
       ...(args.nutritionPer100g !== undefined && {
         nutritionPer100g: nextNutrition,
       }),
+      ...(args.customPortions !== undefined && {
+        customPortions: args.customPortions,
+      }),
+      ...(args.productName !== undefined && {
+        productName: args.productName === null ? undefined : args.productName,
+      }),
+      ...(args.barcode !== undefined && {
+        barcode: args.barcode === null ? undefined : args.barcode,
+      }),
+      ...(args.registryId !== undefined && {
+        registryId: args.registryId === null ? undefined : args.registryId,
+      }),
+      ...(args.toleranceStatus !== undefined && {
+        toleranceStatus:
+          args.toleranceStatus === null ? undefined : args.toleranceStatus,
+      }),
       updatedAt: args.now,
     };
 
@@ -200,8 +231,82 @@ export const upsert = mutation({
               ...args.nutritionPer100g,
             }
           : blankNutrition(),
+      ...(args.customPortions !== undefined && {
+        customPortions: args.customPortions,
+      }),
+      ...(args.productName !== undefined &&
+        args.productName !== null && {
+          productName: args.productName,
+        }),
+      ...(args.barcode !== undefined &&
+        args.barcode !== null && {
+          barcode: args.barcode,
+        }),
+      ...(args.registryId !== undefined &&
+        args.registryId !== null && {
+          registryId: args.registryId,
+        }),
+      ...(args.toleranceStatus !== undefined &&
+        args.toleranceStatus !== null && {
+          toleranceStatus: args.toleranceStatus,
+        }),
       createdAt: args.now,
       updatedAt: args.now,
+    });
+  },
+});
+
+export const remove = mutation({
+  args: { id: v.id("ingredientProfiles") },
+  handler: async (ctx, args) => {
+    const { userId } = await requireAuth(ctx);
+    const row = await ctx.db.get(args.id);
+    if (!row || row.userId !== userId) throw new Error("Not found");
+    await ctx.db.delete(args.id);
+  },
+});
+
+export const setToleranceStatus = mutation({
+  args: {
+    id: v.id("ingredientProfiles"),
+    status: v.union(
+      v.literal("building"),
+      v.literal("like"),
+      v.literal("dislike"),
+      v.literal("watch"),
+      v.literal("avoid"),
+      v.null(),
+    ),
+  },
+  handler: async (ctx, args) => {
+    const { userId } = await requireAuth(ctx);
+    const row = await ctx.db.get(args.id);
+    if (!row || row.userId !== userId) throw new Error("Not found");
+    await ctx.db.patch(args.id, {
+      ...(args.status !== null
+        ? { toleranceStatus: args.status }
+        : { toleranceStatus: undefined }),
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+export const updatePortions = mutation({
+  args: {
+    id: v.id("ingredientProfiles"),
+    customPortions: v.array(customPortionValidator),
+  },
+  handler: async (ctx, args) => {
+    const { userId } = await requireAuth(ctx);
+    const row = await ctx.db.get(args.id);
+    if (!row || row.userId !== userId) throw new Error("Not found");
+    // Validate: all weights must be positive
+    for (const p of args.customPortions) {
+      if (p.weightG <= 0) throw new Error("Portion weight must be positive");
+    }
+    await ctx.db.patch(args.id, {
+      customPortions: args.customPortions,
+      updatedAt: Date.now(),
     });
   },
 });

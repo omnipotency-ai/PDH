@@ -191,6 +191,15 @@ export default defineSchema({
     productName: v.optional(v.string()),
     barcode: v.optional(v.string()),
     registryId: v.optional(v.id("clinicalRegistry")),
+    toleranceStatus: v.optional(
+      v.union(
+        v.literal("building"),
+        v.literal("like"),
+        v.literal("dislike"),
+        v.literal("watch"),
+        v.literal("avoid"),
+      ),
+    ),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
