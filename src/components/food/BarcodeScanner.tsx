@@ -127,7 +127,8 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
 
   const handleManualSubmit = useCallback(() => {
     const cleaned = manualBarcode.trim().replace(/\D/g, "");
-    if (cleaned.length >= 8) {
+    const validLengths = [8, 12, 13, 14];
+    if (validLengths.includes(cleaned.length) && !/^(.)\1+$/.test(cleaned)) {
       onScan(cleaned);
     }
   }, [manualBarcode, onScan]);
@@ -183,7 +184,9 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
       </div>
 
       {error !== null && (
-        <p className="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-400">{error}</p>
+        <p className="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-400">
+          {error}
+        </p>
       )}
 
       {/* Camera view */}
@@ -228,7 +231,10 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
           <button
             type="button"
             onClick={handleManualSubmit}
-            disabled={manualBarcode.trim().replace(/\D/g, "").length < 8}
+            disabled={(() => {
+              const c = manualBarcode.trim().replace(/\D/g, "");
+              return ![8, 12, 13, 14].includes(c.length) || /^(.)\1+$/.test(c);
+            })()}
             className={cn(
               "rounded-lg bg-[var(--surface-2)] px-4 py-2 text-sm font-semibold",
               "text-[var(--text-muted)] transition-colors",
