@@ -16,6 +16,92 @@ function readNutrient(
   return null;
 }
 
+export const lookupBarcode = action({
+  args: {
+    barcode: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await requireAuth(ctx);
+
+    const barcode = args.barcode.trim().replace(/\D/g, "");
+    if (barcode.length < 8 || barcode.length > 14) {
+      return null;
+    }
+
+    const url = `https://world.openfoodfacts.org/api/v2/product/${barcode}.json?fields=code,product_name,brands,ingredients_text,categories_tags,nutriments`;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10_000);
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "User-Agent": "PDH/1.0 (barcode lookup)",
+        },
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = (await response.json()) as {
+      status?: number;
+      product?: Record<string, unknown>;
+    };
+
+    if (payload.status !== 1 || !payload.product) {
+      return null;
+    }
+
+    const row = payload.product;
+    const displayName = asTrimmedString(row.product_name, {
+      normalizeWhitespace: true,
+    });
+    if (displayName === undefined) return null;
+
+    const nutriments =
+      row.nutriments !== null && typeof row.nutriments === "object"
+        ? (row.nutriments as Record<string, unknown>)
+        : {};
+
+    return {
+      externalId: barcode,
+      displayName,
+      brand: asTrimmedString(row.brands, { normalizeWhitespace: true }) ?? null,
+      ingredientsText:
+        asTrimmedString(row.ingredients_text, {
+          normalizeWhitespace: true,
+        }) ?? null,
+      categories: asStringArray(row.categories_tags, {
+        normalizeWhitespace: true,
+        dedupe: true,
+        maxItems: 20,
+      }),
+      nutritionPer100g: {
+        kcal: readNutrient(nutriments, ["energy-kcal_100g", "energy-kcal"]),
+        fatG: readNutrient(nutriments, ["fat_100g", "fat"]),
+        saturatedFatG: readNutrient(nutriments, [
+          "saturated-fat_100g",
+          "saturated-fat",
+        ]),
+        carbsG: readNutrient(nutriments, [
+          "carbohydrates_100g",
+          "carbohydrates",
+        ]),
+        sugarsG: readNutrient(nutriments, ["sugars_100g", "sugars"]),
+        fiberG: readNutrient(nutriments, ["fiber_100g", "fiber"]),
+        proteinG: readNutrient(nutriments, ["proteins_100g", "proteins"]),
+        saltG: readNutrient(nutriments, ["salt_100g", "salt"]),
+      },
+    };
+  },
+});
+
 export const searchOpenFoodFacts = action({
   args: {
     query: v.string(),
@@ -89,7 +175,8 @@ export const searchOpenFoodFacts = action({
             asTrimmedString(row.code, { normalizeWhitespace: true }) ??
             displayName.toLowerCase(),
           displayName,
-          brand: asTrimmedString(row.brands, { normalizeWhitespace: true }) ?? null,
+          brand:
+            asTrimmedString(row.brands, { normalizeWhitespace: true }) ?? null,
           ingredientsText:
             asTrimmedString(row.ingredients_text, {
               normalizeWhitespace: true,

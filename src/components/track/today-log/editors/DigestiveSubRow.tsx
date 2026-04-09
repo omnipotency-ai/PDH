@@ -217,6 +217,7 @@ export function DigestiveSubRow({ entry }: { entry: DigestiveLog }) {
         <div className="flex flex-shrink-0 items-center gap-2">
           {entry.data?.accident && (
             <span
+              role="img"
               aria-label="Accident reported"
               title="Accident"
               className="rounded-full bg-red-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-red-400"

@@ -11,11 +11,12 @@
 
 import { Dialog } from "@base-ui/react/dialog";
 import { useAction, useMutation } from "convex/react";
-import { Download, Loader2, Search, X } from "lucide-react";
+import { Camera, Download, Loader2, Search, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
 import { api } from "../../../convex/_generated/api";
+import { BarcodeScanner } from "./BarcodeScanner";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -92,13 +93,9 @@ function ResultRow({
     >
       {/* Product info */}
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-[var(--text)]">
-          {result.displayName}
-        </p>
+        <p className="truncate text-sm font-semibold text-[var(--text)]">{result.displayName}</p>
         {result.brand !== null && (
-          <p className="truncate text-xs text-[var(--text-muted)]">
-            {result.brand}
-          </p>
+          <p className="truncate text-xs text-[var(--text-muted)]">{result.brand}</p>
         )}
 
         {/* Nutrition chips — per 100g */}
@@ -108,10 +105,7 @@ function ResultRow({
           <NutritionChip label="carb" value={formatNutrient(n.carbsG, "g")} />
           <NutritionChip label="fat" value={formatNutrient(n.fatG, "g")} />
           {n.fiberG !== null && (
-            <NutritionChip
-              label="fibre"
-              value={formatNutrient(n.fiberG, "g")}
-            />
+            <NutritionChip label="fibre" value={formatNutrient(n.fiberG, "g")} />
           )}
         </div>
       </div>
@@ -121,11 +115,7 @@ function ResultRow({
         type="button"
         onClick={() => onImport(result)}
         disabled={importing || imported}
-        aria-label={
-          imported
-            ? `${result.displayName} imported`
-            : `Import ${result.displayName}`
-        }
+        aria-label={imported ? `${result.displayName} imported` : `Import ${result.displayName}`}
         className={cn(
           "inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors",
           imported
@@ -154,17 +144,18 @@ export interface OFFImportDialogProps {
 
 export function OFFImportDialog({ open, onOpenChange }: OFFImportDialogProps) {
   const searchOFF = useAction(api.ingredientNutritionApi.searchOpenFoodFacts);
+  const lookupBarcode = useAction(api.ingredientNutritionApi.lookupBarcode);
   const upsert = useMutation(api.ingredientProfiles.upsert);
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<OFFResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [showScanner, setShowScanner] = useState(false);
+  const [scanLooking, setScanLooking] = useState(false);
 
   // Track per-result import state: externalId → "importing" | "done"
-  const [importState, setImportState] = useState<
-    Record<string, "importing" | "done">
-  >({});
+  const [importState, setImportState] = useState<Record<string, "importing" | "done">>({});
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -187,6 +178,8 @@ export function OFFImportDialog({ open, onOpenChange }: OFFImportDialogProps) {
         setResults([]);
         setSearchError(null);
         setImportState({});
+        setShowScanner(false);
+        setScanLooking(false);
         if (debounceRef.current !== null) {
           clearTimeout(debounceRef.current);
         }
@@ -268,12 +261,33 @@ export function OFFImportDialog({ open, onOpenChange }: OFFImportDialogProps) {
     [upsert],
   );
 
+  const handleBarcodeScan = useCallback(
+    async (barcode: string) => {
+      setShowScanner(false);
+      setScanLooking(true);
+      setSearchError(null);
+
+      try {
+        const result = await lookupBarcode({ barcode });
+        if (result) {
+          setResults([result as OFFResult]);
+          setQuery(result.displayName);
+        } else {
+          setSearchError(`No product found for barcode ${barcode}. Try searching by name.`);
+          setResults([]);
+        }
+      } catch {
+        setSearchError("Barcode lookup failed. Check your connection.");
+      } finally {
+        setScanLooking(false);
+      }
+    },
+    [lookupBarcode],
+  );
+
   const hasResults = results.length > 0;
   const showEmpty =
-    !searching &&
-    query.trim().length >= 2 &&
-    !hasResults &&
-    searchError === null;
+    !searching && !scanLooking && query.trim().length >= 2 && !hasResults && searchError === null;
 
   return (
     <Dialog.Root open={open} onOpenChange={handleOpenChange}>
@@ -319,51 +333,71 @@ export function OFFImportDialog({ open, onOpenChange }: OFFImportDialogProps) {
             </Dialog.Close>
           </div>
 
-          {/* ── Search input ────────────────────────────────────────── */}
+          {/* ── Search input + scan button ─────────────────────────── */}
           <div className="border-b border-[var(--border)] px-4 py-3">
-            <div className="relative">
-              {searching ? (
-                <Loader2
-                  className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 animate-spin text-[var(--text-faint)]"
-                  aria-hidden="true"
-                />
-              ) : (
-                <Search
-                  className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[var(--text-faint)]"
-                  aria-hidden="true"
-                />
-              )}
-              <input
-                ref={inputRef}
-                type="text"
-                value={query}
-                onChange={handleQueryChange}
-                placeholder="e.g. rolled oats, Greek yogurt…"
-                aria-label="Search OpenFoodFacts"
-                className={cn(
-                  "w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)]",
-                  "py-2 pr-3 pl-9 text-sm text-[var(--text)]",
-                  "placeholder:text-[var(--text-faint)]",
-                  "focus:border-[var(--border-strong)] focus:outline-none",
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                {searching || scanLooking ? (
+                  <Loader2
+                    className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 animate-spin text-[var(--text-faint)]"
+                    aria-hidden="true"
+                  />
+                ) : (
+                  <Search
+                    className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[var(--text-faint)]"
+                    aria-hidden="true"
+                  />
                 )}
-              />
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={query}
+                  onChange={handleQueryChange}
+                  placeholder="e.g. rolled oats, Greek yogurt…"
+                  aria-label="Search OpenFoodFacts"
+                  className={cn(
+                    "w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)]",
+                    "py-2 pr-3 pl-9 text-sm text-[var(--text)]",
+                    "placeholder:text-[var(--text-faint)]",
+                    "focus:border-[var(--border-strong)] focus:outline-none",
+                  )}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowScanner((s) => !s)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-colors",
+                  showScanner
+                    ? "bg-teal-500/20 text-teal-400"
+                    : "bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--text)]",
+                )}
+                aria-label={showScanner ? "Close barcode scanner" : "Scan barcode"}
+              >
+                <Camera className="size-4" />
+                Scan
+              </button>
             </div>
+
+            {/* Barcode scanner panel */}
+            {showScanner && (
+              <div className="mt-3">
+                <BarcodeScanner
+                  onScan={(barcode) => void handleBarcodeScan(barcode)}
+                  onClose={() => setShowScanner(false)}
+                />
+              </div>
+            )}
+
             <p className="mt-1.5 text-[10px] text-[var(--text-faint)]">
-              Type at least 2 characters to search. Nutrition values are per
-              100g.
+              Search by name or scan a barcode. Nutrition values are per 100g.
             </p>
           </div>
 
           {/* ── Results ─────────────────────────────────────────────── */}
-          <div
-            data-slot="off-import-results"
-            className="flex-1 overflow-y-auto px-4 py-3"
-          >
+          <div data-slot="off-import-results" className="flex-1 overflow-y-auto px-4 py-3">
             {searchError !== null && (
-              <p
-                role="alert"
-                className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400"
-              >
+              <p role="alert" className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400">
                 {searchError}
               </p>
             )}
@@ -381,11 +415,7 @@ export function OFFImportDialog({ open, onOpenChange }: OFFImportDialogProps) {
             )}
 
             {hasResults && (
-              <ul
-                className="flex flex-col gap-2"
-                role="list"
-                aria-label="Search results"
-              >
+              <ul className="flex flex-col gap-2" aria-label="Search results">
                 {results.map((result) => (
                   <li key={result.externalId}>
                     <ResultRow
