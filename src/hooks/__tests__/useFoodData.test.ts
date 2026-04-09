@@ -47,13 +47,14 @@ describe("useFoodSearch", () => {
     expect(toastResults).toHaveLength(1);
   });
 
-  it("returns empty results and no loading for queries shorter than 2 chars", () => {
+  it("returns empty results and isLoading=false for queries shorter than 2 chars", () => {
     mockUseQuery.mockReturnValue(undefined);
     const { results, isLoading } = useFoodSearch("t");
     expect(results).toEqual([]);
-    // useQuery returns undefined when skipped; hook treats that as loading
-    // but results are empty because static search is also skipped for short queries
-    expect(isLoading).toBe(true);
+    // Query is skipped (not dispatched) for short inputs, so nothing is in-flight.
+    // isLoading must be false even though useQuery returns undefined in both
+    // "skipped" and "loading" states — we distinguish them via isQueryActive.
+    expect(isLoading).toBe(false);
   });
 });
 

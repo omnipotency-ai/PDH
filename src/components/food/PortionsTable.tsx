@@ -1,5 +1,5 @@
 import { FOOD_PORTION_DATA } from "@shared/foodPortionData";
-import type { SortDirection, SortingState } from "@tanstack/react-table";
+import type { SortingState } from "@tanstack/react-table";
 import {
   flexRender,
   getCoreRowModel,
@@ -9,15 +9,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { useMutation, useQuery } from "convex/react";
-import {
-  ArrowDown,
-  ArrowUp,
-  ArrowUpDown,
-  ChevronLeft,
-  ChevronRight,
-  Ruler,
-  Search,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, Ruler, Search } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { api } from "../../../convex/_generated/api";
@@ -27,48 +19,11 @@ import { EditableNumberCell } from "./EditableNumberCell";
 import type { PortionRow } from "./portionsColumns";
 import { buildPortionsColumns } from "./portionsColumns";
 import { AddRowButton, RowDeleteButton } from "./TableActions";
-
-// ── Sort indicator ──────────────────────────────────────────────────────────
-
-function SortIndicator({ direction }: { direction: false | SortDirection }) {
-  if (direction === "asc") {
-    return <ArrowUp size={12} className="shrink-0" />;
-  }
-  if (direction === "desc") {
-    return <ArrowDown size={12} className="shrink-0" />;
-  }
-  return <ArrowUpDown size={12} className="shrink-0 opacity-30" />;
-}
+import { SkeletonRows, SortIndicator } from "./tableUtils";
 
 // ── Page size options ───────────────────────────────────────────────────────
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
-
-// ── Skeleton loading rows ───────────────────────────────────────────────────
-
-function SkeletonRows({ columnCount }: { columnCount: number }) {
-  const widths = ["w-32", "w-20", "w-16", "w-12"];
-  return (
-    <>
-      {Array.from({ length: 5 }).map((_, rowIdx) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: stable skeleton indices
-        <tr key={rowIdx} className="border-b border-[var(--border)]">
-          {Array.from({ length: columnCount }).map((_, colIdx) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: stable skeleton indices
-            <td key={colIdx} className="px-3 py-2.5">
-              <div
-                className={cn(
-                  "h-4 animate-pulse rounded bg-[var(--surface-2)]",
-                  widths[(rowIdx + colIdx) % widths.length],
-                )}
-              />
-            </td>
-          ))}
-        </tr>
-      ))}
-    </>
-  );
-}
 
 // ── System default badge ────────────────────────────────────────────────────
 

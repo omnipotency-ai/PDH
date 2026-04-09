@@ -50,6 +50,8 @@ foodEmbeddings (UNCHANGED)        — remains a pure vector search index.
 
 **W0-T01 creates clinicalRegistry**: canonicalName (unique), zone, subzone, category, subcategory, group, line, lineOrder, macros, notes, defaultPortionG, naturalUnit, unitWeightG, osmoticEffect, totalResidue, fiberTotalApproxG, fiberInsolubleLevel, fiberSolubleLevel, gasProducing, dryTexture, irritantLoad, highFatRisk, lactoseRisk. Index: `by_canonicalName`. This is the permanent medical truth — never wiped during AI operations.
 
+> **Recovery:** If `clinicalRegistry` is accidentally deleted, it can be fully rebuilt by re-running the `seedClinicalData` internal mutation. The seed data is stored as static arrays in `convex/seedClinicalData.ts` and is idempotent (checks by `canonicalName` before inserting — safe to re-run against a partially populated table).
+
 **W0-T02 adds to ingredientProfiles**: customPortions (array of {label: string, weightG: number}), productName (string), barcode (string), registryId (id of clinicalRegistry).
 
 **W0-T03 adds to logs**: productId: `v.optional(v.id("ingredientProfiles"))`. When a food is logged from staging, productId links back to the exact brand/product used. Historical calorie lookups use this instead of guessing from canonicalName alone.
@@ -98,7 +100,15 @@ This avoids throwaway work — the math is written to its final shape from day o
 
 **W2-T01**: Internal mutation reads static registry (4000+ entries), inserts into `clinicalRegistry`. For each entry writes: zone, subzone, category, subcategory, group, line, lineOrder, macros, notes, defaultPortionG, naturalUnit, unitWeightG, and all FoodDigestionMetadata. Idempotent (checks by canonicalName). `foodEmbeddings` is NOT touched — it remains a pure search index.
 
+> **Idempotency:** Skips rows where `canonicalName` already exists — safe to re-run. **Rollback:** Query `clinicalRegistry` and delete all rows (no userId filter needed — this table is global). **Confirmation:** Always verify you are targeting the correct Convex deployment before running.
+
 **W2-T02**: The ~30 foods list (toast, pasta, rice, wraps, lean meat, fish, eggs, cheese, banana, pumpkin, potato, butter, jam, PB, cream cheese, olive oil, salt, pepper, herbs, coffee, milk, sugar, tea, juice, carbonated drink, etc.) with full macros sourced from USDA/McCance/OFF. Includes tsp-to-gram densities for spreads (butter 4.7g/tsp, jam 7g/tsp, etc.).
+
+> **Idempotency:** W2-T02 updates static shared files — no Convex rows inserted directly; idempotency is a file-level concern (overwrite is safe). **Confirmation:** Always confirm target userId/environment before running any associated Convex seed step.
+
+**W2-T03**: Seed Coffee + Toast meal templates into `foodLibrary` via `convex/seedMealTemplates.ts`. Each template is a composite meal (e.g. "Morning Coffee" = coffee + milk + sugar) stored as a `foodLibrary` entry with `items[]` referencing canonical names.
+
+> **Idempotency:** Needs clarification — the script should check for an existing `foodLibrary` entry by template name before inserting to avoid duplicates. If not yet implemented this way, add the check. **Rollback:** Query `foodLibrary` and delete rows inserted by this seed (filter by `createdAt` timestamp or add a `seededBy: "seedMealTemplates"` marker field). **Confirmation:** Always confirm target userId and Convex deployment before running.
 
 ---
 

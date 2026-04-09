@@ -16,8 +16,8 @@ import { mealSlotValidator } from "./validators";
 
 // ── Types for pure toggle logic ──────────────────────────────────────────────
 
-/** Meal slot literal union — mirrors the mealSlotValidator. */
-export type MealSlot = "breakfast" | "lunch" | "dinner" | "snack";
+/** Meal slot literal union — inferred from mealSlotValidator to keep in sync. */
+export type MealSlot = typeof mealSlotValidator.type;
 
 /** The shape of the foodFavouriteSlotTags record stored on profiles. */
 type SlotTagRecord = Record<string, MealSlot[]>;

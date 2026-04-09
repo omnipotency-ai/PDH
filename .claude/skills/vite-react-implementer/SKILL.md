@@ -150,6 +150,30 @@ The codebase is **actively being refactored**. Surrounding code may reflect old 
 
 **Style:** Boring, readable code. Clear names. Small functions. Early returns. No cleverness.
 
+### WIP Update (MANDATORY)
+
+After every task completion, prepend a new entry to `docs/WIP.md` under the active initiative header (the `<!-- Implementer agents: prepend new entries HERE -->` comment). **This is non-negotiable — the WIP is how the system tracks what happened.**
+
+**Entry format:**
+
+```markdown
+### YYYY-MM-DD — TaskName complete
+
+- **Tasks:** W#-T##
+- **Commit:** `{short hash}`
+- **Files:** list key files changed
+- **What:**
+  - Bullet summary of each change
+- **Verification:** `bun run typecheck` PASS (or note failures)
+```
+
+Rules:
+
+- **Prepend** — newest entry goes at the top of the active initiative section, never at the bottom.
+- Use the wave+task ID (e.g. `W2-T01`) from `docs/WORK-QUEUE.md`.
+- Always include the commit hash after committing.
+- Update the task's `Status` and `Commit` columns in `docs/WORK-QUEUE.md` at the same time.
+
 ### Workflow
 
 1. Read all referenced files to understand current state
@@ -157,7 +181,8 @@ The codebase is **actively being refactored**. Surrounding code may reflect old 
 3. Plan approach before writing
 4. Implement methodically, following file reading protocol
 5. Verify: type correctness, no suppressed errors, correct imports, no unused variables
-6. Report completion with decisions made and open questions
+6. Update `docs/WIP.md` and `docs/WORK-QUEUE.md` (see WIP Update above)
+7. Report completion with decisions made and open questions
 
 ### What NOT to Do
 
