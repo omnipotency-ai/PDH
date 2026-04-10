@@ -10,6 +10,9 @@ import {
 import ModeToggle from "@/components/mode-toggle";
 import { cn } from "@/lib/utils";
 
+const SETTINGS_ACTIVE = "text-violet-400";
+const SETTINGS_INACTIVE = "text-[var(--text-faint)]";
+
 const NAV_ITEMS = [
   {
     to: "/",
@@ -43,6 +46,7 @@ const NAV_ITEMS = [
 
 export function GlobalHeader() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const settingsActive = pathname.startsWith("/settings");
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/6 bg-[rgba(255,255,255,0.7)] backdrop-blur-xl backdrop-saturate-150 dark:bg-[rgba(12,20,32,0.7)]">
@@ -52,7 +56,7 @@ export function GlobalHeader() {
           <Link
             to="/"
             className="flex shrink-0 items-center gap-2"
-            aria-label="PDH home"
+            aria-label="Peter's Digestive Health home"
           >
             <img
               src="/icons/icon-72x72.png"
@@ -61,8 +65,8 @@ export function GlobalHeader() {
               height={32}
               className="h-8 w-8 drop-shadow-[0_0_6px_rgba(45,212,191,0.4)]"
             />
-            <span className="hidden bg-linear-to-r from-(--teal) to-(--section-food) bg-clip-text font-display text-base font-extrabold tracking-tight text-transparent sm:block">
-              PDH
+            <span className="hidden font-display text-sm font-extrabold tracking-tight text-teal-400 sm:block">
+              Peter's Digestive Health
             </span>
           </Link>
 
@@ -86,14 +90,14 @@ export function GlobalHeader() {
                     aria-label={item.label}
                     aria-current={isActive ? "page" : undefined}
                     className={cn(
-                      "relative flex flex-col items-center gap-0.5 rounded-lg px-2.5 py-1.5 text-[10px] font-semibold transition-colors sm:flex-row sm:gap-1.5 sm:text-xs",
+                      "relative flex flex-col items-center gap-0.5 rounded-lg px-3 py-1.5 text-[10px] font-semibold transition-colors",
                       isActive
                         ? item.activeTone
                         : "text-(--text-muted) hover:bg-white/6 hover:text-(--text)",
                     )}
                   >
                     <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                    <span className="hidden sm:inline">{item.label}</span>
+                    <span>{item.label}</span>
                     {/* Active underline */}
                     {isActive && (
                       <span
@@ -114,8 +118,12 @@ export function GlobalHeader() {
           <div className="flex shrink-0 items-center gap-2">
             <Link
               to="/settings"
-              className="rounded-lg p-1.5 text-(--text-muted) transition-colors hover:bg-white/6 hover:text-(--text)"
               aria-label="Settings"
+              aria-current={settingsActive ? "page" : undefined}
+              className={cn(
+                "rounded-lg p-1.5 transition-colors hover:bg-white/6",
+                settingsActive ? SETTINGS_ACTIVE : SETTINGS_INACTIVE,
+              )}
             >
               <Settings className="h-4 w-4" aria-hidden="true" />
             </Link>

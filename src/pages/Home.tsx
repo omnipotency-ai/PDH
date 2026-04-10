@@ -18,7 +18,6 @@ import {
 } from "react";
 import { toast } from "sonner";
 
-import { DatePillHeader } from "@/components/layout/DatePillHeader";
 import { ConversationPanel } from "@/components/track/dr-poo/ConversationPanel";
 import { NutritionCard } from "@/components/track/nutrition/NutritionCard";
 import { NutritionCardErrorBoundary } from "@/components/track/nutrition/NutritionCardErrorBoundary";
@@ -429,8 +428,6 @@ export default function HomePage() {
 
   return (
     <div className="space-y-5">
-      <DatePillHeader />
-
       {/* ── Greeting row ── */}
       <div className="flex items-center justify-between gap-3">
         <div>
@@ -454,36 +451,42 @@ export default function HomePage() {
       </div>
 
       {/* ── Date strip ── */}
-      <div className="flex items-center justify-center gap-3">
+      <div className="flex items-center justify-center gap-6">
         <button
           type="button"
           onClick={handlePreviousDay}
           aria-label="Go to previous day"
-          className="text-xs font-medium text-(--text-muted) transition-colors hover:text-(--text)"
+          className="font-sketch text-base font-semibold uppercase tracking-wide text-(--text-faint) transition-colors hover:text-(--text-muted)"
         >
           {getPrevDayLabel(selectedDate, todayDate)}
         </button>
-        <span
-          className="rounded-full border px-3 py-1 text-xs font-semibold"
-          style={{
-            backgroundColor:
-              "color-mix(in srgb, var(--orange) 10%, var(--color-bg-elevated) 90%)",
-            borderColor: "color-mix(in srgb, var(--orange) 28%, transparent)",
-            color:
-              "color-mix(in srgb, var(--orange) 82%, var(--color-text-primary) 18%)",
-          }}
-        >
-          {getDayLabel(selectedDate, todayDate)}
-        </span>
-        {canMoveForward && (
+
+        <div className="relative flex flex-col items-center gap-1">
+          <span
+            className="font-sketch text-lg font-bold uppercase tracking-wide text-teal-400"
+            aria-current="date"
+          >
+            {getDayLabel(selectedDate, todayDate)}
+          </span>
+          <span
+            className="h-0.5 w-full rounded-full bg-teal-500/70"
+            aria-hidden="true"
+          />
+        </div>
+
+        {canMoveForward ? (
           <button
             type="button"
             onClick={dayOffset === -1 ? handleJumpToToday : handleNextDay}
             aria-label="Go to next day"
-            className="text-xs font-medium text-(--text-muted) transition-colors hover:text-(--text)"
+            className="font-sketch text-base font-semibold uppercase tracking-wide text-(--text-faint) transition-colors hover:text-(--text-muted)"
           >
             {getNextDayLabel(selectedDate, todayDate)}
           </button>
+        ) : (
+          <span className="invisible font-sketch text-base font-semibold uppercase">
+            Yesterday
+          </span>
         )}
       </div>
 

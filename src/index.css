@@ -9,6 +9,7 @@
   --font-display: "Bricolage Grotesque", Georgia, serif;
   --font-sans: "Nunito", system-ui, -apple-system, sans-serif;
   --font-mono: "JetBrains Mono", "Fira Code", monospace;
+  --font-sketch: "Caveat", cursive;
 }
 
 /* ── Radius tokens ─────────────────────────────────────────── */

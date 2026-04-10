@@ -1,10 +1,13 @@
 /**
- * DatePillHeader — horizontal scrollable row of date pills.
+ * DatePillHeader — three-pill date navigator.
  *
- * Shows the last N days as clickable pills. Selecting a pill updates
- * the shared activeDate in the global store. Used on Home and Track pages.
+ * Shows [prev day] [active day] [next day] centred below the nav.
+ * Active date is highlighted with a teal underline bar.
+ * Flanking dates are muted and clickable.
+ * Next date is suppressed when activeDate is today.
  *
- * Layout: [TODAY] [MON APR 7] [SUN APR 6] … (newest left)
+ * Reads/writes activeDate from the global Zustand store so every
+ * date-scoped component shares the same selection.
  */
 
 import {
@@ -13,23 +16,14 @@ import {
   format,
   startOfDay,
 } from "date-fns";
-import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/store";
-
-// How many past days to show in the pill row (today + 13 past = 14 total)
-const PILL_COUNT = 14;
-
-function buildPills(today: Date): Date[] {
-  return Array.from({ length: PILL_COUNT }, (_, i) =>
-    startOfDay(addDays(today, -i)),
-  );
-}
 
 function pillLabel(date: Date, today: Date): string {
   const diff = differenceInCalendarDays(date, today);
   if (diff === 0) return "TODAY";
   if (diff === -1) return "YESTERDAY";
+  if (diff === 1) return "TOMORROW";
   return format(date, "EEE MMM d").toUpperCase();
 }
 
@@ -38,54 +32,59 @@ export function DatePillHeader() {
   const setActiveDate = useStore((s) => s.setActiveDate);
 
   const today = startOfDay(new Date());
-  const pills = buildPills(today);
-
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const activePillRef = useRef<HTMLButtonElement>(null);
-
-  // Scroll active pill into view when it changes
-  useEffect(() => {
-    if (activePillRef.current && scrollRef.current) {
-      activePillRef.current.scrollIntoView({
-        inline: "nearest",
-        block: "nearest",
-        behavior: "smooth",
-      });
-    }
-  }, [activeDate]);
+  const prevDate = startOfDay(addDays(activeDate, -1));
+  const nextDate = startOfDay(addDays(activeDate, 1));
+  const canGoForward = activeDate.getTime() < today.getTime();
+  // Next date is always capped at today
+  const nextDateCapped =
+    nextDate.getTime() > today.getTime() ? today : nextDate;
 
   return (
     <div
-      ref={scrollRef}
       data-slot="date-pill-header"
-      className="relative -mx-4 overflow-x-auto px-4 pb-1"
-      style={{ scrollbarWidth: "none" }}
+      className="flex items-center justify-center gap-6 py-1"
     >
-      <div className="flex gap-1.5" role="group" aria-label="Select date">
-        {pills.map((date) => {
-          const isActive = date.getTime() === activeDate.getTime();
-          const label = pillLabel(date, today);
+      {/* Previous day */}
+      <button
+        type="button"
+        onClick={() => setActiveDate(prevDate)}
+        aria-label={format(prevDate, "EEEE d MMMM yyyy")}
+        className="text-xs font-semibold tracking-widest text-[var(--text-faint)] uppercase transition-colors hover:text-[var(--text-muted)]"
+      >
+        {pillLabel(prevDate, today)}
+      </button>
 
-          return (
-            <button
-              key={date.getTime()}
-              ref={isActive ? activePillRef : undefined}
-              type="button"
-              onClick={() => setActiveDate(date)}
-              aria-pressed={isActive}
-              aria-label={format(date, "EEEE d MMMM yyyy")}
-              className={cn(
-                "shrink-0 rounded-full px-3 py-1 text-[10px] font-bold tracking-wider transition-colors whitespace-nowrap",
-                isActive
-                  ? "bg-teal-500/20 text-teal-400 ring-1 ring-teal-500/40"
-                  : "bg-[var(--surface-2)] text-[var(--text-faint)] hover:bg-[var(--surface-3)] hover:text-[var(--text-muted)]",
-              )}
-            >
-              {label}
-            </button>
-          );
-        })}
+      {/* Active date */}
+      <div className="relative flex flex-col items-center gap-1">
+        <span
+          className={cn(
+            "text-xs font-bold tracking-widest uppercase",
+            "text-teal-400",
+          )}
+          aria-current="date"
+        >
+          {pillLabel(activeDate, today)}
+        </span>
+        {/* Underline bar */}
+        <span className="h-0.5 w-full rounded-full bg-teal-500" />
       </div>
+
+      {/* Next day — hidden when activeDate is today */}
+      {canGoForward ? (
+        <button
+          type="button"
+          onClick={() => setActiveDate(nextDateCapped)}
+          aria-label={format(nextDateCapped, "EEEE d MMMM yyyy")}
+          className="text-xs font-semibold tracking-widest text-[var(--text-faint)] uppercase transition-colors hover:text-[var(--text-muted)]"
+        >
+          {pillLabel(nextDateCapped, today)}
+        </button>
+      ) : (
+        // Spacer so active date stays visually centred
+        <span className="invisible text-xs font-semibold tracking-widest">
+          YESTERDAY
+        </span>
+      )}
     </div>
   );
 }
