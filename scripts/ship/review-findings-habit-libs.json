@@ -181,7 +181,7 @@
       "category": "simplicity",
       "file": "src/lib/habitTemplates.ts",
       "line": 155,
-      "title": "isSleepHabit has a hardcoded ID fallback 'habit_sleep' \u2014 violates no-hard-coded-personalization principle",
+      "title": "isSleepHabit has a hardcoded ID fallback 'habit_sleep' \u2014 violates single-user-hard-coding principle",
       "description": "`habit.id === 'habit_sleep'` is a hardcoded ID check that bypasses the type-based check. This is a legacy compatibility shim that should be documented as such. Any other sleep habit with a different id (e.g. a user-created 'Nap' habit with habitType='sleep') would be caught by the habitType check anyway, making the id fallback redundant for new data.",
       "fix": "Remove the `|| habit.id === 'habit_sleep'` clause and rely solely on `habit.habitType === 'sleep'`. If the id check is a genuine legacy requirement, add a comment explaining what data scenarios require it.",
       "implemented": false

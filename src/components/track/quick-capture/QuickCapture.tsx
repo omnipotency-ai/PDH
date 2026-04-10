@@ -6,7 +6,6 @@ import { useHabits, useUnitSystem } from "@/hooks/useProfile";
 import type { HabitConfig } from "@/lib/habitTemplates";
 import { isMovementHabit, isSleepHabit } from "@/lib/habitTemplates";
 import { normalizeFluidItemName } from "@/lib/normalizeFluidName";
-import { AddHabitDrawer } from "./AddHabitDrawer";
 import { DurationEntryPopover } from "./DurationEntryPopover";
 import { QuickCaptureTile } from "./QuickCaptureTile";
 import { WeightEntryDrawer } from "./WeightEntryDrawer";
@@ -130,8 +129,6 @@ export function QuickCapture({
           );
         })}
 
-        {/* Add habit tile */}
-        <AddHabitDrawer existingHabits={habits} />
       </div>
     </section>
   );

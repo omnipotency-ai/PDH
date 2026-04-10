@@ -49,9 +49,6 @@ const journaling = HABIT_TEMPLATES.journaling;
 /** Weigh-in: positive weight habit, no target, no cap */
 const weighIn = HABIT_TEMPLATES.weigh_in;
 
-/** Wound dressing count: positive count habit, no target, no cap */
-const woundDressingCount = HABIT_TEMPLATES.wound_dressing_count;
-
 /** A synthetic destructive habit with dailyCap=0 (zero-cap edge case) */
 const zeroCap: HabitConfig = {
   id: "habit_zero_cap",
@@ -612,11 +609,11 @@ describe("integration scenarios", () => {
     expect(shouldShowBadge(medication, 1, undefined)).toBe("check");
   });
 
-  it("wound dressing count (no target, no cap): always neutral", () => {
-    expect(getProgressText(woundDressingCount, 0, undefined)).toBe("0");
-    expect(getProgressText(woundDressingCount, 3, undefined)).toBe("3");
-    expect(getProgressColor(woundDressingCount, 3, undefined)).toBe("neutral");
-    expect(getProgressFraction(woundDressingCount, 3, undefined)).toBe(0);
-    expect(shouldShowBadge(woundDressingCount, 3, undefined)).toBeNull();
+  it("neutral count habits with no target or cap stay neutral", () => {
+    expect(getProgressText(neutralHabit, 0, undefined)).toBe("0");
+    expect(getProgressText(neutralHabit, 3, undefined)).toBe("3");
+    expect(getProgressColor(neutralHabit, 3, undefined)).toBe("neutral");
+    expect(getProgressFraction(neutralHabit, 3, undefined)).toBe(0);
+    expect(shouldShowBadge(neutralHabit, 3, undefined)).toBeNull();
   });
 });

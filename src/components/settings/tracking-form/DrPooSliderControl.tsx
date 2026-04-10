@@ -48,7 +48,10 @@ export function SliderControl<T extends string>({
         aria-label={label}
       />
 
-      <div className="grid grid-cols-3 text-[10px]">
+      <div
+        className="grid text-[10px]"
+        style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
+      >
         {options.map((option) => (
           <span
             key={option.value}

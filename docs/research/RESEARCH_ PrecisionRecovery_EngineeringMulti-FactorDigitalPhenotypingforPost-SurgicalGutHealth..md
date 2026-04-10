@@ -120,13 +120,13 @@ A primary deficiency in generic health trackers is the lack of support for speci
 | **Ostomy** | Output volume, pouch health | Stoma routine tracking | Preventing dehydration [7, 10, 17] |
 | **Surgery** | Healing, transit time | AI stool analysis (post-op) | Managing ileus risk [5, 21] |
 
-## AI Assistance in Food Reintroduction and Personalization
+## AI Assistance in Food Reintroduction and Preferences
 
 One of the most valuable applications of AI in gastroenterology is the management of the food reintroduction phase. For patients who have undergone a period of strict elimination—whether post-surgery or during a low-FODMAP protocol—knowing when and how to reintroduce foods is vital for long-term health and microbiome diversity.[18, 38]
 
 ### The 3-Phase Reintroduction Protocol
 
-The Monash University FODMAP Diet app and FODMAP Friendly provide structured, evidence-based guidance for the three phases: Elimination, Reintroduction, and Personalization.[15, 37, 38] The AI assistant schedules specific "challenges" where a user consumes a controlled dose of a potential trigger (e.g., lactose or fructans) and then logs their symptoms for a 72-hour window.[37, 39] The "FODMAP Friendly" app features an interactive reintroduction schedule that adapts based on the user's reported reactions; if a reaction is severe, the AI will suggest a longer "washout" period before the next challenge.[37]
+The Monash University FODMAP Diet app and FODMAP Friendly provide structured, evidence-based guidance for the three phases: Elimination, Reintroduction, and Preferences.[15, 37, 38] The AI assistant schedules specific "challenges" where a user consumes a controlled dose of a potential trigger (e.g., lactose or fructans) and then logs their symptoms for a 72-hour window.[37, 39] The "FODMAP Friendly" app features an interactive reintroduction schedule that adapts based on the user's reported reactions; if a reaction is severe, the AI will suggest a longer "washout" period before the next challenge.[37]
 
 ### Identifying the Personal Baseline
 

@@ -1,5 +1,4 @@
-import { ChevronRight, Download, RotateCcw, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Download, RotateCcw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { APP_DATA_HEADING_CLASS } from "./shared";
 
@@ -18,78 +17,59 @@ export function DataManagementSection({
   onResetFactorySettings,
   onOpenDeleteDrawer,
 }: DataManagementSectionProps) {
-  const [isOpen, setIsOpen] = useState(false);
-
   return (
     <div data-slot="data-management-section" className="space-y-2">
-      <div className="flex items-center justify-between">
-        <p className={APP_DATA_HEADING_CLASS}>Data Management</p>
-        <button
-          type="button"
-          aria-label={isOpen ? "Collapse data management" : "Expand data management"}
-          aria-expanded={isOpen}
-          onClick={() => setIsOpen((open) => !open)}
-          className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-[var(--section-appdata-border)] bg-[var(--section-appdata-muted)] text-[var(--section-appdata)] shadow-xs transition-colors hover:bg-[var(--section-appdata-muted)]/80"
-        >
-          <ChevronRight
-            className={`h-3.5 w-3.5 transition-transform ${isOpen ? "rotate-90" : ""}`}
-          />
-        </button>
+      <p className={APP_DATA_HEADING_CLASS}>Data Management</p>
+
+      <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
+        <span className="font-semibold text-[var(--text)]">{logsCount}</span>
+        <span>records available for export</span>
       </div>
 
-      {isOpen && (
-        <>
-          <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
-            <span className="font-semibold text-[var(--text)]">{logsCount}</span>
-            <span>records available for export</span>
-          </div>
+      <div className="grid grid-cols-1 gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 gap-1.5"
+          onClick={() => void onExportBackup()}
+        >
+          <Download className="h-3.5 w-3.5" />
+          Export App Data
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 gap-1.5"
+          onClick={() => void onExportLogsCsv()}
+        >
+          <Download className="h-3.5 w-3.5" />
+          Export Logs CSV
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 gap-1.5"
+          onClick={onResetFactorySettings}
+        >
+          <RotateCcw className="h-3.5 w-3.5" />
+          Reset Factory Settings
+        </Button>
+        <Button
+          variant="destructive"
+          size="sm"
+          className="h-8 gap-1.5"
+          onClick={onOpenDeleteDrawer}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+          Delete My Account Data
+        </Button>
+      </div>
 
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 gap-1.5"
-              onClick={() => void onExportBackup()}
-            >
-              <Download className="h-3.5 w-3.5" />
-              Export App Data
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 gap-1.5"
-              onClick={() => void onExportLogsCsv()}
-            >
-              <Download className="h-3.5 w-3.5" />
-              Export Logs CSV
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 gap-1.5"
-              onClick={onResetFactorySettings}
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-              Reset Factory Settings
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              className="h-8 gap-1.5"
-              onClick={onOpenDeleteDrawer}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-              Delete My Account Data
-            </Button>
-          </div>
-
-          <p className="text-[11px] text-[var(--text-muted)]">
-            Export JSON includes your synced recovery data and excludes the local-only OpenAI API
-            key. Reset affects local settings only. Delete removes all cloud data linked to your
-            account.
-          </p>
-        </>
-      )}
+      <p className="text-[11px] text-[var(--text-muted)]">
+        Export JSON includes your synced recovery data and excludes the local-only OpenAI API
+        key. Reset affects local settings only. Delete removes all cloud data linked to your
+        account.
+      </p>
     </div>
   );
 }

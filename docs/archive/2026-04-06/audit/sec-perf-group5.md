@@ -32,7 +32,7 @@
 
 **Category:** Security / Quality  
 **Files:** `src/hooks/useWeeklySummaryAutoTrigger.ts:147`, `src/hooks/useWeeklySummaryAutoTrigger.ts:163`  
-**Description:** Timestamps sent to the AI in the weekly summary payload are formatted with `toLocaleString("en-GB", ...)`. The CLAUDE.md states "no hard-coding personalisation — this is a future public product." Hardcoding `en-GB` means users in other locales will see inconsistently formatted dates in AI-generated summaries (since the AI may reason about day/month order). This is a personalisation violation and could produce confusing AI output for non-UK users when the product goes public.  
+**Description:** Timestamps sent to the AI in the weekly summary payload are formatted with `toLocaleString("en-GB", ...)`. The old CLAUDE.md guidance warned against single-user hard-coding in a future public product. Hardcoding `en-GB` means users in other locales will see inconsistently formatted dates in AI-generated summaries (since the AI may reason about day/month order). This is a locale-hardcoding issue and could produce confusing AI output for non-UK users when the product goes public.
 **Suggested Fix:** Use `Intl.DateTimeFormat` with the user's locale from their profile (or `navigator.language` as a fallback) rather than the literal `"en-GB"` string. Alternatively, format as ISO 8601 (`toISOString().slice(0, 16)`) which is unambiguous for the AI regardless of locale.
 
 ---

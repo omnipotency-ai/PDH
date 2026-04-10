@@ -174,7 +174,7 @@ export async function fetchAiInsights(
   });
 
   const prefs = aiPreferences ?? DEFAULT_AI_PREFERENCES;
-  const validatedModel = getValidInsightModel(prefs.aiModel);
+  const validatedModel = DEFAULT_INSIGHT_MODEL;
 
   // ── Lightweight mode: conversation-only with patient snapshot ──────────
   if (isLightweight) {

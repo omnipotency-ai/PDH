@@ -77,7 +77,7 @@ Line 1316: `"offer coping tips, routines, ways to adhere to the plan with adhd, 
 
 Line 1320: `"figure out the menu that will satisfy his snacking and keep his output solid. Be clear about portion sizes, if he is hungry..."`
 
-These strings are shipped as part of the client bundle and will appear verbatim in any AI prompt. If this app is ever opened by a different user (e.g., during beta or public launch), the LLM will address them as "Peter" and the prompt reveals that the system was designed for a specific individual. The CLAUDE.md project constraint "No Hard-Coding Personalization" is explicitly violated here.
+These strings are shipped as part of the client bundle and will appear verbatim in any AI prompt. If this app is ever opened by a different user (e.g., during beta or public launch), the LLM will address them as "Peter" and the prompt reveals that the system was designed for a specific individual. The CLAUDE.md project constraint "single-user hard-coding" is explicitly violated here.
 
 This is both a security concern (PII embedded in the code) and a product correctness issue, but it is flagged as HIGH because it would constitute a privacy disclosure to future users.
 

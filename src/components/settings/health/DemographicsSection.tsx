@@ -220,7 +220,7 @@ export function DemographicsSection({
         About You
       </p>
       <p className="text-[10px] text-[var(--text-faint)]">
-        Age, sex, height, and weight help personalise calorie, protein, hydration, and BMI context.
+        Age, sex, height, and weight give Dr. Poo basic clinical context and keep BMI current.
       </p>
       <div className="grid grid-cols-2 gap-x-4 gap-y-3">
         <div className="flex flex-col gap-1">
@@ -358,7 +358,7 @@ export function DemographicsSection({
         </div>
         <div className="flex flex-col gap-1">
           <Label htmlFor="demographics-weight" className="text-[10px] text-[var(--text-faint)]">
-            Surgery start weight ({weightUnitLabel})
+            Baseline weight ({weightUnitLabel})
           </Label>
           <Input
             id="demographics-weight"
@@ -402,7 +402,7 @@ export function DemographicsSection({
         )}
       </div>
       <p className="text-[10px] text-[var(--text-faint)]">
-        Surgery start weight is your baseline. Latest weight syncs from Quick Capture weigh-ins.
+        Baseline weight is your reference point. Latest weight syncs from Quick Capture weigh-ins.
       </p>
     </div>
   );

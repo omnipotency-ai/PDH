@@ -139,7 +139,7 @@ function profileRichnessScore(profile: ProfileRow): number {
   if (profile.sleepGoal !== undefined) score += 4;
   if (profile.healthProfile !== undefined) score += 4;
   if (profile.aiPreferences !== undefined) score += 4;
-  if (profile.foodPersonalisation !== undefined) score += 4;
+  if (profile.foodPreferences !== undefined) score += 4;
   if (profile.transitCalibration !== undefined) score += 4;
   if ((profile.knownFoods?.length ?? 0) > 0) score += 3;
   if (profile.encryptedApiKey !== undefined) score += 2;
@@ -208,8 +208,8 @@ function buildMergedProfile(
   const sleepGoal = firstDefined(sorted.map((row) => row.sleepGoal));
   const healthProfile = firstDefined(sorted.map((row) => row.healthProfile));
   const aiPreferences = firstDefined(sorted.map((row) => row.aiPreferences));
-  const foodPersonalisation = firstDefined(
-    sorted.map((row) => row.foodPersonalisation),
+  const foodPreferences = firstDefined(
+    sorted.map((row) => row.foodPreferences),
   );
   const transitCalibration = firstDefined(
     sorted.map((row) => row.transitCalibration),
@@ -223,7 +223,7 @@ function buildMergedProfile(
     ...(sleepGoal !== undefined && { sleepGoal }),
     ...(healthProfile !== undefined && { healthProfile }),
     ...(aiPreferences !== undefined && { aiPreferences }),
-    ...(foodPersonalisation !== undefined && { foodPersonalisation }),
+    ...(foodPreferences !== undefined && { foodPreferences }),
     ...(transitCalibration !== undefined && { transitCalibration }),
     ...(nextKnownFoods.length > 0 && { knownFoods: nextKnownFoods }),
     ...(nextEncryptedApiKey !== undefined &&

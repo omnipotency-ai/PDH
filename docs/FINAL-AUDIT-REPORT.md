@@ -144,7 +144,7 @@
 **Files:** `src/lib/aiAnalysis.ts:L1316,L1320`
 **Reported by:** sec-perf-group6
 
-**Problem:** Two fields in the LLM system prompt contain hardcoded references to "Peter" by name, including personal details about ADHD and eating habits. These strings are shipped in the client bundle. If the app is ever opened by a different user, the LLM will address them as "Peter" and the prompt reveals the system was designed for a specific individual. The CLAUDE.md constraint "No Hard-Coding Personalization" is explicitly violated. This is both a PII-in-code security concern and a product correctness issue.
+**Problem:** Two fields in the LLM system prompt contain hardcoded references to "Peter" by name, including personal details about ADHD and eating habits. These strings are shipped in the client bundle. If the app is ever opened by a different user, the LLM will address them as "Peter" and the prompt reveals the system was designed for a specific individual. The CLAUDE.md constraint "single-user hard-coding" is explicitly violated. This is both a PII-in-code security concern and a product correctness issue.
 
 **Fix:** Remove all hardcoded references to "Peter" from the prompt-building code. The `preferredName` field in `AiPreferences` already exists and is inserted via `sanitizeNameForPrompt`. Use `preferredName` variable or "the patient" throughout.
 
@@ -497,7 +497,7 @@
 **Files:** `src/hooks/useWeeklySummaryAutoTrigger.ts:L18,L147,L163`
 **Reported by:** sec-perf-group5, maint-quality-group5
 
-**Problem:** Timestamps in the weekly summary payload are formatted with `toLocaleString("en-GB", ...)` and the comment references "Barcelona CET/CEST" -- hardcoding for a single user's locale and timezone. Violates the CLAUDE.md rule "No Hard-Coding Personalization".
+**Problem:** Timestamps in the weekly summary payload are formatted with `toLocaleString("en-GB", ...)` and the comment references "Barcelona CET/CEST" -- hardcoding for a single user's locale and timezone. Violates the CLAUDE.md rule "single-user hard-coding".
 
 **Fix:** Use `Intl.DateTimeFormat` with the user's locale from their profile (or `navigator.language` as fallback), or format as ISO 8601. Remove the Barcelona timezone reference from comments.
 

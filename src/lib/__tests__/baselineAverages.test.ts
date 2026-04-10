@@ -497,7 +497,7 @@ describe("computeBaselineAverages", () => {
       expect(result.waterAvgMlPerDay).toBe(400);
     });
 
-    test("'agua' is NOT treated as water (personalization violation removed)", () => {
+    test("'agua' is NOT treated as water (legacy synonym merge removed)", () => {
       const logs: SyncedLog[] = [
         makeFluidLog([{ name: "agua", quantity: 500 }], BASE_TS),
         makeFluidLog([{ name: "Water", quantity: 300 }], BASE_TS),

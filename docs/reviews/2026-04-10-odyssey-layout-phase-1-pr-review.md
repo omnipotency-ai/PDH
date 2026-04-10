@@ -26,13 +26,13 @@ Scope: full diff in commits `9297831`, `1206872`, `ccb9697`
 - File: `src/components/layout/GlobalHeader.tsx`
 - Lines: 56-70
 
-The new global header hard-codes `Peter's Digestive Health` in both the logo label and the visible product name. That is not just placeholder copy: it is now the primary in-app brand shown to every authenticated user. The repo explicitly calls out "No Hard-Coding Personalization", so this is a direct product correctness issue, not a style preference.
+The new global header hard-codes `Peter's Digestive Health` in both the logo label and the visible product name. That is not just placeholder copy: it is now the primary in-app brand shown to every authenticated user. The repo explicitly flags single-user hard-coding as a product risk, so this is a direct correctness issue, not a style preference.
 
 Why it matters:
 
 - Every user account would see Peter-specific branding.
 - The header is now global, so the mistake propagates across the whole app.
-- It also bakes the personalization into an `aria-label`, so assistive tech gets the wrong product name too.
+- It also bakes the Peter-specific branding into an `aria-label`, so assistive tech gets the wrong product name too.
 
 Recommended fix:
 

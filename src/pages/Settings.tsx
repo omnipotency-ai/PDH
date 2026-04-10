@@ -1,7 +1,7 @@
 import { Database, HeartPulse, Palette, Sliders, Upload } from "lucide-react";
 import { AppDataForm } from "@/components/settings/AppDataForm";
 import { HealthForm } from "@/components/settings/HealthForm";
-import { PersonalisationForm } from "@/components/settings/PersonalisationForm";
+import { PreferencesForm } from "@/components/settings/PreferencesForm";
 import { SettingsTile } from "@/components/settings/SettingsTile";
 import { TrackingForm } from "@/components/settings/TrackingForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,11 +21,6 @@ export default function SettingsPage() {
   const { habits } = useHabits();
 
   // Summary values for mobile tiles
-  const surgeryLabel = healthProfile
-    ? healthProfile.surgeryType === "Other"
-      ? healthProfile.surgeryTypeOther || "Other"
-      : healthProfile.surgeryType
-    : "Not set";
   const computedBmi = (() => {
     if (!healthProfile) return null;
     const weightKg = healthProfile.currentWeight ?? healthProfile.startingWeight;
@@ -33,10 +28,16 @@ export default function SettingsPage() {
     const heightM = healthProfile.height / 100;
     return (weightKg / (heightM * heightM)).toFixed(1);
   })();
-  const healthSummary = [surgeryLabel, ...(computedBmi ? [`BMI ${computedBmi}`] : [])].join(" · ");
+  const healthSummary = [
+    healthProfile?.ageYears != null ? `Age ${healthProfile.ageYears}` : "",
+    healthProfile?.gender ? healthProfile.gender.replaceAll("_", " ") : "",
+    computedBmi ? `BMI ${computedBmi}` : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   const trackingSummary = `${habits.length} habits · ${sleepGoal.targetHours}h sleep`;
-  const appdataSummary = "Synced via Convex";
+  const appdataSummary = "Units, export, reset";
 
   return (
     <div className="stagger-reveal mx-auto max-w-[1680px] px-4 py-6 pb-24">
@@ -71,17 +72,17 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          <Card className="settings-panel settings-panel-personalisation">
+          <Card className="settings-panel settings-panel-preferences">
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-3 text-base text-[var(--text)]">
-                <span className="settings-card-media settings-card-media-personalisation">
-                  <Palette className="h-full w-full p-1.5 text-[var(--section-personalisation)]" />
+                <span className="settings-card-media settings-card-media-preferences">
+                  <Palette className="h-full w-full p-1.5 text-[var(--section-preferences)]" />
                 </span>
-                <span className="leading-tight">Personalisation</span>
+                <span className="leading-tight">Preferences</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <PersonalisationForm />
+              <PreferencesForm />
             </CardContent>
           </Card>
 
@@ -89,7 +90,7 @@ export default function SettingsPage() {
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-3 text-base text-[var(--text)]">
                 <span className="settings-card-media settings-card-media-tracking">
-                  <img src="/tracking-personalisation-img.png" alt="Tracking and habits section" />
+                  <img src="/tracking-preferences-img.png" alt="Tracking and habits section" />
                 </span>
                 <span className="leading-tight">Tracking</span>
               </CardTitle>
@@ -155,24 +156,24 @@ export default function SettingsPage() {
           <Drawer>
             <DrawerTrigger asChild>
               <SettingsTile
-                color="personalisation"
+                color="preferences"
                 icon={Palette}
-                title="Personalisation"
-                summary="AI style & food presets"
+                title="Preferences"
+                summary="Dr. Poo name, schedule, style"
               />
             </DrawerTrigger>
             <DrawerContent className="settings-drawer">
               <DrawerHeader>
                 <DrawerTitle className="flex items-center gap-2">
-                  <Palette className="h-4 w-4 text-[var(--section-personalisation)]" />
-                  Personalisation
+                  <Palette className="h-4 w-4 text-[var(--section-preferences)]" />
+                  Preferences
                 </DrawerTitle>
                 <DrawerDescription className="sr-only">
-                  AI style and food preset settings
+                  Dr. Poo name, schedule, and style settings
                 </DrawerDescription>
               </DrawerHeader>
               <div className="overflow-y-auto px-4 pb-6">
-                <PersonalisationForm />
+                <PreferencesForm />
               </div>
             </DrawerContent>
           </Drawer>

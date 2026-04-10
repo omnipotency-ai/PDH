@@ -2,7 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import { forwardRef } from "react";
 import { cn } from "@/lib/utils";
 
-type SectionColor = "health" | "repro" | "tracking" | "appdata" | "personalisation";
+type SectionColor = "health" | "repro" | "tracking" | "appdata" | "preferences";
 
 const colorMap: Record<SectionColor, { accent: string; muted: string; border: string }> = {
   health: {
@@ -25,10 +25,10 @@ const colorMap: Record<SectionColor, { accent: string; muted: string; border: st
     muted: "var(--section-appdata-muted)",
     border: "var(--section-appdata-border)",
   },
-  personalisation: {
-    accent: "var(--section-personalisation)",
-    muted: "var(--section-personalisation-muted)",
-    border: "var(--section-personalisation-border)",
+  preferences: {
+    accent: "var(--section-preferences)",
+    muted: "var(--section-preferences-muted)",
+    border: "var(--section-preferences-border)",
   },
 };
 

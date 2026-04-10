@@ -1,10 +1,10 @@
 import { Droplets, Plus } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { usePanelTime } from "@/hooks/usePanelTime";
-import { useFluidPresets, useUnitSystem } from "@/hooks/useProfile";
+import { useUnitSystem } from "@/hooks/useProfile";
 import { getErrorMessage } from "@/lib/errors";
 import { DEFAULT_FLUID_PRESETS } from "@/lib/fluidPresets";
 import { flOzToMl, formatFluidDisplay, getDisplayFluidUnit } from "@/lib/units";
@@ -24,7 +24,6 @@ const MAX_FLUID_AMOUNT_ML = 5000;
 
 export function FluidSection({ onLogFluid, captureTimestamp }: FluidSectionProps) {
   const { unitSystem } = useUnitSystem();
-  const { fluidPresets: savedPresets } = useFluidPresets();
   const displayFluidUnit = getDisplayFluidUnit(unitSystem);
 
   const [saving, setSaving] = useState(false);
@@ -38,11 +37,7 @@ export function FluidSection({ onLogFluid, captureTimestamp }: FluidSectionProps
   const { timeValue, setTimeValue, dateValue, setDateValue, isEdited, getTimestampMs, reset } =
     usePanelTime(captureTimestamp);
 
-  /** Use saved drink choices from profile, falling back to defaults. */
-  const quickPresets: readonly FluidPreset[] = useMemo(() => {
-    if (savedPresets.length > 0) return savedPresets.slice(0, 3);
-    return DEFAULT_FLUID_PRESETS;
-  }, [savedPresets]);
+  const quickPresets: readonly FluidPreset[] = DEFAULT_FLUID_PRESETS;
 
   const parseAmountInputToMl = () => {
     const parsed = Number(amountInput);

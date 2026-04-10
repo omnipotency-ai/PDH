@@ -21,7 +21,7 @@ import {
   type aiResponseValidator,
   aiPreferencesValidator,
   fluidPresetsValidator,
-  foodPersonalisationValidator,
+  foodPreferencesValidator,
   habitsValidator,
   healthProfileValidator,
   sleepGoalValidator,

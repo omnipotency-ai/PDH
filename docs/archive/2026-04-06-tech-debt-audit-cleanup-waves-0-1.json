@@ -99,7 +99,7 @@
       "wave": 0,
       "dependsOn": [],
       "skill": "vite-react-implementer",
-      "description": "src/lib/aiAnalysis.ts (~L1316,L1320) contains hardcoded references to 'Peter' including personal ADHD/eating details in the LLM system prompt. This is a PII violation and breaks the 'No Hard-Coding Personalization' rule. Fix: Replace all 'Peter' references with the existing `preferredName` field from AiPreferences (already inserted via sanitizeNameForPrompt) or the generic 'the patient'. Search the entire codebase for any other hardcoded 'Peter' references in prompt-building code. Note: W0-04 and W0-05 also edit this file — those tasks depend on this one completing first.",
+      "description": "src/lib/aiAnalysis.ts (~L1316,L1320) contains hardcoded references to 'Peter' including personal ADHD/eating details in the LLM system prompt. This is a PII violation and breaks the 'single-user hard-coding' rule. Fix: Replace all 'Peter' references with the existing `preferredName` field from AiPreferences (already inserted via sanitizeNameForPrompt) or the generic 'the patient'. Search the entire codebase for any other hardcoded 'Peter' references in prompt-building code. Note: W0-04 and W0-05 also edit this file — those tasks depend on this one completing first.",
       "files": {
         "read": ["src/lib/aiAnalysis.ts"],
         "edit": ["src/lib/aiAnalysis.ts"],
@@ -509,7 +509,7 @@
       "wave": 0,
       "dependsOn": ["W0-16"],
       "skill": "vite-react-implementer",
-      "description": "src/lib/habitCoaching.ts contains 'post-surgery anastomosis' hardcoded 3 times. This violates 'No Hard-Coding Personalization'. Fix: Replace hardcoded strings with a parameter sourced from the user's health profile surgeryType field (or a sensible default like 'digestive condition'). The function should accept surgeryType as a parameter and interpolate it into the prompt strings.",
+      "description": "src/lib/habitCoaching.ts contains 'post-surgery anastomosis' hardcoded 3 times. This violates 'single-user hard-coding'. Fix: Replace hardcoded strings with a parameter sourced from the user's health profile surgeryType field (or a sensible default like 'digestive condition'). The function should accept surgeryType as a parameter and interpolate it into the prompt strings.",
       "files": {
         "read": ["src/lib/habitCoaching.ts"],
         "edit": ["src/lib/habitCoaching.ts"],

@@ -9,14 +9,14 @@ import type { UnitSystem } from "@/lib/units";
 import type {
   AiPreferences,
   FluidPreset,
-  FoodPersonalisation,
+  FoodPreferences,
   HealthProfile,
   NutritionGoals,
   TransitCalibration,
 } from "@/types/domain";
 import {
   DEFAULT_AI_PREFERENCES,
-  DEFAULT_FOOD_PERSONALISATION,
+  DEFAULT_FOOD_PREFERENCES,
   DEFAULT_NUTRITION_GOALS,
   DEFAULT_TRANSIT_CALIBRATION,
 } from "@/types/domain";
@@ -34,7 +34,7 @@ interface ResolvedProfile {
   sleepGoal: SleepGoal;
   healthProfile: HealthProfile;
   aiPreferences: AiPreferences;
-  foodPersonalisation: FoodPersonalisation;
+  foodPreferences: FoodPreferences;
   transitCalibration: TransitCalibration;
   nutritionGoals: NutritionGoals;
   foodFavourites: string[];
@@ -47,7 +47,7 @@ export const DEFAULT_PROFILE: ResolvedProfile = {
   sleepGoal: { ...DEFAULT_SLEEP_GOAL },
   healthProfile: { ...DEFAULT_HEALTH_PROFILE },
   aiPreferences: { ...DEFAULT_AI_PREFERENCES },
-  foodPersonalisation: { ...DEFAULT_FOOD_PERSONALISATION },
+  foodPreferences: { ...DEFAULT_FOOD_PREFERENCES },
   transitCalibration: { ...DEFAULT_TRANSIT_CALIBRATION },
   nutritionGoals: { ...DEFAULT_NUTRITION_GOALS },
   foodFavourites: [],
@@ -65,7 +65,7 @@ export type PatchProfileArgs = {
   sleepGoal?: SleepGoal;
   healthProfile?: HealthProfile;
   aiPreferences?: AiPreferences;
-  foodPersonalisation?: FoodPersonalisation;
+  foodPreferences?: FoodPreferences;
   transitCalibration?: TransitCalibration;
   nutritionGoals?: NutritionGoals;
   foodFavourites?: string[];
@@ -81,6 +81,35 @@ interface ProfileContextValue {
 }
 
 const ProfileContext = createContext<ProfileContextValue | null>(null);
+
+const RETIRED_HABIT_IDS = new Set([
+  "habit_electrolyte",
+  "habit_stretching",
+  "habit_wound_dressing_checkbox",
+  "habit_wound_dressing_count",
+]);
+
+const RETIRED_HABIT_TEMPLATE_KEYS = new Set([
+  "electrolyte",
+  "stretching",
+  "wound_dressing_checkbox",
+  "wound_dressing_count",
+]);
+
+function filterRetiredHabits(habits: HabitConfig[]): HabitConfig[] {
+  return habits.filter((habit) => {
+    const normalizedName = habit.name.trim().toLowerCase();
+    return !(
+      RETIRED_HABIT_IDS.has(habit.id) ||
+      (habit.templateKey !== undefined && RETIRED_HABIT_TEMPLATE_KEYS.has(habit.templateKey)) ||
+      normalizedName === "bebida" ||
+      normalizedName === "electrolyte drink" ||
+      normalizedName === "stretching" ||
+      normalizedName === "change dressing" ||
+      normalizedName === "dressing changes"
+    );
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Provider
@@ -98,12 +127,15 @@ function resolveProfile(
   const hp = raw.healthProfile as HealthProfile | undefined;
   return {
     unitSystem: raw.unitSystem ?? DEFAULT_PROFILE.unitSystem,
-    habits: (raw.habits ?? DEFAULT_PROFILE.habits) as HabitConfig[],
+    habits: filterRetiredHabits((raw.habits ?? DEFAULT_PROFILE.habits) as HabitConfig[]),
     fluidPresets: (raw.fluidPresets ?? DEFAULT_PROFILE.fluidPresets) as FluidPreset[],
-    sleepGoal: raw.sleepGoal ?? DEFAULT_PROFILE.sleepGoal,
-    healthProfile: hp ?? DEFAULT_PROFILE.healthProfile,
-    aiPreferences: (raw.aiPreferences ?? DEFAULT_PROFILE.aiPreferences) as AiPreferences,
-    foodPersonalisation: raw.foodPersonalisation ?? DEFAULT_PROFILE.foodPersonalisation,
+    sleepGoal: { ...DEFAULT_PROFILE.sleepGoal, ...(raw.sleepGoal ?? {}) },
+    healthProfile: { ...DEFAULT_PROFILE.healthProfile, ...(hp ?? {}) },
+    aiPreferences: {
+      ...DEFAULT_PROFILE.aiPreferences,
+      ...((raw.aiPreferences ?? {}) as Partial<AiPreferences>),
+    } as AiPreferences,
+    foodPreferences: raw.foodPreferences ?? DEFAULT_PROFILE.foodPreferences,
     transitCalibration: raw.transitCalibration ?? DEFAULT_PROFILE.transitCalibration,
     nutritionGoals:
       (raw.nutritionGoals as NutritionGoals | undefined) ?? DEFAULT_PROFILE.nutritionGoals,
@@ -144,7 +176,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       JSON.stringify(prev.sleepGoal) !== JSON.stringify(next.sleepGoal) ||
       JSON.stringify(prev.healthProfile) !== JSON.stringify(next.healthProfile) ||
       JSON.stringify(prev.aiPreferences) !== JSON.stringify(next.aiPreferences) ||
-      JSON.stringify(prev.foodPersonalisation) !== JSON.stringify(next.foodPersonalisation) ||
+      JSON.stringify(prev.foodPreferences) !== JSON.stringify(next.foodPreferences) ||
       JSON.stringify(prev.transitCalibration) !== JSON.stringify(next.transitCalibration) ||
       JSON.stringify(prev.nutritionGoals) !== JSON.stringify(next.nutritionGoals) ||
       JSON.stringify(prev.foodFavourites) !== JSON.stringify(next.foodFavourites);

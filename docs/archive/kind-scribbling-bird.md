@@ -532,7 +532,7 @@ I've completed a comprehensive analysis of the food-related Convex schema and ba
 #### **`profiles` Table**
 - **Purpose**: User configuration and settings (1:1 per user).
 - **Food-related fields**:
-  - `foodPersonalisation: { cautionLevel, upgradeSpeed }` — exploration style (`"conservative"`, `"balanced"`, `"adventurous"`)
+  - `foodPreferences: { cautionLevel, upgradeSpeed }` — exploration style (`"conservative"`, `"balanced"`, `"adventurous"`)
   - `knownFoods: string[] | undefined` — set of all canonical food names ever logged (optimizes "new foods" detection)
   - `foodFavourites: string[] | undefined` — bookmarked/starred foods
   - `nutritionGoals: { dailyCalorieGoal, dailyWaterGoalMl } | undefined`
@@ -583,9 +583,9 @@ I've completed a comprehensive analysis of the food-related Convex schema and ba
 - **`historyByIngredient(canonicalName, limit?)`** (query) — Recent exposures for a food
 - **`allIngredients(limit?)`** (query) — Aggregated exposure counts grouped by canonical name
 #### **`convex/profileMutations.ts`**
-- **`replaceProfile(unitSystem, habits, fluidPresets?, sleepGoal?, healthProfile?, aiPreferences?, foodPersonalisation?, transitCalibration?, now)`** (mutation)
+- **`replaceProfile(unitSystem, habits, fluidPresets?, sleepGoal?, healthProfile?, aiPreferences?, foodPreferences?, transitCalibration?, now)`** (mutation)
   - Full profile replacement (excludes `nutritionGoals` and `foodFavourites` to prevent overwrites)
-- **`patchProfile(..., foodPersonalisation?, foodFavourites?, ...)`** (mutation)
+- **`patchProfile(..., foodPreferences?, foodFavourites?, ...)`** (mutation)
   - Partial update; can set `foodFavourites` independently
 - **`getProfile()`** (query) — Fetch current user's profile
 #### **`convex/profiles.ts`** (AI rate limiting)
@@ -712,7 +712,7 @@ interface FoodRegistryEntryBase extends FoodDigestionMetadata {
 |-------|------|---------|---------|
 | `ingredientProfiles` | User-specific | Yes | Custom metadata per ingredient |
 | `foodLibrary` | User-specific | Yes | Composite foods & custom groupings |
-| `profiles` | 1 per user | Yes | User config (includes foodPersonalisation, foodFavourites) |
+| `profiles` | 1 per user | Yes | User config (includes foodPreferences, foodFavourites) |
 | `ingredientExposures` | Per log entry | No (append-only) | Food intake history |
 | `ingredientOverrides` | User-specific | Yes | Status overrides (safe/watch/avoid) |
 | `foodAssessments` | Per AI report | No (append-only) | AI verdicts & reasoning |
@@ -727,7 +727,7 @@ interface FoodRegistryEntryBase extends FoodDigestionMetadata {
 - `/home/user/repo/convex/foodLibrary.ts` — Composite food CRUD & merge logic
 - `/home/user/repo/convex/ingredientOverrides.ts` — Status override CRUD
 - `/home/user/repo/convex/foodRequests.ts` — New food submission
-- `/home/user/repo/convex/profileMutations.ts` — Profile patching (includes foodPersonalisation, foodFavourites)
+- `/home/user/repo/convex/profileMutations.ts` — Profile patching (includes foodPreferences, foodFavourites)
 - `/home/user/repo/convex/profiles.ts` — AI rate limiting
 - `/home/user/repo/shared/foodRegistryData.ts` — Canonical registry (4382 lines)
 - `/home/user/repo/shared/foodPortionData.ts` — Static portion/nutrition reference

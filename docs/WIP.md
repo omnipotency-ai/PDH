@@ -289,7 +289,7 @@ Key commits this session: `c4b22fb` (W4-09 impl), `8b5096c` (W4-09 fix: hard-fai
 ### W3-05 — Extract store configuration constants from src/store.ts (2026-04-06 19:20)
 
 - **Commit:** `4b71da6`
-- **Files:** `src/lib/fluidPresets.ts` (new), `src/lib/defaults.ts` (new), `src/lib/logTypeGuards.ts` (new), `src/store.ts`, `src/contexts/ProfileContext.tsx`, `src/components/track/panels/FluidSection.tsx`, `src/components/settings/PersonalisationForm.tsx`, `src/hooks/useWeeklySummaryAutoTrigger.ts`, `src/lib/aiParsing.ts`
+- **Files:** `src/lib/fluidPresets.ts` (new), `src/lib/defaults.ts` (new), `src/lib/logTypeGuards.ts` (new), `src/store.ts`, `src/contexts/ProfileContext.tsx`, `src/components/track/panels/FluidSection.tsx`, `src/components/settings/PreferencesForm.tsx`, `src/hooks/useWeeklySummaryAutoTrigger.ts`, `src/lib/aiParsing.ts`
 - **What:** Moved fluid preset constants to fluidPresets.ts, DEFAULT_HEALTH_PROFILE to defaults.ts, and all log type guards to logTypeGuards.ts with direct function declarations replacing the createLogTypeGuard factory. store.ts now exports only Zustand store state and actions. Also fixed pre-existing broken import in aiParsing.ts (./aiPrompts → ./aiAnalysis).
 - **Decisions:** Dead re-exports of SleepGoal, HabitConfig, HabitLog removed from store.ts (no consumers imported them from @/store). aiParsing.ts was an untracked file from prior wave work with a broken import that blocked typecheck — fixed in this commit to unblock the pre-commit hook.
 
@@ -317,8 +317,8 @@ Key commits this session: `c4b22fb` (W4-09 impl), `8b5096c` (W4-09 fix: hard-fai
 ### W2-10 — Consolidate `customFoodPresets` normalization and fix ID generation (2026-04-06 19:05)
 
 - **Commit:** TBD
-- **Files:** `src/lib/customFoodPresets.ts`, `src/components/settings/PersonalisationForm.tsx`
-- **What:** Replaced the ad hoc preset normalization paths with shared constants and a single `normalizePreset()` helper, switched blank preset IDs to `crypto.randomUUID()`, and rewired the personalisation form to consume the shared preset limits.
+- **Files:** `src/lib/customFoodPresets.ts`, `src/components/settings/PreferencesForm.tsx`
+- **What:** Replaced the ad hoc preset normalization paths with shared constants and a single `normalizePreset()` helper, switched blank preset IDs to `crypto.randomUUID()`, and rewired the preferences form to consume the shared preset limits.
 - **Decisions:** Interpreted the ingredient `20` limit as an ingredient-name length cap rather than a list-length cap, so normalization now truncates individual ingredient names instead of trimming the number of ingredients entered.
 
 ### W2-09 — Fix stale theme storage key and create `storageKeys.ts` (2026-04-06 19:03)

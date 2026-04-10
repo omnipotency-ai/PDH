@@ -48,7 +48,6 @@ See `.claude/CLAUDE-ops.md` for full dashboard procedures and cross-tool coordin
 
 ### Product & Design
 
-**No Hard-Coding Personalization:** This is a future public product. Implementation must use configuration, preferences, and extensible models—never hard-coded logic for the primary user.
 **Design System Discipline:** Use tokenized colors only. Check for existing components before creating new ones; if an existing one is weak, improve it rather than duplicating it.
 **Calm & Scannable UX:** Assume the user is stressed or symptomatic. The UI should be calm, lightweight, and easy to scan, leading with the most important signal (progressive disclosure).
 **Accessibility is Mandatory:** Treat accessibility, responsive behavior, and loading/error states as core requirements, not optional "polish."

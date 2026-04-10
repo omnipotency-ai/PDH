@@ -937,6 +937,7 @@ function midpointClock(start: string, end: string, fallback: string): string {
 
 // Migration for the v1 release domain refactor:
 // - aiPreferences.location -> aiPreferences.locationTimezone
+// - legacy Dr Poo tone keys -> familiarity / vocabulary / output style
 // - 3-meal schedule -> explicit 6-meal schedule
 // - healthProfile legacy keys renamed to canonical v1 keys
 // - removed profile metadata fields dropped from stored objects
@@ -1049,7 +1050,6 @@ export const normalizeProfileDomainV1 = internalMutation({
             : "19:00";
 
         const normalizedPrefs = {
-          ...prefs,
           locationTimezone:
             typeof prefs.locationTimezone === "string"
               ? prefs.locationTimezone
@@ -1073,11 +1073,56 @@ export const normalizeProfileDomainV1 = internalMutation({
                 ? mealSchedule.lateEveningSnack
                 : "22:00",
           },
+          preferredName:
+            typeof prefs.preferredName === "string" ? prefs.preferredName : "",
+          aiModel:
+            typeof prefs.aiModel === "string" && prefs.aiModel.length > 0
+              ? prefs.aiModel
+              : "gpt-5.4",
+          toneFamiliarity:
+            prefs.toneFamiliarity === "reserved" ||
+            prefs.toneFamiliarity === "steady" ||
+            prefs.toneFamiliarity === "familiar" ||
+            prefs.toneFamiliarity === "close"
+              ? prefs.toneFamiliarity
+              : prefs.approach === "analytical"
+                ? "reserved"
+                : prefs.approach === "personal"
+                  ? "familiar"
+                  : "close",
+          toneVocabulary:
+            prefs.toneVocabulary === "everyday" ||
+            prefs.toneVocabulary === "balanced" ||
+            prefs.toneVocabulary === "clinical"
+              ? prefs.toneVocabulary
+              : prefs.register === "clinical"
+                ? "clinical"
+                : prefs.register === "everyday"
+                  ? "everyday"
+                  : "balanced",
+          outputStyle:
+            prefs.outputStyle === "prose" ||
+            prefs.outputStyle === "blended" ||
+            prefs.outputStyle === "structured"
+              ? prefs.outputStyle
+              : prefs.outputFormat === "narrative"
+                ? "prose"
+                : prefs.outputFormat === "structured"
+                  ? "structured"
+                  : "blended",
+          outputLength:
+            prefs.outputLength === "brief" ||
+            prefs.outputLength === "standard" ||
+            prefs.outputLength === "detailed"
+              ? prefs.outputLength
+              : prefs.outputLength === "concise"
+                ? "brief"
+                : "standard",
           promptVersion:
             typeof prefs.promptVersion === "number" &&
             Number.isFinite(prefs.promptVersion)
-              ? prefs.promptVersion
-              : 2,
+              ? Math.max(prefs.promptVersion, 4)
+              : 4,
           preset:
             prefs.preset === "reassuring_coach" ||
             prefs.preset === "clear_clinician" ||
@@ -1086,6 +1131,10 @@ export const normalizeProfileDomainV1 = internalMutation({
             prefs.preset === "custom"
               ? prefs.preset
               : "reassuring_coach",
+          ...(prefs.reportTriggerMode === "auto" ||
+          prefs.reportTriggerMode === "manual"
+            ? { reportTriggerMode: prefs.reportTriggerMode }
+            : {}),
         } as Record<string, unknown>;
 
         delete normalizedPrefs.location;
@@ -1093,6 +1142,9 @@ export const normalizeProfileDomainV1 = internalMutation({
         delete normalizedPrefs.toneFriendliness;
         delete normalizedPrefs.toneProfessionalism;
         delete normalizedPrefs.warmth;
+        delete normalizedPrefs.approach;
+        delete normalizedPrefs.register;
+        delete normalizedPrefs.outputFormat;
 
         if (JSON.stringify(prefs) !== JSON.stringify(normalizedPrefs)) {
           nextAiPreferences = normalizedPrefs as typeof profile.aiPreferences;

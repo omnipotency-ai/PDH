@@ -5,16 +5,11 @@ import { DEFAULT_PROFILE, type PatchProfileArgs } from "@/contexts/ProfileContex
 import { formatLocalDateKey } from "@/lib/dateUtils";
 import { getErrorMessage } from "@/lib/errors";
 import type { AppBackupPayload } from "@/lib/sync";
-import type { HealthProfile } from "@/types/domain";
 
 interface UseAppDataFormControllerArgs {
   deleteAllSyncedData: () => Promise<unknown>;
   clearLocalData: () => Promise<void>;
   exportBackup: () => Promise<AppBackupPayload>;
-  // null until Convex has loaded the profile — mutations must not fire
-  // with stale defaults while null.
-  healthProfile: HealthProfile | null;
-  setHealthProfile: (updates: Partial<HealthProfile>) => void;
   /** Patch Convex-backed profile settings to defaults on factory reset. */
   patchProfile: (updates: PatchProfileArgs) => Promise<void>;
 }
@@ -30,8 +25,6 @@ export function useAppDataFormController({
   deleteAllSyncedData,
   clearLocalData,
   exportBackup,
-  healthProfile: _healthProfile,
-  setHealthProfile: _setHealthProfile,
   patchProfile,
 }: UseAppDataFormControllerArgs) {
   const [profileStatus, setProfileStatus] = useState("");
@@ -105,7 +98,7 @@ export function useAppDataFormController({
         sleepGoal: DEFAULT_PROFILE.sleepGoal,
         healthProfile: DEFAULT_PROFILE.healthProfile,
         aiPreferences: DEFAULT_PROFILE.aiPreferences,
-        foodPersonalisation: DEFAULT_PROFILE.foodPersonalisation,
+        foodPreferences: DEFAULT_PROFILE.foodPreferences,
         transitCalibration: DEFAULT_PROFILE.transitCalibration,
       });
       setProfileStatus("All settings reset to factory defaults.");

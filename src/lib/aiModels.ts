@@ -13,11 +13,10 @@ export const BACKGROUND_MODEL = "gpt-5.4-mini";
 /** Ordered list of models the user may pick for insight/analysis tasks. */
 export const INSIGHT_MODEL_OPTIONS = ["gpt-5.4", "gpt-5.4-mini"] as const;
 
-/** Default insight model for new users / factory reset. */
-export const DEFAULT_INSIGHT_MODEL: InsightModel = "gpt-5.4";
-
 /** Union type for user-selectable insight models. */
 export type InsightModel = (typeof INSIGHT_MODEL_OPTIONS)[number];
+
+const FALLBACK_INSIGHT_MODEL: InsightModel = "gpt-5.4";
 
 /** All valid insight models as a Set, for runtime validation. */
 const VALID_INSIGHT_MODELS: ReadonlySet<string> = new Set<string>(INSIGHT_MODEL_OPTIONS);
@@ -37,13 +36,23 @@ function isInsightModel(value: unknown): value is InsightModel {
   return typeof value === "string" && VALID_INSIGHT_MODELS.has(value);
 }
 
-/** Validate an unknown value into a valid InsightModel, falling back to the default. */
-export function getValidInsightModel(model: unknown): InsightModel {
+function normalizeInsightModel(model: unknown, fallback: InsightModel): InsightModel {
   if (isInsightModel(model)) return model;
   if (typeof model === "string") {
-    return LEGACY_INSIGHT_MODEL_ALIASES[model] ?? DEFAULT_INSIGHT_MODEL;
+    return LEGACY_INSIGHT_MODEL_ALIASES[model] ?? fallback;
   }
-  return DEFAULT_INSIGHT_MODEL;
+  return fallback;
+}
+
+/** Default insight model for new users / factory reset, driven by .env.local when set. */
+export const DEFAULT_INSIGHT_MODEL: InsightModel = normalizeInsightModel(
+  import.meta.env.VITE_OPENAI_INSIGHT_MODEL,
+  FALLBACK_INSIGHT_MODEL,
+);
+
+/** Validate an unknown value into a valid InsightModel, falling back to the default. */
+export function getValidInsightModel(model: unknown): InsightModel {
+  return normalizeInsightModel(model, DEFAULT_INSIGHT_MODEL);
 }
 
 /** Human-readable label for a model name. */
