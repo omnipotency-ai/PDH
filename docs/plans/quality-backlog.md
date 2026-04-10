@@ -5,6 +5,13 @@ Sweep this file when planning new initiatives for items that fit.
 
 ---
 
+## Layout Phase 1 PR Review — 2026-04-10
+
+- **Simplification** `src/hooks/useTodayLogCrud.ts:26-45` and `src/hooks/useDayStats.ts:50-64` — both files now own near-identical "activity type -> matching habits" and fluid normalization logic. Extract shared helpers to avoid the two paths drifting.
+- **Quality** `src/components/track/TodayStatusRow.tsx:10,19-41` — `nowMs` still drives severity colouring, but the rendered copy no longer explains elapsed time. Either restore elapsed wording or drop the prop so the component has one consistent concept of "last BM".
+- **Simplification** `src/pages/Home.tsx:157-159` — `useEffect(() => setDismissedCard(false), [])` only re-states the initial `useState(false)` value and can be removed.
+- **Nice-to-have** `src/components/track/quick-capture/QuickCapture.tsx:59` — the grid no longer expands past three columns on larger breakpoints. If the tighter layout was intentional, add a comment or design note; otherwise restore the wider desktop breakpoints.
+
 ## W0 Schema Widening — 2026-04-08
 
 - **Quality** `convex/validators.ts:382` — `customPortionValidator.weightG` allows zero/negative. Fix: enforce positive value in mutation layer (W6 when custom portions UI ships).
