@@ -37,7 +37,6 @@ Sweep this file when planning new initiatives for items that fit.
 
 - **Nice-to-have** `src/components/track/quick-capture/WeightEntryDrawer.tsx:46` — inline type predicate `(entry): entry is ... => entry.type === "weight"` should be replaced with `isWeightLog` from `@/lib/logTypeGuards`. One-line change.
 - **Quality** `src/lib/logTypeGuards.ts:3` — `NarrowableLog` accepts `{ type: string; data: unknown }` fallback that is never exercised in practice. Consider narrowing to only `LogEntry | SyncedLog` once unified (follow-on from the Moderate fix).
-- **Architecture** `src/lib/defaults.ts:6` — `DEFAULT_HEALTH_PROFILE.surgeryType` is hardcoded to `"Ileostomy reversal"` (primary user's specific type). Per CLAUDE.md "single-user hard-coding", default should be neutral (e.g. `""` or first/least-specific option). Value is always overwritten after onboarding, but worth fixing for public product readiness.
 
 ## W3-06 — 2026-04-06
 

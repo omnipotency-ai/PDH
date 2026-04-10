@@ -1075,10 +1075,6 @@ export const normalizeProfileDomainV1 = internalMutation({
           },
           preferredName:
             typeof prefs.preferredName === "string" ? prefs.preferredName : "",
-          aiModel:
-            typeof prefs.aiModel === "string" && prefs.aiModel.length > 0
-              ? prefs.aiModel
-              : "gpt-5.4",
           toneFamiliarity:
             prefs.toneFamiliarity === "reserved" ||
             prefs.toneFamiliarity === "steady" ||

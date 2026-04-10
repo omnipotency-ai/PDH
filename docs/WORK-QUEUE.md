@@ -1,8 +1,9 @@
 > **Ref:** `docs/WORK-QUEUE.md`
-> **Updated:** 2026-04-08
-> **Version:** 3.5
+> **Updated:** 2026-04-10
+> **Version:** 3.6
 > **History:**
 >
+> - v3.6 (2026-04-10) — verified no Work Queue task/status changes after `odyssey/layout-phase-1` PR stabilization work
 > - v3.5 (2026-04-08) — Backfill commit hashes for W2-W5, mark W4-T01/T02, W5-T03/T05 done from git history
 > - v3.4 (2026-04-08) — Food Platform master plan adopted (31 tasks, 8 waves), old 22-task plan superseded
 > - v3.3 (2026-04-07) — Tech-Debt initiative marked complete, task rows removed, resolved ROADMAP items updated

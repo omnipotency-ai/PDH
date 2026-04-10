@@ -5,7 +5,9 @@
  * the AI library functions so they can relay prompts to OpenAI through Convex
  * without needing a browser-side OpenAI client.
  */
-export type AllowedAiModel = "gpt-5.4" | "gpt-5.4-mini";
+import type { AiModelName } from "./aiModels";
+
+export type AllowedAiModel = AiModelName;
 
 export type ConvexAiCaller = (args: {
   model: AllowedAiModel;

@@ -484,7 +484,6 @@ describe("logs", () => {
             dinner: "19:00",
             lateEveningSnack: "22:00",
           },
-          aiModel: "gpt-5.4",
           toneFamiliarity: "close",
           toneVocabulary: "balanced",
           outputStyle: "blended",
@@ -505,7 +504,7 @@ describe("logs", () => {
       { name: "Aquarius" },
       { name: "Tea" },
     ]);
-    expect(profile?.aiPreferences?.aiModel).toBe("gpt-5.4");
+    expect(profile?.aiPreferences?.toneFamiliarity).toBe("close");
   });
 
   it("exports a full data snapshot and deleteAll clears synced data", async () => {

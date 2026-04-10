@@ -1,5 +1,4 @@
 import type { HealthProfile } from "@/types/domain";
-
 const DEFAULT_CLINICAL_HISTORY = `2019: first colostomy with roughly 20 cm removed from the descending-colon / rectal area.
 Later had another colon resection related to scar complications, leaving about 12 cm of distal stump and then lived with a colostomy bag for around 3 years 7 months.
 Subsequent reconnective surgery linked the remaining stump back into the colon and diverted small-intestine output through the abdomen with two stomas through the same site.

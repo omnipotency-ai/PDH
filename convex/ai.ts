@@ -9,11 +9,11 @@ import {
   getConfiguredOpenAiApiKey,
 } from "./lib/openai";
 
-// 5-minute server-side cooldown per user per feature type.
+// 5-minute server-side cooldown for background AI calls.
 const AI_RATE_LIMIT_MS = 300_000;
 
 // Allowed OpenAI models — constrained to prevent arbitrary model strings.
-// Keep in sync with src/lib/aiModels.ts INSIGHT_MODEL_OPTIONS + BACKGROUND_MODEL
+// Keep in sync with src/lib/aiModels.ts AI_MODEL_OPTIONS + BACKGROUND_MODEL
 // and convex/validators.ts allowedModelsValidator.
 const allowedModels = v.union(v.literal("gpt-5.4"), v.literal("gpt-5.4-mini"));
 
@@ -58,24 +58,26 @@ export const chatCompletion = action({
   }> => {
     const { userId } = await requireAuth(ctx);
 
-    // Server-side rate limiting: enforce a per-user, per-feature cooldown.
-    // This survives page reloads and cannot be bypassed by the client.
+    // Server-side rate limiting: enforce a per-user cooldown for background AI
+    // calls only. Dr. Poo report cadence is controlled client-side using the
+    // timestamps of the bowel events being analyzed, so backfilled logs and
+    // manual full-report overrides are not blocked by call-time cooldowns.
     const featureType = args.featureType ?? "drpoo";
-    const rateLimits = await ctx.runQuery(internal.profiles.getAiRateLimits, {
-      userId,
-    });
-    const lastCallAt =
-      featureType === "drpoo"
-        ? rateLimits.lastDrPooCallAt
-        : rateLimits.lastCoachingCallAt;
     const now = Date.now();
-    if (lastCallAt !== null && now - lastCallAt < AI_RATE_LIMIT_MS) {
-      const waitSeconds = Math.ceil(
-        (AI_RATE_LIMIT_MS - (now - lastCallAt)) / 1000,
-      );
-      throw new Error(
-        `[NON_RETRYABLE] [RATE_LIMITED] AI call rate limited — please wait ${waitSeconds}s before calling ${featureType} again.`,
-      );
+
+    if (featureType === "coaching") {
+      const rateLimits = await ctx.runQuery(internal.profiles.getAiRateLimits, {
+        userId,
+      });
+      const lastCallAt = rateLimits.lastCoachingCallAt;
+      if (lastCallAt !== null && now - lastCallAt < AI_RATE_LIMIT_MS) {
+        const waitSeconds = Math.ceil(
+          (AI_RATE_LIMIT_MS - (now - lastCallAt)) / 1000,
+        );
+        throw new Error(
+          `[NON_RETRYABLE] [RATE_LIMITED] AI call rate limited — please wait ${waitSeconds}s before calling ${featureType} again.`,
+        );
+      }
     }
 
     const apiKey = getConfiguredOpenAiApiKey();
@@ -103,12 +105,15 @@ export const chatCompletion = action({
         }),
       });
 
-      // Record successful call time so the next call can be rate-checked.
-      await ctx.runMutation(internal.profiles.updateAiRateLimit, {
-        userId,
-        featureType,
-        calledAt: now,
-      });
+      if (featureType === "coaching") {
+        // Record successful background-call time so the next background task
+        // can be rate-checked.
+        await ctx.runMutation(internal.profiles.updateAiRateLimit, {
+          userId,
+          featureType,
+          calledAt: now,
+        });
+      }
 
       return {
         content: response.choices[0]?.message?.content ?? "",

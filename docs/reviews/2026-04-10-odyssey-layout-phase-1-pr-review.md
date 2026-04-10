@@ -8,7 +8,7 @@ Scope: full diff in commits `9297831`, `1206872`, `ccb9697`
 ## Summary
 
 - Critical: 0
-- High: 2
+- High: 1
 - Moderate: 2
 - Low / nice-to-have: moved to `docs/plans/quality-backlog.md`
 
@@ -21,25 +21,7 @@ Scope: full diff in commits `9297831`, `1206872`, `ccb9697`
 
 ### HIGH
 
-#### H1. Header ships hard-coded personal branding to every signed-in user
-
-- File: `src/components/layout/GlobalHeader.tsx`
-- Lines: 56-70
-
-The new global header hard-codes `Peter's Digestive Health` in both the logo label and the visible product name. That is not just placeholder copy: it is now the primary in-app brand shown to every authenticated user. The repo explicitly flags single-user hard-coding as a product risk, so this is a direct correctness issue, not a style preference.
-
-Why it matters:
-
-- Every user account would see Peter-specific branding.
-- The header is now global, so the mistake propagates across the whole app.
-- It also bakes the Peter-specific branding into an `aria-label`, so assistive tech gets the wrong product name too.
-
-Recommended fix:
-
-- Replace the literal with a neutral product label (`PDH`, `Post-Op Digestive Health`, etc.).
-- If user- or deployment-specific naming is needed later, source it from config rather than a hard-coded string.
-
-#### H2. Home status row mixes selected-day totals with all-time bowel timing
+#### H1. Home status row mixes selected-day totals with all-time bowel timing
 
 - File: `src/pages/Home.tsx`
 - Lines: 429-441, 488-493

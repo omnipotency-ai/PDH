@@ -8,6 +8,7 @@ interface TodayStatusRowProps {
   waterOnlyMl: number;
   lastBmTimestamp: number | null;
   nowMs: number;
+  isCurrentDay?: boolean;
 }
 
 const BM_TIMER_THRESHOLDS = {
@@ -19,7 +20,9 @@ const BM_TIMER_THRESHOLDS = {
 function getLastBmTextColor(
   lastBmTimestamp: number | null,
   nowMs: number,
+  isCurrentDay: boolean,
 ): string {
+  if (!isCurrentDay) return "var(--text-muted)";
   if (lastBmTimestamp === null) return "var(--text-muted)";
   const elapsedMs = Math.max(0, nowMs - lastBmTimestamp);
   const totalMinutes = Math.floor(elapsedMs / 60_000);
@@ -47,9 +50,14 @@ export function TodayStatusRow({
   waterOnlyMl,
   lastBmTimestamp,
   nowMs,
+  isCurrentDay = true,
 }: TodayStatusRowProps) {
   const { unitSystem } = useUnitSystem();
-  const lastBmTextColor = getLastBmTextColor(lastBmTimestamp, nowMs);
+  const lastBmTextColor = getLastBmTextColor(
+    lastBmTimestamp,
+    nowMs,
+    isCurrentDay,
+  );
 
   return (
     <div

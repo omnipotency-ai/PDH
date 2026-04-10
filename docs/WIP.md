@@ -1,8 +1,12 @@
 > **Ref:** `docs/WIP.md`
-> **Updated:** 2026-04-08
-> **Version:** 3.5
+> **Updated:** 2026-04-10
+> **Version:** 3.9
 > **History:**
 >
+> - v3.9 (2026-04-10) — removed dead habit AI code and switched Dr. Poo auto/manual sends to event-aware full analysis
+> - v3.8 (2026-04-10) — moved AI model selection out of user preferences into developer env config
+> - v3.7 (2026-04-10) — restored intentional Peter-specific personalization after confirming single-user app scope
+> - v3.6 (2026-04-10) — logged PR #8 stabilization work on `odyssey/layout-phase-1` (Convex schema recovery, review fixes, final audit)
 > - v3.5 (2026-04-08) — logged Wave 2 data seeding and meal template execution
 > - v3.4 (2026-04-08) — Food Platform master plan adopted, old plan superseded
 > - v3.3 (2026-04-07) — Tech-Debt initiative complete, collapsed to summary
@@ -30,6 +34,64 @@
 > **Started:** 2026-04-08
 
 <!-- Implementer agents: prepend new entries HERE, above the completed summaries -->
+### 2026-04-10 — Dr. Poo full-send override + dead AI cleanup
+
+- **Branch:** `odyssey/layout-phase-1`
+- **Commit:** `uncommitted`
+- **Files:** `src/hooks/useAiInsights.ts`, `src/lib/aiFetchInsights.ts`, `src/pages/Home.tsx`, `convex/ai.ts`, `convex/aiAnalyses.ts`, `convex/schema.ts`, `src/lib/syncAi.ts`, `src/lib/foodParsing.ts`, `src/lib/aiRateLimiter.ts`, `src/lib/habitCoaching.ts`, `docs/WIP.md`
+- **What:**
+  - Removed the orphaned habit/settings AI review code and the old client-side AI rate-limiter module, leaving food parsing as the only remaining background LLM path.
+  - Changed Dr. Poo auto-send to anchor cooldown decisions to the latest analyzed bowel timestamp, and changed `Send now` to always run the full report package with pending replies instead of downgrading to conversation-only mode.
+  - Added `latestDigestionLogTimestamp` to stored AI analysis metadata so the auto-trigger can distinguish backfilled older logs from genuinely newer bowel events.
+- **Verification:**
+  - `bun run typecheck` PASS
+  - `bun run build` PASS
+  - `bun x convex dev --once --typecheck disable --tail-logs disable` PASS
+  - `bun x vitest run convex/aiAnalyses.test.ts convex/logs.test.ts` PASS
+- **Decisions:** Kept the 5-minute server cooldown only for background/coaching-class calls and removed it from Dr. Poo reports so manual full sends and backfilled-event analyses are not blocked by wall-clock send time.
+### 2026-04-10 — AI model selection moved to developer config
+
+- **Branch:** `odyssey/layout-phase-1`
+- **Commit:** `uncommitted`
+- **Files:** `src/lib/aiModels.ts`, `src/lib/aiFetchInsights.ts`, `src/hooks/useAiInsights.ts`, `src/hooks/useWeeklySummaryAutoTrigger.ts`, `src/lib/convexAiClient.ts`, `src/lib/aiPrompts.ts`, `src/types/domain.ts`, `convex/profileMutations.ts`, `convex/migrations.ts`, `convex/validators.ts`, `convex/logs.test.ts`, `.env.example`, `.env.local`, `docs/WIP.md`
+- **What:**
+  - Moved Dr. Poo and background-task model selection to developer-controlled env config, with `VITE_OPENAI_DR_POO_MODEL` for Dr. Poo and `VITE_OPENAI_BACKGROUND_MODEL` for general LLM work.
+  - Removed `aiModel` from `AiPreferences`, profile normalization, and the persisted Convex schema so model choice is no longer part of user settings data.
+  - Updated the shared AI model helpers/tests, migrated the existing profile row to strip its legacy `aiModel`, and kept backward compatibility for the old `VITE_OPENAI_INSIGHT_MODEL` env key.
+- **Verification:**
+  - `bun run typecheck` PASS
+  - `bun run build` PASS
+  - `bun x convex run --push --typecheck disable migrations:normalizeProfileDomainV1 '{"now":1767660000000}'` PASS (`{ fixed: 1, scanned: 1 }`)
+  - `bun x convex dev --once --typecheck disable --tail-logs disable` PASS
+- **Decisions:** AI model choice is now developer-owned runtime configuration rather than a persisted per-user preference.
+
+### 2026-04-10 — PR #8 personalization restoration
+
+- **Branch:** `odyssey/layout-phase-1`
+- **Commit:** `uncommitted`
+- **Files:** `src/components/layout/GlobalHeader.tsx`, `src/lib/defaults.ts`, `docs/WIP.md`, `docs/reviews/2026-04-10-odyssey-layout-phase-1-pr-review.md`, `docs/plans/quality-backlog.md`
+- **What:**
+  - Restored intentional Peter-specific app branding in the global header.
+  - Restored the seeded clinical history and related recovery defaults in `DEFAULT_HEALTH_PROFILE`.
+  - Corrected active review/docs text so it no longer frames single-user personalization as something to remove.
+- **Verification:** pending final typecheck
+- **Decisions:** Personalization remains intentional because this app is explicitly for Peter only.
+
+### 2026-04-10 — PR #8 stabilization: schema recovery + review closure
+
+- **Branch:** `odyssey/layout-phase-1`
+- **Commit:** `uncommitted`
+- **Files:** `convex/validators.ts`, `src/components/layout/GlobalHeader.tsx`, `src/pages/Home.tsx`, `src/pages/Track.tsx`, `src/components/track/TodayStatusRow.tsx`, `src/lib/aiFetchInsights.ts`, `src/lib/defaults.ts`, `src/components/settings/app-data-form/DataManagementSection.tsx`, `.gitignore`
+- **What:**
+  - Unblocked Convex by temporarily widening `profiles.aiPreferences`, running `migrations:normalizeProfileDomainV1`, then narrowing the validator back to the canonical strict shape after the legacy profile row was rewritten.
+  - Resolved the documented PR blockers that were still valid for this branch: aligned the Home status row with the selected day, moved Track onto the shared Zustand active-date state, and removed tracked local/generated artifacts from the branch.
+  - Ran a fresh audit of the latest settings refactor and fixed the configured Dr. Poo model wiring, plus corrected the export/API-key copy to match the current architecture.
+- **Verification:**
+  - `bun run typecheck` PASS
+  - `bun run build` PASS
+  - `bun x convex run --push --typecheck disable migrations:normalizeProfileDomainV1 "{\"now\":...}"` PASS (`{ fixed: 1, scanned: 1 }`)
+  - `bun x convex dev --once --typecheck disable --tail-logs disable` PASS
+- **Decisions:** Kept ROADMAP and WORK-QUEUE semantically unchanged because this was branch stabilization work, not a planned initiative/task completion.
 
 ### 2026-04-08 — W4-T01/T02 complete: Page reorganization
 

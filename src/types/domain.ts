@@ -13,7 +13,6 @@ import type {
   FoodTendency,
   TransitCalibration,
 } from "../../shared/foodTypes";
-import { DEFAULT_INSIGHT_MODEL, type InsightModel } from "../lib/aiModels";
 import type { HabitConfig } from "../lib/habitTemplates";
 
 export type {
@@ -109,8 +108,6 @@ export const DEFAULT_FOOD_PREFERENCES: FoodPreferences = {
 
 // ── AI Preferences ────────────────────────────────────────────────────────────
 
-export type AiModel = InsightModel;
-
 /** Axis 1 — Familiarity: how close and conversational Dr. Poo sounds */
 export type ToneFamiliarity = "reserved" | "steady" | "familiar" | "close";
 /** Axis 2 — Vocabulary: how plain or clinical the wording should be */
@@ -141,7 +138,6 @@ export interface AiPreferences {
   preferredName: string;
   locationTimezone: string;
   mealSchedule: MealSchedule;
-  aiModel: AiModel;
   toneFamiliarity: ToneFamiliarity;
   toneVocabulary: ToneVocabulary;
   outputStyle: OutputStyle;
@@ -204,7 +200,6 @@ export const DEFAULT_AI_PREFERENCES: AiPreferences = {
     dinner: "18:00",
     lateEveningSnack: "20:30",
   },
-  aiModel: DEFAULT_INSIGHT_MODEL,
   toneFamiliarity: "close",
   toneVocabulary: "balanced",
   outputStyle: "blended",

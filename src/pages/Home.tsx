@@ -154,9 +154,6 @@ export default function HomePage() {
     return getFallbackDrPooPrompt(currentMealSlot);
   }, [currentMealSlot, latestInsightSummary]);
 
-  useEffect(() => {
-    setDismissedCard(false);
-  }, []);
 
   // ── Capture panel hooks ──
   const { logs } = useSyncedLogsContext();
@@ -402,6 +399,7 @@ export default function HomePage() {
     void triggerAnalysis({
       bristolScore: bowelState.bristolCode,
       autoSendEnabled: true,
+      digestionTimestamp: timestamp,
     });
   };
 
@@ -434,11 +432,11 @@ export default function HomePage() {
   const waterOnlyMl = selectedFluidTotalsByName["water"] ?? 0;
 
   const lastBmTimestamp = useMemo(() => {
-    const bms = logs
+    const bms = selectedLogs
       .filter((l) => l.type === "digestion")
       .sort((a, b) => b.timestamp - a.timestamp);
     return bms[0]?.timestamp ?? null;
-  }, [logs]);
+  }, [selectedLogs]);
 
   // ── Render ──
 
@@ -491,6 +489,7 @@ export default function HomePage() {
             waterOnlyMl={waterOnlyMl}
             lastBmTimestamp={lastBmTimestamp}
             nowMs={now.getTime()}
+            isCurrentDay={dayOffset === 0}
           />
         </div>
       </div>

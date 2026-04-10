@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useAiConfig } from "@/hooks/useAiConfig";
 import { useAiPreferences } from "@/hooks/useProfile";
 import { fetchWeeklySummary } from "@/lib/aiAnalysis";
-import { DEFAULT_INSIGHT_MODEL } from "@/lib/aiModels";
+import { DR_POO_MODEL } from "@/lib/aiModels";
 import { formatTime } from "@/lib/aiUtils";
 import { debugLog } from "@/lib/debugLog";
 import { isDigestionLog } from "@/lib/logTypeGuards";
@@ -197,7 +197,7 @@ export function useWeeklySummaryAutoTrigger() {
     );
 
     try {
-      const model = DEFAULT_INSIGHT_MODEL;
+      const model = DR_POO_MODEL;
       const response = await fetchWeeklySummary(callAi, input, model);
 
       await addWeeklySummaryRef.current({

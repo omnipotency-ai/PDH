@@ -207,6 +207,7 @@ export default defineSchema({
     model: v.string(),
     durationMs: v.number(),
     inputLogCount: v.number(),
+    latestDigestionLogTimestamp: v.optional(v.number()),
     error: v.optional(v.string()),
     starred: v.optional(v.boolean()),
   })

@@ -334,22 +334,6 @@ export function normalizeStoredFluidPresets(
 // AI preferences normalization
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Known legacy model names that should be normalized to current values. */
-const LEGACY_AI_MODEL_MAP: Record<string, string> = {
-  "gpt-5-mini": "gpt-5.4-mini",
-  "gpt-4o-mini": "gpt-5.4-mini",
-  "gpt-4o": "gpt-5.4",
-  "gpt-4.1-nano": "gpt-5.4-mini",
-  "gpt-4.1-mini": "gpt-5.4-mini",
-  "gpt-5.2": "gpt-5.4",
-};
-
-function normalizeStoredAiModel(value: unknown): string {
-  if (typeof value !== "string" || value.length === 0) return "gpt-5.4";
-  const mapped = LEGACY_AI_MODEL_MAP[value];
-  if (mapped !== undefined) return mapped;
-  return value;
-}
 
 function normalizeToneFamiliarity(value: unknown): string {
   switch (value) {
@@ -456,7 +440,6 @@ export function normalizeStoredAiPreferences(
           ? preferences.location
           : "",
     mealSchedule: normalizeMealSchedule(preferences.mealSchedule),
-    aiModel: normalizeStoredAiModel(preferences.aiModel),
     toneFamiliarity: normalizeToneFamiliarity(
       preferences.toneFamiliarity ?? preferences.approach,
     ),

@@ -82,22 +82,24 @@ export default function TrackPage() {
   const weightUnit = getDisplayWeightUnit(unitSystem);
 
   // Pending edit from cross-page navigation (Home → Track)
+  const activeDate = useStore((s) => s.activeDate);
+  const setActiveDate = useStore((s) => s.setActiveDate);
+  const goBack = useStore((s) => s.goBack);
+  const goForward = useStore((s) => s.goForward);
+  const goToToday = useStore((s) => s.goToToday);
   const pendingEditLogId = useStore((s) => s.pendingEditLogId);
   const setPendingEditLogId = useStore((s) => s.setPendingEditLogId);
 
   useLiveClock();
   const now = new Date();
-  const [selectedDate, setSelectedDate] = useState(() =>
-    startOfDay(new Date()),
-  );
 
   const todayDate = useMemo(() => startOfDay(now), [now]);
   const dayOffset = useMemo(
-    () => differenceInCalendarDays(selectedDate, todayDate),
-    [selectedDate, todayDate],
+    () => differenceInCalendarDays(activeDate, todayDate),
+    [activeDate, todayDate],
   );
-  const selectedStart = selectedDate.getTime();
-  const selectedEnd = addDays(selectedDate, 1).getTime();
+  const selectedStart = activeDate.getTime();
+  const selectedEnd = addDays(activeDate, 1).getTime();
 
   const selectedLogs = useMemo(
     () =>
@@ -115,41 +117,28 @@ export default function TrackPage() {
     if (pendingEditLogId === null) return;
     const matchingLog = logs.find((entry) => entry.id === pendingEditLogId);
     if (matchingLog) {
-      setSelectedDate(startOfDay(new Date(matchingLog.timestamp)));
+      setActiveDate(startOfDay(new Date(matchingLog.timestamp)));
     }
     setAutoEditLogId(pendingEditLogId);
     setPendingEditLogId(null);
-  }, [pendingEditLogId, logs, setPendingEditLogId]);
+  }, [pendingEditLogId, logs, setActiveDate, setPendingEditLogId]);
 
   const handleAutoEditHandled = useCallback(() => {
     setAutoEditLogId(null);
   }, []);
 
   // --- Date navigation ---
-  const handlePreviousDay = useCallback(
-    () => setSelectedDate((value) => startOfDay(addDays(value, -1))),
-    [],
-  );
-  const handleNextDay = useCallback(
-    () =>
-      setSelectedDate((value) => {
-        const next = startOfDay(addDays(value, 1));
-        return next.getTime() > todayDate.getTime() ? todayDate : next;
-      }),
-    [todayDate],
-  );
-  const handleJumpToToday = useCallback(
-    () => setSelectedDate(todayDate),
-    [todayDate],
-  );
+  const handlePreviousDay = useCallback(() => goBack(), [goBack]);
+  const handleNextDay = useCallback(() => goForward(), [goForward]);
+  const handleJumpToToday = useCallback(() => goToToday(), [goToToday]);
   const handleSelectDate = useCallback(
     (date: Date) => {
       const normalized = startOfDay(date);
-      setSelectedDate(
+      setActiveDate(
         normalized.getTime() > todayDate.getTime() ? todayDate : normalized,
       );
     },
-    [todayDate],
+    [setActiveDate, todayDate],
   );
 
   return (
@@ -163,7 +152,7 @@ export default function TrackPage() {
             {format(now, "E · d MMMM · HH:mm")}
           </p>
           <TrackDatePicker
-            selectedDate={selectedDate}
+            selectedDate={activeDate}
             todayDate={todayDate}
             onSelect={handleSelectDate}
           />
@@ -175,7 +164,7 @@ export default function TrackPage() {
         habits={habits}
         weightUnit={weightUnit}
         constrainHeight={false}
-        selectedDate={selectedDate}
+        selectedDate={activeDate}
         dayOffset={dayOffset}
         onPreviousDay={handlePreviousDay}
         onNextDay={handleNextDay}

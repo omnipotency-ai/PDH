@@ -66,8 +66,8 @@ export function DataManagementSection({
       </div>
 
       <p className="text-[11px] text-[var(--text-muted)]">
-        Export JSON includes your synced recovery data and excludes the local-only OpenAI API
-        key. Reset affects local settings only. Delete removes all cloud data linked to your
+        Export JSON includes your synced recovery data and excludes your OpenAI API key by
+        design. Reset affects local settings only. Delete removes all cloud data linked to your
         account.
       </p>
     </div>
