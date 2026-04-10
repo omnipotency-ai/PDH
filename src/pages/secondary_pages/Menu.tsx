@@ -248,7 +248,7 @@ export default function MenuPage() {
         </Link>
         <div className="flex items-end justify-between">
           <div>
-            <h1 className="font-display text-2xl font-bold tracking-tight text-[var(--section-meals)] md:text-3xl">
+            <h1 className="font-sketch text-2xl font-bold tracking-tight text-[var(--section-meals)] md:text-3xl">
               Food Library
             </h1>
             <p className="text-xs text-[var(--text-muted)]">

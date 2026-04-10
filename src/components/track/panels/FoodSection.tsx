@@ -1,11 +1,10 @@
 import { Soup } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { usePanelTime } from "@/hooks/usePanelTime";
-import { type CustomFoodPreset, loadCustomFoodPresets } from "@/lib/customFoodPresets";
 import { getErrorMessage } from "@/lib/errors";
 import { PanelTimePicker } from "./PanelTimePicker";
 
@@ -18,18 +17,11 @@ export function FoodSection({ onLogFood, captureTimestamp }: FoodSectionProps) {
   const [foodName, setFoodName] = useState("");
   const [foodError, setFoodError] = useState("");
   const [saving, setSaving] = useState(false);
-  const [customFoodPresets, setCustomFoodPresets] = useState<CustomFoodPreset[]>([]);
-  // Track the active preset so we can bypass AI parsing when submitting a badge
-  const [activePreset, setActivePreset] = useState<CustomFoodPreset | null>(null);
 
   const submittingRef = useRef(false);
 
   const { timeValue, setTimeValue, dateValue, setDateValue, isEdited, getTimestampMs, reset } =
     usePanelTime(captureTimestamp);
-
-  useEffect(() => {
-    setCustomFoodPresets(loadCustomFoodPresets());
-  }, []);
 
   const submitFood = () => {
     // useRef guard prevents double-submit under React 18 concurrent rendering,
@@ -50,14 +42,12 @@ export function FoodSection({ onLogFood, captureTimestamp }: FoodSectionProps) {
     const savedName = foodName;
     const savedTimeValue = timeValue;
     const savedDateValue = dateValue;
-    const savedActivePreset = activePreset;
     const savedTimestampMs = getTimestampMs();
 
     submittingRef.current = true;
 
     // Optimistic: clear input immediately so the UI stays responsive
     setFoodName("");
-    setActivePreset(null);
     reset();
     setSaving(true);
 
@@ -66,7 +56,6 @@ export function FoodSection({ onLogFood, captureTimestamp }: FoodSectionProps) {
       .catch((err: unknown) => {
         // Restore all input state so the user doesn't lose their entry
         setFoodName(savedName);
-        setActivePreset(savedActivePreset);
         setTimeValue(savedTimeValue);
         setDateValue(savedDateValue);
         toast.error(getErrorMessage(err, "Failed to log food."));
@@ -89,41 +78,6 @@ export function FoodSection({ onLogFood, captureTimestamp }: FoodSectionProps) {
       />
 
       <div className="space-y-1.5">
-        {customFoodPresets.length > 0 && (
-          <div className="space-y-1.5">
-            <p className="text-[10px] font-medium uppercase tracking-wide text-[var(--text-faint)]">
-              Food badges
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {customFoodPresets.map((preset) => (
-                <button
-                  key={preset.id}
-                  type="button"
-                  className="rounded-full border border-[var(--section-food-border)] bg-[var(--section-food-muted)] px-2.5 py-0.5 text-[10px] text-[var(--text-muted)] transition-colors hover:border-[var(--section-food)] hover:text-[var(--section-food)]"
-                  title={
-                    preset.ingredients.length > 0
-                      ? `Ingredients: ${preset.ingredients.join(", ")}`
-                      : "Custom food badge"
-                  }
-                  onClick={() => {
-                    const nextName = preset.name.trim();
-                    if (!nextName) return;
-                    if (foodName.trim().toLowerCase() === nextName.toLowerCase()) {
-                      void submitFood();
-                      return;
-                    }
-                    setFoodName(nextName);
-                    setActivePreset(preset);
-                    if (foodError) setFoodError("");
-                  }}
-                >
-                  {preset.name}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
         <div className="flex items-center gap-2">
           <PanelTimePicker
             timeValue={timeValue}
@@ -140,7 +94,6 @@ export function FoodSection({ onLogFood, captureTimestamp }: FoodSectionProps) {
             maxLength={300}
             onChange={(event) => {
               setFoodName(event.target.value);
-              setActivePreset(null);
               if (foodError) setFoodError("");
             }}
             onKeyDown={(event) => {

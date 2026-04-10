@@ -13,7 +13,6 @@ import type {
   FoodTendency,
   TransitCalibration,
 } from "../../shared/foodTypes";
-import { DEFAULT_INSIGHT_MODEL, type InsightModel } from "../lib/aiModels";
 import type { HabitConfig } from "../lib/habitTemplates";
 
 export type {
@@ -89,7 +88,7 @@ export const DEFAULT_NUTRITION_GOALS: NutritionGoals = {
   dailyWaterGoalMl: 2000,
 };
 
-// ── Food Personalisation ──────────────────────────────────────────────────────
+// ── Food Preferences ─────────────────────────────────────────────────────────
 
 /** How cautiously Dr. Poo upgrades foods and makes suggestions. */
 export type CautionLevel = "conservative" | "balanced" | "adventurous";
@@ -97,28 +96,26 @@ export type CautionLevel = "conservative" | "balanced" | "adventurous";
 /** How many good trials are required before a food is considered safe. */
 export type UpgradeSpeed = "conservative" | "balanced" | "adventurous";
 
-export interface FoodPersonalisation {
+export interface FoodPreferences {
   cautionLevel: CautionLevel;
   upgradeSpeed: UpgradeSpeed;
 }
 
-export const DEFAULT_FOOD_PERSONALISATION: FoodPersonalisation = {
+export const DEFAULT_FOOD_PREFERENCES: FoodPreferences = {
   cautionLevel: "balanced",
   upgradeSpeed: "balanced",
 };
 
 // ── AI Preferences ────────────────────────────────────────────────────────────
 
-export type AiModel = InsightModel;
-
-/** Axis 1 — Approach: emotional orientation / relationship style */
-export type Approach = "supportive" | "personal" | "analytical";
-/** Axis 2 — Register: vocabulary and terminology level */
-export type Register = "everyday" | "mixed" | "clinical";
+/** Axis 1 — Familiarity: how close and conversational Dr. Poo sounds */
+export type ToneFamiliarity = "reserved" | "steady" | "familiar" | "close";
+/** Axis 2 — Vocabulary: how plain or clinical the wording should be */
+export type ToneVocabulary = "everyday" | "balanced" | "clinical";
 /** Axis 3 — Structure: how the output is formatted */
-export type OutputFormat = "narrative" | "mixed" | "structured";
+export type OutputStyle = "prose" | "blended" | "structured";
 /** Axis 4 — Length: how much detail per section */
-export type OutputLength = "concise" | "standard" | "detailed";
+export type OutputLength = "brief" | "standard" | "detailed";
 
 /** Named presets that map to sensible axis combinations */
 export type DrPooPreset =
@@ -141,10 +138,9 @@ export interface AiPreferences {
   preferredName: string;
   locationTimezone: string;
   mealSchedule: MealSchedule;
-  aiModel: AiModel;
-  approach: Approach;
-  register: Register;
-  outputFormat: OutputFormat;
+  toneFamiliarity: ToneFamiliarity;
+  toneVocabulary: ToneVocabulary;
+  outputStyle: OutputStyle;
   outputLength: OutputLength;
   /** Named preset — "custom" when user has manually adjusted axes */
   preset: DrPooPreset;
@@ -157,31 +153,34 @@ export interface AiPreferences {
 /** Preset definitions mapping preset name → axis values */
 export const DR_POO_PRESETS: Record<
   Exclude<DrPooPreset, "custom">,
-  Pick<AiPreferences, "approach" | "register" | "outputFormat" | "outputLength">
+  Pick<
+    AiPreferences,
+    "toneFamiliarity" | "toneVocabulary" | "outputStyle" | "outputLength"
+  >
 > = {
   reassuring_coach: {
-    approach: "supportive",
-    register: "mixed",
-    outputFormat: "mixed",
+    toneFamiliarity: "close",
+    toneVocabulary: "balanced",
+    outputStyle: "blended",
     outputLength: "standard",
   },
   clear_clinician: {
-    approach: "personal",
-    register: "clinical",
-    outputFormat: "structured",
-    outputLength: "concise",
+    toneFamiliarity: "steady",
+    toneVocabulary: "clinical",
+    outputStyle: "structured",
+    outputLength: "brief",
   },
   data_deep_dive: {
-    approach: "analytical",
-    register: "mixed",
-    outputFormat: "structured",
+    toneFamiliarity: "reserved",
+    toneVocabulary: "balanced",
+    outputStyle: "structured",
     outputLength: "detailed",
   },
   quiet_checkin: {
-    approach: "personal",
-    register: "everyday",
-    outputFormat: "narrative",
-    outputLength: "concise",
+    toneFamiliarity: "familiar",
+    toneVocabulary: "everyday",
+    outputStyle: "prose",
+    outputLength: "brief",
   },
 };
 
@@ -201,13 +200,12 @@ export const DEFAULT_AI_PREFERENCES: AiPreferences = {
     dinner: "18:00",
     lateEveningSnack: "20:30",
   },
-  aiModel: DEFAULT_INSIGHT_MODEL,
-  approach: "supportive",
-  register: "mixed",
-  outputFormat: "mixed",
+  toneFamiliarity: "close",
+  toneVocabulary: "balanced",
+  outputStyle: "blended",
   outputLength: "standard",
   preset: "reassuring_coach",
-  promptVersion: 3,
+  promptVersion: 4,
 };
 
 export interface HealthProfile {
@@ -220,6 +218,7 @@ export interface HealthProfile {
   startingWeight: number | null;
   currentWeight: number | null;
   targetWeight: number | null;
+  clinicalHistory: string;
   comorbidities: string[];
   otherConditions: string;
   medications: string;
@@ -275,7 +274,7 @@ export interface PersistedProfileSettings {
   sleepGoal?: SleepGoal;
   healthProfile?: HealthProfile;
   aiPreferences?: AiPreferences;
-  foodPersonalisation?: FoodPersonalisation;
+  foodPreferences?: FoodPreferences;
   transitCalibration?: TransitCalibration;
 }
 

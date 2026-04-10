@@ -138,7 +138,7 @@ export function DeleteConfirmDrawer({
         <DrawerContent className="border-t-2 border-[var(--destructive)]/60 bg-[var(--surface-1)]">
           <DrawerHeader className="pb-2">
             {warningIcon}
-            <DrawerTitle className="mt-2 text-center font-display text-lg tracking-tight text-[var(--text)]">
+            <DrawerTitle className="mt-2 text-center font-sketch text-lg tracking-tight text-[var(--text)]">
               {titleText}
             </DrawerTitle>
             <DrawerDescription className="text-center text-[12px] leading-relaxed text-[var(--text-muted)]">
@@ -165,7 +165,7 @@ export function DeleteConfirmDrawer({
 
           <div className="px-6 pt-5 pb-2 text-center">
             {warningIcon}
-            <DialogPrimitive.Title className="mt-3 font-display text-lg font-semibold tracking-tight text-[var(--text)]">
+            <DialogPrimitive.Title className="mt-3 font-sketch text-lg font-semibold tracking-tight text-[var(--text)]">
               {titleText}
             </DialogPrimitive.Title>
             <DialogPrimitive.Description className="mt-1.5 text-[12px] leading-relaxed text-[var(--text-muted)]">

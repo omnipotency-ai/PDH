@@ -125,7 +125,7 @@ Move `formatRelativeTime` to `src/lib/trialFormatters.ts` (or `src/lib/dateUtils
 ### [MODERATE] `MAX_CUSTOM_FOOD_PRESETS` magic number is locally defined inside a function body
 
 **Category:** Code Quality
-**Files:** `src/components/settings/PersonalisationForm.tsx:207`
+**Files:** `src/components/settings/PreferencesForm.tsx:207`
 
 **Description:**
 The constant `MAX_CUSTOM_FOOD_PRESETS = 12` is declared inside the `addCustomFoodCard` callback function, not at module scope. Magic numbers inside function bodies are invisible to callers and cannot be referenced in validation logic, tests, or error messages without duplicating the value. There is already a pattern in this codebase for module-scoped max constants (`MAX_FLUID_PRESETS` imported from `@/store`). The inline constant is inconsistent with that convention.
@@ -251,7 +251,7 @@ Remove `justify-center` from the Label's className. If the intent was to center 
 **Files:** `src/components/settings/tracking-form/CustomDrinksSection.tsx:23`
 
 **Description:**
-Line 23: `<div key={\`drink-${index}\`}>`. The fluid presets have a fixed maximum count (`MAX_FLUID_PRESETS`) and are rendered in the same order they appear in the `fluidDrafts`array. While this is technically safe when the list is fixed-length and non-reorderable, it is inconsistent with the pattern used everywhere else in the codebase (e.g.`CustomFoodCard`in`PersonalisationForm.tsx`uses`preset.id`). The index-as-key pattern suppresses React's ability to detect order changes and is flagged by lint rules. If the fluid drafts ever become reorderable, this key will cause bugs.
+Line 23: `<div key={\`drink-${index}\`}>`. The fluid presets have a fixed maximum count (`MAX_FLUID_PRESETS`) and are rendered in the same order they appear in the `fluidDrafts`array. While this is technically safe when the list is fixed-length and non-reorderable, it is inconsistent with the pattern used everywhere else in the codebase (e.g.`CustomFoodCard`in`PreferencesForm.tsx`uses`preset.id`). The index-as-key pattern suppresses React's ability to detect order changes and is flagged by lint rules. If the fluid drafts ever become reorderable, this key will cause bugs.
 
 **Suggested Fix:**
 If `fluidDrafts` have stable identities (e.g. a fixed slot index that is semantically meaningful), use the slot index with a comment explaining why it is stable. Otherwise assign stable IDs to fluid preset slots. The simplest fix is a comment: `{/* key is stable: fluid presets are fixed-length and non-reorderable */}`. A better fix is adding an `id` field to `FluidPresetDraft`.

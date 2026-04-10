@@ -1,8 +1,9 @@
 > **Ref:** `docs/ROADMAP.md`
-> **Updated:** 2026-04-08
-> **Version:** 2.4
+> **Updated:** 2026-04-10
+> **Version:** 2.5
 > **History:**
 >
+> - v2.5 (2026-04-10) — verified no roadmap status changes after `odyssey/layout-phase-1` PR stabilization work
 > - v2.4 (2026-04-08) — Food Platform master plan adopted, old Food Page initiative superseded, Food Registry absorbed
 > - v2.3 (2026-04-07) — Tech-Debt initiative marked Done, ~30 resolved standalone items moved to Removed
 > - v2.2 (2026-04-06) — Food Page & Meal System initiative activated, Navigation Restructure superseded

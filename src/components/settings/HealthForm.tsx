@@ -2,27 +2,18 @@ import { useCallback } from "react";
 import { Separator } from "@/components/ui/separator";
 import { useHealthProfile, useUnitSystem } from "@/hooks/useProfile";
 import type { HealthProfile } from "@/types/domain";
-import {
-  ConditionsSection,
-  DemographicsSection,
-  DietarySection,
-  LifestyleSection,
-  MedicationsSection,
-  SurgerySection,
-} from "./health";
+import { ClinicalHistorySection, DemographicsSection } from "./health";
 
 export function HealthForm() {
-  const { healthProfile, isLoading, setHealthProfile: setFullHealthProfile } = useHealthProfile();
+  const { healthProfile, isLoading, setHealthProfile: patchHealthProfile } = useHealthProfile();
   const { unitSystem } = useUnitSystem();
 
-  // Child sections use the old partial-update pattern: setHealthProfile({ field: value }).
-  // The hook's setter takes a full HealthProfile, so we wrap it to merge partials.
   const setHealthProfile = useCallback(
     (updates: Partial<HealthProfile>) => {
       if (!healthProfile) return;
-      void setFullHealthProfile({ ...healthProfile, ...updates });
+      void patchHealthProfile(updates);
     },
-    [healthProfile, setFullHealthProfile],
+    [healthProfile, patchHealthProfile],
   );
 
   if (isLoading) {
@@ -31,10 +22,6 @@ export function HealthForm() {
 
   return (
     <div className="space-y-4">
-      <SurgerySection healthProfile={healthProfile} setHealthProfile={setHealthProfile} />
-
-      <Separator />
-
       <DemographicsSection
         healthProfile={healthProfile}
         setHealthProfile={setHealthProfile}
@@ -43,22 +30,14 @@ export function HealthForm() {
 
       <Separator />
 
-      <ConditionsSection healthProfile={healthProfile} setHealthProfile={setHealthProfile} />
-
-      <Separator />
-
-      <MedicationsSection healthProfile={healthProfile} setHealthProfile={setHealthProfile} />
-
-      <Separator />
-
-      <LifestyleSection healthProfile={healthProfile} setHealthProfile={setHealthProfile} />
-
-      <Separator />
-
-      <DietarySection healthProfile={healthProfile} setHealthProfile={setHealthProfile} />
+      <ClinicalHistorySection
+        healthProfile={healthProfile}
+        setHealthProfile={setHealthProfile}
+        unitSystem={unitSystem}
+      />
 
       <p className="text-[10px] text-[var(--text-faint)]">
-        Shared with Dr. Poo to personalise your advice. Stored securely in your cloud profile.
+        Used by Dr. Poo as durable recovery context alongside your live logs.
       </p>
     </div>
   );

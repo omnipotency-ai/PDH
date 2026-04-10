@@ -89,11 +89,17 @@ export interface TodayLogProps {
   onNextDay: () => void;
   onJumpToToday: () => void;
   onDelete: (id: string) => Promise<void>;
-  onSave: (id: string, data: LogUpdateData, timestamp?: number) => Promise<void>;
+  onSave: (
+    id: string,
+    data: LogUpdateData,
+    timestamp?: number,
+  ) => Promise<void>;
   /** When set, the LogEntry with this ID will auto-open in edit mode. */
   autoEditId?: string | null;
   /** Called after auto-edit is activated so the parent can clear the ID. */
   onAutoEditHandled?: () => void;
+  /** Override the computed title (e.g. "LOGS" in the Home right column). */
+  title?: string;
 }
 
 export interface LogEntryProps {

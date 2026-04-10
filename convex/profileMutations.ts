@@ -11,7 +11,7 @@ import { sanitizeUnknownStringsDeep } from "./lib/inputSafety";
 import {
   aiPreferencesValidator,
   fluidPresetsValidator,
-  foodPersonalisationValidator,
+  foodPreferencesValidator,
   habitsValidator,
   healthProfileValidator,
   nutritionGoalsValidator,
@@ -54,6 +54,37 @@ const KNOWN_HABIT_UNITS = new Set<string>([
   "minutes",
   "hours",
 ] as const);
+
+const RETIRED_HABIT_IDS = new Set([
+  "habit_electrolyte",
+  "habit_stretching",
+  "habit_wound_dressing_checkbox",
+  "habit_wound_dressing_count",
+]);
+
+const RETIRED_HABIT_TEMPLATE_KEYS = new Set([
+  "electrolyte",
+  "stretching",
+  "wound_dressing_checkbox",
+  "wound_dressing_count",
+]);
+
+function isRetiredHabitCandidate(args: {
+  id: string | undefined;
+  name: string;
+  templateKey: string | undefined;
+}): boolean {
+  const normalizedName = args.name.trim().toLowerCase();
+  return (
+    (args.id !== undefined && RETIRED_HABIT_IDS.has(args.id)) ||
+    (args.templateKey !== undefined && RETIRED_HABIT_TEMPLATE_KEYS.has(args.templateKey)) ||
+    normalizedName === "bebida" ||
+    normalizedName === "electrolyte drink" ||
+    normalizedName === "stretching" ||
+    normalizedName === "change dressing" ||
+    normalizedName === "dressing changes"
+  );
+}
 
 function asFiniteNumber(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value)
@@ -178,6 +209,12 @@ function normalizeStoredProfileHabit(
     asFiniteNumber(raw.dailyTarget) ?? asFiniteNumber(raw.dailyGoal);
   const rawDailyCap =
     asFiniteNumber(raw.dailyCap) ?? asFiniteNumber(raw.dailyGoal);
+  const templateKey = asTrimmedString(raw.templateKey);
+  const habitId = asTrimmedString(raw.id);
+
+  if (isRetiredHabitCandidate({ id: habitId, name, templateKey })) {
+    return null;
+  }
 
   const habitType = normalizeHabitType(rawHabitType, name);
   const kind = normalizeKind({ rawKind, goalMode, habitType });
@@ -211,7 +248,7 @@ function normalizeStoredProfileHabit(
     habitType: string;
     templateKey?: string;
   } = {
-    id: asTrimmedString(raw.id) ?? `habit_${slugifyName(name)}_${index}`,
+    id: habitId ?? `habit_${slugifyName(name)}_${index}`,
     name,
     kind,
     unit,
@@ -238,7 +275,6 @@ function normalizeStoredProfileHabit(
   if (archivedAt !== undefined) normalized.archivedAt = archivedAt;
   if (logAs !== undefined) normalized.logAs = logAs;
 
-  const templateKey = asTrimmedString(raw.templateKey);
   if (templateKey) normalized.templateKey = templateKey;
 
   return normalized;
@@ -298,21 +334,92 @@ export function normalizeStoredFluidPresets(
 // AI preferences normalization
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Known legacy model names that should be normalized to current values. */
-const LEGACY_AI_MODEL_MAP: Record<string, string> = {
-  "gpt-5-mini": "gpt-5.4-mini",
-  "gpt-4o-mini": "gpt-5.4-mini",
-  "gpt-4o": "gpt-5.4",
-  "gpt-4.1-nano": "gpt-5.4-mini",
-  "gpt-4.1-mini": "gpt-5.4-mini",
-  "gpt-5.2": "gpt-5.4",
-};
 
-function normalizeStoredAiModel(value: unknown): string {
-  if (typeof value !== "string" || value.length === 0) return "gpt-5.4";
-  const mapped = LEGACY_AI_MODEL_MAP[value];
-  if (mapped !== undefined) return mapped;
-  return value;
+function normalizeToneFamiliarity(value: unknown): string {
+  switch (value) {
+    case "reserved":
+    case "steady":
+    case "familiar":
+    case "close":
+      return value;
+    case "supportive":
+      return "close";
+    case "personal":
+      return "familiar";
+    case "analytical":
+      return "reserved";
+    default:
+      return "close";
+  }
+}
+
+function normalizeToneVocabulary(value: unknown): string {
+  switch (value) {
+    case "everyday":
+    case "balanced":
+    case "clinical":
+      return value;
+    case "mixed":
+      return "balanced";
+    default:
+      return "balanced";
+  }
+}
+
+function normalizeOutputStyle(value: unknown): string {
+  switch (value) {
+    case "prose":
+    case "blended":
+    case "structured":
+      return value;
+    case "narrative":
+      return "prose";
+    case "mixed":
+      return "blended";
+    default:
+      return "blended";
+  }
+}
+
+function normalizeOutputLength(value: unknown): string {
+  switch (value) {
+    case "brief":
+    case "standard":
+    case "detailed":
+      return value;
+    case "concise":
+      return "brief";
+    default:
+      return "standard";
+  }
+}
+
+function normalizeMealSchedule(value: unknown): Record<string, string> {
+  const mealSchedule =
+    value && typeof value === "object" && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
+  const breakfast =
+    typeof mealSchedule.breakfast === "string" ? mealSchedule.breakfast : "08:00";
+  const lunch = typeof mealSchedule.lunch === "string" ? mealSchedule.lunch : "13:00";
+  const dinner =
+    typeof mealSchedule.dinner === "string" ? mealSchedule.dinner : "18:00";
+
+  return {
+    breakfast,
+    middaySnack:
+      typeof mealSchedule.middaySnack === "string" ? mealSchedule.middaySnack : "10:30",
+    lunch,
+    midafternoonSnack:
+      typeof mealSchedule.midafternoonSnack === "string"
+        ? mealSchedule.midafternoonSnack
+        : "15:30",
+    dinner,
+    lateEveningSnack:
+      typeof mealSchedule.lateEveningSnack === "string"
+        ? mealSchedule.lateEveningSnack
+        : "20:30",
+  };
 }
 
 export function normalizeStoredAiPreferences(
@@ -324,8 +431,40 @@ export function normalizeStoredAiPreferences(
 
   const preferences = value as Record<string, unknown>;
   return {
-    ...preferences,
-    aiModel: normalizeStoredAiModel(preferences.aiModel),
+    preferredName:
+      typeof preferences.preferredName === "string" ? preferences.preferredName : "",
+    locationTimezone:
+      typeof preferences.locationTimezone === "string"
+        ? preferences.locationTimezone
+        : typeof preferences.location === "string"
+          ? preferences.location
+          : "",
+    mealSchedule: normalizeMealSchedule(preferences.mealSchedule),
+    toneFamiliarity: normalizeToneFamiliarity(
+      preferences.toneFamiliarity ?? preferences.approach,
+    ),
+    toneVocabulary: normalizeToneVocabulary(
+      preferences.toneVocabulary ?? preferences.register,
+    ),
+    outputStyle: normalizeOutputStyle(preferences.outputStyle ?? preferences.outputFormat),
+    outputLength: normalizeOutputLength(preferences.outputLength),
+    preset:
+      preferences.preset === "reassuring_coach" ||
+      preferences.preset === "clear_clinician" ||
+      preferences.preset === "data_deep_dive" ||
+      preferences.preset === "quiet_checkin" ||
+      preferences.preset === "custom"
+        ? preferences.preset
+        : "reassuring_coach",
+    promptVersion:
+      typeof preferences.promptVersion === "number" &&
+      Number.isFinite(preferences.promptVersion)
+        ? Math.max(preferences.promptVersion, 4)
+        : 4,
+    ...(preferences.reportTriggerMode === "auto" ||
+    preferences.reportTriggerMode === "manual"
+      ? { reportTriggerMode: preferences.reportTriggerMode }
+      : {}),
   };
 }
 
@@ -346,7 +485,7 @@ export function buildNormalizedProfileFields(args: {
   sleepGoal?: typeof sleepGoalValidator.type;
   healthProfile?: typeof healthProfileValidator.type;
   aiPreferences?: typeof aiPreferencesValidator.type;
-  foodPersonalisation?: typeof foodPersonalisationValidator.type;
+  foodPreferences?: typeof foodPreferencesValidator.type;
   transitCalibration?: typeof transitCalibrationValidator.type;
   nutritionGoals?: typeof nutritionGoalsValidator.type;
   foodFavourites?: string[];
@@ -388,10 +527,10 @@ export function buildNormalizedProfileFields(args: {
       }),
     ) as typeof args.aiPreferences;
   }
-  if (args.foodPersonalisation !== undefined) {
-    fields.foodPersonalisation = sanitizeUnknownStringsDeep(
-      args.foodPersonalisation,
-      { path: "profile.foodPersonalisation" },
+  if (args.foodPreferences !== undefined) {
+    fields.foodPreferences = sanitizeUnknownStringsDeep(
+      args.foodPreferences,
+      { path: "profile.foodPreferences" },
     );
   }
   if (args.transitCalibration !== undefined) {
@@ -428,7 +567,7 @@ export const replaceProfile = mutation({
     sleepGoal: v.optional(sleepGoalValidator),
     healthProfile: v.optional(healthProfileValidator),
     aiPreferences: v.optional(aiPreferencesValidator),
-    foodPersonalisation: v.optional(foodPersonalisationValidator),
+    foodPreferences: v.optional(foodPreferencesValidator),
     transitCalibration: v.optional(transitCalibrationValidator),
     now: v.number(),
   },
@@ -458,8 +597,8 @@ export const replaceProfile = mutation({
       ...(args.aiPreferences !== undefined && {
         aiPreferences: args.aiPreferences,
       }),
-      ...(args.foodPersonalisation !== undefined && {
-        foodPersonalisation: args.foodPersonalisation,
+      ...(args.foodPreferences !== undefined && {
+        foodPreferences: args.foodPreferences,
       }),
       ...(args.transitCalibration !== undefined && {
         transitCalibration: args.transitCalibration,
@@ -482,8 +621,8 @@ export const replaceProfile = mutation({
       ...(fields.aiPreferences !== undefined && {
         aiPreferences: fields.aiPreferences,
       }),
-      ...(fields.foodPersonalisation !== undefined && {
-        foodPersonalisation: fields.foodPersonalisation,
+      ...(fields.foodPreferences !== undefined && {
+        foodPreferences: fields.foodPreferences,
       }),
       ...(fields.transitCalibration !== undefined && {
         transitCalibration: fields.transitCalibration,
@@ -518,7 +657,7 @@ export const patchProfile = mutation({
     sleepGoal: v.optional(sleepGoalValidator),
     healthProfile: v.optional(healthProfileValidator),
     aiPreferences: v.optional(aiPreferencesValidator),
-    foodPersonalisation: v.optional(foodPersonalisationValidator),
+    foodPreferences: v.optional(foodPreferencesValidator),
     transitCalibration: v.optional(transitCalibrationValidator),
     nutritionGoals: v.optional(nutritionGoalsValidator),
     foodFavourites: v.optional(v.array(v.string())),
@@ -549,8 +688,8 @@ export const patchProfile = mutation({
       ...(args.aiPreferences !== undefined && {
         aiPreferences: args.aiPreferences,
       }),
-      ...(args.foodPersonalisation !== undefined && {
-        foodPersonalisation: args.foodPersonalisation,
+      ...(args.foodPreferences !== undefined && {
+        foodPreferences: args.foodPreferences,
       }),
       ...(args.transitCalibration !== undefined && {
         transitCalibration: args.transitCalibration,
@@ -589,8 +728,8 @@ export const patchProfile = mutation({
       ...(updates.aiPreferences !== undefined && {
         aiPreferences: updates.aiPreferences,
       }),
-      ...(updates.foodPersonalisation !== undefined && {
-        foodPersonalisation: updates.foodPersonalisation,
+      ...(updates.foodPreferences !== undefined && {
+        foodPreferences: updates.foodPreferences,
       }),
       ...(updates.transitCalibration !== undefined && {
         transitCalibration: updates.transitCalibration,

@@ -1,16 +1,11 @@
-import { useCallback } from "react";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
 import { useProfileContext } from "@/contexts/ProfileContext";
-import { useAiConfig } from "@/hooks/useAiConfig";
-import { useAiPreferences, useHealthProfile, useUnitSystem } from "@/hooks/useProfile";
+import { useUnitSystem } from "@/hooks/useProfile";
 import { getErrorMessage } from "@/lib/errors";
 import { THEME_STORAGE_KEY } from "@/lib/storageKeys";
 import { useDeleteAllSyncedData, useExportBackup, useSyncedLogCount } from "@/lib/sync";
-import type { HealthProfile } from "@/types/domain";
 import {
-  ArtificialIntelligenceSection,
-  CloudProfileSection,
   DataManagementSection,
   UnitsSection,
   useAppDataFormController,
@@ -21,30 +16,16 @@ const LOCAL_APP_STORAGE_KEYS = [
   "patterns-smart-views-v1",
   "patterns-filter-state-v1",
   "track.pending-food-draft",
-  "caca-custom-food-presets-v1",
   THEME_STORAGE_KEY,
 ] as const;
 const LOCAL_APP_STORAGE_PREFIXES = ["quick-capture-destructive-rollover:"] as const;
 
 export function AppDataForm() {
   const logsCount = useSyncedLogCount();
-  const { isLoading: isProfileLoading, patchProfile } = useProfileContext();
-  const { isAiConfigured } = useAiConfig();
+  const { patchProfile } = useProfileContext();
   const { unitSystem, setUnitSystem } = useUnitSystem();
-  const { healthProfile, setHealthProfile: setFullHealthProfile } = useHealthProfile();
-  const { aiPreferences, setAiPreferences } = useAiPreferences();
   const deleteAllSyncedData = useDeleteAllSyncedData();
   const exportBackup = useExportBackup();
-
-  // The controller expects a partial-update setter matching the old store API.
-  // useHealthProfile().setHealthProfile takes a full HealthProfile, so we wrap it.
-  const patchHealthProfile = useCallback(
-    (updates: Partial<HealthProfile>) => {
-      if (!healthProfile) return;
-      void setFullHealthProfile({ ...healthProfile, ...updates });
-    },
-    [healthProfile, setFullHealthProfile],
-  );
 
   const clearLocalData = async () => {
     if (typeof window === "undefined") return;
@@ -70,9 +51,6 @@ export function AppDataForm() {
     }
   };
 
-  // Hooks must be called unconditionally, so the controller receives
-  // healthProfile (null until loaded). The controller guards its own mutations
-  // against null. Form sections are blocked in the JSX below until loaded.
   const {
     profileStatus,
     isDeletingData,
@@ -89,18 +67,12 @@ export function AppDataForm() {
     deleteAllSyncedData,
     clearLocalData,
     exportBackup,
-    healthProfile,
-    setHealthProfile: patchHealthProfile,
     patchProfile,
   });
 
   return (
     <div className="space-y-4">
       <UnitsSection unitSystem={unitSystem} onUnitSystemChange={setUnitSystem} />
-
-      <Separator />
-
-      <CloudProfileSection isLoading={isProfileLoading} />
 
       <Separator />
 
@@ -121,8 +93,8 @@ export function AppDataForm() {
         >
           <p className="mb-2 font-medium text-amber-300">Reset all settings to factory defaults?</p>
           <p className="mb-3 text-[var(--text-muted)]">
-            Your logged data will not be deleted, but all preferences (habits, units, AI settings,
-            health profile) will be reset to their defaults.
+            Your logged data will not be deleted, but habits, units, Dr. Poo preferences, and
+            health details will reset to their defaults.
           </p>
           <div className="flex gap-2">
             <button
@@ -144,12 +116,6 @@ export function AppDataForm() {
       )}
 
       <Separator />
-
-      <ArtificialIntelligenceSection
-        aiEnabled={isAiConfigured === true}
-        aiModel={aiPreferences.aiModel}
-        onAiModelChange={(model) => void setAiPreferences({ aiModel: model })}
-      />
 
       {!!profileStatus && <p className="text-[10px] text-[var(--text-faint)]">{profileStatus}</p>}
 

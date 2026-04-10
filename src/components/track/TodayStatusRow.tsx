@@ -8,6 +8,7 @@ interface TodayStatusRowProps {
   waterOnlyMl: number;
   lastBmTimestamp: number | null;
   nowMs: number;
+  isCurrentDay?: boolean;
 }
 
 const BM_TIMER_THRESHOLDS = {
@@ -16,27 +17,31 @@ const BM_TIMER_THRESHOLDS = {
   LONG_HOURS: 24,
 } as const;
 
-function getLastBmTextColor(lastBmTimestamp: number | null, nowMs: number): string {
+function getLastBmTextColor(
+  lastBmTimestamp: number | null,
+  nowMs: number,
+  isCurrentDay: boolean,
+): string {
+  if (!isCurrentDay) return "var(--text-muted)";
   if (lastBmTimestamp === null) return "var(--text-muted)";
   const elapsedMs = Math.max(0, nowMs - lastBmTimestamp);
   const totalMinutes = Math.floor(elapsedMs / 60_000);
   if (totalMinutes < BM_TIMER_THRESHOLDS.RECENT_MINUTES) return "var(--sky)";
-  if (totalMinutes < BM_TIMER_THRESHOLDS.MODERATE_HOURS * 60) return "var(--emerald)";
-  if (totalMinutes < BM_TIMER_THRESHOLDS.LONG_HOURS * 60) return "var(--orange)";
+  if (totalMinutes < BM_TIMER_THRESHOLDS.MODERATE_HOURS * 60)
+    return "var(--emerald)";
+  if (totalMinutes < BM_TIMER_THRESHOLDS.LONG_HOURS * 60)
+    return "var(--orange)";
   return "var(--red)";
 }
 
-function formatTimeSince(lastBmTimestamp: number | null, nowMs: number): string {
-  if (lastBmTimestamp === null) return "No BM logged yet";
-  const elapsedMs = Math.max(0, nowMs - lastBmTimestamp);
-  const totalMinutes = Math.floor(elapsedMs / 60_000);
-  if (totalMinutes < 60) return `${totalMinutes}m ago`;
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  if (hours < 24) return minutes === 0 ? `${hours}h ago` : `${hours}h ${minutes}m ago`;
-  const days = Math.floor(hours / 24);
-  const remHours = hours % 24;
-  return remHours === 0 ? `${days}d ago` : `${days}d ${remHours}h ago`;
+function formatLastBmTime(lastBmTimestamp: number | null): string {
+  if (lastBmTimestamp === null) return "No BM logged";
+  const d = new Date(lastBmTimestamp);
+  const h = d.getHours();
+  const m = d.getMinutes().toString().padStart(2, "0");
+  const period = h >= 12 ? "pm" : "am";
+  const h12 = h % 12 || 12;
+  return `at ${h12}:${m} ${period}`;
 }
 
 export function TodayStatusRow({
@@ -45,9 +50,14 @@ export function TodayStatusRow({
   waterOnlyMl,
   lastBmTimestamp,
   nowMs,
+  isCurrentDay = true,
 }: TodayStatusRowProps) {
   const { unitSystem } = useUnitSystem();
-  const lastBmTextColor = getLastBmTextColor(lastBmTimestamp, nowMs);
+  const lastBmTextColor = getLastBmTextColor(
+    lastBmTimestamp,
+    nowMs,
+    isCurrentDay,
+  );
 
   return (
     <div
@@ -62,7 +72,7 @@ export function TodayStatusRow({
           border: "none",
         }}
       >
-        BMs: {bmCount} today
+        BMs: {bmCount}
       </span>
       <span
         className="inline-flex items-center rounded-full px-3 py-1 text-center text-xs font-medium"
@@ -86,7 +96,7 @@ export function TodayStatusRow({
         }}
       >
         <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
-        Last BM: {formatTimeSince(lastBmTimestamp, nowMs)}
+        Last BM {formatLastBmTime(lastBmTimestamp)}
       </span>
     </div>
   );

@@ -6,7 +6,6 @@ import { useHabits, useUnitSystem } from "@/hooks/useProfile";
 import type { HabitConfig } from "@/lib/habitTemplates";
 import { isMovementHabit, isSleepHabit } from "@/lib/habitTemplates";
 import { normalizeFluidItemName } from "@/lib/normalizeFluidName";
-import { AddHabitDrawer } from "./AddHabitDrawer";
 import { DurationEntryPopover } from "./DurationEntryPopover";
 import { QuickCaptureTile } from "./QuickCaptureTile";
 import { WeightEntryDrawer } from "./WeightEntryDrawer";
@@ -56,7 +55,7 @@ export function QuickCapture({
         mutedColor="var(--section-quick-muted)"
       />
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-2 2xl:grid-cols-3">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {visibleHabits.map((habit) => {
           if (habit.habitType === "weight") {
             return (
@@ -130,8 +129,6 @@ export function QuickCapture({
           );
         })}
 
-        {/* Add habit tile */}
-        <AddHabitDrawer existingHabits={habits} />
       </div>
     </section>
   );

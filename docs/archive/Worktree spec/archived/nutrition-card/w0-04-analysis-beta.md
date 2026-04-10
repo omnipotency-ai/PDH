@@ -235,7 +235,7 @@ The `upsert` mutation (line 74-194) handles both insert and update. Key observat
 
 The runtime priority should be:
 
-1. **ingredientProfiles** (per-user, Convex) — if the user has populated nutrition for this food, use their data. This respects personalization (e.g., their specific brand of yogurt).
+1. **ingredientProfiles** (per-user, Convex) — if the user has populated nutrition for this food, use their data. This respects preferences (e.g., their specific brand of yogurt).
 2. **FOOD_PORTION_DATA** (static, client-side) — fallback for foods the user hasn't profiled. Shows reference values with a clear "reference data" indicator in the UI.
 
 ---

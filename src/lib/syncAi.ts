@@ -40,6 +40,7 @@ export function useAddAiAnalysis() {
       model: string;
       durationMs: number;
       inputLogCount: number;
+      latestDigestionLogTimestamp?: number;
       error?: string;
     },
   ) =>
@@ -60,6 +61,9 @@ export function useAddAiAnalysis() {
       model: sanitizePlainText(payload.model, { preserveNewlines: false }),
       durationMs: payload.durationMs,
       inputLogCount: payload.inputLogCount,
+      ...(payload.latestDigestionLogTimestamp !== undefined && {
+        latestDigestionLogTimestamp: payload.latestDigestionLogTimestamp,
+      }),
       ...(payload.error !== undefined && {
         error: sanitizePlainText(payload.error),
       }),

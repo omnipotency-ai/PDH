@@ -1,72 +1,141 @@
 import { UserButton } from "@clerk/clerk-react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Settings } from "lucide-react";
+import {
+  BarChart3,
+  Home,
+  NotebookPen,
+  Settings,
+  UtensilsCrossed,
+} from "lucide-react";
 import ModeToggle from "@/components/mode-toggle";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+
+const SETTINGS_ACTIVE = "text-violet-400";
+const SETTINGS_INACTIVE = "text-[var(--text-faint)]";
+
+const NAV_ITEMS = [
+  {
+    to: "/",
+    label: "Home",
+    icon: Home,
+    tone: "text-teal-500 dark:text-teal-400",
+    activeBg: "bg-teal-400",
+  },
+  {
+    to: "/track",
+    label: "Track",
+    icon: NotebookPen,
+    tone: "text-sky-500 dark:text-sky-400",
+    activeBg: "bg-sky-400",
+  },
+  {
+    to: "/food",
+    label: "Food",
+    icon: UtensilsCrossed,
+    tone: "text-orange-500 dark:text-orange-400",
+    activeBg: "bg-orange-400",
+  },
+  {
+    to: "/insights",
+    label: "Insights",
+    icon: BarChart3,
+    tone: "text-rose-500 dark:text-rose-400",
+    activeBg: "bg-rose-400",
+  },
+] as const;
 
 export function GlobalHeader() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const settingsActive = pathname.startsWith("/settings");
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/6 bg-[rgba(255,255,255,0.7)] backdrop-blur-xl backdrop-saturate-150 dark:bg-[rgba(12,20,32,0.7)]">
-      <div className="mx-auto w-full max-w-2xl px-4 py-2.5">
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-          {/* Logo area */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Link to="/" className="flex items-center gap-2.5">
-                <img
-                  src="/icons/icon-72x72.png"
-                  alt="PDH"
-                  width={64}
-                  height={64}
-                  className="h-16 w-16 drop-shadow-[0_0_8px_rgba(45,212,191,0.4)]"
-                />
-                <div className="hidden lg:block">
-                  <p className="bg-linear-to-r from-(--teal) to-(--section-food) bg-clip-text font-display text-lg font-extrabold tracking-tight text-transparent">
-                    PDH
-                  </p>
-                  <p className="text-[10px] font-medium uppercase tracking-widest text-(--text-faint)">
-                    Anastomosis Food Re-Integration Tracker
-                  </p>
-                </div>
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className={pathname === "/" ? "" : "hidden"}>
-              Home
-            </TooltipContent>
-          </Tooltip>
+      <div className="mx-auto w-full max-w-5xl px-4 py-2">
+        <div className="flex items-center gap-4">
+          {/* Logo */}
+          <Link
+            to="/"
+            className="flex shrink-0 items-center gap-2"
+            aria-label="Peter's Digestive Health home"
+          >
+            <img
+              src="/icons/icon-72x72.png"
+              alt="PDH"
+              width={40}
+              height={40}
+              className="h-10 w-10 drop-shadow-[0_0_8px_rgba(45,212,191,0.5)]"
+            />
+            <span className="hidden font-sketch text-base font-bold tracking-tight text-teal-400 sm:block">
+              Peter's Digestive Health
+            </span>
+          </Link>
 
-          <div className="flex items-center justify-end gap-3">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Link
-                  to="/settings"
-                  className="rounded-lg p-1.5 text-(--text-muted) transition-colors hover:bg-white/6 hover:text-(--text)"
-                  aria-label="Settings"
-                >
-                  <Settings className="h-4 w-4" />
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">Settings</TooltipContent>
-            </Tooltip>
-            <div className="rounded-lg transition-colors hover:bg-white/6">
+          {/* Nav — centre */}
+          <nav
+            aria-label="Main navigation"
+            className="flex flex-1 items-center justify-center"
+          >
+            <div className="flex items-center gap-0.5">
+              {NAV_ITEMS.map((item) => {
+                const Icon = item.icon;
+                const isActive =
+                  item.to === "/"
+                    ? pathname === "/"
+                    : pathname.startsWith(item.to);
+
+                return (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    aria-label={item.label}
+                    aria-current={isActive ? "page" : undefined}
+                    className={cn(
+                      "relative flex flex-col items-center gap-0.5 rounded-lg px-3 py-1.5 text-[10px] font-semibold transition-colors",
+                      item.tone,
+                    )}
+                  >
+                    <Icon className="h-6 w-6 shrink-0" aria-hidden="true" />
+                    <span className="text-[11px] font-semibold">
+                      {item.label}
+                    </span>
+                    {/* Active underline — thick tapered pill (inverted top-border style) */}
+                    {isActive && (
+                      <span
+                        className={cn(
+                          "absolute inset-x-2 -bottom-[calc(0.5rem+1px)] h-[3px] rounded-full",
+                          item.activeBg,
+                        )}
+                        aria-hidden="true"
+                      />
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          </nav>
+
+          {/* Right controls */}
+          <div className="flex shrink-0 items-center gap-2">
+            <Link
+              to="/settings"
+              aria-label="Settings"
+              aria-current={settingsActive ? "page" : undefined}
+              className={cn(
+                "flex h-9 w-9 items-center justify-center rounded-full border border-white/15 transition-colors hover:bg-white/6",
+                settingsActive ? SETTINGS_ACTIVE : SETTINGS_INACTIVE,
+              )}
+            >
+              <Settings className="h-5 w-5" aria-hidden="true" />
+            </Link>
+            <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 transition-colors hover:bg-white/6">
               <ModeToggle />
             </div>
-            <UserButton />
+            <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15">
+              <UserButton />
+            </div>
           </div>
         </div>
       </div>
-
-      {/* Gradient separator at the bottom of the header */}
-      <div
-        className="h-px w-full opacity-40"
-        style={{
-          background:
-            "linear-gradient(90deg, transparent, var(--teal), var(--orange), var(--teal), transparent)",
-        }}
-        aria-hidden="true"
-      />
     </header>
   );
 }

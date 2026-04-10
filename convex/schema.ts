@@ -13,7 +13,7 @@ import {
   foodCategoryValidator,
   foodGroupValidator,
   foodLineValidator,
-  foodPersonalisationValidator,
+  foodPreferencesValidator,
   foodPrimaryStatusValidator,
   foodRiskLevelValidator,
   foodSubcategoryValidator,
@@ -207,6 +207,7 @@ export default defineSchema({
     model: v.string(),
     durationMs: v.number(),
     inputLogCount: v.number(),
+    latestDigestionLogTimestamp: v.optional(v.number()),
     error: v.optional(v.string()),
     starred: v.optional(v.boolean()),
   })
@@ -391,7 +392,7 @@ export default defineSchema({
     sleepGoal: v.optional(sleepGoalValidator),
     healthProfile: v.optional(healthProfileValidator),
     aiPreferences: v.optional(aiPreferencesValidator),
-    foodPersonalisation: v.optional(foodPersonalisationValidator),
+    foodPreferences: v.optional(foodPreferencesValidator),
     transitCalibration: v.optional(transitCalibrationValidator),
     // Set of all canonical food names the user has ever logged.
     // Used by weeklyDigest to determine "new foods" without scanning

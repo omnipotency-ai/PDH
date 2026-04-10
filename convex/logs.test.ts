@@ -484,13 +484,12 @@ describe("logs", () => {
             dinner: "19:00",
             lateEveningSnack: "22:00",
           },
-          aiModel: "gpt-5.4",
-          approach: "supportive",
-          register: "mixed",
-          outputFormat: "mixed",
+          toneFamiliarity: "close",
+          toneVocabulary: "balanced",
+          outputStyle: "blended",
           outputLength: "standard",
           preset: "reassuring_coach",
-          promptVersion: 2,
+          promptVersion: 4,
         },
         updatedAt: now,
       });
@@ -505,7 +504,7 @@ describe("logs", () => {
       { name: "Aquarius" },
       { name: "Tea" },
     ]);
-    expect(profile?.aiPreferences?.aiModel).toBe("gpt-5.4");
+    expect(profile?.aiPreferences?.toneFamiliarity).toBe("close");
   });
 
   it("exports a full data snapshot and deleteAll clears synced data", async () => {

@@ -17,6 +17,7 @@ export const add = mutation({
     model: v.string(),
     durationMs: v.number(),
     inputLogCount: v.number(),
+    latestDigestionLogTimestamp: v.optional(v.number()),
     error: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -30,6 +31,9 @@ export const add = mutation({
       model: args.model,
       durationMs: args.durationMs,
       inputLogCount: args.inputLogCount,
+      ...(args.latestDigestionLogTimestamp !== undefined && {
+        latestDigestionLogTimestamp: args.latestDigestionLogTimestamp,
+      }),
       ...(args.error !== undefined && { error: args.error }),
     });
 
@@ -77,6 +81,7 @@ export const list = query({
       model: row.model,
       durationMs: row.durationMs,
       inputLogCount: row.inputLogCount,
+      latestDigestionLogTimestamp: row.latestDigestionLogTimestamp,
       insight: row.insight,
       error: row.error,
       starred: row.starred ?? false,
@@ -117,6 +122,7 @@ export const latest = query({
       model: row.model,
       durationMs: row.durationMs,
       inputLogCount: row.inputLogCount,
+      latestDigestionLogTimestamp: row.latestDigestionLogTimestamp,
       insight: row.insight,
       error: row.error,
       starred: row.starred ?? false,
@@ -197,6 +203,7 @@ export const latestSuccessful = query({
       model: row.model,
       durationMs: row.durationMs,
       inputLogCount: row.inputLogCount,
+      latestDigestionLogTimestamp: row.latestDigestionLogTimestamp,
       insight: row.insight,
       starred: row.starred ?? false,
     };

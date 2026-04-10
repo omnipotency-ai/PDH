@@ -419,6 +419,7 @@ describe("getFoodWindowHours", () => {
     startingWeight: null,
     currentWeight: null,
     targetWeight: null,
+    clinicalHistory: "",
     comorbidities: [],
     otherConditions: "",
     medications: "",
@@ -464,29 +465,13 @@ describe("getFoodWindowHours", () => {
     expect(getFoodWindowHours(BASE_PROFILE)).toBe(72);
   });
 
-  it("adds 24h for opioid medications", () => {
-    const profile = {
-      ...BASE_PROFILE,
-      medications: "codeine (opioid), paracetamol",
-    };
-    expect(getFoodWindowHours(profile)).toBe(96); // 72 + 24
-  });
-
-  it("adds 24h for iron medications", () => {
-    const profile = {
-      ...BASE_PROFILE,
-      medications: "Iron supplements",
-    };
-    expect(getFoodWindowHours(profile)).toBe(96); // 72 + 24
-  });
-
-  it("caps at 96h", () => {
-    const profile = {
-      ...BASE_PROFILE,
-      medications: "opioid pain medication, iron supplements",
-    };
-    // 72 + 24 = 96, capped at 96
-    expect(getFoodWindowHours(profile)).toBe(96);
+  it("ignores legacy medication fields when computing the window", () => {
+    expect(
+      getFoodWindowHours({
+        ...BASE_PROFILE,
+        medications: "opioid pain medication, iron supplements",
+      }),
+    ).toBe(72);
   });
 });
 
@@ -627,6 +612,7 @@ const BASE_PROFILE: HealthProfile = {
   startingWeight: null,
   currentWeight: null,
   targetWeight: null,
+  clinicalHistory: "",
   comorbidities: [],
   otherConditions: "",
   medications: "",
@@ -802,7 +788,7 @@ describe("getFoodWindowHours (edge cases)", () => {
     ).toBe(72);
   });
 
-  it("does not add modifier for empty medications string", () => {
+  it("keeps a 72h window when legacy medication fields are empty", () => {
     expect(
       getFoodWindowHours({
         ...BASE_PROFILE,
@@ -811,7 +797,7 @@ describe("getFoodWindowHours (edge cases)", () => {
     ).toBe(72);
   });
 
-  it("does not add modifier for medications without opioid or iron", () => {
+  it("keeps a 72h window when legacy medication fields have unrelated values", () => {
     expect(
       getFoodWindowHours({
         ...BASE_PROFILE,
@@ -820,14 +806,13 @@ describe("getFoodWindowHours (edge cases)", () => {
     ).toBe(72);
   });
 
-  it("applies single +24h modifier even when both opioid and iron are present", () => {
-    // hasSlowTransitModifier is a boolean — multiple matches still produce one +24h
+  it("ignores opioid and iron text in legacy medication fields", () => {
     expect(
       getFoodWindowHours({
         ...BASE_PROFILE,
         medications: "opioid painkillers, iron tablets",
       }),
-    ).toBe(96); // 72 + 24
+    ).toBe(72);
   });
 });
 
@@ -845,17 +830,12 @@ describe("buildPatientSnapshot", () => {
     expect(result.daysSinceReversal).toBeUndefined();
   });
 
-  it("splits medications into array", () => {
+  it("does not include legacy medication fields in the compact snapshot", () => {
     const result = buildPatientSnapshot(
       { ...BASE_PROFILE, medications: "paracetamol, ibuprofen, omeprazole" },
       [],
       [],
     );
-    expect(result.medications).toEqual(["paracetamol", "ibuprofen", "omeprazole"]);
-  });
-
-  it("omits medications when empty string", () => {
-    const result = buildPatientSnapshot({ ...BASE_PROFILE, medications: "" }, [], []);
     expect(result.medications).toBeUndefined();
   });
 

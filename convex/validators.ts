@@ -71,7 +71,7 @@ export const transitCalibrationValidator = v.object({
   learnedAt: v.union(v.number(), v.null()),
 });
 
-export const foodPersonalisationValidator = v.object({
+export const foodPreferencesValidator = v.object({
   cautionLevel: v.union(
     v.literal("conservative"),
     v.literal("balanced"),
@@ -257,24 +257,24 @@ export const aiPreferencesValidator = v.object({
     dinner: v.string(),
     lateEveningSnack: v.string(),
   }),
-  aiModel: v.union(v.literal("gpt-5.4-mini"), v.literal("gpt-5.4")),
-  approach: v.union(
-    v.literal("supportive"),
-    v.literal("personal"),
-    v.literal("analytical"),
+  toneFamiliarity: v.union(
+    v.literal("reserved"),
+    v.literal("steady"),
+    v.literal("familiar"),
+    v.literal("close"),
   ),
-  register: v.union(
+  toneVocabulary: v.union(
     v.literal("everyday"),
-    v.literal("mixed"),
+    v.literal("balanced"),
     v.literal("clinical"),
   ),
-  outputFormat: v.union(
-    v.literal("narrative"),
-    v.literal("mixed"),
+  outputStyle: v.union(
+    v.literal("prose"),
+    v.literal("blended"),
     v.literal("structured"),
   ),
   outputLength: v.union(
-    v.literal("concise"),
+    v.literal("brief"),
     v.literal("standard"),
     v.literal("detailed"),
   ),
@@ -626,6 +626,7 @@ export const healthProfileValidator = v.object({
   startingWeight: v.union(v.number(), v.null()),
   currentWeight: v.union(v.number(), v.null()),
   targetWeight: v.optional(v.union(v.number(), v.null())),
+  clinicalHistory: v.optional(v.string()),
   comorbidities: v.array(v.string()),
   otherConditions: v.string(),
   medications: v.string(),

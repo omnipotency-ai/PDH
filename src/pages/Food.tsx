@@ -28,7 +28,7 @@ export default function FoodPage() {
 
   return (
     <div data-slot="food-page" className="flex flex-col gap-4 pb-20">
-      <h1 className="font-display text-2xl font-bold tracking-tight text-(--section-summary)">
+      <h1 className="font-sketch text-2xl font-bold tracking-tight text-(--section-summary)">
         Food Database
       </h1>
 

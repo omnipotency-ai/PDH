@@ -148,7 +148,7 @@ Convex is the entire backend. Background jobs (tolerance recalculation, daily in
 - Respect system “Reduce Motion.”
 - Use subtle haptics for save/complete states instead of visual noise.
 
-#### Flexible Personalization Ladder
+#### Flexible Preferences Ladder
 
 The app should remain useful at multiple data levels:
 

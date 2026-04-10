@@ -104,7 +104,7 @@ export default function UiMigrationLab() {
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-(--text-faint)">
               Manual Verification
             </p>
-            <h1 className="mt-2 font-display text-3xl tracking-tight text-(--text)">
+            <h1 className="mt-2 font-sketch text-3xl tracking-tight text-(--text)">
               Base UI Migration Lab
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-(--text-muted)">

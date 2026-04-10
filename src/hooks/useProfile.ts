@@ -6,7 +6,7 @@ import type { UnitSystem } from "@/lib/units";
 import type {
   AiPreferences,
   FluidPreset,
-  FoodPersonalisation,
+  FoodPreferences,
   HealthProfile,
   NutritionGoals,
   TransitCalibration,
@@ -152,26 +152,26 @@ export function useAiPreferences() {
 }
 
 // ---------------------------------------------------------------------------
-// useFoodPersonalisation
+// useFoodPreferences
 // ---------------------------------------------------------------------------
 
-export function useFoodPersonalisation() {
+export function useFoodPreferences() {
   const { profile, patchProfile } = useProfileContext();
 
-  const setFoodPersonalisation = useCallback(
-    (updates: Partial<FoodPersonalisation>) =>
+  const setFoodPreferences = useCallback(
+    (updates: Partial<FoodPreferences>) =>
       patchProfile({
-        foodPersonalisation: { ...profile.foodPersonalisation, ...updates },
+        foodPreferences: { ...profile.foodPreferences, ...updates },
       }),
-    [patchProfile, profile.foodPersonalisation],
+    [patchProfile, profile.foodPreferences],
   );
 
   return useMemo(
     () => ({
-      foodPersonalisation: profile.foodPersonalisation,
-      setFoodPersonalisation,
+      foodPreferences: profile.foodPreferences,
+      setFoodPreferences,
     }),
-    [profile.foodPersonalisation, setFoodPersonalisation],
+    [profile.foodPreferences, setFoodPreferences],
   );
 }
 

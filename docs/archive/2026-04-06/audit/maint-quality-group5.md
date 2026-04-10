@@ -101,7 +101,7 @@ Remove the constants and simplify `celebrateGoalComplete` by removing the dead c
  * Boundary hour for half-week periods (local time — Barcelona CET/CEST).
 ```
 
-The code uses `new Date()` which produces the browser's local time — not Barcelona's time specifically. The comment implies a product decision to hard-code for a single user's timezone, which violates the CLAUDE.md rule "No Hard-Coding Personalization". If a second user in a different timezone ever uses this app, all half-week boundaries will fire at the wrong local time for them. The boundary logic is also undocumented as timezone-dependent in any user-facing way.
+The code uses `new Date()` which produces the browser's local time — not Barcelona's time specifically. The comment implies a product decision to hard-code for a single user's timezone, which violates the CLAUDE.md rule "single-user hard-coding". If a second user in a different timezone ever uses this app, all half-week boundaries will fire at the wrong local time for them. The boundary logic is also undocumented as timezone-dependent in any user-facing way.
 
 **Suggested Fix:**
 If this is genuinely a known single-user constraint, document it clearly in a top-level comment and add a TODO. If it needs to generalise, replace local time usage with timezone-aware logic using the user's configured timezone from their profile. At minimum, the comment should not refer to a specific city.

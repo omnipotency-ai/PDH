@@ -71,12 +71,12 @@ function toTemplateKey(value: string): string {
 function inferHabitTypeFromName(name: string): HabitType {
   const key = toTemplateKey(name);
   if (/sleep|nap/.test(key)) return "sleep";
-  if (/walk|movement|steps|run|yoga|stretch|breath|swim|workout/.test(key)) return "activity";
-  if (/water|hydrat|tea|coffee|electrolyte|juice/.test(key)) return "fluid";
+  if (/walk|movement|steps|run|yoga|breath|swim|workout/.test(key)) return "activity";
+  if (/water|hydrat|tea|coffee|juice/.test(key)) return "fluid";
   if (/cig|smok|nicotine|alcohol|beer|wine|spirit|sweet|candy|drug/.test(key)) {
     return "destructive";
   }
-  if (/med|pill|tablet|medicine|dressing|wound/.test(key)) return "checkbox";
+  if (/med|pill|tablet|medicine/.test(key)) return "checkbox";
   if (/weight|weigh/.test(key)) return "weight";
   return "count";
 }
@@ -212,20 +212,6 @@ export const HABIT_TEMPLATES: Record<string, HabitConfig> = {
     habitType: "fluid",
     templateKey: "tea",
   },
-  electrolyte: {
-    id: "habit_electrolyte",
-    name: "Electrolyte drink",
-    kind: "positive",
-    unit: "ml",
-    quickIncrement: 250,
-    dailyTarget: 500,
-    showOnTrack: true,
-    color: "blue",
-    createdAt: 0,
-    logAs: "fluid",
-    habitType: "fluid",
-    templateKey: "electrolyte",
-  },
   sleep: {
     id: "habit_sleep",
     name: "Sleep",
@@ -278,20 +264,6 @@ export const HABIT_TEMPLATES: Record<string, HabitConfig> = {
     createdAt: 0,
     habitType: "activity",
     templateKey: "yoga",
-  },
-  stretching: {
-    id: "habit_stretching",
-    name: "Stretching",
-    kind: "positive",
-    unit: "minutes",
-    quickIncrement: 10,
-    dailyTarget: 10,
-    weeklyFrequencyTarget: 4,
-    showOnTrack: true,
-    color: "indigo",
-    createdAt: 0,
-    habitType: "activity",
-    templateKey: "stretching",
   },
   breathing: {
     id: "habit_breathing",
@@ -358,31 +330,6 @@ export const HABIT_TEMPLATES: Record<string, HabitConfig> = {
     createdAt: 0,
     habitType: "checkbox",
     templateKey: "evening_medication",
-  },
-  wound_dressing_checkbox: {
-    id: "habit_wound_dressing_checkbox",
-    name: "Change dressing",
-    kind: "positive",
-    unit: "count",
-    quickIncrement: 1,
-    dailyTarget: 1,
-    showOnTrack: true,
-    color: "indigo",
-    createdAt: 0,
-    habitType: "checkbox",
-    templateKey: "wound_dressing_checkbox",
-  },
-  wound_dressing_count: {
-    id: "habit_wound_dressing_count",
-    name: "Dressing changes",
-    kind: "positive",
-    unit: "count",
-    quickIncrement: 1,
-    showOnTrack: true,
-    color: "indigo",
-    createdAt: 0,
-    habitType: "count",
-    templateKey: "wound_dressing_count",
   },
   cigarettes: {
     id: "habit_cigarettes",

@@ -13,7 +13,7 @@ import {
   parseAiInsight,
 } from "@/lib/aiAnalysis";
 import { formatAiError } from "@/lib/aiErrorFormatter";
-import { DEFAULT_INSIGHT_MODEL } from "@/lib/aiModels";
+import { DR_POO_MODEL } from "@/lib/aiModels";
 import {
   useAddAiAnalysis,
   useAddAssistantMessage,
@@ -57,6 +57,44 @@ interface DataRefs {
   latestWeeklySummary: ReturnType<typeof useLatestWeeklySummary>;
   latestSuccessfulAnalysis: ReturnType<typeof useLatestSuccessfulAiAnalysis>;
   baselineAverages: import("@/types/domain").BaselineAverages | null;
+}
+
+function shouldAutoTriggerAnalysis(args: {
+  latestAnalyzedDigestionTimestamp: number | null;
+  digestionTimestamp: number;
+  bristolScore?: number;
+  logs: LogEntry[];
+}): boolean {
+  const {
+    latestAnalyzedDigestionTimestamp,
+    digestionTimestamp,
+    bristolScore,
+    logs,
+  } = args;
+
+  if (latestAnalyzedDigestionTimestamp === null) {
+    return true;
+  }
+
+  if (digestionTimestamp <= latestAnalyzedDigestionTimestamp) {
+    return false;
+  }
+
+  if (digestionTimestamp - latestAnalyzedDigestionTimestamp >= COOLDOWN_MS) {
+    return true;
+  }
+
+  if (bristolScore !== 7) {
+    return false;
+  }
+
+  return !logs.some(
+    (log) =>
+      log.type === "digestion" &&
+      log.timestamp > latestAnalyzedDigestionTimestamp &&
+      log.timestamp < digestionTimestamp &&
+      log.data.bristolCode === 7,
+  );
 }
 
 export function useAiInsights() {
@@ -290,6 +328,9 @@ export function useAiInsights() {
               model: result.request.model,
               durationMs: result.durationMs,
               inputLogCount: result.inputLogCount,
+              ...(result.latestDigestionLogTimestamp !== undefined && {
+                latestDigestionLogTimestamp: result.latestDigestionLogTimestamp,
+              }),
             });
 
             await claimPendingReplies({ aiAnalysisId: analysisId });
@@ -327,7 +368,7 @@ export function useAiInsights() {
             request: null,
             response: null,
             insight: null,
-            model: DEFAULT_INSIGHT_MODEL,
+            model: DR_POO_MODEL,
             durationMs: 0,
             inputLogCount: isLightweight
               ? 0
@@ -362,28 +403,35 @@ export function useAiInsights() {
   // latestSuccessfulAnalysis is read from dataRef (not a dep) so the callback
   // identity is stable even when that query re-resolves with the same timestamp.
   const triggerAnalysis = useCallback(
-    async (options?: { bristolScore?: number; autoSendEnabled?: boolean }) => {
+    async (options?: {
+      bristolScore?: number;
+      autoSendEnabled?: boolean;
+      digestionTimestamp?: number;
+    }) => {
       if (!isAiConfigured) return;
 
       if (options?.autoSendEnabled === false) return;
+      const digestionTimestamp = options?.digestionTimestamp;
 
-      const bristolScore = options?.bristolScore;
-      const latestAiInsightAt = dataRef.current.latestSuccessfulAnalysis?.timestamp ?? null;
-      const cooldownPassed = !latestAiInsightAt || Date.now() - latestAiInsightAt >= COOLDOWN_MS;
+      if (digestionTimestamp === undefined) {
+        await runAnalysis();
+        return;
+      }
 
-      if (!cooldownPassed) {
-        // Inside cooldown — only Bristol 7 can break through, and only if
-        // there hasn't been a 7 in the last 6 hours (not since last report).
-        if (bristolScore !== 7) return;
+      const latestAnalyzedDigestionTimestamp =
+        dataRef.current.latestSuccessfulAnalysis?.latestDigestionLogTimestamp ?? null;
 
-        const sixHoursAgo = Date.now() - COOLDOWN_MS;
-        const has7InLastSixHours = dataRef.current.logs.some(
-          (log) =>
-            log.type === "digestion" && log.timestamp > sixHoursAgo && log.data.bristolCode === 7,
-        );
-        // The current BM hasn't been saved to logs yet at this point,
-        // so if we find a 7 in the logs it's a *previous* 7 — skip.
-        if (has7InLastSixHours) return;
+      if (
+        !shouldAutoTriggerAnalysis({
+          latestAnalyzedDigestionTimestamp,
+          digestionTimestamp,
+          ...(options?.bristolScore !== undefined && {
+            bristolScore: options.bristolScore,
+          }),
+          logs: dataRef.current.logs,
+        })
+      ) {
+        return;
       }
 
       await runAnalysis();
@@ -391,13 +439,9 @@ export function useAiInsights() {
     [isAiConfigured, runAnalysis],
   );
 
-  // sendNow: manual trigger. During cooldown, use lightweight mode (conversation-only).
-  // Reads latestSuccessfulAnalysis from dataRef for the same reason as triggerAnalysis.
-  const sendNow = useCallback(() => {
-    const latestAiInsightAt = dataRef.current.latestSuccessfulAnalysis?.timestamp ?? null;
-    const isInCooldown = latestAiInsightAt != null && Date.now() - latestAiInsightAt < COOLDOWN_MS;
-    return runAnalysis(isInCooldown ? { lightweight: true } : undefined);
-  }, [runAnalysis]);
+  // sendNow: manual trigger. Always run the full analysis package and include
+  // any unclaimed pending replies, regardless of the auto-trigger cooldown.
+  const sendNow = useCallback(() => runAnalysis(), [runAnalysis]);
 
   // Memoize the return value so the parent component only re-renders when
   // the actual outputs change, not when internal queries resolve.

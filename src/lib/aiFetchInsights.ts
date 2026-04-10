@@ -1,4 +1,4 @@
-import { DEFAULT_INSIGHT_MODEL, getValidInsightModel, INSIGHT_MODEL_OPTIONS } from "@/lib/aiModels";
+import { DR_POO_MODEL } from "@/lib/aiModels";
 import {
   enforceNovelEducationalInsight,
   isRecord,
@@ -22,7 +22,6 @@ import {
   MAX_CONVERSATION_MESSAGES,
   truncateForStorage,
 } from "@/lib/aiPrompts";
-import { checkRateLimit } from "@/lib/aiRateLimiter";
 import { formatTime, getDaysPostOp } from "@/lib/aiUtils";
 import type { AllowedAiModel, ConvexAiCaller } from "@/lib/convexAiClient";
 import { debugWarn } from "@/lib/debugLog";
@@ -105,6 +104,7 @@ interface AiAnalysisResult {
   rawResponse: string;
   durationMs: number;
   inputLogCount: number;
+  latestDigestionLogTimestamp?: number;
 }
 
 export interface FetchAiInsightsOptions {
@@ -160,7 +160,6 @@ export async function fetchAiInsights(
   aiPreferences?: AiPreferences,
   options?: FetchAiInsightsOptions,
 ): Promise<AiAnalysisResult> {
-  checkRateLimit();
   const nowMs = Date.now();
   const isLightweight = options?.lightweight === true;
 
@@ -174,7 +173,7 @@ export async function fetchAiInsights(
   });
 
   const prefs = aiPreferences ?? DEFAULT_AI_PREFERENCES;
-  const validatedModel = getValidInsightModel(prefs.aiModel);
+  const validatedModel = DR_POO_MODEL;
 
   // ── Lightweight mode: conversation-only with patient snapshot ──────────
   if (isLightweight) {
@@ -296,6 +295,13 @@ export async function fetchAiInsights(
   }
 
   // ── Full mode: complete payload with all logs and context ──────────────
+  let latestDigestionLogTimestamp: number | null = null;
+  for (const log of logs) {
+    if (log.type !== "digestion") continue;
+    if (latestDigestionLogTimestamp === null || log.timestamp > latestDigestionLogTimestamp) {
+      latestDigestionLogTimestamp = log.timestamp;
+    }
+  }
   const safeLogs = sanitizeUnknownStringsDeep(logs, {
     maxStringLength: INPUT_SAFETY_LIMITS.aiPayloadString,
     path: "ai.logs",
@@ -459,6 +465,7 @@ export async function fetchAiInsights(
     rawResponse: truncateForStorage(rawContent),
     durationMs,
     inputLogCount,
+    ...(latestDigestionLogTimestamp !== null && { latestDigestionLogTimestamp }),
   };
 }
 
@@ -497,29 +504,13 @@ Just tell the unfiltered story of what we actually said to each other last week.
 export async function fetchWeeklySummary(
   callAi: ConvexAiCaller,
   input: WeeklySummaryInput,
-  model: AllowedAiModel = DEFAULT_INSIGHT_MODEL as AllowedAiModel,
+  model: AllowedAiModel = DR_POO_MODEL,
 ): Promise<{
   result: WeeklySummaryResult;
   rawResponse: string;
   durationMs: number;
 }> {
-  checkRateLimit();
-  const legacyModelAliases = new Set([
-    "gpt-5-mini",
-    "gpt-5.2",
-    "gpt-4o-mini",
-    "gpt-4o",
-    "gpt-4.1-nano",
-    "gpt-4.1-mini",
-  ]);
-  if (
-    typeof model === "string" &&
-    !INSIGHT_MODEL_OPTIONS.includes(model as (typeof INSIGHT_MODEL_OPTIONS)[number]) &&
-    !legacyModelAliases.has(model)
-  ) {
-    throw new Error(`Unsupported weekly summary model: ${model}`);
-  }
-  const validatedModel = getValidInsightModel(model);
+  const validatedModel = model;
 
   const sanitized = sanitizeUnknownStringsDeep(input, {
     maxStringLength: INPUT_SAFETY_LIMITS.aiPayloadString,
