@@ -254,7 +254,7 @@ export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
       {/* Header */}
       <SectionHeader
         icon={HeartPulse}
-        title="Bowel Movement"
+        title="Bowel Movements"
         color="var(--section-bowel)"
         mutedColor="var(--section-bowel-muted)"
       />

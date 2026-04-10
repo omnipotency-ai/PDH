@@ -10,7 +10,7 @@ export default function InsightsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="font-display text-2xl font-bold text-(--text)">Insights</h1>
+      <h1 className="font-sketch text-2xl font-bold text-(--text)">Insights</h1>
       <div className="flex flex-wrap gap-2">
         <button
           type="button"

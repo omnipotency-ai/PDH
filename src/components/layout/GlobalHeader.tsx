@@ -18,29 +18,29 @@ const NAV_ITEMS = [
     to: "/",
     label: "Home",
     icon: Home,
-    activeTone: "text-teal-500 dark:text-teal-400",
-    activeBorder: "border-teal-500 dark:border-teal-400",
+    tone: "text-teal-500 dark:text-teal-400",
+    activeBg: "bg-teal-400",
   },
   {
     to: "/track",
     label: "Track",
     icon: NotebookPen,
-    activeTone: "text-sky-500 dark:text-sky-400",
-    activeBorder: "border-sky-500 dark:border-sky-400",
+    tone: "text-sky-500 dark:text-sky-400",
+    activeBg: "bg-sky-400",
   },
   {
     to: "/food",
     label: "Food",
     icon: UtensilsCrossed,
-    activeTone: "text-orange-500 dark:text-orange-400",
-    activeBorder: "border-orange-500 dark:border-orange-400",
+    tone: "text-orange-500 dark:text-orange-400",
+    activeBg: "bg-orange-400",
   },
   {
     to: "/insights",
     label: "Insights",
     icon: BarChart3,
-    activeTone: "text-rose-500 dark:text-rose-400",
-    activeBorder: "border-rose-500 dark:border-rose-400",
+    tone: "text-rose-500 dark:text-rose-400",
+    activeBg: "bg-rose-400",
   },
 ] as const;
 
@@ -61,11 +61,11 @@ export function GlobalHeader() {
             <img
               src="/icons/icon-72x72.png"
               alt="PDH"
-              width={32}
-              height={32}
-              className="h-8 w-8 drop-shadow-[0_0_6px_rgba(45,212,191,0.4)]"
+              width={40}
+              height={40}
+              className="h-10 w-10 drop-shadow-[0_0_8px_rgba(45,212,191,0.5)]"
             />
-            <span className="hidden font-display text-sm font-extrabold tracking-tight text-teal-400 sm:block">
+            <span className="hidden font-sketch text-base font-bold tracking-tight text-teal-400 sm:block">
               Peter's Digestive Health
             </span>
           </Link>
@@ -91,19 +91,19 @@ export function GlobalHeader() {
                     aria-current={isActive ? "page" : undefined}
                     className={cn(
                       "relative flex flex-col items-center gap-0.5 rounded-lg px-3 py-1.5 text-[10px] font-semibold transition-colors",
-                      isActive
-                        ? item.activeTone
-                        : "text-(--text-muted) hover:bg-white/6 hover:text-(--text)",
+                      item.tone,
                     )}
                   >
-                    <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                    <span>{item.label}</span>
-                    {/* Active underline */}
+                    <Icon className="h-6 w-6 shrink-0" aria-hidden="true" />
+                    <span className="text-[11px] font-semibold">
+                      {item.label}
+                    </span>
+                    {/* Active underline — thick tapered pill (inverted top-border style) */}
                     {isActive && (
                       <span
                         className={cn(
-                          "absolute inset-x-1 -bottom-[calc(0.5rem+1px)] h-0.5 rounded-full",
-                          item.activeBorder.replace("border-", "bg-"),
+                          "absolute inset-x-2 -bottom-[calc(0.5rem+1px)] h-[3px] rounded-full",
+                          item.activeBg,
                         )}
                         aria-hidden="true"
                       />
@@ -121,29 +121,21 @@ export function GlobalHeader() {
               aria-label="Settings"
               aria-current={settingsActive ? "page" : undefined}
               className={cn(
-                "rounded-lg p-1.5 transition-colors hover:bg-white/6",
+                "flex h-9 w-9 items-center justify-center rounded-full border border-white/15 transition-colors hover:bg-white/6",
                 settingsActive ? SETTINGS_ACTIVE : SETTINGS_INACTIVE,
               )}
             >
-              <Settings className="h-4 w-4" aria-hidden="true" />
+              <Settings className="h-5 w-5" aria-hidden="true" />
             </Link>
-            <div className="rounded-lg transition-colors hover:bg-white/6">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 transition-colors hover:bg-white/6">
               <ModeToggle />
             </div>
-            <UserButton />
+            <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15">
+              <UserButton />
+            </div>
           </div>
         </div>
       </div>
-
-      {/* Gradient separator */}
-      <div
-        className="h-px w-full opacity-40"
-        style={{
-          background:
-            "linear-gradient(90deg, transparent, var(--teal), var(--orange), var(--teal), transparent)",
-        }}
-        aria-hidden="true"
-      />
     </header>
   );
 }

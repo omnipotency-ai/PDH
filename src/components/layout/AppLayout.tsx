@@ -45,7 +45,7 @@ export function AppLayout() {
             height={72}
             className="drop-shadow-[0_0_8px_rgba(45,212,191,0.4)]"
           />
-          <h1 className="bg-linear-to-r from-(--teal) to-(--section-food) bg-clip-text font-display text-2xl font-extrabold tracking-tight text-transparent">
+          <h1 className="bg-linear-to-r from-(--teal) to-(--section-food) bg-clip-text font-sketch text-2xl font-extrabold tracking-tight text-transparent">
             PDH
           </h1>
           <p className="text-sm text-(--text-muted)">

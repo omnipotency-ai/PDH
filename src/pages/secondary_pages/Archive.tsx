@@ -127,7 +127,7 @@ export default function ArchivePage() {
         >
           <Brain size={16} />
         </div>
-        <h1 className="font-display text-xl font-bold tracking-tight text-[var(--text)]">
+        <h1 className="font-sketch text-xl font-bold tracking-tight text-[var(--text)]">
           Dr. Poo Report Archive
         </h1>
       </div>

@@ -18,7 +18,7 @@ import {
 import { useSyncedLogsContext } from "@/contexts/SyncedLogsContext";
 import { useTodayLogCrud } from "@/hooks/useTodayLogCrud";
 import { useLiveClock } from "@/hooks/useLiveClock";
-import { useUnitSystem } from "@/hooks/useProfile";
+import { useHabits, useUnitSystem } from "@/hooks/useProfile";
 import { getDisplayWeightUnit } from "@/lib/units";
 import { useStore } from "@/store";
 
@@ -77,7 +77,7 @@ function TrackDatePicker({
 export default function TrackPage() {
   const { logs } = useSyncedLogsContext();
   const { handleDelete, handleSave } = useTodayLogCrud(logs);
-
+  const { habits } = useHabits();
   const { unitSystem } = useUnitSystem();
   const weightUnit = getDisplayWeightUnit(unitSystem);
 
@@ -156,7 +156,7 @@ export default function TrackPage() {
     <div className="pb-8">
       <header className="mb-3">
         <div className="flex flex-wrap items-baseline gap-4">
-          <h1 className="font-display text-2xl font-bold tracking-tight text-teal-600 dark:text-teal-400 md:text-3xl shrink-0">
+          <h1 className="font-sketch text-2xl font-bold tracking-tight text-teal-600 dark:text-teal-400 md:text-3xl shrink-0">
             Track
           </h1>
           <p className="font-monaco text-xs uppercase tracking-[0.2em] text-teal-600 dark:text-teal-400 shrink-0">
@@ -172,7 +172,7 @@ export default function TrackPage() {
 
       <TodayLog
         logs={selectedLogs}
-        habits={[]}
+        habits={habits}
         weightUnit={weightUnit}
         constrainHeight={false}
         selectedDate={selectedDate}

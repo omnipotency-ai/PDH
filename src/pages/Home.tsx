@@ -5,9 +5,10 @@ import {
   addDays,
   differenceInCalendarDays,
   format,
+  isSameDay,
   startOfDay,
 } from "date-fns";
-import { MessageCircle, X } from "lucide-react";
+import { MessageCircle, Stethoscope, X } from "lucide-react";
 import {
   lazy,
   Suspense,
@@ -22,8 +23,11 @@ import { ConversationPanel } from "@/components/track/dr-poo/ConversationPanel";
 import { NutritionCard } from "@/components/track/nutrition/NutritionCard";
 import { NutritionCardErrorBoundary } from "@/components/track/nutrition/NutritionCardErrorBoundary";
 import { type BowelFormState, BowelSection } from "@/components/track/panels";
+import { HeroStrip } from "@/components/patterns/hero/HeroStrip";
 import { QuickCapture } from "@/components/track/quick-capture";
 import { HabitDetailSheet } from "@/components/track/quick-capture/HabitDetailSheet";
+import { TodayLog } from "@/components/track/today-log";
+import { TodayStatusRow } from "@/components/track/TodayStatusRow";
 import { ConfettiBurst } from "@/components/ui/Confetti";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { useSyncedLogsContext } from "@/contexts/SyncedLogsContext";
@@ -35,8 +39,9 @@ import { useFoodLlmMatching } from "@/hooks/useFoodLlmMatching";
 import { useHabitStreaks } from "@/hooks/useHabitStreaks";
 import { useLiveClock } from "@/hooks/useLiveClock";
 import { useNutritionData } from "@/hooks/useNutritionData";
-import { useHabits } from "@/hooks/useProfile";
+import { useHabits, useUnitSystem } from "@/hooks/useProfile";
 import { useQuickCapture } from "@/hooks/useQuickCapture";
+import { useTodayLogCrud } from "@/hooks/useTodayLogCrud";
 import { useUnresolvedFoodQueue } from "@/hooks/useUnresolvedFoodQueue";
 import { useUnresolvedFoodToast } from "@/hooks/useUnresolvedFoodToast";
 import { useWeeklySummaryAutoTrigger } from "@/hooks/useWeeklySummaryAutoTrigger";
@@ -51,6 +56,7 @@ import {
   useRemoveSyncedLog,
 } from "@/lib/sync";
 import { MS_PER_DAY } from "@/lib/timeConstants";
+import { getDisplayWeightUnit } from "@/lib/units";
 import { useStore } from "@/store";
 
 // Lazy-loaded so that foodRegistry.ts is code-split
@@ -71,9 +77,9 @@ type ConversationSeed = { key: string; text: string };
 // ---------------------------------------------------------------------------
 
 function getTimeOfDayGreeting(hour: number): string {
-  if (hour < 12) return "Good morning";
-  if (hour < 18) return "Good afternoon";
-  return "Good evening";
+  if (hour < 12) return "Good Morning";
+  if (hour < 18) return "Good Afternoon";
+  return "Good Evening";
 }
 
 function getDisplayName(name: string | null | undefined): string {
@@ -94,6 +100,11 @@ function getFallbackDrPooPrompt(activeMealSlot: MealSlot): string {
   return `Have you logged ${slotLabel.toLowerCase()} yet? Dr. Poo can help you think through what feels safe today.`;
 }
 
+function formatDatePillShort(date: Date, today: Date): string {
+  if (isSameDay(date, today)) return "TODAY";
+  return format(date, "EEE MMM d").toUpperCase();
+}
+
 function getFollowUpPrompt(
   activeMealSlot: MealSlot,
   hasInsight: boolean,
@@ -107,24 +118,6 @@ function getFollowUpPrompt(
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
-
-function getDayLabel(date: Date, todayDate: Date): string {
-  const offset = differenceInCalendarDays(date, todayDate);
-  if (offset === 0) return "Today";
-  return format(date, "EEE, MMM d");
-}
-
-function getPrevDayLabel(selectedDate: Date, todayDate: Date): string {
-  const offset = differenceInCalendarDays(selectedDate, todayDate);
-  if (offset === 0) return "Yesterday";
-  return format(addDays(selectedDate, -1), "EEEE");
-}
-
-function getNextDayLabel(selectedDate: Date, todayDate: Date): string {
-  const offset = differenceInCalendarDays(selectedDate, todayDate);
-  if (offset === -1) return "Today";
-  return format(addDays(selectedDate, 1), "EEEE");
-}
 
 // ---------------------------------------------------------------------------
 // Home page
@@ -154,8 +147,8 @@ export default function HomePage() {
       ? toPreviewText(latestInsightSummary)
       : "";
     if (preview.length > 0) {
-      return preview.length > 150
-        ? `${preview.slice(0, 147).trimEnd()}...`
+      return preview.length > 600
+        ? `${preview.slice(0, 597).trimEnd()}...`
         : preview;
     }
     return getFallbackDrPooPrompt(currentMealSlot);
@@ -165,13 +158,19 @@ export default function HomePage() {
     setDismissedCard(false);
   }, []);
 
-  // ── Capture panel hooks (moved from Track) ──
+  // ── Capture panel hooks ──
   const { logs } = useSyncedLogsContext();
   const { habits } = useHabits();
+  const { unitSystem } = useUnitSystem();
+  const weightUnit = getDisplayWeightUnit(unitSystem);
   const removeHabitLog = useStore((s) => s.removeHabitLog);
   const habitLogs = useStore((s) => s.habitLogs);
+  const pendingEditLogId = useStore((s) => s.pendingEditLogId);
   const setPendingEditLogId = useStore((s) => s.setPendingEditLogId);
   const navigate = useNavigate();
+
+  // Shared CRUD handlers (also used by right-column TodayLog)
+  const { handleDelete, handleSave } = useTodayLogCrud(logs);
 
   // Auto-generate weekly summary when a Sunday 18:00 boundary passes
   useWeeklySummaryAutoTrigger();
@@ -184,23 +183,26 @@ export default function HomePage() {
 
   useLiveClock();
   const now = new Date();
-  const [selectedDate, setSelectedDate] = useState(() =>
-    startOfDay(new Date()),
-  );
+
+  // ── Date state — from Zustand store ──
+  const activeDate = useStore((s) => s.activeDate);
+  const goBack = useStore((s) => s.goBack);
+  const goForward = useStore((s) => s.goForward);
+  const goToToday = useStore((s) => s.goToToday);
 
   const todayStart = useMemo(() => startOfDay(now).getTime(), [now]);
   const todayEnd = todayStart + MS_PER_DAY;
   const todayDate = useMemo(() => startOfDay(now), [now]);
   const dayOffset = useMemo(
-    () => differenceInCalendarDays(selectedDate, todayDate),
-    [selectedDate, todayDate],
+    () => differenceInCalendarDays(activeDate, todayDate),
+    [activeDate, todayDate],
   );
-  const selectedStart = selectedDate.getTime();
-  const selectedEnd = addDays(selectedDate, 1).getTime();
+  const selectedStart = activeDate.getTime();
+  const selectedEnd = addDays(activeDate, 1).getTime();
   const selectedCaptureTimestamp = useMemo(
     () =>
-      dayOffset === 0 ? undefined : getDateScopedTimestamp(selectedDate, now),
-    [dayOffset, now, selectedDate],
+      dayOffset === 0 ? undefined : getDateScopedTimestamp(activeDate, now),
+    [dayOffset, now, activeDate],
   );
 
   // Day statistics (actual today + selected day)
@@ -213,6 +215,7 @@ export default function HomePage() {
   const {
     todayHabitCounts: selectedHabitCounts,
     todayFluidTotalsByName: selectedFluidTotalsByName,
+    totalFluidMl: totalFluidMlForSelected,
   } = useDayStats({ logs, todayStart: selectedStart, todayEnd: selectedEnd });
 
   // Destructive habit rollover toast (once per day)
@@ -311,11 +314,14 @@ export default function HomePage() {
     celebrateLog();
   }, [celebrateLog]);
 
-  // Cross-page edit: navigate to Track with pending edit ID in Zustand store
+  // Cross-page edit: on desktop right column is visible, no navigation needed
   const handleRequestEdit = useCallback(
     (logId: string) => {
       setPendingEditLogId(logId);
-      void navigate({ to: "/track" });
+      // On desktop (lg: ≥ 1024px), right column TodayLog is visible
+      if (window.innerWidth < 1024) {
+        void navigate({ to: "/track" });
+      }
     },
     [navigate, setPendingEditLogId],
   );
@@ -359,31 +365,20 @@ export default function HomePage() {
     [daySummaries, detailSheetHabit],
   );
 
-  const _handleSelectDate = useCallback(
-    (date: Date) => {
-      const normalized = startOfDay(date);
-      setSelectedDate(
-        normalized.getTime() > todayDate.getTime() ? todayDate : normalized,
-      );
-    },
-    [todayDate],
-  );
-  const handlePreviousDay = useCallback(
-    () => setSelectedDate((value) => startOfDay(addDays(value, -1))),
-    [],
-  );
-  const handleNextDay = useCallback(
-    () =>
-      setSelectedDate((value) => {
-        const next = startOfDay(addDays(value, 1));
-        return next.getTime() > todayDate.getTime() ? todayDate : next;
-      }),
-    [todayDate],
-  );
-  const handleJumpToToday = useCallback(
-    () => setSelectedDate(todayDate),
-    [todayDate],
-  );
+  // Auto-edit state for right-column TodayLog
+  const [autoEditLogId, setAutoEditLogId] = useState<string | null>(null);
+  useEffect(() => {
+    if (pendingEditLogId === null) return;
+    // Only consume on desktop (mobile navigates to Track instead)
+    if (window.innerWidth >= 1024) {
+      setAutoEditLogId(pendingEditLogId);
+      setPendingEditLogId(null);
+    }
+  }, [pendingEditLogId, setPendingEditLogId]);
+
+  const handleAutoEditHandled = useCallback(() => {
+    setAutoEditLogId(null);
+  }, []);
 
   const handleLogBowel = async (bowelState: BowelFormState) => {
     const consistencyTag = bristolToConsistency(bowelState.bristolCode);
@@ -422,143 +417,213 @@ export default function HomePage() {
     setConversationOpen(true);
   }, []);
 
+  // ── Right column data ──
+  const selectedLogs = useMemo(
+    () =>
+      logs.filter(
+        (l) => l.timestamp >= selectedStart && l.timestamp < selectedEnd,
+      ),
+    [logs, selectedStart, selectedEnd],
+  );
+
+  const bmCount = useMemo(
+    () => selectedLogs.filter((l) => l.type === "digestion").length,
+    [selectedLogs],
+  );
+
+  const waterOnlyMl = selectedFluidTotalsByName["water"] ?? 0;
+
+  const lastBmTimestamp = useMemo(() => {
+    const bms = logs
+      .filter((l) => l.type === "digestion")
+      .sort((a, b) => b.timestamp - a.timestamp);
+    return bms[0]?.timestamp ?? null;
+  }, [logs]);
+
   // ── Render ──
 
   const canMoveForward = dayOffset < 0;
 
   return (
-    <div className="space-y-5">
-      {/* ── Greeting row ── */}
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="font-display text-2xl font-bold text-(--text)">
-            {greeting},
-          </p>
-          <p className="font-display text-2xl font-bold text-(--text)">
-            {firstName}
-          </p>
-        </div>
-        {hasApiKey ? (
+    <>
+      {/* ── Shared top row: date strip (left) + status bar (right) ── */}
+      <div className="lg:grid lg:grid-cols-2 lg:items-center lg:gap-6 mb-4">
+        {/* Date strip */}
+        <div className="flex items-center justify-center gap-3">
           <button
             type="button"
-            onClick={() => openConversation()}
-            className="inline-flex items-center gap-2 rounded-full border border-[var(--section-log)]/35 bg-[var(--section-log-muted)] px-4 py-2 text-sm font-semibold text-[var(--section-log)] transition-colors hover:bg-[var(--section-log)]/15"
+            onClick={goBack}
+            aria-label="Go to previous day"
+            className="rounded-full px-3 py-1.5 font-sketch text-sm font-semibold text-(--text-faint) transition-colors hover:text-(--text-muted)"
           >
-            <MessageCircle className="h-4 w-4" />
-            Ask Dr. Poo
+            {formatDatePillShort(addDays(activeDate, -1), todayDate)}
           </button>
-        ) : null}
-      </div>
 
-      {/* ── Date strip ── */}
-      <div className="flex items-center justify-center gap-6">
-        <button
-          type="button"
-          onClick={handlePreviousDay}
-          aria-label="Go to previous day"
-          className="font-sketch text-base font-semibold uppercase tracking-wide text-(--text-faint) transition-colors hover:text-(--text-muted)"
-        >
-          {getPrevDayLabel(selectedDate, todayDate)}
-        </button>
+          <div className="relative flex flex-col items-center gap-1 px-4 py-2">
+            <span
+              className="font-sketch text-base font-bold text-teal-400 underline underline-offset-4 decoration-teal-500/70 decoration-2"
+              aria-current="date"
+            >
+              {formatDatePillShort(activeDate, todayDate)}
+            </span>
+          </div>
 
-        <div className="relative flex flex-col items-center gap-1">
-          <span
-            className="font-sketch text-lg font-bold uppercase tracking-wide text-teal-400"
-            aria-current="date"
-          >
-            {getDayLabel(selectedDate, todayDate)}
-          </span>
-          <span
-            className="h-0.5 w-full rounded-full bg-teal-500/70"
-            aria-hidden="true"
+          {canMoveForward ? (
+            <button
+              type="button"
+              onClick={dayOffset === -1 ? goToToday : goForward}
+              aria-label="Go to next day"
+              className="rounded-full px-3 py-1.5 font-sketch text-sm font-semibold text-(--text-faint) transition-colors hover:text-(--text-muted)"
+            >
+              {formatDatePillShort(addDays(activeDate, 1), todayDate)}
+            </button>
+          ) : (
+            <span className="invisible rounded-full px-3 py-1.5 font-sketch text-sm font-semibold">
+              Fri
+            </span>
+          )}
+        </div>
+        {/* Status bar — hidden on mobile, shown on desktop */}
+        <div className="hidden lg:block">
+          <TodayStatusRow
+            bmCount={bmCount}
+            fluidTotalMl={totalFluidMlForSelected}
+            waterOnlyMl={waterOnlyMl}
+            lastBmTimestamp={lastBmTimestamp}
+            nowMs={now.getTime()}
           />
         </div>
-
-        {canMoveForward ? (
-          <button
-            type="button"
-            onClick={dayOffset === -1 ? handleJumpToToday : handleNextDay}
-            aria-label="Go to next day"
-            className="font-sketch text-base font-semibold uppercase tracking-wide text-(--text-faint) transition-colors hover:text-(--text-muted)"
-          >
-            {getNextDayLabel(selectedDate, todayDate)}
-          </button>
-        ) : (
-          <span className="invisible font-sketch text-base font-semibold uppercase">
-            Yesterday
-          </span>
-        )}
       </div>
 
-      {/* ── Bowel Movement ── */}
-      <ErrorBoundary label="Bowel Movement">
-        <BowelSection
-          onSave={handleLogBowel}
-          {...(selectedCaptureTimestamp !== undefined && {
-            captureTimestamp: selectedCaptureTimestamp,
-          })}
-        />
-      </ErrorBoundary>
-
-      {/* ── Nutrition ── */}
-      <NutritionCardErrorBoundary>
-        <NutritionCard
-          selectedDate={selectedDate}
-          {...(selectedCaptureTimestamp !== undefined && {
-            captureTimestamp: selectedCaptureTimestamp,
-          })}
-        />
-      </NutritionCardErrorBoundary>
-
-      {/* ── Quick Capture ── */}
-      <QuickCapture
-        habits={habits}
-        todayHabitCounts={selectedHabitCounts}
-        todayFluidMl={selectedFluidTotalsByName}
-        onTap={handleQuickCaptureTap}
-        onLogSleepHours={handleLogSleepQuickCapture}
-        onLogActivityMinutes={handleLogActivityQuickCapture}
-        onLogWeightKg={handleLogWeightKg}
-        onLongPress={handleQuickCaptureLongPress}
-      />
-
-      {/* ── Dr. Poo proactive card ── */}
-      {hasApiKey && !dismissedCard ? (
-        <section className="glass-card space-y-3 border border-[var(--section-log)]/20 p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--section-log)]">
-                Dr. Poo
-              </p>
-              <p className="text-sm text-(--text-muted)">{proactiveCardText}</p>
+      <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
+        {/* ── Left column ── */}
+        <div className="space-y-4">
+          {/* ── Greeting row ── */}
+          <div className="glass-card glass-card-greeting rounded-2xl p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="font-sketch text-xl font-bold text-sky-300/70">
+                  {greeting},
+                </p>
+                <p className="font-sketch text-xl font-bold text-sky-300/70">
+                  {firstName}
+                </p>
+              </div>
+              {hasApiKey ? (
+                <button
+                  type="button"
+                  onClick={() => openConversation()}
+                  className="inline-flex items-center gap-2 rounded-full border border-sky-400/30 bg-sky-500/15 px-4 py-2 font-sketch text-xs font-semibold text-sky-300 transition-colors hover:bg-sky-500/25"
+                >
+                  <Stethoscope className="h-4 w-4" />
+                  Ask Dr Poo
+                </button>
+              ) : null}
             </div>
-            <MessageCircle className="mt-0.5 h-5 w-5 shrink-0 text-[var(--section-log)]" />
           </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setDismissedCard(true)}
-              className="rounded-full border border-[var(--color-border-default)] px-3 py-1.5 text-sm font-medium text-(--text-muted) transition-colors hover:text-(--text)"
-            >
-              Got it
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                openConversation(
-                  getFollowUpPrompt(
-                    currentMealSlot,
-                    latestInsightSummary !== null,
-                  ),
-                )
-              }
-              className="rounded-full bg-[var(--section-log)] px-3 py-1.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-            >
-              Chat with Dr. Poo
-            </button>
-          </div>
-        </section>
-      ) : null}
+
+
+          {/* ── Nutrition ── */}
+          <NutritionCardErrorBoundary>
+            <NutritionCard
+              selectedDate={activeDate}
+              {...(selectedCaptureTimestamp !== undefined && {
+                captureTimestamp: selectedCaptureTimestamp,
+              })}
+            />
+          </NutritionCardErrorBoundary>
+
+          {/* ── Bowel Movement ── */}
+          <ErrorBoundary label="Bowel Movement">
+            <BowelSection
+              onSave={handleLogBowel}
+              {...(selectedCaptureTimestamp !== undefined && {
+                captureTimestamp: selectedCaptureTimestamp,
+              })}
+            />
+          </ErrorBoundary>
+
+          {/* ── Hero strip ── */}
+          <HeroStrip />
+
+          {/* MoodCard — Phase 3 */}
+
+          {/* ── Quick Capture ── */}
+          <QuickCapture
+            habits={habits}
+            todayHabitCounts={selectedHabitCounts}
+            todayFluidMl={selectedFluidTotalsByName}
+            onTap={handleQuickCaptureTap}
+            onLogSleepHours={handleLogSleepQuickCapture}
+            onLogActivityMinutes={handleLogActivityQuickCapture}
+            onLogWeightKg={handleLogWeightKg}
+            onLongPress={handleQuickCaptureLongPress}
+          />
+
+          {/* ── Dr. Poo proactive card ── */}
+          {hasApiKey && !dismissedCard ? (
+            <section className="glass-card glass-card-drpoo rounded-2xl p-4">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-2">
+                  <Stethoscope className="h-5 w-5 shrink-0" style={{ color: "var(--section-drpoo)" }} />
+                  <p className="font-sketch text-[0.7rem] font-bold uppercase tracking-[0.1em]" style={{ color: "var(--section-drpoo)" }}>
+                    Dr Poo Says
+                  </p>
+                </div>
+                <MessageCircle className="h-5 w-5 shrink-0 opacity-50" style={{ color: "var(--section-drpoo)" }} />
+              </div>
+              <p className="mt-3 text-sm leading-relaxed text-[rgba(240,248,255,0.8)]">
+                {proactiveCardText}
+              </p>
+              <div className="flex justify-end gap-2 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setDismissedCard(true)}
+                  className="rounded-full border border-[var(--section-drpoo-border)] px-3 py-1.5 font-sketch text-xs font-semibold uppercase tracking-wide transition-colors hover:bg-[var(--section-drpoo-muted)]"
+                  style={{ color: "var(--section-drpoo)" }}
+                >
+                  Got It
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    openConversation(
+                      getFollowUpPrompt(
+                        currentMealSlot,
+                        latestInsightSummary !== null,
+                      ),
+                    )
+                  }
+                  className="rounded-full border border-[var(--section-drpoo-border)] bg-[var(--section-drpoo-muted)] px-3 py-1.5 font-sketch text-xs font-semibold uppercase tracking-wide transition-opacity hover:opacity-90"
+                  style={{ color: "var(--section-drpoo)" }}
+                >
+                  Ask More
+                </button>
+              </div>
+            </section>
+          ) : null}
+        </div>
+
+        {/* ── Right column — desktop only ── */}
+        <div className="hidden lg:block space-y-3">
+          <TodayLog
+            title="LOGS"
+            logs={selectedLogs}
+            habits={habits}
+            weightUnit={weightUnit}
+            constrainHeight={false}
+            selectedDate={activeDate}
+            dayOffset={dayOffset}
+            onPreviousDay={goBack}
+            onNextDay={goForward}
+            onJumpToToday={goToToday}
+            onDelete={handleDelete}
+            onSave={handleSave}
+            autoEditId={autoEditLogId}
+            onAutoEditHandled={handleAutoEditHandled}
+          />
+        </div>
+      </div>
 
       {/* ── Modals & overlays ── */}
 
@@ -568,7 +633,7 @@ export default function HomePage() {
           <Dialog.Popup className="fixed inset-x-4 top-1/2 z-50 mx-auto w-full max-w-2xl -translate-y-1/2 rounded-3xl border border-[var(--section-log)]/20 bg-[var(--card)] p-4 shadow-2xl">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
-                <Dialog.Title className="font-display text-xl font-bold text-(--text)">
+                <Dialog.Title className="font-sketch text-xl font-bold text-(--text)">
                   Dr. Poo
                 </Dialog.Title>
                 <p className="text-sm text-(--text-muted)">
@@ -629,6 +694,6 @@ export default function HomePage() {
           onOpenChange={setReviewQueueOpen}
         />
       </Suspense>
-    </div>
+    </>
   );
 }

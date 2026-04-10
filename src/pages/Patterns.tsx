@@ -601,7 +601,7 @@ export default function PatternsPage() {
     <div data-slot="patterns-page" className="stagger-reveal mx-auto max-w-7xl space-y-5">
       {/* Page header */}
       <header className="flex flex-wrap items-baseline gap-4">
-        <h1 className="font-display text-2xl font-bold tracking-tight text-(--section-summary) md:text-3xl shrink-0">
+        <h1 className="font-sketch text-2xl font-bold tracking-tight text-(--section-summary) md:text-3xl shrink-0">
           Patterns
         </h1>
         <TodayLabel />

@@ -29,9 +29,9 @@ export function SectionHeader({
   return (
     <div data-slot="section-header" className={cn("section-header", className)}>
       <div className="section-icon" style={{ backgroundColor: mutedColor }}>
-        <Icon className="h-4 w-4" style={{ color }} />
+        <Icon className="h-5 w-5" style={{ color }} />
       </div>
-      <span className="section-title" style={{ color }}>
+      <span className="section-title font-sketch" style={{ color }}>
         {title}
       </span>
       {children}
