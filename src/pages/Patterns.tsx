@@ -1,8 +1,10 @@
 import type { FoodDigestionMetadata, FoodGroup } from "@shared/foodRegistry";
+import type { FoodAssessmentRecord } from "@shared/foodEvidence";
 import type { ColumnFiltersState, SortingState } from "@tanstack/react-table";
-import { useQuery } from "convex/react";
+import type { FunctionReturnType } from "convex/server";
+import { useConvex } from "convex/react";
 import { format } from "date-fns";
-import { Filter, Search } from "lucide-react";
+import { Filter, RefreshCw, Search } from "lucide-react";
 import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   buildFoodDatabaseRow,
@@ -19,10 +21,11 @@ import {
   sortingEqual,
   type ToleranceStatus,
 } from "@/components/patterns/database";
-import { HeroStrip } from "@/components/patterns/hero";
-import { useAnalyzedFoodStats } from "@/hooks/useAnalyzedFoodStats";
 import { useLiveClock } from "@/hooks/useLiveClock";
-import { useMappedAssessments } from "@/hooks/useMappedAssessments";
+import { useHabits, useTransitCalibration } from "@/hooks/useProfile";
+import { analyzeLogs } from "@/lib/analysis";
+import { getErrorMessage } from "@/lib/errors";
+import { toSyncedLogs } from "@/lib/sync";
 import { api } from "../../convex/_generated/api";
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -31,6 +34,65 @@ const SMART_VIEWS_STORAGE_KEY = "patterns-smart-views-v1";
 const FILTER_STATE_STORAGE_KEY = "patterns-filter-state-v1";
 const ALL_VIEW_ID = "all";
 const DEFAULT_SORTING: SortingState = [{ id: "lastTested", desc: true }];
+type LogsListAllRow = NonNullable<FunctionReturnType<typeof api.logs.listAll>>;
+type AllFoodTrialsResult = NonNullable<
+  FunctionReturnType<typeof api.aggregateQueries.allFoodTrials>
+>;
+type ClinicalRegistryRows = NonNullable<
+  FunctionReturnType<typeof api.clinicalRegistry.list>
+>;
+type IngredientProfileRows = NonNullable<
+  FunctionReturnType<typeof api.ingredientProfiles.list>
+>;
+type AssessmentRows = NonNullable<
+  FunctionReturnType<typeof api.foodAssessments.allAssessmentRecords>
+>;
+
+function mapVerdict(value: unknown): FoodAssessmentRecord["verdict"] {
+  switch (value) {
+    case "safe":
+    case "watch":
+    case "avoid":
+    case "trial_next":
+      return value;
+    default:
+      return "watch";
+  }
+}
+
+function mapConfidence(value: unknown): FoodAssessmentRecord["confidence"] {
+  switch (value) {
+    case "low":
+    case "medium":
+    case "high":
+      return value;
+    default:
+      return "low";
+  }
+}
+
+function mapCausalRole(value: unknown): FoodAssessmentRecord["causalRole"] {
+  switch (value) {
+    case "primary":
+    case "possible":
+    case "unlikely":
+      return value;
+    default:
+      return "unlikely";
+  }
+}
+
+function mapChangeType(value: unknown): FoodAssessmentRecord["changeType"] {
+  switch (value) {
+    case "new":
+    case "upgraded":
+    case "downgraded":
+    case "unchanged":
+      return value;
+    default:
+      return "unchanged";
+  }
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -458,12 +520,89 @@ function TodayLabel() {
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function PatternsPage() {
-  const analysis = useAnalyzedFoodStats();
-  const mappedAssessments = useMappedAssessments();
+  const convex = useConvex();
+  const { habits } = useHabits();
+  const { transitCalibration } = useTransitCalibration();
+  const [patternsData, setPatternsData] = useState<{
+    logs: ReturnType<typeof toSyncedLogs>;
+    foodTrials: AllFoodTrialsResult["trials"];
+    mappedAssessments: FoodAssessmentRecord[];
+    clinicalRegistryRows: ClinicalRegistryRows;
+    ingredientProfileRows: IngredientProfileRows;
+  } | null>(null);
+  const [patternsLoading, setPatternsLoading] = useState(true);
+  const [patternsError, setPatternsError] = useState<string | null>(null);
+  const requestIdRef = useRef(0);
 
-  // ── Live Convex data ──────────────────────────────────────────────────────
-  const clinicalRegistryRows = useQuery(api.clinicalRegistry.list);
-  const ingredientProfileRows = useQuery(api.ingredientProfiles.list);
+  const refreshPatternsData = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
+    setPatternsLoading(true);
+    setPatternsError(null);
+
+    try {
+      const [
+        logRows,
+        allFoodTrialsResult,
+        assessmentRecords,
+        clinicalRegistryRows,
+        ingredientProfileRows,
+      ] = await Promise.all([
+        convex.query(api.logs.listAll, {}),
+        convex.query(api.aggregateQueries.allFoodTrials, {}),
+        convex.query(api.foodAssessments.allAssessmentRecords, {}),
+        convex.query(api.clinicalRegistry.list, {}),
+        convex.query(api.ingredientProfiles.list, {}),
+      ]);
+
+      if (requestId !== requestIdRef.current) return;
+
+      const mappedAssessments = (assessmentRecords as AssessmentRows).map((r) => ({
+        canonicalName: r.canonicalName,
+        foodName: r.foodName,
+        food: r.foodName,
+        verdict: mapVerdict(r.verdict),
+        confidence: mapConfidence(r.confidence),
+        causalRole: mapCausalRole(r.causalRole),
+        changeType: mapChangeType(r.changeType),
+        modifierSummary: r.modifierSummary ?? "",
+        reasoning: r.reasoning,
+        reportTimestamp: r.reportTimestamp,
+      }));
+
+      setPatternsData({
+        logs: toSyncedLogs(logRows as LogsListAllRow),
+        foodTrials: (allFoodTrialsResult as AllFoodTrialsResult).trials,
+        mappedAssessments,
+        clinicalRegistryRows: clinicalRegistryRows as ClinicalRegistryRows,
+        ingredientProfileRows: ingredientProfileRows as IngredientProfileRows,
+      });
+    } catch (error) {
+      if (requestId !== requestIdRef.current) return;
+      setPatternsError(getErrorMessage(error, "Failed to refresh Patterns."));
+    } finally {
+      if (requestId === requestIdRef.current) {
+        setPatternsLoading(false);
+      }
+    }
+  }, [convex]);
+
+  useEffect(() => {
+    void refreshPatternsData();
+  }, [refreshPatternsData]);
+
+  const analysis = useMemo(
+    () =>
+      analyzeLogs(patternsData?.logs ?? [], patternsData?.foodTrials ?? [], {
+        habits: habits.map((h) => ({ id: h.id, name: h.name })),
+        calibration: transitCalibration,
+        assessments: patternsData?.mappedAssessments ?? [],
+      }),
+    [habits, patternsData, transitCalibration],
+  );
+
+  const mappedAssessments = patternsData?.mappedAssessments ?? [];
+  const clinicalRegistryRows = patternsData?.clinicalRegistryRows;
+  const ingredientProfileRows = patternsData?.ingredientProfileRows;
 
   // Build O(1) lookup map: canonicalName (lowercase) → registry row.
   const registryByName = useMemo(() => {
@@ -567,75 +706,35 @@ export default function PatternsPage() {
     toleranceByName,
   ]);
 
-  // ── Zone transit aggregation ──────────────────────────────────────────────
-  // Group rows by zone and compute average transit time per zone.
-  const zoneTransitSummary = useMemo(() => {
-    const buckets: Record<number, { totalMinutes: number; count: number }> = {
-      1: { totalMinutes: 0, count: 0 },
-      2: { totalMinutes: 0, count: 0 },
-      3: { totalMinutes: 0, count: 0 },
-    };
-
-    for (const row of databaseRows) {
-      const zone = row.stage ?? 3;
-      const bucket = buckets[zone];
-      if (bucket !== undefined && row.avgTransitMinutes !== null) {
-        bucket.totalMinutes += row.avgTransitMinutes;
-        bucket.count += 1;
-      }
-    }
-
-    return ([1, 2, 3] as const).map((zone) => {
-      const bucket = buckets[zone];
-      const avgHours =
-        bucket !== undefined && bucket.count > 0
-          ? Math.round(bucket.totalMinutes / bucket.count / 6) / 10
-          : null;
-      return { zone, avgHours, count: bucket?.count ?? 0 };
-    });
-  }, [databaseRows]);
-
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div data-slot="patterns-page" className="stagger-reveal mx-auto max-w-7xl space-y-5">
       {/* Page header */}
-      <header className="flex flex-wrap items-baseline gap-4">
-        <h1 className="font-sketch text-2xl font-bold tracking-tight text-(--section-summary) md:text-3xl shrink-0">
-          Patterns
-        </h1>
-        <TodayLabel />
+      <header className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-baseline gap-4">
+          <h1 className="font-sketch text-2xl font-bold tracking-tight text-(--section-summary) md:text-3xl shrink-0">
+            Patterns
+          </h1>
+          <TodayLabel />
+        </div>
+        <button
+          type="button"
+          onClick={() => void refreshPatternsData()}
+          disabled={patternsLoading}
+          className="inline-flex items-center gap-2 rounded-full border border-[var(--section-summary)]/20 bg-[var(--surface-1)] px-3 py-1.5 text-xs font-semibold text-[var(--section-summary)] transition-colors hover:bg-[var(--surface-2)] disabled:opacity-60"
+        >
+          <RefreshCw
+            className={`h-3.5 w-3.5 ${patternsLoading ? "animate-spin" : ""}`}
+            aria-hidden="true"
+          />
+          <span>Refresh</span>
+        </button>
       </header>
 
-      {/* Hero strip — always visible at top */}
-      <HeroStrip />
-
-      {/* Zone transit summary strip */}
-      <div
-        data-slot="zone-transit-summary"
-        className="grid grid-cols-3 gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-3"
-      >
-        {zoneTransitSummary.map(({ zone, avgHours, count }) => (
-          <div key={zone} className="flex flex-col items-center gap-0.5 py-1">
-            <span
-              className="inline-flex h-6 w-6 items-center justify-center rounded-full font-mono text-xs font-bold"
-              style={{
-                background: "color-mix(in srgb, var(--text-muted) 15%, transparent)",
-                color: "var(--text-muted)",
-              }}
-            >
-              {zone}
-            </span>
-            <span className="font-mono text-sm font-bold text-[var(--text)]">
-              {avgHours !== null ? `${avgHours}h` : "—"}
-            </span>
-            <span className="font-mono text-[10px] text-[var(--text-faint)]">avg transit</span>
-            <span className="font-mono text-[10px] text-[var(--text-faint)]">
-              {count} food{count !== 1 ? "s" : ""}
-            </span>
-          </div>
-        ))}
-      </div>
+      {patternsError && (
+        <p className="text-sm text-rose-500">{patternsError}</p>
+      )}
 
       <section>
         <div className="mb-3">

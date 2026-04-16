@@ -15,6 +15,7 @@ import {
   HeartPlus,
   Moon,
   ShowerHead,
+  Smile,
   Snowflake,
   SquareCheckBig,
   Tablets,
@@ -49,6 +50,8 @@ const HABIT_ICON_BY_ID: Record<string, HabitIconResult> = {
   },
   habit_breathing: { Icon: HeartPlus, toneClassName: "text-teal-400" },
   habit_journaling: { Icon: BookOpen, toneClassName: "text-violet-400" },
+  habit_shower: { Icon: ShowerHead, toneClassName: "text-sky-400" },
+  habit_brush_teeth: { Icon: Smile, toneClassName: "text-pink-400" },
   habit_wound_dressing_checkbox: {
     Icon: BriefcaseMedical,
     toneClassName: "text-pink-400",
@@ -96,7 +99,8 @@ export function getHabitIcon(habit: HabitConfig): HabitIconResult {
   // Custom habits intentionally use a generic icon unless they map to a known
   // legacy type. Templates and built-ins carry either a known ID or templateKey.
   const hasTemplateKey =
-    typeof habit.templateKey === "string" && habit.templateKey.trim().length > 0;
+    typeof habit.templateKey === "string" &&
+    habit.templateKey.trim().length > 0;
   if (!hasTemplateKey) {
     const legacyType = LEGACY_HABIT_ICON_BY_TYPE[String(habit.habitType)];
     if (legacyType) return legacyType;

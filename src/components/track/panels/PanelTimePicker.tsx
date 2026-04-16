@@ -1,7 +1,11 @@
 import { format } from "date-fns";
 import { Clock } from "lucide-react";
 import { useId } from "react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 interface PanelTimePickerProps {
@@ -13,6 +17,8 @@ interface PanelTimePickerProps {
   /** Section color for accent (e.g., "var(--section-bowel)") */
   accentColor?: string;
   onEnterKey?: () => void;
+  /** When true, hides the date input (date comes from global date picker). */
+  hideDate?: boolean;
 }
 
 /**
@@ -27,6 +33,7 @@ export function PanelTimePicker({
   isEdited,
   accentColor,
   onEnterKey,
+  hideDate = false,
 }: PanelTimePickerProps) {
   const instanceId = useId();
   const dateId = `${instanceId}-date`;
@@ -53,7 +60,10 @@ export function PanelTimePicker({
         >
           <Clock className="h-4 w-4 text-(--text-faint)" aria-hidden="true" />
           <span
-            className={cn("text-xs tabular-nums", isEdited ? "" : "text-(--text-faint)")}
+            className={cn(
+              "text-xs tabular-nums",
+              isEdited ? "" : "text-(--text-faint)",
+            )}
             style={isEdited && accentColor ? { color: accentColor } : undefined}
           >
             {isEdited ? displayTime : "Now"}
@@ -61,24 +71,30 @@ export function PanelTimePicker({
         </button>
       </PopoverTrigger>
 
-      <PopoverContent side="bottom" align="start" className="w-auto p-2 space-y-1.5">
+      <PopoverContent
+        side="bottom"
+        align="start"
+        className="w-auto p-2 space-y-1.5"
+      >
         <div data-slot="panel-time-picker" className="space-y-1.5">
-          <div className="space-y-0.5">
-            <label
-              htmlFor={dateId}
-              className="block text-[10px] uppercase tracking-wider font-mono text-(--text-faint)"
-            >
-              Date
-            </label>
-            <input
-              id={dateId}
-              type="date"
-              value={dateValue || defaultDate}
-              onChange={(e) => setDateValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              className="w-full rounded border border-[var(--color-border-default)] bg-[var(--surface-2)] px-1.5 py-0.5 text-xs text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-[var(--ring)]"
-            />
-          </div>
+          {!hideDate && (
+            <div className="space-y-0.5">
+              <label
+                htmlFor={dateId}
+                className="block text-[10px] uppercase tracking-wider font-mono text-(--text-faint)"
+              >
+                Date
+              </label>
+              <input
+                id={dateId}
+                type="date"
+                value={dateValue || defaultDate}
+                onChange={(e) => setDateValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                className="w-full rounded border border-[var(--color-border-default)] bg-[var(--surface-2)] px-1.5 py-0.5 text-xs text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-[var(--ring)]"
+              />
+            </div>
+          )}
 
           <div className="space-y-0.5">
             <label

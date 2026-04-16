@@ -172,7 +172,6 @@ export default function HomePage() {
 
   // Auto-generate weekly summary when a Sunday 18:00 boundary passes
   useWeeklySummaryAutoTrigger();
-
   useLiveClock();
   const now = new Date();
 

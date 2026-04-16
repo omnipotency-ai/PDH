@@ -62,7 +62,12 @@ const LEGACY_HABIT_TYPE_MAP: Record<string, HabitType> = {
   recovery: "count",
 };
 
-const DIGESTIVE_HABIT_TYPES = new Set<HabitType>(["destructive", "checkbox", "fluid", "sleep"]);
+const DIGESTIVE_HABIT_TYPES = new Set<HabitType>([
+  "destructive",
+  "checkbox",
+  "fluid",
+  "sleep",
+]);
 
 function toTemplateKey(value: string): string {
   return value.toLowerCase().trim().replace(/\s+/g, "_");
@@ -71,7 +76,8 @@ function toTemplateKey(value: string): string {
 function inferHabitTypeFromName(name: string): HabitType {
   const key = toTemplateKey(name);
   if (/sleep|nap/.test(key)) return "sleep";
-  if (/walk|movement|steps|run|yoga|breath|swim|workout/.test(key)) return "activity";
+  if (/walk|movement|steps|run|yoga|breath|swim|workout/.test(key))
+    return "activity";
   if (/water|hydrat|tea|coffee|juice/.test(key)) return "fluid";
   if (/cig|smok|nicotine|alcohol|beer|wine|spirit|sweet|candy|drug/.test(key)) {
     return "destructive";
@@ -94,9 +100,12 @@ function normalizeHabitTypeValue(input: {
   rawDailyCap: unknown;
   rawLogAs: unknown;
 }): HabitType {
-  const rawType = typeof input.rawType === "string" ? input.rawType.trim().toLowerCase() : "";
-  const rawKind = typeof input.rawKind === "string" ? input.rawKind.trim().toLowerCase() : "";
-  const rawUnit = typeof input.rawUnit === "string" ? input.rawUnit.trim().toLowerCase() : "";
+  const rawType =
+    typeof input.rawType === "string" ? input.rawType.trim().toLowerCase() : "";
+  const rawKind =
+    typeof input.rawKind === "string" ? input.rawKind.trim().toLowerCase() : "";
+  const rawUnit =
+    typeof input.rawUnit === "string" ? input.rawUnit.trim().toLowerCase() : "";
   const rawName = typeof input.rawName === "string" ? input.rawName.trim() : "";
 
   if (
@@ -119,11 +128,17 @@ function normalizeHabitTypeValue(input: {
     return mapped;
   }
 
-  const dailyCap = typeof input.rawDailyCap === "number" ? input.rawDailyCap : undefined;
+  const dailyCap =
+    typeof input.rawDailyCap === "number" ? input.rawDailyCap : undefined;
   if (typeof dailyCap === "number" && dailyCap > 0) return "destructive";
 
-  const dailyTarget = typeof input.rawDailyTarget === "number" ? input.rawDailyTarget : undefined;
-  if (rawUnit === "count" && typeof dailyTarget === "number" && dailyTarget === 1) {
+  const dailyTarget =
+    typeof input.rawDailyTarget === "number" ? input.rawDailyTarget : undefined;
+  if (
+    rawUnit === "count" &&
+    typeof dailyTarget === "number" &&
+    dailyTarget === 1
+  ) {
     return "checkbox";
   }
 
@@ -412,6 +427,44 @@ export const HABIT_TEMPLATES: Record<string, HabitConfig> = {
     habitType: "count",
     templateKey: "journaling",
   },
+  shower: {
+    id: "habit_shower",
+    name: "Shower",
+    kind: "positive",
+    unit: "count",
+    quickIncrement: 1,
+    showOnTrack: true,
+    color: "indigo",
+    createdAt: 0,
+    habitType: "count",
+    templateKey: "shower",
+  },
+  brush_teeth: {
+    id: "habit_brush_teeth",
+    name: "Brush Teeth",
+    kind: "positive",
+    unit: "count",
+    quickIncrement: 1,
+    dailyTarget: 2,
+    showOnTrack: true,
+    color: "indigo",
+    createdAt: 0,
+    habitType: "count",
+    templateKey: "brush_teeth",
+  },
+  tina: {
+    id: "habit_tina",
+    name: "Tina",
+    kind: "destructive",
+    unit: "count",
+    quickIncrement: 1,
+    dailyCap: 1,
+    showOnTrack: true,
+    color: "gray",
+    createdAt: 0,
+    habitType: "destructive",
+    templateKey: "tina",
+  },
 };
 
 export const DEFAULT_HABIT_TEMPLATE_KEYS = [
@@ -423,7 +476,9 @@ export const DEFAULT_HABIT_TEMPLATE_KEYS = [
 ] as const;
 
 export function getDefaultHabitTemplates(): HabitConfig[] {
-  return DEFAULT_HABIT_TEMPLATE_KEYS.map((key) => HABIT_TEMPLATES[key]).filter(Boolean);
+  return DEFAULT_HABIT_TEMPLATE_KEYS.map((key) => HABIT_TEMPLATES[key]).filter(
+    Boolean,
+  );
 }
 
 // --- Validation ---
@@ -488,7 +543,9 @@ function validateHabitConfig(habit: Record<string, unknown>): HabitConfig {
   }
 
   const numericQuickIncrement =
-    typeof quickIncrement === "number" && quickIncrement > 0 ? quickIncrement : undefined;
+    typeof quickIncrement === "number" && quickIncrement > 0
+      ? quickIncrement
+      : undefined;
 
   if (numericQuickIncrement === undefined) {
     throw new Error("HabitConfig: quickIncrement must be a positive number");
@@ -532,11 +589,19 @@ function validateHabitConfig(habit: Record<string, unknown>): HabitConfig {
     habitType,
   };
 
-  if (typeof habit.dailyTarget === "number" && habit.dailyTarget > 0 && kind === "positive") {
+  if (
+    typeof habit.dailyTarget === "number" &&
+    habit.dailyTarget > 0 &&
+    kind === "positive"
+  ) {
     result.dailyTarget = habitType === "checkbox" ? 1 : habit.dailyTarget;
   }
 
-  if (typeof habit.dailyCap === "number" && habit.dailyCap >= 0 && kind === "destructive") {
+  if (
+    typeof habit.dailyCap === "number" &&
+    habit.dailyCap >= 0 &&
+    kind === "destructive"
+  ) {
     result.dailyCap = habit.dailyCap;
   }
 
@@ -555,7 +620,9 @@ function validateHabitConfig(habit: Record<string, unknown>): HabitConfig {
       !Number.isFinite(habit.weeklyFrequencyTarget) ||
       habit.weeklyFrequencyTarget <= 0
     ) {
-      throw new Error("HabitConfig: weeklyFrequencyTarget must be a positive number");
+      throw new Error(
+        "HabitConfig: weeklyFrequencyTarget must be a positive number",
+      );
     }
     result.weeklyFrequencyTarget = Math.round(habit.weeklyFrequencyTarget);
   }
@@ -585,7 +652,9 @@ function validateHabitConfig(habit: Record<string, unknown>): HabitConfig {
 
   // Final safety check in case any mapping function drifts.
   if (!isHabitType(result.habitType)) {
-    throw new Error(`HabitConfig: invalid habitType "${String(result.habitType)}"`);
+    throw new Error(
+      `HabitConfig: invalid habitType "${String(result.habitType)}"`,
+    );
   }
 
   return result;
@@ -597,7 +666,9 @@ function validateHabitConfig(habit: Record<string, unknown>): HabitConfig {
  * Callers in store.ts migration and settings forms use this so they don't need
  * to cast before calling validateHabitConfig.
  */
-export function normalizeHabitConfig(habit: HabitConfig | Record<string, unknown>): HabitConfig {
+export function normalizeHabitConfig(
+  habit: HabitConfig | Record<string, unknown>,
+): HabitConfig {
   // Spread into a plain record so HabitConfig (no index signature) is
   // widened to Record<string, unknown> without a type assertion.
   const raw: Record<string, unknown> = { ...habit };
@@ -625,10 +696,20 @@ export function createCustomHabit(
   const kind = options.kind ?? inferKind(habitType);
   const unit =
     options.unit ??
-    (habitType === "sleep" ? "hours" : habitType === "activity" ? "minutes" : "count");
+    (habitType === "sleep"
+      ? "hours"
+      : habitType === "activity"
+        ? "minutes"
+        : "count");
   const quickIncrement =
     options.quickIncrement ??
-    (habitType === "fluid" ? 250 : habitType === "activity" ? 10 : habitType === "sleep" ? 0.5 : 1);
+    (habitType === "fluid"
+      ? 250
+      : habitType === "activity"
+        ? 10
+        : habitType === "sleep"
+          ? 0.5
+          : 1);
   const color = options.color ?? "indigo";
 
   return normalizeHabitConfig({
