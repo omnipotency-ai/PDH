@@ -1,4 +1,3 @@
-import { startOfWeek } from "date-fns";
 import { useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { useProfileContext } from "@/contexts/ProfileContext";
@@ -27,9 +26,6 @@ interface UseHabitLogOptions {
   captureStart?: number;
   captureEnd?: number;
   captureOffset?: number;
-  checkAndCelebrateGoal: (habit: HabitConfig, previousValue: number, nextValue: number) => void;
-  /** Direct celebration callback for custom messages (e.g. weekly frequency goals). */
-  celebrateGoalComplete: (message: string) => void;
 }
 
 interface HabitLogResult {
@@ -72,13 +68,10 @@ export function useHabitLog({
   captureStart: captureStartProp,
   captureEnd: captureEndProp,
   captureOffset = 0,
-  checkAndCelebrateGoal,
-  celebrateGoalComplete,
 }: UseHabitLogOptions): HabitLogResult {
   const addSyncedLog = useAddSyncedLog();
   const { habits } = useHabits();
   const addHabitLog = useStore((state) => state.addHabitLog);
-  const habitLogs = useStore((state) => state.habitLogs);
   const { healthProfile } = useHealthProfile();
   const { patchProfile } = useProfileContext();
   const { unitSystem } = useUnitSystem();
@@ -190,11 +183,9 @@ export function useHabitLog({
       });
       afterSave();
 
-      checkAndCelebrateGoal(habit, currentCompleted, currentCompleted + 1);
-
       return String(logId);
     },
-    [addSyncedLog, captureNow, afterSave, checkAndCelebrateGoal],
+    [addSyncedLog, captureNow, afterSave],
   );
 
   // ─── handleLogSleepQuickCapture ───────────────────────────────────────────
@@ -278,10 +269,6 @@ export function useHabitLog({
 
         afterSave();
 
-        const previousValue = todayHabitCounts[habit.id] ?? 0;
-        const nextValue = previousValue + todayHours;
-        checkAndCelebrateGoal(habit, previousValue, nextValue);
-
         toast(`+${normalizedHours} hrs ${habit.name} (split across midnight)`, {
           action: {
             label: "Undo",
@@ -333,10 +320,6 @@ export function useHabitLog({
 
       afterSave();
 
-      const previousValue = todayHabitCounts[habit.id] ?? 0;
-      const nextValue = previousValue + normalizedHours;
-      checkAndCelebrateGoal(habit, previousValue, nextValue);
-
       toast(`+${normalizedHours} hrs ${habit.name}`, {
         action: {
           label: "Undo",
@@ -359,8 +342,6 @@ export function useHabitLog({
       captureNow,
       captureStart,
       captureOffset,
-      todayHabitCounts,
-      checkAndCelebrateGoal,
       removeSyncedLog,
       removeHabitLog,
       onRequestEdit,
@@ -405,28 +386,6 @@ export function useHabitLog({
 
       afterSave();
 
-      const previousValue = todayHabitCounts[habit.id] ?? 0;
-      const nextValue = previousValue + habitLogValue;
-      checkAndCelebrateGoal(habit, previousValue, nextValue);
-
-      if (habit.weeklyFrequencyTarget !== undefined && habit.weeklyFrequencyTarget > 0) {
-        const weekStart = startOfWeek(new Date(timestamp), {
-          weekStartsOn: 1,
-        }).getTime();
-        const weekEnd = weekStart + 7 * 24 * 60 * 60 * 1000;
-        const sessionsThisWeek = habitLogs.filter(
-          (entry) => entry.habitId === habit.id && entry.at >= weekStart && entry.at < weekEnd,
-        ).length;
-        const nextSessions = sessionsThisWeek + 1;
-        if (
-          sessionsThisWeek < habit.weeklyFrequencyTarget &&
-          nextSessions >= habit.weeklyFrequencyTarget
-        ) {
-          celebrateGoalComplete(
-            `${habit.name} weekly goal hit: ${nextSessions}/${habit.weeklyFrequencyTarget} sessions.`,
-          );
-        }
-      }
       toast(`+${normalizedMinutes} min ${habit.name}`, {
         action: {
           label: "Undo",
@@ -447,11 +406,7 @@ export function useHabitLog({
       addHabitLog,
       captureNow,
       captureOffset,
-      habitLogs,
       afterSave,
-      todayHabitCounts,
-      checkAndCelebrateGoal,
-      celebrateGoalComplete,
       removeSyncedLog,
       removeHabitLog,
       onRequestEdit,
@@ -639,12 +594,6 @@ export function useHabitLog({
             : 0;
         const newCount = (todayHabitCounts[habit.id] ?? 0) + (habit.logAs === "fluid" ? 0 : 1);
         const checkValue = habit.logAs === "fluid" ? newFluidMl : newCount * habit.quickIncrement;
-        const prevValue =
-          habit.logAs === "fluid"
-            ? (todayFluidTotalsByName[fluidKey] ?? 0)
-            : (todayHabitCounts[habit.id] ?? 0) * habit.quickIncrement;
-
-        checkAndCelebrateGoal(habit, prevValue, checkValue);
       }
 
       if (isCapHabit(habit) && habit.dailyCap) {
@@ -689,7 +638,6 @@ export function useHabitLog({
       handleIncrementHabit,
       todayHabitCounts,
       todayFluidTotalsByName,
-      checkAndCelebrateGoal,
       removeHabitLog,
       removeSyncedLog,
       onRequestEdit,

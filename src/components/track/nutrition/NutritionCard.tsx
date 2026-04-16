@@ -15,32 +15,29 @@ import type { FoodRegistryEntry } from "@shared/foodRegistryData";
 import { format, isSameDay } from "date-fns";
 import {
   Camera,
+  Clock,
   Droplets,
-  Heart,
   Mic,
   Plus,
-  SlidersHorizontal,
   UtensilsCrossed,
   X,
-  Zap,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { useNutritionData } from "@/hooks/useNutritionData";
-import { useFoodFavourites } from "@/hooks/useProfile";
 import { getErrorMessage } from "@/lib/errors";
 import { titleCase } from "@/lib/nutritionUtils";
 import { useAddSyncedLog, useRemoveSyncedLog } from "@/lib/sync";
 import { getZoneBadgeBackground } from "@/lib/zoneColors";
 import { CalorieDetailView } from "./CalorieDetailView";
 import { CircularProgressRing } from "./CircularProgressRing";
-import { FavouritesView } from "./FavouritesView";
-import { FoodFilterView } from "./FoodFilterView";
 import { LogFoodModal } from "./LogFoodModal";
 import { MealSlotToggle } from "./MealSlotToggle";
-import { buildRawNutritionLogData, buildStagedNutritionLogData } from "./nutritionLogging";
-import { QuickPicksView } from "./QuickPicksView";
+import {
+  buildRawNutritionLogData,
+  buildStagedNutritionLogData,
+} from "./nutritionLogging";
 import { useNutritionStore } from "./useNutritionStore";
 import { WaterModal } from "./WaterModal";
 
@@ -155,20 +152,20 @@ function NutritionSearchInput({
 
 function _SearchResultRow({
   entry,
-  isFavourite,
   onSelect,
-  onToggleFavourite,
 }: {
   entry: FoodRegistryEntry;
-  isFavourite: boolean;
   onSelect: (canonicalName: string) => void;
-  onToggleFavourite: (canonicalName: string) => void;
 }) {
   const portionData = FOOD_PORTION_DATA.get(entry.canonical);
   const calories = portionData
-    ? Math.round(((portionData.caloriesPer100g ?? 0) * portionData.defaultPortionG) / 100)
+    ? Math.round(
+        ((portionData.caloriesPer100g ?? 0) * portionData.defaultPortionG) /
+          100,
+      )
     : 0;
-  const portionLabel = portionData?.naturalUnit ?? `${portionData?.defaultPortionG ?? 0}g`;
+  const portionLabel =
+    portionData?.naturalUnit ?? `${portionData?.defaultPortionG ?? 0}g`;
 
   const zoneColor = getZoneBadgeBackground(entry.zone);
 
@@ -181,25 +178,6 @@ function _SearchResultRow({
       aria-label={`${entry.canonical}, Zone ${entry.zone}, ${calories} kcal`}
       className="flex w-full items-center gap-2 rounded-lg px-3 py-2 transition-colors hover:bg-[var(--surface-2)]"
     >
-      {/* Heart toggle */}
-      <button
-        type="button"
-        className="shrink-0 p-0"
-        onClick={() => onToggleFavourite(entry.canonical)}
-        aria-label={
-          isFavourite
-            ? `Remove ${entry.canonical} from favourites`
-            : `Add ${entry.canonical} to favourites`
-        }
-      >
-        <Heart
-          className={`h-4 w-4 ${isFavourite ? "fill-current" : ""}`}
-          style={{
-            color: isFavourite ? "var(--orange)" : "var(--text-faint)",
-          }}
-        />
-      </button>
-
       {/* Clickable area for adding to staging */}
       <button
         type="button"
@@ -221,9 +199,13 @@ function _SearchResultRow({
               Z{entry.zone}
             </span>
           </div>
-          <span className="text-[10px] text-[var(--text-faint)]">{portionLabel}</span>
+          <span className="text-[10px] text-[var(--text-faint)]">
+            {portionLabel}
+          </span>
         </div>
-        <span className="text-xs font-medium text-[var(--text-muted)]">{calories} kcal</span>
+        <span className="text-xs font-medium text-[var(--text-muted)]">
+          {calories} kcal
+        </span>
       </button>
 
       {/* Explicit + button */}
@@ -244,10 +226,19 @@ function _SearchResultRow({
 interface NutritionCardProps {
   selectedDate?: Date;
   captureTimestamp?: number;
+  /** HH:mm time override — empty string means "now" */
+  captureTimeOverride?: string;
+  onCaptureTimeChange?: (time: string) => void;
 }
 
-export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardProps) {
-  const { state, dispatch, searchResults, stagingCount, stagingTotals } = useNutritionStore();
+export function NutritionCard({
+  selectedDate,
+  captureTimestamp,
+  captureTimeOverride = "",
+  onCaptureTimeChange,
+}: NutritionCardProps) {
+  const { state, dispatch, searchResults, stagingCount, stagingTotals } =
+    useNutritionStore();
   const {
     totalCaloriesToday,
     totalMacrosToday,
@@ -257,10 +248,8 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
     fluidGoal,
     caloriesByMealSlot,
     logsByMealSlot,
-    recentFoods,
     currentMealSlot,
   } = useNutritionData(selectedDate);
-  const { favourites, toggleFavourite, isFavourite } = useFoodFavourites();
   const addSyncedLog = useAddSyncedLog();
   const removeSyncedLog = useRemoveSyncedLog();
 
@@ -317,9 +306,9 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
     };
   }, []);
 
-  // Filter recentFoods to only those with known portion data
   // Whether the search zero-state is active (focused, empty query)
-  const showSearchZeroState = searchFocused && state.searchQuery.trim().length === 0;
+  const showSearchZeroState =
+    searchFocused && state.searchQuery.trim().length === 0;
   const surfaceSlot =
     state.view !== "none"
       ? undefined
@@ -436,7 +425,10 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
 
   const handleLogStagedFood = useCallback(async () => {
     try {
-      const data = buildStagedNutritionLogData(state.stagingItems, state.activeMealSlot);
+      const data = buildStagedNutritionLogData(
+        state.stagingItems,
+        state.activeMealSlot,
+      );
       await addSyncedLog({
         timestamp: captureTimestamp ?? Date.now(),
         type: "food",
@@ -454,10 +446,19 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
     } catch (err) {
       toast.error(getErrorMessage(err, "Failed to log food"));
     }
-  }, [addSyncedLog, captureTimestamp, dispatch, state.activeMealSlot, state.stagingItems]);
+  }, [
+    addSyncedLog,
+    captureTimestamp,
+    dispatch,
+    state.activeMealSlot,
+    state.stagingItems,
+  ]);
 
   const handleLogRawInput = useCallback(async () => {
-    const data = buildRawNutritionLogData(state.searchQuery, state.activeMealSlot);
+    const data = buildRawNutritionLogData(
+      state.searchQuery,
+      state.activeMealSlot,
+    );
     if (!data) {
       searchInputRef.current?.focus();
       return;
@@ -477,7 +478,13 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
     } catch (err) {
       toast.error(getErrorMessage(err, "Failed to log food"));
     }
-  }, [addSyncedLog, captureTimestamp, dispatch, state.activeMealSlot, state.searchQuery]);
+  }, [
+    addSyncedLog,
+    captureTimestamp,
+    dispatch,
+    state.activeMealSlot,
+    state.searchQuery,
+  ]);
 
   const handleAddMore = useCallback(() => {
     dispatch({ type: "CLOSE_STAGING_MODAL" });
@@ -529,7 +536,8 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
 
   // ── Derived state ───────────────────────────────────────────────────────
 
-  const hasSearchResults = state.searchQuery.trim().length >= 3 && searchResults.length > 0;
+  const hasSearchResults =
+    state.searchQuery.trim().length >= 3 && searchResults.length > 0;
 
   const _hasSearchQueryButNoResults =
     state.searchQuery.trim().length >= 3 && searchResults.length === 0;
@@ -554,30 +562,6 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
   const headerIcons = useMemo(
     () => (
       <div className="ml-auto flex items-center gap-3">
-        <button
-          type="button"
-          className="rounded-md p-1 transition-colors hover:bg-[var(--surface-2)]"
-          aria-label="Quick picks"
-          onClick={() => dispatch({ type: "SET_VIEW", view: "quickPicks" })}
-        >
-          <Zap className="h-5 w-5" style={{ color: "var(--orange)" }} />
-        </button>
-        <button
-          type="button"
-          className="rounded-md p-1 transition-colors hover:bg-[var(--surface-2)]"
-          aria-label="Favourites"
-          onClick={() => dispatch({ type: "SET_VIEW", view: "favourites" })}
-        >
-          <Heart className="h-5 w-5" style={{ color: "var(--orange)" }} />
-        </button>
-        <button
-          type="button"
-          className="rounded-md p-1 transition-colors hover:bg-[var(--surface-2)]"
-          aria-label="Filter foods"
-          onClick={() => dispatch({ type: "SET_VIEW", view: "foodFilter" })}
-        >
-          <SlidersHorizontal className="h-5 w-5" style={{ color: "var(--orange)" }} />
-        </button>
         <button
           type="button"
           className="rounded-md p-1 transition-colors hover:bg-[var(--surface-2)]"
@@ -643,8 +627,31 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
       </button>
 
       {/* ── Search + Log Food button state container ─── */}
-      <div {...(surfaceSlot !== undefined && { "data-slot": surfaceSlot })} className="space-y-3">
+      <div
+        {...(surfaceSlot !== undefined && { "data-slot": surfaceSlot })}
+        className="space-y-3"
+      >
         <div className="flex items-center gap-2">
+          {onCaptureTimeChange && (
+            <label
+              className={`shrink-0 flex items-center gap-1 rounded-full px-2 py-1.5 text-xs tabular-nums transition-colors cursor-pointer hover:bg-[var(--surface-3)] ${captureTimeOverride ? "text-[var(--orange)] font-semibold" : "text-[var(--text-faint)]"}`}
+              aria-label={
+                captureTimeOverride
+                  ? `Log time: ${captureTimeOverride}`
+                  : "Set log time"
+              }
+            >
+              <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+              <span>{captureTimeOverride || "Now"}</span>
+              <input
+                type="time"
+                className="sr-only"
+                value={captureTimeOverride || format(new Date(), "HH:mm")}
+                onChange={(e) => onCaptureTimeChange(e.target.value)}
+                tabIndex={-1}
+              />
+            </label>
+          )}
           <NutritionSearchInput
             value={state.searchQuery}
             onChange={handleSearchChange}
@@ -660,7 +667,9 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
             data-slot="log-food-button"
             className="shrink-0 rounded-full bg-[var(--orange)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:brightness-110 active:brightness-95"
             onClick={handleLogFoodButton}
-            aria-label={stagingCount > 0 ? "Review staged food items" : "Log food"}
+            aria-label={
+              stagingCount > 0 ? "Review staged food items" : "Log food"
+            }
           >
             Log Food
             {stagingCount > 0 && (
@@ -674,8 +683,14 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
         {/* ── Meal slot toggle + "Logging to" — visible when expanded ─── */}
         {surfaceSlot !== "collapsed-view" && (
           <div className="space-y-1.5">
-            <MealSlotToggle activeSlot={state.slotFilter} onToggle={handleToggleSlotFilter} />
-            <span data-slot="meal-slot-label" className="block text-xs text-[var(--text-muted)]">
+            <MealSlotToggle
+              activeSlot={state.slotFilter}
+              onToggle={handleToggleSlotFilter}
+            />
+            <span
+              data-slot="meal-slot-label"
+              className="block text-xs text-[var(--text-muted)]"
+            >
               Logging to: {titleCase(state.activeMealSlot)}
               {selectedDateLabel ? ` · ${selectedDateLabel}` : ""}
             </span>
@@ -683,13 +698,10 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
         )}
       </div>
 
-      {/* ── Quick Picks — auto on search focus (zero-state) or via ⚡ icon ─── */}
-      {(showSearchZeroState || state.view === "quickPicks") && (
-        <QuickPicksView
-          slotFilter={state.slotFilter}
-          activeMealSlot={state.activeMealSlot}
-          onAddToStaging={handleAddToStaging}
-        />
+      {showSearchZeroState && (
+        <p className="py-3 text-center text-xs text-[var(--text-faint)]">
+          Type at least 3 characters to search, or press Enter to send the text to the meal parser.
+        </p>
       )}
 
       {/* ── SEARCH RESULTS
@@ -711,9 +723,7 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
             <SearchResultRow
               key={entry.canonical}
               entry={entry}
-              isFavourite={isFavourite(entry.canonical)}
               onSelect={handleAddToStaging}
-              onToggleFavourite={toggleFavourite}
             />
           ))}
         </div>
@@ -733,23 +743,6 @@ export function NutritionCard({ selectedDate, captureTimestamp }: NutritionCardP
           caloriesByMealSlot={caloriesByMealSlot}
           logsByMealSlot={logsByMealSlot}
           onDeleteLog={handleDeleteLog}
-        />
-      )}
-
-      {state.view === "favourites" && (
-        <FavouritesView
-          favourites={favourites}
-          onAddToStaging={handleAddToStaging}
-          onBack={handleBackToNone}
-        />
-      )}
-
-      {state.view === "foodFilter" && (
-        <FoodFilterView
-          recentFoods={recentFoods}
-          favourites={favourites}
-          onAddToStaging={handleAddToStaging}
-          onBack={handleBackToNone}
         />
       )}
 

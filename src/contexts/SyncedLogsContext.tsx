@@ -6,6 +6,8 @@ import { type SyncedLog, toSyncedLogs } from "@/lib/sync";
 import { useStore } from "@/store";
 import { api } from "../../convex/_generated/api";
 
+const LIVE_LOG_WINDOW_DAYS = 2;
+
 export interface SyncedLogsContextValue {
   logs: SyncedLog[];
   isLoading: boolean;
@@ -27,19 +29,19 @@ export function SyncedLogsProvider({ children }: { children: ReactNode }) {
     return new Date(year, month, day);
   }, [dayKey]);
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const fourteenDaysAgo = new Date(startOfToday);
-  fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+  const liveWindowStart = new Date(startOfToday);
+  liveWindowStart.setDate(liveWindowStart.getDate() - (LIVE_LOG_WINDOW_DAYS - 1));
 
   const endOfToday = new Date(startOfToday);
   endOfToday.setDate(endOfToday.getDate() + 1);
-  const fourteenDaysAgoMs = fourteenDaysAgo.getTime();
+  const liveWindowStartMs = liveWindowStart.getTime();
   // End of today = start of tomorrow (exclusive upper bound)
   const endOfTodayMs = endOfToday.getTime();
 
   const rawLogs = useQuery(api.logs.listByRange, {
-    startMs: fourteenDaysAgoMs,
+    startMs: liveWindowStartMs,
     endMs: endOfTodayMs,
-    limit: 5000,
+    limit: 1000,
   });
   const isLoading = rawLogs === undefined;
   const logs = useMemo(() => toSyncedLogs(rawLogs), [rawLogs]);

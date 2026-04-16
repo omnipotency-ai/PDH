@@ -504,6 +504,24 @@ export const listByRange = query({
   },
 });
 
+export const getById = query({
+  args: {
+    id: v.id("logs"),
+  },
+  handler: async (ctx, args) => {
+    const { userId } = await requireAuth(ctx);
+    const row = await ctx.db.get(args.id);
+    if (!row || row.userId !== userId) return null;
+
+    return {
+      id: row._id,
+      timestamp: row.timestamp,
+      type: row.type,
+      data: row.data,
+    };
+  },
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Mutations — log CRUD
 // ─────────────────────────────────────────────────────────────────────────────

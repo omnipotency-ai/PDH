@@ -169,34 +169,34 @@ describe("reducer SET_VIEW", () => {
     const state = makeState({ view: "none" });
     const next = nutritionReducer(state, {
       type: "SET_VIEW",
-      view: "favourites",
+      view: "calorieDetail",
     });
-    expect(next.view).toBe("favourites");
+    expect(next.view).toBe("calorieDetail");
   });
 
   it("toggles to none when setting the same view (toggle behavior)", () => {
-    const state = makeState({ view: "favourites" });
+    const state = makeState({ view: "calorieDetail" });
     const next = nutritionReducer(state, {
       type: "SET_VIEW",
-      view: "favourites",
+      view: "calorieDetail",
     });
     expect(next.view).toBe("none");
   });
 
-  it("switches between panels without going through none", () => {
-    const state = makeState({ view: "favourites" });
+  it("switches from none into the remaining panel", () => {
+    const state = makeState({ view: "none" });
     const next = nutritionReducer(state, {
       type: "SET_VIEW",
-      view: "foodFilter",
+      view: "calorieDetail",
     });
-    expect(next.view).toBe("foodFilter");
+    expect(next.view).toBe("calorieDetail");
   });
 
   it("does not clear searchQuery on view change", () => {
     const state = makeState({ searchQuery: "hello" });
     const next = nutritionReducer(state, {
       type: "SET_VIEW",
-      view: "favourites",
+      view: "calorieDetail",
     });
     expect(next.searchQuery).toBe("hello");
   });

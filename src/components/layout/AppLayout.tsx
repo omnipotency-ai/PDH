@@ -12,13 +12,8 @@ export function AppLayout() {
   });
   const requiresSyncedLogs =
     pathname === "/" ||
-    pathname.startsWith("/track") ||
-    pathname.startsWith("/food") ||
     pathname.startsWith("/insights") ||
-    pathname.startsWith("/patterns") ||
-    pathname.startsWith("/settings") ||
-    pathname.startsWith("/menu") ||
-    pathname.startsWith("/archive");
+    pathname.startsWith("/menu");
 
   return (
     <div className="relative min-h-screen">

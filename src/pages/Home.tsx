@@ -1,6 +1,7 @@
 import { Dialog } from "@base-ui/react/dialog";
 import { useUser } from "@clerk/clerk-react";
 import { useNavigate } from "@tanstack/react-router";
+import { useConvex } from "convex/react";
 import {
   addDays,
   differenceInCalendarDays,
@@ -8,13 +9,14 @@ import {
   isSameDay,
   startOfDay,
 } from "date-fns";
-import { MessageCircle, Stethoscope, X } from "lucide-react";
+import { MessageCircle, RefreshCw, Stethoscope, X } from "lucide-react";
 import {
   lazy,
   Suspense,
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { toast } from "sonner";
@@ -23,20 +25,15 @@ import { ConversationPanel } from "@/components/track/dr-poo/ConversationPanel";
 import { NutritionCard } from "@/components/track/nutrition/NutritionCard";
 import { NutritionCardErrorBoundary } from "@/components/track/nutrition/NutritionCardErrorBoundary";
 import { type BowelFormState, BowelSection } from "@/components/track/panels";
-import { HeroStrip } from "@/components/patterns/hero/HeroStrip";
 import { QuickCapture } from "@/components/track/quick-capture";
 import { HabitDetailSheet } from "@/components/track/quick-capture/HabitDetailSheet";
 import { TodayLog } from "@/components/track/today-log";
 import { TodayStatusRow } from "@/components/track/TodayStatusRow";
-import { ConfettiBurst } from "@/components/ui/Confetti";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { useSyncedLogsContext } from "@/contexts/SyncedLogsContext";
 import { useAiInsights } from "@/hooks/useAiInsights";
 import { useBaselineAverages } from "@/hooks/useBaselineAverages";
-import { useCelebration } from "@/hooks/useCelebration";
 import { useDayStats } from "@/hooks/useDayStats";
-import { useFoodLlmMatching } from "@/hooks/useFoodLlmMatching";
-import { useHabitStreaks } from "@/hooks/useHabitStreaks";
 import { useLiveClock } from "@/hooks/useLiveClock";
 import { useNutritionData } from "@/hooks/useNutritionData";
 import { useHabits, useUnitSystem } from "@/hooks/useProfile";
@@ -51,12 +48,16 @@ import { getErrorMessage } from "@/lib/errors";
 import { normalizeFluidItemName } from "@/lib/normalizeFluidName";
 import { type MealSlot, titleCase } from "@/lib/nutritionUtils";
 import {
+  asConvexId,
   useAddSyncedLog,
   useLatestSuccessfulAiAnalysis,
   useRemoveSyncedLog,
+  type SyncedLog,
+  toSyncedLogs,
 } from "@/lib/sync";
 import { MS_PER_DAY } from "@/lib/timeConstants";
 import { getDisplayWeightUnit } from "@/lib/units";
+import { api } from "../../convex/_generated/api";
 import { useStore } from "@/store";
 
 // Lazy-loaded so that foodRegistry.ts is code-split
@@ -125,6 +126,7 @@ function getFollowUpPrompt(
 
 export default function HomePage() {
   const { user } = useUser();
+  const convex = useConvex();
 
   // ── Food platform hooks ──
   const { currentMealSlot } = useNutritionData();
@@ -154,7 +156,6 @@ export default function HomePage() {
     return getFallbackDrPooPrompt(currentMealSlot);
   }, [currentMealSlot, latestInsightSummary]);
 
-
   // ── Capture panel hooks ──
   const { logs } = useSyncedLogsContext();
   const { habits } = useHabits();
@@ -171,12 +172,6 @@ export default function HomePage() {
 
   // Auto-generate weekly summary when a Sunday 18:00 boundary passes
   useWeeklySummaryAutoTrigger();
-
-  // Auto-trigger LLM matching for food logs with unresolved items
-  useFoodLlmMatching();
-
-  const { celebration, celebrateLog, celebrateGoalComplete, clearCelebration } =
-    useCelebration();
 
   useLiveClock();
   const now = new Date();
@@ -196,11 +191,31 @@ export default function HomePage() {
   );
   const selectedStart = activeDate.getTime();
   const selectedEnd = addDays(activeDate, 1).getTime();
-  const selectedCaptureTimestamp = useMemo(
-    () =>
-      dayOffset === 0 ? undefined : getDateScopedTimestamp(activeDate, now),
-    [dayOffset, now, activeDate],
-  );
+
+  // ── Time override for Quick Capture / Nutrition ──
+  // When set (e.g. "22:00"), logs use activeDate + this time instead of now.
+  const [captureTimeOverride, setCaptureTimeOverride] = useState("");
+
+  const selectedCaptureTimestamp = useMemo(() => {
+    if (captureTimeOverride) {
+      const [h, m] = captureTimeOverride.split(":").map(Number);
+      if (Number.isFinite(h) && Number.isFinite(m)) {
+        const d = new Date(activeDate);
+        return new Date(
+          d.getFullYear(),
+          d.getMonth(),
+          d.getDate(),
+          h,
+          m,
+          0,
+          0,
+        ).getTime();
+      }
+    }
+    return dayOffset === 0
+      ? undefined
+      : getDateScopedTimestamp(activeDate, now);
+  }, [captureTimeOverride, dayOffset, now, activeDate]);
 
   // Day statistics (actual today + selected day)
   const { todayHabitCounts, todayFluidTotalsByName, totalFluidMl } =
@@ -258,7 +273,7 @@ export default function HomePage() {
         zeroUseCount === 1
           ? "Yesterday: zero use on one destructive habit. Excellent control."
           : `Yesterday: zero use on ${zeroUseCount} destructive habits. Excellent control.`;
-      celebrateGoalComplete(message);
+      toast.success(message);
       return;
     }
 
@@ -269,13 +284,7 @@ export default function HomePage() {
           : `Yesterday: you stayed under ${underCapCount} destructive caps. Keep that momentum.`,
       );
     }
-  }, [habits, habitLogs, todayStart, celebrateGoalComplete]);
-
-  const { daySummaries, streakSummaries } = useHabitStreaks({
-    habitLogs,
-    habits,
-    now,
-  });
+  }, [habits, habitLogs, todayStart]);
 
   // Baseline averages (side-effect-only: caches in Zustand store)
   useBaselineAverages({
@@ -307,9 +316,7 @@ export default function HomePage() {
   }, [unresolvedQueue]);
   useUnresolvedFoodToast(logs, now.getTime(), handleReviewUnresolved);
 
-  const afterSave = useCallback(() => {
-    celebrateLog();
-  }, [celebrateLog]);
+  const afterSave = useCallback(() => {}, []);
 
   // Cross-page edit: on desktop right column is visible, no navigation needed
   const handleRequestEdit = useCallback(
@@ -334,10 +341,8 @@ export default function HomePage() {
     detailSheetHabit,
   } = useQuickCapture({
     afterSave,
-    celebrateGoalComplete,
     todayHabitCounts: selectedHabitCounts,
     todayFluidTotalsByName: selectedFluidTotalsByName,
-    streakSummaries,
     logs,
     todayStart: selectedStart,
     todayEnd: selectedEnd,
@@ -351,16 +356,6 @@ export default function HomePage() {
     captureEnd: selectedEnd,
     captureOffset: dayOffset,
   });
-
-  const detailDaySummaries = useMemo(
-    () =>
-      detailSheetHabit
-        ? daySummaries.filter(
-            (summary) => summary.habitId === detailSheetHabit.id,
-          )
-        : [],
-    [daySummaries, detailSheetHabit],
-  );
 
   // Auto-edit state for right-column TodayLog
   const [autoEditLogId, setAutoEditLogId] = useState<string | null>(null);
@@ -416,13 +411,41 @@ export default function HomePage() {
   }, []);
 
   // ── Right column data ──
-  const selectedLogs = useMemo(
-    () =>
-      logs.filter(
-        (l) => l.timestamp >= selectedStart && l.timestamp < selectedEnd,
-      ),
-    [logs, selectedStart, selectedEnd],
+  const [selectedLogs, setSelectedLogs] = useState<SyncedLog[]>([]);
+  const [selectedLogsLoading, setSelectedLogsLoading] = useState(true);
+  const [selectedLogsError, setSelectedLogsError] = useState<string | null>(
+    null,
   );
+  const selectedLogsRequestIdRef = useRef(0);
+
+  const loadSelectedLogs = useCallback(async () => {
+    const requestId = ++selectedLogsRequestIdRef.current;
+    setSelectedLogsLoading(true);
+    setSelectedLogsError(null);
+
+    try {
+      const rows = await convex.query(api.logs.listByRange, {
+        startMs: selectedStart,
+        endMs: selectedEnd,
+        limit: 500,
+      });
+      if (requestId !== selectedLogsRequestIdRef.current) return;
+      setSelectedLogs(toSyncedLogs(rows));
+    } catch (error) {
+      if (requestId !== selectedLogsRequestIdRef.current) return;
+      setSelectedLogsError(
+        getErrorMessage(error, "Failed to refresh this day."),
+      );
+    } finally {
+      if (requestId === selectedLogsRequestIdRef.current) {
+        setSelectedLogsLoading(false);
+      }
+    }
+  }, [convex, selectedEnd, selectedStart]);
+
+  useEffect(() => {
+    void loadSelectedLogs();
+  }, [loadSelectedLogs]);
 
   const bmCount = useMemo(
     () => selectedLogs.filter((l) => l.type === "digestion").length,
@@ -441,6 +464,26 @@ export default function HomePage() {
   // ── Render ──
 
   const canMoveForward = dayOffset < 0;
+
+  const handleDesktopLogDelete = useCallback(
+    async (id: string) => {
+      await handleDelete(id);
+      await loadSelectedLogs();
+    },
+    [handleDelete, loadSelectedLogs],
+  );
+
+  const handleDesktopLogSave = useCallback(
+    async (
+      id: string,
+      data: Parameters<typeof handleSave>[1],
+      timestamp?: number,
+    ) => {
+      await handleSave(id, data, timestamp);
+      await loadSelectedLogs();
+    },
+    [handleSave, loadSelectedLogs],
+  );
 
   return (
     <>
@@ -521,7 +564,6 @@ export default function HomePage() {
             </div>
           </div>
 
-
           {/* ── Nutrition ── */}
           <NutritionCardErrorBoundary>
             <NutritionCard
@@ -529,23 +571,10 @@ export default function HomePage() {
               {...(selectedCaptureTimestamp !== undefined && {
                 captureTimestamp: selectedCaptureTimestamp,
               })}
+              captureTimeOverride={captureTimeOverride}
+              onCaptureTimeChange={setCaptureTimeOverride}
             />
           </NutritionCardErrorBoundary>
-
-          {/* ── Bowel Movement ── */}
-          <ErrorBoundary label="Bowel Movement">
-            <BowelSection
-              onSave={handleLogBowel}
-              {...(selectedCaptureTimestamp !== undefined && {
-                captureTimestamp: selectedCaptureTimestamp,
-              })}
-            />
-          </ErrorBoundary>
-
-          {/* ── Hero strip ── */}
-          <HeroStrip />
-
-          {/* MoodCard — Phase 3 */}
 
           {/* ── Quick Capture ── */}
           <QuickCapture
@@ -557,19 +586,40 @@ export default function HomePage() {
             onLogActivityMinutes={handleLogActivityQuickCapture}
             onLogWeightKg={handleLogWeightKg}
             onLongPress={handleQuickCaptureLongPress}
+            captureTimeOverride={captureTimeOverride}
+            onCaptureTimeChange={setCaptureTimeOverride}
           />
+
+          {/* ── Bowel Movement ── */}
+          <ErrorBoundary label="Bowel Movement">
+            <BowelSection
+              onSave={handleLogBowel}
+              {...(selectedCaptureTimestamp !== undefined && {
+                captureTimestamp: selectedCaptureTimestamp,
+              })}
+            />
+          </ErrorBoundary>
 
           {/* ── Dr. Poo proactive card ── */}
           {hasApiKey && !dismissedCard ? (
             <section className="glass-card glass-card-drpoo rounded-2xl p-4">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
-                  <Stethoscope className="h-5 w-5 shrink-0" style={{ color: "var(--section-drpoo)" }} />
-                  <p className="font-sketch text-[0.7rem] font-bold uppercase tracking-[0.1em]" style={{ color: "var(--section-drpoo)" }}>
+                  <Stethoscope
+                    className="h-5 w-5 shrink-0"
+                    style={{ color: "var(--section-drpoo)" }}
+                  />
+                  <p
+                    className="font-sketch text-[0.7rem] font-bold uppercase tracking-[0.1em]"
+                    style={{ color: "var(--section-drpoo)" }}
+                  >
                     Dr Poo Says
                   </p>
                 </div>
-                <MessageCircle className="h-5 w-5 shrink-0 opacity-50" style={{ color: "var(--section-drpoo)" }} />
+                <MessageCircle
+                  className="h-5 w-5 shrink-0 opacity-50"
+                  style={{ color: "var(--section-drpoo)" }}
+                />
               </div>
               <p className="mt-3 text-sm leading-relaxed text-[rgba(240,248,255,0.8)]">
                 {proactiveCardText}
@@ -605,6 +655,23 @@ export default function HomePage() {
 
         {/* ── Right column — desktop only ── */}
         <div className="hidden lg:block space-y-3">
+          <div className="flex items-center justify-end">
+            <button
+              type="button"
+              onClick={() => void loadSelectedLogs()}
+              disabled={selectedLogsLoading}
+              className="inline-flex items-center gap-2 rounded-full border border-[var(--section-log)]/20 bg-[var(--surface-1)] px-3 py-1.5 text-xs font-semibold text-[var(--section-log)] transition-colors hover:bg-[var(--surface-2)] disabled:opacity-60"
+            >
+              <RefreshCw
+                className={`h-3.5 w-3.5 ${selectedLogsLoading ? "animate-spin" : ""}`}
+                aria-hidden="true"
+              />
+              <span>Refresh</span>
+            </button>
+          </div>
+          {selectedLogsError && (
+            <p className="text-sm text-rose-500">{selectedLogsError}</p>
+          )}
           <TodayLog
             title="LOGS"
             logs={selectedLogs}
@@ -616,8 +683,8 @@ export default function HomePage() {
             onPreviousDay={goBack}
             onNextDay={goForward}
             onJumpToToday={goToToday}
-            onDelete={handleDelete}
-            onSave={handleSave}
+            onDelete={handleDesktopLogDelete}
+            onSave={handleDesktopLogSave}
             autoEditId={autoEditLogId}
             onAutoEditHandled={handleAutoEditHandled}
           />
@@ -657,15 +724,6 @@ export default function HomePage() {
         </Dialog.Portal>
       </Dialog.Root>
 
-      {celebration?.confettiActive && (
-        <ConfettiBurst
-          active={celebration.confettiActive}
-          onComplete={clearCelebration}
-          originX={celebration.confettiOriginX}
-          originY={celebration.confettiOriginY}
-        />
-      )}
-
       <HabitDetailSheet
         habit={detailSheetHabit}
         count={
@@ -677,12 +735,6 @@ export default function HomePage() {
               normalizeFluidItemName(detailSheetHabit.name)
             ],
         })}
-        daySummaries={detailDaySummaries}
-        streakSummary={
-          detailSheetHabit
-            ? (streakSummaries[detailSheetHabit.id] ?? null)
-            : null
-        }
         onClose={handleCloseDetailSheet}
       />
 

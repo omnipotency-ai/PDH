@@ -8,8 +8,7 @@ import { Label } from "@/components/ui/label";
 import { ResponsiveShell } from "@/components/ui/responsive-shell";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useHabits, useSleepGoal, useUnitSystem } from "@/hooks/useProfile";
-import type { HabitDaySummary, HabitStreakSummary } from "@/lib/habitAggregates";
-import { getGoodDayLabel, getNeutralSummaryLabel, hasGoal } from "@/lib/habitAggregates";
+import { hasGoal } from "@/lib/habitAggregates";
 import { getHabitIcon } from "@/lib/habitIcons";
 import {
   getProgressBarColor,
@@ -28,65 +27,12 @@ import {
 import { getDisplayFluidUnit } from "@/lib/units";
 import { useStore } from "@/store";
 
-// --- Day-of-week labels ---
-
-const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
-
-// --- Micro-graph day dot ---
-
-type DayStatus = "good" | "missed" | "over-cap" | "logged" | "no-data";
-
-function getDayStatus(
-  summary: HabitDaySummary | undefined,
-  neutralMode: boolean,
-  isDestructive: boolean,
-): DayStatus {
-  if (!summary) return "no-data";
-  if (summary.totalValue === 0) return "no-data";
-  if (neutralMode) return "logged";
-  if (summary.isGoodDay) return "good";
-  // For destructive habits, exceeding cap is worse than missing a target
-  return isDestructive ? "over-cap" : "missed";
-}
-
-function getDayDotClasses(status: DayStatus): string {
-  switch (status) {
-    case "good":
-      return "bg-emerald-500";
-    case "missed":
-      return "bg-orange-400";
-    case "over-cap":
-      return "bg-red-500";
-    case "logged":
-      return "bg-sky-400";
-    case "no-data":
-      return "border-2 border-dashed border-[var(--text-muted)]/30 bg-transparent";
-  }
-}
-
-function getDayDotAriaLabel(label: string, status: DayStatus): string {
-  switch (status) {
-    case "good":
-      return `${label}: goal achieved`;
-    case "missed":
-      return `${label}: under goal`;
-    case "over-cap":
-      return `${label}: over cap`;
-    case "logged":
-      return `${label}: logged`;
-    case "no-data":
-      return `${label}: no data`;
-  }
-}
-
 // --- Props ---
 
 export interface HabitDetailSheetProps {
   habit: HabitConfig | null;
   count: number;
   fluidMl?: number;
-  daySummaries: HabitDaySummary[];
-  streakSummary: HabitStreakSummary | null;
   onClose: () => void;
 }
 
@@ -96,8 +42,6 @@ export function HabitDetailSheet({
   habit,
   count,
   fluidMl,
-  daySummaries,
-  streakSummary,
   onClose,
 }: HabitDetailSheetProps) {
   if (!habit) return null;
@@ -107,8 +51,6 @@ export function HabitDetailSheet({
       habit={habit}
       count={count}
       {...(fluidMl !== undefined && { fluidMl })}
-      daySummaries={daySummaries}
-      streakSummary={streakSummary}
       onClose={onClose}
     />
   );
@@ -120,8 +62,6 @@ interface HabitDetailSheetInnerProps {
   habit: HabitConfig;
   count: number;
   fluidMl?: number;
-  daySummaries: HabitDaySummary[];
-  streakSummary: HabitStreakSummary | null;
   onClose: () => void;
 }
 
@@ -129,8 +69,6 @@ function HabitDetailSheetInner({
   habit,
   count,
   fluidMl,
-  daySummaries,
-  streakSummary,
   onClose,
 }: HabitDetailSheetInnerProps) {
   const { updateHabit } = useHabits();
@@ -190,26 +128,6 @@ function HabitDetailSheetInner({
     },
     [onClose],
   );
-
-  // Sort day summaries by date ascending, take last 7, then reverse for display (most recent first)
-  const sortedDays = useMemo(
-    () => [...daySummaries].sort((a, b) => a.date.localeCompare(b.date)),
-    [daySummaries],
-  );
-  const last7Days = useMemo(() => sortedDays.slice(-7), [sortedDays]);
-
-  // Reversed for display: Today first, then yesterday, etc.
-  const displayDays = useMemo(() => [...last7Days].reverse(), [last7Days]);
-
-  // Compute day labels from actual dates (reversed order: most recent first)
-  const dayLabels = useMemo(() => {
-    if (displayDays.length === 0) return DAY_LABELS;
-    const days = ["S", "M", "T", "W", "T", "F", "S"];
-    return displayDays.map((s) => {
-      const d = new Date(`${s.date}T12:00:00`);
-      return days[d.getDay()];
-    });
-  }, [displayDays]);
 
   const progressFraction = getProgressFraction(habit, count, fluidMl);
   const progressColor = getProgressColor(habit, count, fluidMl);
@@ -358,89 +276,13 @@ function HabitDetailSheetInner({
           </div>
         </div>
 
-        {/* Micro-graph: 7-day visualization (most recent first) */}
-        <div data-slot="habit-detail-micro-graph" className="space-y-1.5">
-          <p className="text-sm font-medium text-[var(--text-muted)]">Last 7 days</p>
-          <div className="flex items-center justify-between gap-1">
-            {dayLabels.map((label, index) => {
-              const summary = displayDays[index];
-              const status = getDayStatus(summary, neutralMode, habit.kind === "destructive");
-              const dotClasses = getDayDotClasses(status);
-              return (
-                <div
-                  key={summary?.date ?? `empty-${index}`}
-                  className="flex flex-col items-center gap-1"
-                >
-                  <div
-                    role="img"
-                    className={`h-6 w-6 rounded-full ${dotClasses}`}
-                    aria-label={getDayDotAriaLabel(label, status)}
-                  />
-                  <span className="text-[10px] text-[var(--text-muted)]">{label}</span>
-                </div>
-              );
-            })}
-          </div>
-          {/* Dot legend */}
-          <div className="flex items-center gap-3 pt-1 text-[10px] text-[var(--text-faint)]">
-            {neutralMode ? (
-              <>
-                <span className="flex items-center gap-1">
-                  <span className="inline-block h-2.5 w-2.5 rounded-full bg-sky-400" />
-                  Logged
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="inline-block h-2.5 w-2.5 rounded-full border-2 border-dashed border-[var(--text-muted)]/30" />
-                  No data
-                </span>
-              </>
-            ) : habit.kind === "destructive" ? (
-              <>
-                <span className="flex items-center gap-1">
-                  <span className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                  Under cap
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-500" />
-                  Over cap
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="inline-block h-2.5 w-2.5 rounded-full border-2 border-dashed border-[var(--text-muted)]/30" />
-                  No data
-                </span>
-              </>
-            ) : (
-              <>
-                <span className="flex items-center gap-1">
-                  <span className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                  Goal met
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="inline-block h-2.5 w-2.5 rounded-full bg-orange-400" />
-                  Under goal
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="inline-block h-2.5 w-2.5 rounded-full border-2 border-dashed border-[var(--text-muted)]/30" />
-                  No data
-                </span>
-              </>
-            )}
-          </div>
+        <div data-slot="habit-detail-summary" className="text-sm text-[var(--text-muted)]">
+          {neutralMode
+            ? "Quick capture details for this habit."
+            : habit.kind === "destructive"
+              ? "Tracks today's cap progress only."
+              : "Tracks today's target progress only."}
         </div>
-
-        {/* Summary label: neutral for no-target habits, good days for goal habits */}
-        {neutralMode ? (
-          <div data-slot="habit-detail-streak" className="text-sm text-[var(--text-muted)]">
-            {getNeutralSummaryLabel(daySummaries, habit.id, 7)}
-          </div>
-        ) : (
-          streakSummary !== null && (
-            <div data-slot="habit-detail-streak" className="text-sm text-[var(--text-muted)]">
-              {habit.kind === "destructive" ? "Under cap" : "Good days"}:{" "}
-              {getGoodDayLabel(streakSummary)}
-            </div>
-          )
-        )}
       </div>
 
       {/* ── Divider between data and settings ── */}

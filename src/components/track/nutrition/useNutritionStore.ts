@@ -26,7 +26,7 @@ import {
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
-export type NutritionView = "none" | "quickPicks" | "favourites" | "foodFilter" | "calorieDetail";
+export type NutritionView = "none" | "calorieDetail";
 
 export interface StagedItem {
   /** Unique ID for this staging row. */
@@ -67,7 +67,7 @@ export interface NutritionState {
   waterModalOpen: boolean;
   /** Auto-detected from time, user can override. */
   activeMealSlot: MealSlot;
-  /** Slot filter for Quick Picks / Favourites / Browse. null = show all slots. */
+  /** Slot filter for meal-slot scoped search helpers. null = show all slots. */
   slotFilter: MealSlot | null;
   /** Set when ADJUST_STAGING_PORTION removes an item (portion <= 0). Consuming component reads + toasts, then resets on next action. */
   lastRemovedItem: string | null;
