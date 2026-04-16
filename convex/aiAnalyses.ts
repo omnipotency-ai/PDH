@@ -22,6 +22,10 @@ export const add = mutation({
   },
   handler: async (ctx, args) => {
     const { userId } = await requireAuth(ctx);
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
 
     // Write lightweight metadata to aiAnalyses (no request/response payload).
     const id = await ctx.db.insert("aiAnalyses", {
@@ -49,6 +53,13 @@ export const add = mutation({
     // Extract normalized data from the insight (async, non-blocking).
     // Only schedule for successful reports — skip error reports.
     if (args.error === undefined) {
+      if (profile) {
+        await ctx.db.patch(profile._id, {
+          latestSuccessfulAiAnalysisId: id,
+          updatedAt: Math.max(profile.updatedAt, args.timestamp),
+        });
+      }
+
       await ctx.scheduler.runAfter(
         0,
         internal.extractInsightData.extractFromReport,
@@ -178,22 +189,36 @@ export const latestSuccessful = query({
   args: {},
   handler: async (ctx) => {
     const { userId } = await requireAuth(ctx);
-    const rows = await ctx.db
-      .query("aiAnalyses")
-      .withIndex("by_userId_timestamp", (q) => q.eq("userId", userId))
-      .order("desc")
-      .take(200);
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
 
-    // If all 200 rows are failures, something is likely wrong — warn for observability.
-    if (rows.length === 200 && rows.every((r) => r.error !== undefined || r.insight === null)) {
-      console.warn(
-        `[latestSuccessful] All 200 fetched rows for user ${userId} are failures — no successful report found in recent history.`,
-      );
+    let row =
+      profile?.latestSuccessfulAiAnalysisId !== undefined
+        ? await ctx.db.get(profile.latestSuccessfulAiAnalysisId)
+        : null;
+
+    if (
+      row !== null &&
+      (row.userId !== userId || row.error !== undefined || row.insight === null)
+    ) {
+      row = null;
     }
 
-    const row = rows.find(
-      (candidate) => candidate.error === undefined && candidate.insight !== null,
-    );
+    if (row === null) {
+      const rows = await ctx.db
+        .query("aiAnalyses")
+        .withIndex("by_userId_timestamp", (q) => q.eq("userId", userId))
+        .order("desc")
+        .take(50);
+
+      row =
+        rows.find(
+          (candidate) =>
+            candidate.error === undefined && candidate.insight !== null,
+        ) ?? null;
+    }
 
     if (!row) return null;
 

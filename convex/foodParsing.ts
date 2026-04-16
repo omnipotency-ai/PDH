@@ -1282,12 +1282,8 @@ export const processLogInternal = internalAction({
 
     let phraseEmbeddings: number[][] = [];
     try {
-      const hasEmbeddings = await ctx.runQuery(
-        internal.foodParsing.hasAnyFoodEmbeddings,
-        {},
-      );
       const apiKey = getServerOpenAiApiKey();
-      if (hasEmbeddings && apiKey) {
+      if (apiKey) {
         phraseEmbeddings = await fetchOpenAiEmbeddings(
           phrases.map((phrase) => phrase.parsedName),
           apiKey,
@@ -1295,7 +1291,7 @@ export const processLogInternal = internalAction({
       }
     } catch (error) {
       console.error(
-        "Food embedding layer unavailable. Falling back to fuzzy-only matching.",
+        "Food embedding layer unavailable. Continuing without semantic scores.",
         error,
       );
     }

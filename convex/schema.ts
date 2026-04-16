@@ -409,6 +409,9 @@ export default defineSchema({
     // Server-side AI rate limit state, keyed by feature type.
     // Survives page reload. Updated by the chatCompletion action.
     aiRateLimits: v.optional(aiRateLimitsValidator),
+    // Cheap lookup for the current successful report shown on Home/Dr. Poo
+    // surfaces. Updated when a successful aiAnalyses row is written.
+    latestSuccessfulAiAnalysisId: v.optional(v.id("aiAnalyses")),
     updatedAt: v.number(),
   }).index("by_userId", ["userId"]),
 
