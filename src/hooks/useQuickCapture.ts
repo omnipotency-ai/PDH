@@ -1,8 +1,6 @@
 import { useHabits } from "@/hooks/useProfile";
-import type { HabitStreakSummary } from "@/lib/habitAggregates";
 import type { HabitConfig } from "@/lib/habitTemplates";
 import type { SyncedLog } from "@/lib/sync";
-import { useCelebrationTrigger } from "./useCelebrationTrigger";
 import { useDetailSheetController } from "./useDetailSheetController";
 import { useHabitLog } from "./useHabitLog";
 
@@ -10,10 +8,8 @@ import { useHabitLog } from "./useHabitLog";
 
 interface UseQuickCaptureOptions {
   afterSave: () => void;
-  celebrateGoalComplete: (message: string) => void;
   todayHabitCounts: Record<string, number>;
   todayFluidTotalsByName: Record<string, number>;
-  streakSummaries: Record<string, HabitStreakSummary>;
   logs: SyncedLog[];
   todayStart: number;
   todayEnd: number;
@@ -59,10 +55,8 @@ interface QuickCaptureResult {
  */
 export function useQuickCapture({
   afterSave,
-  celebrateGoalComplete,
   todayHabitCounts,
   todayFluidTotalsByName,
-  streakSummaries,
   logs,
   todayStart,
   todayEnd,
@@ -80,13 +74,7 @@ export function useQuickCapture({
   const { detailSheetHabit, handleQuickCaptureLongPress, handleCloseDetailSheet } =
     useDetailSheetController({ habits });
 
-  // 2. Celebration trigger (goal threshold detection + message selection)
-  const { checkAndCelebrateGoal } = useCelebrationTrigger({
-    streakSummaries,
-    celebrateGoalComplete,
-  });
-
-  // 3. All logging handlers (habits, fluid, sleep, activity, weight)
+  // 2. All logging handlers (habits, fluid, sleep, activity, weight)
   const {
     handleQuickCaptureTap,
     handleLogSleepQuickCapture,
@@ -104,8 +92,6 @@ export function useQuickCapture({
     removeSyncedLog,
     removeHabitLog,
     onRequestEdit,
-    checkAndCelebrateGoal,
-    celebrateGoalComplete,
     ...(captureTimestamp !== undefined && { captureTimestamp }),
     ...(captureStart !== undefined && { captureStart }),
     ...(captureEnd !== undefined && { captureEnd }),

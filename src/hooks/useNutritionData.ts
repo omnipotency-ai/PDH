@@ -71,14 +71,6 @@ export interface NutritionData {
   fluidGoal: number;
   /** The current meal slot based on time of day. */
   currentMealSlot: MealSlot;
-  /**
-   * Canonical food names from the last 7 days scoped to the current meal slot.
-   * Falls back to allRecentFoods if no slot-specific foods exist.
-   * Most recent first, deduped, max 50.
-   */
-  recentFoods: string[];
-  /** Canonical food names from the last 7 days (all slots), most recent first, deduped, max 50. */
-  allRecentFoods: string[];
 }
 
 export function getNutritionDayBounds(targetDate?: Date): {
@@ -222,55 +214,6 @@ export function useNutritionData(targetDate?: Date): NutritionData {
     ? getMealSlot(getDateScopedTimestamp(targetDate))
     : getMealSlot(Date.now());
 
-  // Recent foods: canonical names from last 7 days, most recent first, deduped, max 50.
-  // Computes both all-slot and per-slot lists in one pass.
-  const { slotRecentFoods, allRecentFoods } = useMemo(() => {
-    const sevenDaysAgo = activeDayStart - 7 * MS_PER_DAY;
-    const seenAll = new Set<string>();
-    const seenSlot = new Set<string>();
-    const allResult: string[] = [];
-    const slotResult: string[] = [];
-
-    // Logs arrive descending (most recent first) from Convex query. Iterate forward.
-    for (const log of logs) {
-      if (log.timestamp >= activeDayEnd) continue;
-      if (log.timestamp < sevenDaysAgo) break;
-
-      if (!isFoodPipelineLog(log)) continue;
-
-      const logSlot = getMealSlot(log.timestamp);
-
-      for (const item of log.data.items) {
-        const canonical = item.canonicalName;
-        if (canonical == null) continue;
-
-        // Add to all-slot list
-        if (!seenAll.has(canonical)) {
-          seenAll.add(canonical);
-          allResult.push(canonical);
-        }
-
-        // Add to slot-specific list
-        if (logSlot === currentMealSlot && !seenSlot.has(canonical)) {
-          seenSlot.add(canonical);
-          slotResult.push(canonical);
-        }
-      }
-
-      // Early exit only if both lists are full — slot list may never reach 50
-      if (allResult.length >= 50 && slotResult.length >= 50) break;
-    }
-
-    return {
-      slotRecentFoods: slotResult.slice(0, 50),
-      allRecentFoods: allResult.slice(0, 50),
-    };
-  }, [logs, currentMealSlot, activeDayEnd, activeDayStart]);
-
-  // Fall back to global recents if no slot-specific foods exist.
-  // Both branches are stable memo references — no new array allocated
-  const recentFoods = slotRecentFoods.length > 0 ? slotRecentFoods : allRecentFoods;
-
   return {
     todayFoodLogs,
     todayFluidLogs,
@@ -283,7 +226,5 @@ export function useNutritionData(targetDate?: Date): NutritionData {
     calorieGoal: dailyCalorieGoal,
     fluidGoal: dailyWaterGoalMl,
     currentMealSlot,
-    recentFoods,
-    allRecentFoods,
   };
 }
