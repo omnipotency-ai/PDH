@@ -457,6 +457,14 @@ export const listFoodEmbeddingVersions = internalQuery({
   },
 });
 
+export const hasAnyFoodEmbeddings = internalQuery({
+  args: {},
+  handler: async (ctx): Promise<boolean> => {
+    const rows = await ctx.db.query("foodEmbeddings").take(1);
+    return rows.length > 0;
+  },
+});
+
 export const getFoodEmbeddingsByIds = internalQuery({
   args: { ids: v.array(v.id("foodEmbeddings")) },
   handler: async (ctx, args): Promise<Doc<"foodEmbeddings">[]> => {
@@ -1274,9 +1282,12 @@ export const processLogInternal = internalAction({
 
     let phraseEmbeddings: number[][] = [];
     try {
-      const embeddingsReady = await ensureFoodEmbeddings(ctx);
+      const hasEmbeddings = await ctx.runQuery(
+        internal.foodParsing.hasAnyFoodEmbeddings,
+        {},
+      );
       const apiKey = getServerOpenAiApiKey();
-      if (embeddingsReady && apiKey) {
+      if (hasEmbeddings && apiKey) {
         phraseEmbeddings = await fetchOpenAiEmbeddings(
           phrases.map((phrase) => phrase.parsedName),
           apiKey,

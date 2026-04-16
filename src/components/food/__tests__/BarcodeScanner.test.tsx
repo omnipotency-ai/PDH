@@ -14,7 +14,7 @@
  * a React renderer. If @testing-library/react is added to the project in future,
  * these tests can be promoted to full render tests.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 // ---------------------------------------------------------------------------
 // Feature detection — mirrors isBarcodeDetectorSupported() in BarcodeScanner
@@ -135,5 +135,127 @@ describe("BarcodeScanner — initial mode selection", () => {
     const supported = isBarcodeDetectorSupported(env);
     const initialManualMode = !supported;
     expect(initialManualMode).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Photo barcode detection — mirrors handlePhotoSelect logic in BarcodeScanner
+// ---------------------------------------------------------------------------
+
+/**
+ * Simulate the photo decode logic from BarcodeScanner:
+ * - createImageBitmap → BarcodeDetector.detect → onScan or error
+ */
+async function simulatePhotoSelect(
+  deps: {
+    createImageBitmap: () => Promise<{ close: () => void }>;
+    detectBarcodes: (bitmap: unknown) => Promise<Array<{ rawValue: string }>>;
+  },
+  callbacks: {
+    onScan: (barcode: string) => void;
+    setPhotoError: (msg: string) => void;
+    setPhotoProcessing: (v: boolean) => void;
+  },
+): Promise<void> {
+  callbacks.setPhotoProcessing(true);
+
+  try {
+    const bitmap = await deps.createImageBitmap();
+    const barcodes = await deps.detectBarcodes(bitmap);
+    bitmap.close();
+
+    if (barcodes.length > 0 && barcodes[0].rawValue) {
+      callbacks.onScan(barcodes[0].rawValue);
+    } else {
+      callbacks.setPhotoError(
+        "No barcode found in this image. Try a clearer photo with the barcode fully visible.",
+      );
+    }
+  } catch {
+    callbacks.setPhotoError("Could not read the image. Try a different photo.");
+  } finally {
+    callbacks.setPhotoProcessing(false);
+  }
+}
+
+describe("BarcodeScanner — photo barcode detection", () => {
+  it("calls onScan when a barcode is found in the image", async () => {
+    const onScan = vi.fn();
+    const setPhotoError = vi.fn();
+    const setPhotoProcessing = vi.fn();
+
+    await simulatePhotoSelect(
+      {
+        createImageBitmap: vi.fn().mockResolvedValue({ close: vi.fn() }),
+        detectBarcodes: vi
+          .fn()
+          .mockResolvedValue([{ rawValue: "5011476100098" }]),
+      },
+      { onScan, setPhotoError, setPhotoProcessing },
+    );
+
+    expect(onScan).toHaveBeenCalledWith("5011476100098");
+    expect(setPhotoError).not.toHaveBeenCalled();
+    expect(setPhotoProcessing).toHaveBeenCalledWith(true);
+    expect(setPhotoProcessing).toHaveBeenLastCalledWith(false);
+  });
+
+  it("sets photoError when no barcode is found in the image", async () => {
+    const onScan = vi.fn();
+    const setPhotoError = vi.fn();
+    const setPhotoProcessing = vi.fn();
+
+    await simulatePhotoSelect(
+      {
+        createImageBitmap: vi.fn().mockResolvedValue({ close: vi.fn() }),
+        detectBarcodes: vi.fn().mockResolvedValue([]),
+      },
+      { onScan, setPhotoError, setPhotoProcessing },
+    );
+
+    expect(onScan).not.toHaveBeenCalled();
+    expect(setPhotoError).toHaveBeenCalledWith(
+      "No barcode found in this image. Try a clearer photo with the barcode fully visible.",
+    );
+  });
+
+  it("sets photoError when createImageBitmap fails", async () => {
+    const onScan = vi.fn();
+    const setPhotoError = vi.fn();
+    const setPhotoProcessing = vi.fn();
+
+    await simulatePhotoSelect(
+      {
+        createImageBitmap: vi
+          .fn()
+          .mockRejectedValue(new Error("Invalid image")),
+        detectBarcodes: vi.fn(),
+      },
+      { onScan, setPhotoError, setPhotoProcessing },
+    );
+
+    expect(onScan).not.toHaveBeenCalled();
+    expect(setPhotoError).toHaveBeenCalledWith(
+      "Could not read the image. Try a different photo.",
+    );
+    expect(setPhotoProcessing).toHaveBeenLastCalledWith(false);
+  });
+
+  it("closes the bitmap even when a barcode is found", async () => {
+    const closeFn = vi.fn();
+    const onScan = vi.fn();
+
+    await simulatePhotoSelect(
+      {
+        createImageBitmap: vi.fn().mockResolvedValue({ close: closeFn }),
+        detectBarcodes: vi
+          .fn()
+          .mockResolvedValue([{ rawValue: "8001234567890" }]),
+      },
+      { onScan, setPhotoError: vi.fn(), setPhotoProcessing: vi.fn() },
+    );
+
+    expect(closeFn).toHaveBeenCalled();
+    expect(onScan).toHaveBeenCalledWith("8001234567890");
   });
 });

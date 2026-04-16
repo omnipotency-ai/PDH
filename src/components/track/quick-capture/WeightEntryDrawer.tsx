@@ -9,7 +9,6 @@ import {
   PopoverDescription,
   PopoverHeader,
   PopoverTitle,
-  PopoverTrigger,
 } from "@/components/ui/popover";
 import { ResponsiveShell } from "@/components/ui/responsive-shell";
 import { useSyncedLogsContext } from "@/contexts/SyncedLogsContext";
@@ -42,7 +41,11 @@ type TargetDraft = {
   pounds: string;
 };
 
-export function WeightEntryDrawer({ onLogWeightKg, habit, onHide }: WeightEntryDrawerProps) {
+export function WeightEntryDrawer({
+  onLogWeightKg,
+  habit,
+  onHide,
+}: WeightEntryDrawerProps) {
   const { logs } = useSyncedLogsContext();
   const { healthProfile, setHealthProfile } = useHealthProfile();
   const { unitSystem } = useUnitSystem();
@@ -50,7 +53,10 @@ export function WeightEntryDrawer({ onLogWeightKg, habit, onHide }: WeightEntryD
   const weightLogs = useMemo(
     () =>
       logs
-        .filter((entry): entry is typeof entry & { type: "weight" } => entry.type === "weight")
+        .filter(
+          (entry): entry is typeof entry & { type: "weight" } =>
+            entry.type === "weight",
+        )
         .sort((a, b) => a.timestamp - b.timestamp),
     [logs],
   );
@@ -60,10 +66,14 @@ export function WeightEntryDrawer({ onLogWeightKg, habit, onHide }: WeightEntryD
     healthProfile?.currentWeight ??
     healthProfile?.startingWeight;
   const previousWeightKg =
-    weightLogs.length >= 2 ? (weightLogs[weightLogs.length - 2]?.data?.weightKg ?? null) : null;
+    weightLogs.length >= 2
+      ? (weightLogs[weightLogs.length - 2]?.data?.weightKg ?? null)
+      : null;
 
   const sinceLastKg =
-    latestWeightKg != null && previousWeightKg != null ? latestWeightKg - previousWeightKg : null;
+    latestWeightKg != null && previousWeightKg != null
+      ? latestWeightKg - previousWeightKg
+      : null;
   const sinceSurgeryKg =
     latestWeightKg != null && healthProfile?.startingWeight != null
       ? latestWeightKg - healthProfile?.startingWeight
@@ -87,7 +97,11 @@ export function WeightEntryDrawer({ onLogWeightKg, habit, onHide }: WeightEntryD
   const [targetValue, setTargetValue] = useState("");
   const [targetStones, setTargetStones] = useState("");
   const [targetPounds, setTargetPounds] = useState("");
-  const targetDraftRef = useRef<TargetDraft>({ value: "", stones: "", pounds: "" });
+  const targetDraftRef = useRef<TargetDraft>({
+    value: "",
+    stones: "",
+    pounds: "",
+  });
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const syncTargetDraft = useCallback((nextDraft: TargetDraft) => {
@@ -113,7 +127,9 @@ export function WeightEntryDrawer({ onLogWeightKg, habit, onHide }: WeightEntryD
       return;
     }
 
-    setEntryValue(String(Number(kgToDisplayWeight(latestWeightKg, unitSystem).toFixed(1))));
+    setEntryValue(
+      String(Number(kgToDisplayWeight(latestWeightKg, unitSystem).toFixed(1))),
+    );
   }, [latestWeightKg, unitSystem]);
 
   const populateTargetState = useCallback(() => {
@@ -134,7 +150,9 @@ export function WeightEntryDrawer({ onLogWeightKg, habit, onHide }: WeightEntryD
     }
 
     syncTargetDraft({
-      value: String(Number(kgToDisplayWeight(targetWeightKg, unitSystem).toFixed(1))),
+      value: String(
+        Number(kgToDisplayWeight(targetWeightKg, unitSystem).toFixed(1)),
+      ),
       stones: "",
       pounds: "",
     });
@@ -148,12 +166,17 @@ export function WeightEntryDrawer({ onLogWeightKg, habit, onHide }: WeightEntryD
    * For metric/imperial_us: takes a single value string.
    */
   const parseWeightKg = useCallback(
-    (opts: { value: string; stones: string; pounds: string }): number | null => {
+    (opts: {
+      value: string;
+      stones: string;
+      pounds: string;
+    }): number | null => {
       if (unitSystem === "imperial_uk") {
         if (opts.stones.trim() === "" && opts.pounds.trim() === "") return null;
         const rawStones = Number(opts.stones);
         const rawPounds = Number(opts.pounds);
-        if (!Number.isFinite(rawStones) || !Number.isFinite(rawPounds)) return null;
+        if (!Number.isFinite(rawStones) || !Number.isFinite(rawPounds))
+          return null;
         const stones = Math.round(rawStones);
         const pounds = Math.round(rawPounds);
         if (stones < 0 || pounds < 0 || pounds >= 14) return null;
@@ -209,7 +232,12 @@ export function WeightEntryDrawer({ onLogWeightKg, habit, onHide }: WeightEntryD
 
     setHealthProfile({ targetWeight: parsed });
     toast.success("Target weight updated.");
-  }, [parseWeightKg, unitSystem, healthProfile?.targetWeight, setHealthProfile]);
+  }, [
+    parseWeightKg,
+    unitSystem,
+    healthProfile?.targetWeight,
+    setHealthProfile,
+  ]);
 
   const debouncedAutoSaveTarget = useCallback(() => {
     if (debounceTimerRef.current) {
@@ -330,35 +358,39 @@ export function WeightEntryDrawer({ onLogWeightKg, habit, onHide }: WeightEntryD
               <EllipsisVertical className="h-3.5 w-3.5" />
             </button>
 
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                {...weightTileLongPress}
-                onClick={openWeightEntry}
-                className="relative flex min-h-11 w-full items-center gap-2 rounded-2xl border border-[rgba(236,72,153,0.35)] bg-[rgba(236,72,153,0.08)] px-3 py-2.5 text-left transition-all select-none active:scale-95 hover:border-transparent hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400/40"
-                aria-label={`${habitName} quick capture. Tap to log weight, long press for settings`}
+            <button
+              type="button"
+              {...weightTileLongPress}
+              onClick={openWeightEntry}
+              className="relative flex min-h-11 w-full items-center gap-2 rounded-2xl border border-[rgba(236,72,153,0.35)] bg-[rgba(236,72,153,0.08)] px-3 py-2.5 text-left transition-all select-none active:scale-95 hover:border-transparent hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400/40"
+              aria-label={`${habitName} quick capture. Tap to log weight, long press for settings`}
+            >
+              <span
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--surface-3)]"
+                aria-hidden="true"
               >
-                <span
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--surface-3)]"
-                  aria-hidden="true"
-                >
-                  <Weight className="h-4.5 w-4.5 text-pink-600 dark:text-pink-400" />
+                <Weight className="h-4.5 w-4.5 text-pink-600 dark:text-pink-400" />
+              </span>
+              <div className="min-w-0 flex flex-1 flex-col justify-center gap-0.5">
+                <span className="truncate font-mono text-xs font-bold tabular-nums text-pink-600 dark:text-pink-400">
+                  {latestWeightKg != null
+                    ? `${kgToDisplayWeight(latestWeightKg, unitSystem).toFixed(1)} ${weightUnit}`
+                    : "Tap to log"}
                 </span>
-                <div className="min-w-0 flex flex-1 flex-col justify-center gap-0.5">
-                  <span className="truncate font-mono text-xs font-bold tabular-nums text-pink-600 dark:text-pink-400">
-                    {latestWeightKg != null
-                      ? `${kgToDisplayWeight(latestWeightKg, unitSystem).toFixed(1)} ${weightUnit}`
-                      : "Tap to log"}
-                  </span>
-                  <span className="truncate text-[11px] text-[var(--text-muted)]">{habitName}</span>
-                </div>
-              </button>
-            </PopoverTrigger>
+                <span className="truncate text-[11px] text-[var(--text-muted)]">
+                  {habitName}
+                </span>
+              </div>
+            </button>
           </div>
         </PopoverAnchor>
 
         {/* Compact popover — Enter saves, click-away closes */}
-        <PopoverContent align="center" sideOffset={8} className="w-[280px] space-y-2 p-3">
+        <PopoverContent
+          align="center"
+          sideOffset={8}
+          className="w-[280px] space-y-2 p-3"
+        >
           <PopoverHeader>
             <PopoverTitle>Weigh-in</PopoverTitle>
             <PopoverDescription>Type weight, press Enter.</PopoverDescription>
@@ -387,7 +419,9 @@ export function WeightEntryDrawer({ onLogWeightKg, habit, onHide }: WeightEntryD
           />
 
           {weightSaving && (
-            <p className="text-center text-xs text-[var(--text-muted)]">Saving...</p>
+            <p className="text-center text-xs text-[var(--text-muted)]">
+              Saving...
+            </p>
           )}
         </PopoverContent>
       </Popover>
@@ -416,7 +450,10 @@ export function WeightEntryDrawer({ onLogWeightKg, habit, onHide }: WeightEntryD
               </p>
               <p className="mt-1 font-mono text-lg font-semibold text-[var(--text)]">
                 {healthProfile?.startingWeight != null
-                  ? formatWeight(healthProfile?.startingWeight, displayWeightUnit)
+                  ? formatWeight(
+                      healthProfile?.startingWeight,
+                      displayWeightUnit,
+                    )
                   : "Not set"}
               </p>
             </div>
@@ -489,7 +526,9 @@ export function WeightEntryDrawer({ onLogWeightKg, habit, onHide }: WeightEntryD
               }}
               inputClassName="selection:bg-[var(--surface-3)] selection:text-[var(--text)]"
             />
-            <p className="text-xs text-[var(--text-muted)]">Auto-saves as you type.</p>
+            <p className="text-xs text-[var(--text-muted)]">
+              Auto-saves as you type.
+            </p>
           </div>
 
           {/* Delta stats */}

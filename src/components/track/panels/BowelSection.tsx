@@ -2,11 +2,18 @@ import { AlertTriangle, HeartPulse, Minus, Plus } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useCallback, useId, useRef, useState } from "react";
 import { toast } from "sonner";
-import { BRISTOL_SCALE, BristolIllustration } from "@/components/track/panels/BristolScale";
+import {
+  BRISTOL_SCALE,
+  BristolIllustration,
+} from "@/components/track/panels/BristolScale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { usePanelTime } from "@/hooks/usePanelTime";
 
 import { getErrorMessage } from "@/lib/errors";
@@ -132,7 +139,13 @@ function SeverityScale<T extends string>({
   );
 }
 
-function TripStepper({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+function TripStepper({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+}) {
   return (
     <div className="flex items-center justify-center gap-3 rounded-xl bg-(--surface-3) min-h-[44px] px-3">
       <button
@@ -175,21 +188,33 @@ function TripStepper({ value, onChange }: { value: number; onChange: (v: number)
 
 export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
   const bristolGroupName = useId();
-  const [draft, setDraft] = useState<BowelFormDraft>({ ...INITIAL_BOWEL_DRAFT });
+  const [draft, setDraft] = useState<BowelFormDraft>({
+    ...INITIAL_BOWEL_DRAFT,
+  });
   const [saving, setSaving] = useState(false);
   // useRef guard prevents double-submit under React 18 concurrent rendering,
   // where two rapid invocations can both pass a useState check before either
   // state update commits.
   const submittingRef = useRef(false);
 
-  const { timeValue, setTimeValue, dateValue, setDateValue, isEdited, getTimestampMs, reset } =
-    usePanelTime(captureTimestamp);
+  const {
+    timeValue,
+    setTimeValue,
+    dateValue,
+    setDateValue,
+    isEdited,
+    getTimestampMs,
+    reset,
+  } = usePanelTime(captureTimestamp);
 
   const prefersReducedMotion = useReducedMotion();
 
   const selectedBristol =
-    draft.bristolCode !== null ? BRISTOL_SCALE.find((b) => b.value === draft.bristolCode) : null;
-  const accent = draft.bristolCode !== null ? BRISTOL_ACCENT[draft.bristolCode] : null;
+    draft.bristolCode !== null
+      ? BRISTOL_SCALE.find((b) => b.value === draft.bristolCode)
+      : null;
+  const accent =
+    draft.bristolCode !== null ? BRISTOL_ACCENT[draft.bristolCode] : null;
 
   const resetDraft = useCallback(() => {
     setDraft({ ...INITIAL_BOWEL_DRAFT });
@@ -239,11 +264,18 @@ export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
       if (event.key === "ArrowRight" || event.key === "ArrowDown") {
         event.preventDefault();
         const nextIndex = (currentIndex + 1) % bristolValues.length;
-        setDraft((prev) => ({ ...prev, bristolCode: bristolValues[nextIndex] }));
+        setDraft((prev) => ({
+          ...prev,
+          bristolCode: bristolValues[nextIndex],
+        }));
       } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
         event.preventDefault();
-        const prevIndex = (currentIndex - 1 + bristolValues.length) % bristolValues.length;
-        setDraft((prev) => ({ ...prev, bristolCode: bristolValues[prevIndex] }));
+        const prevIndex =
+          (currentIndex - 1 + bristolValues.length) % bristolValues.length;
+        setDraft((prev) => ({
+          ...prev,
+          bristolCode: bristolValues[prevIndex],
+        }));
       }
     },
     [],
@@ -293,13 +325,21 @@ export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
                       type="radio"
                       name={bristolGroupName}
                       checked={isSelected}
-                      onChange={() => setDraft((prev) => ({ ...prev, bristolCode: option.value }))}
+                      onChange={() =>
+                        setDraft((prev) => ({
+                          ...prev,
+                          bristolCode: option.value,
+                        }))
+                      }
                       onKeyDown={(e) => handleBristolKeyDown(e, option.value)}
                       aria-label={`Bristol type ${option.value}: ${option.description}`}
                       className="sr-only"
                     />
                     <span aria-hidden="true">
-                      <BristolIllustration type={option.value} size={isSelected ? 36 : 26} />
+                      <BristolIllustration
+                        type={option.value}
+                        size={isSelected ? 36 : 26}
+                      />
                     </span>
                     <span
                       className={cn(
@@ -345,7 +385,8 @@ export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
               className="text-center text-sm font-semibold transition-colors duration-300"
               style={{ color: accent.hex }}
             >
-              Type {selectedBristol.value} &middot; {selectedBristol.description}
+              Type {selectedBristol.value} &middot;{" "}
+              {selectedBristol.description}
             </p>
           </>
         )}
@@ -375,13 +416,17 @@ export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
                   label="Urgency"
                   options={URGENCY}
                   value={draft.urgencyTag}
-                  onChange={(value) => setDraft((prev) => ({ ...prev, urgencyTag: value }))}
+                  onChange={(value) =>
+                    setDraft((prev) => ({ ...prev, urgencyTag: value }))
+                  }
                 />
                 <SeverityScale
                   label="Effort"
                   options={EFFORT}
                   value={draft.effortTag}
-                  onChange={(value) => setDraft((prev) => ({ ...prev, effortTag: value }))}
+                  onChange={(value) =>
+                    setDraft((prev) => ({ ...prev, effortTag: value }))
+                  }
                 />
               </div>
 
@@ -402,28 +447,38 @@ export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
                         <button
                           key={opt.value}
                           type="button"
-                          onClick={() => setDraft((prev) => ({ ...prev, volumeTag: opt.value }))}
+                          onClick={() =>
+                            setDraft((prev) => ({
+                              ...prev,
+                              volumeTag: opt.value,
+                            }))
+                          }
                           aria-label={`Volume: ${opt.label}`}
                           aria-pressed={isSelected}
                           className={cn(
                             "flex-1 flex flex-col items-center gap-0.5 rounded-xl min-h-[44px] justify-center transition-all duration-200",
-                            !isSelected && "bg-(--surface-3) hover:bg-(--surface-0)",
+                            !isSelected &&
+                              "bg-(--surface-3) hover:bg-(--surface-0)",
                           )}
                           style={
                             isSelected
                               ? {
                                   backgroundColor: "var(--section-bowel-muted)",
-                                  boxShadow: "inset 0 0 0 1.5px var(--section-bowel)",
+                                  boxShadow:
+                                    "inset 0 0 0 1.5px var(--section-bowel)",
                                 }
                               : {
-                                  border: "1px solid var(--section-bowel-border)",
+                                  border:
+                                    "1px solid var(--section-bowel-border)",
                                 }
                           }
                         >
                           <span
                             className="text-sm font-black leading-none tracking-[0.2em]"
                             style={{
-                              color: isSelected ? "var(--section-bowel)" : "var(--text-faint)",
+                              color: isSelected
+                                ? "var(--section-bowel)"
+                                : "var(--text-faint)",
                             }}
                           >
                             {opt.visual}
@@ -431,7 +486,9 @@ export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
                           <span
                             className="text-[10px] font-bold leading-none"
                             style={{
-                              color: isSelected ? "var(--section-bowel)" : "var(--text-faint)",
+                              color: isSelected
+                                ? "var(--section-bowel)"
+                                : "var(--text-faint)",
                             }}
                           >
                             {opt.label}
@@ -461,9 +518,16 @@ export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
                     {/* Accident toggle */}
                     <button
                       type="button"
-                      onClick={() => setDraft((prev) => ({ ...prev, accident: !prev.accident }))}
+                      onClick={() =>
+                        setDraft((prev) => ({
+                          ...prev,
+                          accident: !prev.accident,
+                        }))
+                      }
                       aria-pressed={draft.accident}
-                      aria-label={draft.accident ? "Accident: yes" : "Accident: no"}
+                      aria-label={
+                        draft.accident ? "Accident: yes" : "Accident: no"
+                      }
                       className={cn(
                         "flex h-11 items-center justify-center rounded-xl transition-all duration-200",
                         draft.accident
@@ -485,7 +549,9 @@ export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
                       <AlertTriangle
                         className={cn(
                           "h-4 w-4",
-                          draft.accident ? "text-red-500" : "text-(--text-faint)",
+                          draft.accident
+                            ? "text-red-500"
+                            : "text-(--text-faint)",
                         )}
                         aria-hidden="true"
                       />
@@ -493,7 +559,9 @@ export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
                     {/* Trips stepper */}
                     <TripStepper
                       value={draft.episodesCount}
-                      onChange={(value) => setDraft((prev) => ({ ...prev, episodesCount: value }))}
+                      onChange={(value) =>
+                        setDraft((prev) => ({ ...prev, episodesCount: value }))
+                      }
                     />
                   </div>
                 </div>
@@ -509,6 +577,7 @@ export function BowelSection({ onSave, captureTimestamp }: BowelSectionProps) {
                     setDateValue={setDateValue}
                     isEdited={isEdited}
                     accentColor="var(--section-bowel)"
+                    hideDate
                   />
                   <Input
                     placeholder="Notes..."

@@ -41,3 +41,159 @@ test-results/
 .claude/settings.local.json
 .claude/worktrees/
 *.tsbuildinfo
+
+# Local screenshots (managed outside repo)
+screenshots/
+docs/2026-02-21_Food-Symptom-Tracker-App.html
+docs/2026-03-20_PDH-Food-Tracking-Process-Visual.png
+docs/2026-04-08_Meal-Logging-Feature-Screenshot.png
+docs/2026-04-10_Food-Tracking-Data-Architecture-Reference.html
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/README.md
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/_tables/documents.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/aiAnalyses/documents.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/aiAnalyses/generated_schema.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/conversations/documents.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/conversations/generated_schema.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/foodAssessments/documents.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/foodAssessments/generated_schema.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/foodLibrary/documents.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/foodLibrary/generated_schema.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/foodTrialSummary/documents.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/foodTrialSummary/generated_schema.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/gameState/documents.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/gameState/generated_schema.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/ingredientExposures/documents.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/ingredientExposures/generated_schema.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/ingredientOverrides/documents.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/ingredientOverrides/generated_schema.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/ingredientProfiles/documents.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/ingredientProfiles/generated_schema.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/ingredientTemplates/documents.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/ingredientTemplates/generated_schema.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/logs/documents.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/logs/generated_schema.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/profiles/documents.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/profiles/generated_schema.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/reportSuggestions/documents.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/reportSuggestions/generated_schema.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/stationDefinitions/documents.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/stationDefinitions/generated_schema.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/trialSessions/documents.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/trialSessions/generated_schema.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/waitlistEntries/documents.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/waitlistEntries/generated_schema.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/weeklyDigest/documents.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/weeklyDigest/generated_schema.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/weeklySummaries/documents.jsonl
+docs/2026-03-03_Caca-Traca-DB-Snapshot-1/weeklySummaries/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/README.md
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/_storage/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/_tables/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/aiAnalyses/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/aiAnalyses/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/aiAnalysisPayloads/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/aiAnalysisPayloads/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/conversations/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/conversations/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/foodAliases/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/foodAliases/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/foodAssessments/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/foodAssessments/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/foodEmbeddings/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/foodEmbeddings/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/foodLibrary/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/foodLibrary/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/foodRequests/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/foodRequests/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/foodTrialSummary/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/foodTrialSummary/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/gameState/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/gameState/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/ingredientExposures/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/ingredientExposures/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/ingredientOverrides/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/ingredientOverrides/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/ingredientProfiles/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/ingredientProfiles/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/ingredientTemplates/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/ingredientTemplates/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/logs/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/logs/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/profiles/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/profiles/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/reportSuggestions/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/reportSuggestions/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/stationDefinitions/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/stationDefinitions/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/trialSessions/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/trialSessions/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/waitlistEntries/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/waitlistEntries/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/weeklyDigest/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/weeklyDigest/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/weeklySummaries/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-2/weeklySummaries/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/README.md
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/_storage/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/_tables/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/aiAnalyses/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/aiAnalyses/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/aiAnalysisPayloads/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/aiAnalysisPayloads/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/conversations/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/conversations/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/foodAliases/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/foodAliases/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/foodAssessments/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/foodAssessments/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/foodEmbeddings/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/foodEmbeddings/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/foodLibrary/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/foodLibrary/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/foodRequests/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/foodRequests/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/foodTrialSummary/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/foodTrialSummary/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/gameState/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/gameState/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/ingredientExposures/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/ingredientExposures/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/ingredientOverrides/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/ingredientOverrides/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/ingredientProfiles/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/ingredientProfiles/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/ingredientTemplates/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/ingredientTemplates/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/logs/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/logs/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/profiles/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/profiles/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/reportSuggestions/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/reportSuggestions/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/stationDefinitions/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/stationDefinitions/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/trialSessions/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/trialSessions/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/waitlistEntries/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/waitlistEntries/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/weeklyDigest/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/weeklyDigest/generated_schema.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/weeklySummaries/documents.jsonl
+docs/2026-04-09_Caca-Traca-DB-Snapshot-3/weeklySummaries/generated_schema.jsonl
+docs/Designing Schema and Tables for TanStack Table Display/convex_schema.md
+docs/Designing Schema and Tables for TanStack Table Display/data_flow_and_gotchas.md
+docs/Designing Schema and Tables for TanStack Table Display/data_flow.d2
+docs/Designing Schema and Tables for TanStack Table Display/data_flow.png
+docs/Designing Schema and Tables for TanStack Table Display/entity_relationship.mmd
+docs/Designing Schema and Tables for TanStack Table Display/entity_relationship.png
+docs/Designing Schema and Tables for TanStack Table Display/Food Tracking System: Data Architecture & Display Layer Design.md
+docs/Designing Schema and Tables for TanStack Table Display/interactive_reference.html
+docs/Designing Schema and Tables for TanStack Table Display/mutation_side_effects.mmd
+docs/Designing Schema and Tables for TanStack Table Display/mutation_side_effects.png
+docs/Designing Schema and Tables for TanStack Table Display/notes.txt
+docs/Designing Schema and Tables for TanStack Table Display/pasted_content.txt
+docs/Designing Schema and Tables for TanStack Table Display/portion_resolution.mmd
+docs/Designing Schema and Tables for TanStack Table Display/portion_resolution.png
+docs/Designing Schema and Tables for TanStack Table Display/requirements_analysis.md
+docs/Designing Schema and Tables for TanStack Table Display/tanstack_table_design.md
+public/2026-03-03_PDH-App-Icon.png
