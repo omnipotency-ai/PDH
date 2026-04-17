@@ -48,7 +48,6 @@ import { getErrorMessage } from "@/lib/errors";
 import { normalizeFluidItemName } from "@/lib/normalizeFluidName";
 import { type MealSlot, titleCase } from "@/lib/nutritionUtils";
 import {
-  asConvexId,
   useAddSyncedLog,
   useLatestSuccessfulAiAnalysis,
   useRemoveSyncedLog,
