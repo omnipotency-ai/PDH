@@ -465,6 +465,19 @@ export const HABIT_TEMPLATES: Record<string, HabitConfig> = {
     habitType: "destructive",
     templateKey: "tina",
   },
+  halibut: {
+    id: "habit_halibut",
+    name: "Halibut",
+    kind: "positive",
+    unit: "count",
+    quickIncrement: 1,
+    dailyTarget: 1,
+    showOnTrack: true,
+    color: "indigo",
+    createdAt: 0,
+    habitType: "checkbox",
+    templateKey: "halibut",
+  },
 };
 
 export const DEFAULT_HABIT_TEMPLATE_KEYS = [
