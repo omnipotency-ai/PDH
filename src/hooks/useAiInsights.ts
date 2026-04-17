@@ -1,9 +1,8 @@
-import { useAction, useMutation } from "convex/react";
+import { useAction, useConvex, useMutation } from "convex/react";
 import { useCallback, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import { useSyncedLogsContext } from "@/contexts/SyncedLogsContext";
 import { useAiConfig } from "@/hooks/useAiConfig";
-import { usePendingReplies } from "@/hooks/usePendingReplies";
 import { useAiPreferences, useHealthProfile } from "@/hooks/useProfile";
 import { getLastHalfWeekBoundary } from "@/hooks/useWeeklySummaryAutoTrigger";
 import {
@@ -14,19 +13,16 @@ import {
 } from "@/lib/aiAnalysis";
 import { formatAiError } from "@/lib/aiErrorFormatter";
 import { DR_POO_MODEL } from "@/lib/aiModels";
-import {
-  useAddAiAnalysis,
-  useAddAssistantMessage,
-  useAiAnalysisHistory,
-  useAllFoodTrials,
-  useConversationsByDateRange,
-  useLatestSuccessfulAiAnalysis,
-  useLatestWeeklySummary,
-  useSuggestionsByDateRange,
-  useWeeklyDigests,
-} from "@/lib/sync";
+import { fetchDrPooAnalysisContext } from "@/lib/drPooAnalysisContext";
+import { useAddAiAnalysis, useAddAssistantMessage } from "@/lib/sync";
 import { useStore } from "@/store";
-import type { AiPreferences, DrPooReply, HealthProfile, LogEntry } from "@/types/domain";
+import type {
+  AiPreferences,
+  BaselineAverages,
+  DrPooReply,
+  HealthProfile,
+  LogEntry,
+} from "@/types/domain";
 import { api } from "../../convex/_generated/api";
 
 const COOLDOWN_MS = 21_600_000; // 6 hours
@@ -35,28 +31,22 @@ const REACTIVE_DELAY_MS = 1_500; // wait for Convex reactive query to update
 // 20 reports covers ~2-3 weeks of typical usage — enough to avoid short-term
 // repetition without fetching hundreds of documents from Convex on every render.
 const REPORT_HISTORY_COUNT = 20;
+const WEEKLY_DIGEST_COUNT = 4;
 
 /**
- * Mutable snapshot refs that track the latest values of reactive data for use inside callbacks.
+ * Snapshot of render-time inputs that the analysis callback reads at send time.
  *
- * All Convex query results are stored here rather than used as callback dependencies.
- * This means the 8+ independent queries can resolve at different times without
- * causing callback identity churn or cascading re-renders to the parent component.
+ * Unlike the previous implementation, this no longer holds Convex query results —
+ * those are now fetched on-demand from within `runAnalysis`. Only per-render
+ * inputs that the callback depends on (logs, profile, preferences, mutation
+ * closures) are kept here.
  */
-interface DataRefs {
+interface LiveRefs {
   logs: LogEntry[];
-  history: ReturnType<typeof useAiAnalysisHistory>;
-  addAssistantMessage: ReturnType<typeof useAddAssistantMessage>;
-  replies: DrPooReply[];
   healthProfile: HealthProfile;
   aiPreferences: AiPreferences;
-  foodTrials: ReturnType<typeof useAllFoodTrials>;
-  weeklyDigests: ReturnType<typeof useWeeklyDigests>;
-  conversationHistory: ReturnType<typeof useConversationsByDateRange>;
-  recentSuggestions: ReturnType<typeof useSuggestionsByDateRange>;
-  latestWeeklySummary: ReturnType<typeof useLatestWeeklySummary>;
-  latestSuccessfulAnalysis: ReturnType<typeof useLatestSuccessfulAiAnalysis>;
-  baselineAverages: import("@/types/domain").BaselineAverages | null;
+  baselineAverages: BaselineAverages | null;
+  addAssistantMessage: ReturnType<typeof useAddAssistantMessage>;
 }
 
 function shouldAutoTriggerAnalysis(args: {
@@ -100,8 +90,8 @@ function shouldAutoTriggerAnalysis(args: {
 export function useAiInsights() {
   const { isAiConfigured } = useAiConfig();
   const callAi = useAction(api.ai.chatCompletion);
+  const convex = useConvex();
   const setAiAnalysisStatus = useStore((state) => state.setAiAnalysisStatus);
-  const { pendingReplies } = usePendingReplies();
   const { healthProfile } = useHealthProfile();
   const { aiPreferences } = useAiPreferences();
   const baselineAverages = useStore((state) => state.baselineAverages);
@@ -110,27 +100,19 @@ export function useAiInsights() {
   // Use shared logs from context instead of creating a duplicate subscription
   const { logs, isLoading } = useSyncedLogsContext();
 
-  // Fetch last N successful analyses for conversation context
-  const analysisHistory = useAiAnalysisHistory(REPORT_HISTORY_COUNT);
-  const latestSuccessfulAnalysis = useLatestSuccessfulAiAnalysis();
-
   const addAiAnalysis = useAddAiAnalysis();
   const addAssistantMessage = useAddAssistantMessage();
-  const claimPendingReplies = useMutation(api.conversations.claimPendingReplies);
+  const claimPendingReplies = useMutation(
+    api.conversations.claimPendingReplies,
+  );
 
   // Use a ref to track the in-flight request — prevents concurrent analysis runs
   const abortRef = useRef<AbortController | null>(null);
   const loadingRef = useRef(false);
 
-  // Layer 1-3 enhanced context hooks
-  const foodTrials = useAllFoodTrials();
-
-  const weeklyDigests = useWeeklyDigests(4);
-
   // Conversation history + suggestions: current half-week only (since last Sun/Wed 21:00 boundary).
   // Historical context comes from the weekly summary, not from old messages/suggestions.
   // Derive stableEndMs from the boundary (not Date.now()) so it doesn't freeze at mount.
-  // The end bound is the next boundary after the current one, plus a day of padding.
   const { halfWeekStartMs, stableEndMs } = useMemo(() => {
     const boundary = getLastHalfWeekBoundary();
     const boundaryMs = boundary.getTime();
@@ -141,68 +123,30 @@ export function useAiInsights() {
     };
   }, []);
 
-  const conversationHistory = useConversationsByDateRange(halfWeekStartMs, stableEndMs);
-
-  // Suggestions: current half-week only (same boundary as conversations)
-  const recentSuggestions = useSuggestionsByDateRange(halfWeekStartMs, stableEndMs);
-
-  const latestWeeklySummary = useLatestWeeklySummary();
-
-  // Map Convex pending replies to DrPooReply shape for the analysis callback
-  const drPooReplies: DrPooReply[] = useMemo(
-    () =>
-      pendingReplies.map((r: { content: string; timestamp: number }) => ({
-        text: r.content,
-        timestamp: r.timestamp,
-      })),
-    [pendingReplies],
-  );
-
-  // ---------------------------------------------------------------------------
-  // Single ref object for all mutable data snapshots used inside callbacks.
-  // By storing ALL query results in a ref, we decouple query resolution from
-  // callback identity — the 8+ queries can each resolve independently without
-  // invalidating useCallback deps or triggering parent re-renders.
-  // ---------------------------------------------------------------------------
-  const dataRef = useRef<DataRefs>({
+  // Live refs for per-render inputs consumed inside the analysis callback.
+  // Updated every render so the callback identity stays stable while still
+  // reading the latest values at send time.
+  const liveRef = useRef<LiveRefs>({
     logs,
-    history: analysisHistory,
-    addAssistantMessage,
-    replies: drPooReplies,
     healthProfile: healthProfile ?? ({} as HealthProfile),
     aiPreferences,
-    foodTrials,
-    weeklyDigests,
-    conversationHistory,
-    recentSuggestions,
-    latestWeeklySummary,
-    latestSuccessfulAnalysis,
     baselineAverages,
+    addAssistantMessage,
   });
-  dataRef.current.logs = logs;
-  dataRef.current.history = analysisHistory;
-  dataRef.current.addAssistantMessage = addAssistantMessage;
-  dataRef.current.replies = drPooReplies;
-  dataRef.current.healthProfile = healthProfile ?? ({} as HealthProfile);
-  dataRef.current.aiPreferences = aiPreferences;
-  dataRef.current.foodTrials = foodTrials;
-  dataRef.current.weeklyDigests = weeklyDigests;
-  dataRef.current.conversationHistory = conversationHistory;
-  dataRef.current.recentSuggestions = recentSuggestions;
-  dataRef.current.latestWeeklySummary = latestWeeklySummary;
-  dataRef.current.latestSuccessfulAnalysis = latestSuccessfulAnalysis;
-  dataRef.current.baselineAverages = baselineAverages;
+  liveRef.current.logs = logs;
+  liveRef.current.healthProfile = healthProfile ?? ({} as HealthProfile);
+  liveRef.current.aiPreferences = aiPreferences;
+  liveRef.current.baselineAverages = baselineAverages;
+  liveRef.current.addAssistantMessage = addAssistantMessage;
 
   const runAnalysis = useCallback(
     async (runOptions?: FetchAiInsightsOptions) => {
       if (!isAiConfigured) return;
       if (isLoading) return;
-      // Guard: skip if a request is already in flight
       if (loadingRef.current) return;
 
       const isLightweight = runOptions?.lightweight === true;
 
-      // Abort any previous controller (defensive — should not be needed given the guard above)
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
@@ -210,95 +154,120 @@ export function useAiInsights() {
 
       setAiAnalysisStatus("sending");
 
-      // Snapshot pending replies before the delay
-      const pendingReplies = [...dataRef.current.replies];
-
-      // Wait for Convex reactive query to include the just-logged entry
-      await new Promise((resolve) => setTimeout(resolve, REACTIVE_DELAY_MS));
-
-      // Context guard: in lightweight mode, pending replies are sufficient.
-      // In full mode, require either bowel data or a pending question.
-      if (isLightweight) {
-        if (pendingReplies.length === 0) {
-          setAiAnalysisStatus("error", "Send a question to Dr. Poo first.");
-          loadingRef.current = false;
-          return;
-        }
-      } else {
-        const freshLogs = dataRef.current.logs;
-        const hasBowelContext = freshLogs.some((log) => log.type === "digestion");
-        const hasQuestionContext = pendingReplies.length > 0;
-        if (!hasBowelContext && !hasQuestionContext) {
-          setAiAnalysisStatus("error", "Log a bowel movement or send a question first.");
-          loadingRef.current = false;
-          return;
-        }
-      }
-
-      // In lightweight mode, skip heavy data collection
-      const freshLogs = isLightweight ? [] : dataRef.current.logs;
-
-      const previousReports: PreviousReport[] = isLightweight
-        ? []
-        : (() => {
-            const history = dataRef.current.history ?? [];
-            const results: PreviousReport[] = [];
-            for (const a of history) {
-              if (a.insight === null || a.insight === undefined || a.error) continue;
-              const parsed = parseAiInsight(a.insight);
-              if (parsed) results.push({ timestamp: a.timestamp, insight: parsed });
-            }
-            return results;
-          })();
-
-      // Conversation history is always included (both modes need it)
-      const conversationHistoryMapped = (dataRef.current.conversationHistory ?? []).map(
-        (msg: { role: "user" | "assistant"; content: string; timestamp: number }) => ({
-          role: msg.role,
-          content: msg.content,
-          timestamp: msg.timestamp,
-        }),
-      );
-
-      // Build enhanced context: lightweight mode only includes conversation history
-      const enhancedContext = isLightweight
-        ? { conversationHistory: conversationHistoryMapped }
-        : {
-            ...(dataRef.current.foodTrials !== undefined && {
-              foodTrials: dataRef.current.foodTrials.trials,
-            }),
-            conversationHistory: conversationHistoryMapped,
-            weeklyContext: (dataRef.current.weeklyDigests ?? []).map((wd) => ({
-              weekStart: wd.weekStart,
-              avgBristolScore: wd.avgBristolScore ?? null,
-              totalBowelEvents: wd.totalBowelEvents,
-              accidentCount: wd.accidentCount,
-              uniqueFoodsEaten: wd.uniqueFoodsEaten,
-              newFoodsTried: wd.newFoodsTried,
-              foodsCleared: wd.foodsCleared,
-              foodsFlagged: wd.foodsFlagged,
-            })),
-            recentSuggestions: (dataRef.current.recentSuggestions ?? []).map(
-              (s: { text: string; textNormalized: string; reportTimestamp: number }) => ({
-                text: s.text,
-                textNormalized: s.textNormalized,
-                reportTimestamp: s.reportTimestamp,
-              }),
-            ),
-            ...(dataRef.current.latestWeeklySummary && {
-              previousWeeklySummary: {
-                weeklySummary: dataRef.current.latestWeeklySummary.weeklySummary,
-                keyFoods: dataRef.current.latestWeeklySummary.keyFoods,
-                carryForwardNotes: dataRef.current.latestWeeklySummary.carryForwardNotes,
-              },
-            }),
-            ...(dataRef.current.baselineAverages !== null && {
-              baselineAverages: dataRef.current.baselineAverages,
-            }),
-          };
-
       try {
+        // Wait for Convex reactive query (logs) to include a just-logged entry
+        await new Promise((resolve) => setTimeout(resolve, REACTIVE_DELAY_MS));
         if (controller.signal.aborted) return;
+
+        // Fetch all Dr. Poo analysis context on demand (one parallel round-trip)
+        const context = await fetchDrPooAnalysisContext(convex, {
+          historyLimit: REPORT_HISTORY_COUNT,
+          weeklyDigestLimit: WEEKLY_DIGEST_COUNT,
+          halfWeekStartMs,
+          stableEndMs,
+        });
+
+        if (controller.signal.aborted) return;
+
+        const pendingReplies: DrPooReply[] = context.pendingReplies.map(
+          (r: { content: string; timestamp: number }) => ({
+            text: r.content,
+            timestamp: r.timestamp,
+          }),
+        );
+
+        // Context guard: in lightweight mode, pending replies are sufficient.
+        // In full mode, require either bowel data or a pending question.
+        if (isLightweight) {
+          if (pendingReplies.length === 0) {
+            setAiAnalysisStatus("error", "Send a question to Dr. Poo first.");
+            return;
+          }
+        } else {
+          const freshLogs = liveRef.current.logs;
+          const hasBowelContext = freshLogs.some(
+            (log) => log.type === "digestion",
+          );
+          const hasQuestionContext = pendingReplies.length > 0;
+          if (!hasBowelContext && !hasQuestionContext) {
+            setAiAnalysisStatus(
+              "error",
+              "Log a bowel movement or send a question first.",
+            );
+            return;
+          }
+        }
+
+        const freshLogs = isLightweight ? [] : liveRef.current.logs;
+
+        const previousReports: PreviousReport[] = isLightweight
+          ? []
+          : (() => {
+              const results: PreviousReport[] = [];
+              for (const a of context.analysisHistory) {
+                if (a.insight === null || a.insight === undefined || a.error)
+                  continue;
+                const parsed = parseAiInsight(a.insight);
+                if (parsed)
+                  results.push({ timestamp: a.timestamp, insight: parsed });
+              }
+              return results;
+            })();
+
+        // Conversation history is always included (both modes need it)
+        const conversationHistoryMapped = context.conversationHistory.map(
+          (msg: {
+            role: "user" | "assistant";
+            content: string;
+            timestamp: number;
+          }) => ({
+            role: msg.role,
+            content: msg.content,
+            timestamp: msg.timestamp,
+          }),
+        );
+
+        // Build enhanced context: lightweight mode only includes conversation history
+        const enhancedContext = isLightweight
+          ? { conversationHistory: conversationHistoryMapped }
+          : {
+              ...(context.foodTrials !== undefined && {
+                foodTrials: context.foodTrials.trials,
+              }),
+              conversationHistory: conversationHistoryMapped,
+              weeklyContext: context.weeklyDigests.map((wd) => ({
+                weekStart: wd.weekStart,
+                avgBristolScore: wd.avgBristolScore ?? null,
+                totalBowelEvents: wd.totalBowelEvents,
+                accidentCount: wd.accidentCount,
+                uniqueFoodsEaten: wd.uniqueFoodsEaten,
+                newFoodsTried: wd.newFoodsTried,
+                foodsCleared: wd.foodsCleared,
+                foodsFlagged: wd.foodsFlagged,
+              })),
+              recentSuggestions: context.recentSuggestions.map(
+                (s: {
+                  text: string;
+                  textNormalized: string;
+                  reportTimestamp: number;
+                }) => ({
+                  text: s.text,
+                  textNormalized: s.textNormalized,
+                  reportTimestamp: s.reportTimestamp,
+                }),
+              ),
+              ...(context.latestWeeklySummary && {
+                previousWeeklySummary: {
+                  weeklySummary: context.latestWeeklySummary.weeklySummary,
+                  keyFoods: context.latestWeeklySummary.keyFoods,
+                  carryForwardNotes:
+                    context.latestWeeklySummary.carryForwardNotes,
+                },
+              }),
+              ...(liveRef.current.baselineAverages !== null && {
+                baselineAverages: liveRef.current.baselineAverages,
+              }),
+            };
 
         setAiAnalysisStatus("receiving");
         const result = await fetchAiInsights(
@@ -306,55 +275,58 @@ export function useAiInsights() {
           freshLogs as LogEntry[],
           previousReports,
           pendingReplies,
-          dataRef.current.healthProfile,
+          liveRef.current.healthProfile,
           enhancedContext,
-          dataRef.current.aiPreferences,
+          liveRef.current.aiPreferences,
           isLightweight ? { lightweight: true } : undefined,
         );
 
-        if (!controller.signal.aborted) {
-          // Mark that the insight run consumed the current baseline data
-          // (skip in lightweight mode — no baseline data was consumed)
-          if (!isLightweight) {
-            markInsightRun();
+        if (controller.signal.aborted) return;
+
+        // Mark that the insight run consumed the current baseline data
+        // (skip in lightweight mode — no baseline data was consumed)
+        if (!isLightweight) {
+          markInsightRun();
+        }
+
+        try {
+          const analysisId = await addAiAnalysis({
+            timestamp: Date.now(),
+            request: result.request,
+            response: result.rawResponse,
+            insight: result.insight,
+            model: result.request.model,
+            durationMs: result.durationMs,
+            inputLogCount: result.inputLogCount,
+            ...(result.latestDigestionLogTimestamp !== undefined && {
+              latestDigestionLogTimestamp: result.latestDigestionLogTimestamp,
+            }),
+          });
+
+          await claimPendingReplies({ aiAnalysisId: analysisId });
+
+          if (result.insight.summary) {
+            await liveRef.current.addAssistantMessage(
+              result.insight.summary,
+              analysisId,
+            );
+          }
+          if (result.insight.directResponseToUser) {
+            await liveRef.current.addAssistantMessage(
+              result.insight.directResponseToUser,
+              analysisId,
+            );
           }
 
-          try {
-            const analysisId = await addAiAnalysis({
-              timestamp: Date.now(),
-              request: result.request,
-              response: result.rawResponse,
-              insight: result.insight,
-              model: result.request.model,
-              durationMs: result.durationMs,
-              inputLogCount: result.inputLogCount,
-              ...(result.latestDigestionLogTimestamp !== undefined && {
-                latestDigestionLogTimestamp: result.latestDigestionLogTimestamp,
-              }),
-            });
-
-            await claimPendingReplies({ aiAnalysisId: analysisId });
-
-            if (result.insight.summary) {
-              await dataRef.current.addAssistantMessage(result.insight.summary, analysisId);
-            }
-            if (result.insight.directResponseToUser) {
-              await dataRef.current.addAssistantMessage(
-                result.insight.directResponseToUser,
-                analysisId,
-              );
-            }
-
-            if (!controller.signal.aborted) {
-              setAiAnalysisStatus("done");
-            }
-          } catch (err) {
-            console.error("[AI Nutritionist] Failed to save analysis:", err);
-            if (!controller.signal.aborted) {
-              setAiAnalysisStatus("error", "Failed to save analysis");
-            }
-            toast.error("Failed to save analysis");
+          if (!controller.signal.aborted) {
+            setAiAnalysisStatus("done");
           }
+        } catch (err) {
+          console.error("[AI Nutritionist] Failed to save analysis:", err);
+          if (!controller.signal.aborted) {
+            setAiAnalysisStatus("error", "Failed to save analysis");
+          }
+          toast.error("Failed to save analysis");
         }
       } catch (err: unknown) {
         console.error("[AI Nutritionist]", err);
@@ -372,9 +344,12 @@ export function useAiInsights() {
             durationMs: 0,
             inputLogCount: isLightweight
               ? 0
-              : dataRef.current.logs.filter((l) => l.type === "digestion").length,
+              : liveRef.current.logs.filter((l) => l.type === "digestion")
+                  .length,
             error: message,
-          }).catch((saveErr) => console.error("[AI Nutritionist] Failed to save error:", saveErr));
+          }).catch((saveErr) =>
+            console.error("[AI Nutritionist] Failed to save error:", saveErr),
+          );
         }
       } finally {
         loadingRef.current = false;
@@ -383,11 +358,14 @@ export function useAiInsights() {
     [
       isAiConfigured,
       callAi,
+      convex,
       setAiAnalysisStatus,
       addAiAnalysis,
       claimPendingReplies,
       markInsightRun,
       isLoading,
+      halfWeekStartMs,
+      stableEndMs,
     ],
   );
 
@@ -400,8 +378,9 @@ export function useAiInsights() {
   // When a report fires after 6 hours, it naturally includes all BMs from
   // the quiet period.
   //
-  // latestSuccessfulAnalysis is read from dataRef (not a dep) so the callback
-  // identity is stable even when that query re-resolves with the same timestamp.
+  // latestSuccessfulAnalysis is fetched on-demand here — previously it was a
+  // live subscription on every render, now it's a one-shot fetch only when the
+  // trigger actually fires.
   const triggerAnalysis = useCallback(
     async (options?: {
       bristolScore?: number;
@@ -409,7 +388,6 @@ export function useAiInsights() {
       digestionTimestamp?: number;
     }) => {
       if (!isAiConfigured) return;
-
       if (options?.autoSendEnabled === false) return;
       const digestionTimestamp = options?.digestionTimestamp;
 
@@ -418,8 +396,12 @@ export function useAiInsights() {
         return;
       }
 
+      const latestSuccessful = await convex.query(
+        api.aiAnalyses.latestSuccessful,
+        {},
+      );
       const latestAnalyzedDigestionTimestamp =
-        dataRef.current.latestSuccessfulAnalysis?.latestDigestionLogTimestamp ?? null;
+        latestSuccessful?.latestDigestionLogTimestamp ?? null;
 
       if (
         !shouldAutoTriggerAnalysis({
@@ -428,7 +410,7 @@ export function useAiInsights() {
           ...(options?.bristolScore !== undefined && {
             bristolScore: options.bristolScore,
           }),
-          logs: dataRef.current.logs,
+          logs: liveRef.current.logs,
         })
       ) {
         return;
@@ -436,7 +418,7 @@ export function useAiInsights() {
 
       await runAnalysis();
     },
-    [isAiConfigured, runAnalysis],
+    [isAiConfigured, runAnalysis, convex],
   );
 
   // sendNow: manual trigger. Always run the full analysis package and include

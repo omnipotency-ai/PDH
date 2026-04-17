@@ -586,6 +586,8 @@ export default function HomePage() {
             onLogActivityMinutes={handleLogActivityQuickCapture}
             onLogWeightKg={handleLogWeightKg}
             onLongPress={handleQuickCaptureLongPress}
+            captureTimeOverride={captureTimeOverride}
+            onCaptureTimeChange={setCaptureTimeOverride}
           />
 
           {/* ── Bowel Movement ── */}
