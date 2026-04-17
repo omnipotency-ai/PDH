@@ -59,11 +59,19 @@ export function GlobalHeader() {
             aria-label="Peter's Digestive Health home"
           >
             <img
-              src="/icons/icon-72x72.png"
+              src="/favicon_light_transparent.png"
               alt="PDH"
               width={40}
               height={40}
-              className="h-10 w-10 drop-shadow-[0_0_8px_rgba(45,212,191,0.5)]"
+              className="h-10 w-10 drop-shadow-[0_0_8px_rgba(45,212,191,0.5)] dark:hidden"
+            />
+            <img
+              src="/favicon_dark_transparent.png"
+              alt=""
+              width={40}
+              height={40}
+              aria-hidden="true"
+              className="hidden h-10 w-10 drop-shadow-[0_0_8px_rgba(45,212,191,0.5)] dark:block"
             />
             <span className="hidden font-sketch text-base font-bold tracking-tight text-teal-400 sm:block">
               Peter's Digestive Health
