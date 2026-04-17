@@ -621,7 +621,7 @@ export default function HomePage() {
                   style={{ color: "var(--section-drpoo)" }}
                 />
               </div>
-              <p className="mt-3 text-sm leading-relaxed text-[rgba(240,248,255,0.8)]">
+              <p className="mt-3 text-sm leading-relaxed text-foreground/80">
                 {proactiveCardText}
               </p>
               <div className="flex justify-end gap-2 pt-3">

@@ -1,10 +1,21 @@
 import { useMutation, useQuery } from "convex/react";
-import { createContext, type ReactNode, useCallback, useContext, useMemo, useRef } from "react";
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react";
 import { DEFAULT_HEALTH_PROFILE } from "@/lib/defaults";
 import type { SleepGoal } from "@/lib/gamificationDefaults";
 import { DEFAULT_SLEEP_GOAL } from "@/lib/gamificationDefaults";
 import type { HabitConfig } from "@/lib/habitTemplates";
-import { getDefaultHabitTemplates } from "@/lib/habitTemplates";
+import {
+  getDefaultHabitTemplates,
+  HABIT_TEMPLATES,
+} from "@/lib/habitTemplates";
 import type { UnitSystem } from "@/lib/units";
 import type {
   AiPreferences,
@@ -101,7 +112,8 @@ function filterRetiredHabits(habits: HabitConfig[]): HabitConfig[] {
     const normalizedName = habit.name.trim().toLowerCase();
     return !(
       RETIRED_HABIT_IDS.has(habit.id) ||
-      (habit.templateKey !== undefined && RETIRED_HABIT_TEMPLATE_KEYS.has(habit.templateKey)) ||
+      (habit.templateKey !== undefined &&
+        RETIRED_HABIT_TEMPLATE_KEYS.has(habit.templateKey)) ||
       normalizedName === "bebida" ||
       normalizedName === "electrolyte drink" ||
       normalizedName === "stretching" ||
@@ -127,8 +139,11 @@ function resolveProfile(
   const hp = raw.healthProfile as HealthProfile | undefined;
   return {
     unitSystem: raw.unitSystem ?? DEFAULT_PROFILE.unitSystem,
-    habits: filterRetiredHabits((raw.habits ?? DEFAULT_PROFILE.habits) as HabitConfig[]),
-    fluidPresets: (raw.fluidPresets ?? DEFAULT_PROFILE.fluidPresets) as FluidPreset[],
+    habits: filterRetiredHabits(
+      (raw.habits ?? DEFAULT_PROFILE.habits) as HabitConfig[],
+    ),
+    fluidPresets: (raw.fluidPresets ??
+      DEFAULT_PROFILE.fluidPresets) as FluidPreset[],
     sleepGoal: { ...DEFAULT_PROFILE.sleepGoal, ...(raw.sleepGoal ?? {}) },
     healthProfile: { ...DEFAULT_PROFILE.healthProfile, ...(hp ?? {}) },
     aiPreferences: {
@@ -136,10 +151,14 @@ function resolveProfile(
       ...((raw.aiPreferences ?? {}) as Partial<AiPreferences>),
     } as AiPreferences,
     foodPreferences: raw.foodPreferences ?? DEFAULT_PROFILE.foodPreferences,
-    transitCalibration: raw.transitCalibration ?? DEFAULT_PROFILE.transitCalibration,
+    transitCalibration:
+      raw.transitCalibration ?? DEFAULT_PROFILE.transitCalibration,
     nutritionGoals:
-      (raw.nutritionGoals as NutritionGoals | undefined) ?? DEFAULT_PROFILE.nutritionGoals,
-    foodFavourites: (raw.foodFavourites as string[] | undefined) ?? DEFAULT_PROFILE.foodFavourites,
+      (raw.nutritionGoals as NutritionGoals | undefined) ??
+      DEFAULT_PROFILE.nutritionGoals,
+    foodFavourites:
+      (raw.foodFavourites as string[] | undefined) ??
+      DEFAULT_PROFILE.foodFavourites,
   };
 }
 
@@ -174,12 +193,18 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       JSON.stringify(prev.habits) !== JSON.stringify(next.habits) ||
       JSON.stringify(prev.fluidPresets) !== JSON.stringify(next.fluidPresets) ||
       JSON.stringify(prev.sleepGoal) !== JSON.stringify(next.sleepGoal) ||
-      JSON.stringify(prev.healthProfile) !== JSON.stringify(next.healthProfile) ||
-      JSON.stringify(prev.aiPreferences) !== JSON.stringify(next.aiPreferences) ||
-      JSON.stringify(prev.foodPreferences) !== JSON.stringify(next.foodPreferences) ||
-      JSON.stringify(prev.transitCalibration) !== JSON.stringify(next.transitCalibration) ||
-      JSON.stringify(prev.nutritionGoals) !== JSON.stringify(next.nutritionGoals) ||
-      JSON.stringify(prev.foodFavourites) !== JSON.stringify(next.foodFavourites);
+      JSON.stringify(prev.healthProfile) !==
+        JSON.stringify(next.healthProfile) ||
+      JSON.stringify(prev.aiPreferences) !==
+        JSON.stringify(next.aiPreferences) ||
+      JSON.stringify(prev.foodPreferences) !==
+        JSON.stringify(next.foodPreferences) ||
+      JSON.stringify(prev.transitCalibration) !==
+        JSON.stringify(next.transitCalibration) ||
+      JSON.stringify(prev.nutritionGoals) !==
+        JSON.stringify(next.nutritionGoals) ||
+      JSON.stringify(prev.foodFavourites) !==
+        JSON.stringify(next.foodFavourites);
     if (!changed) {
       return prev;
     }
@@ -200,12 +225,90 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     [patchMutation],
   );
 
+  // One-shot seeding of new code-defined templates into existing profiles.
+  // Tracks seeded keys in localStorage so a hidden/deleted habit stays gone.
+  useSeedNewTemplates(raw, profile.habits, patchProfile);
+
   const value: ProfileContextValue = useMemo(
     () => ({ profile, isLoading, patchProfile }),
     [profile, isLoading, patchProfile],
   );
 
   return <ProfileContext value={value}>{children}</ProfileContext>;
+}
+
+// ---------------------------------------------------------------------------
+// One-shot template seeding for existing users
+// ---------------------------------------------------------------------------
+
+const SEEDED_TEMPLATE_KEYS_STORAGE = "pdh.seededTemplateKeys";
+
+// Template keys that existing users should receive automatically on next load.
+// Add a key here when a new template should auto-appear for users whose
+// profile was created before the template existed.
+const AUTO_SEED_TEMPLATE_KEYS = ["halibut"] as const;
+
+function readSeededKeys(): Set<string> {
+  try {
+    const raw = localStorage.getItem(SEEDED_TEMPLATE_KEYS_STORAGE);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw);
+    return new Set(
+      Array.isArray(parsed) ? parsed.filter((k) => typeof k === "string") : [],
+    );
+  } catch {
+    return new Set();
+  }
+}
+
+function writeSeededKeys(keys: Set<string>): void {
+  try {
+    localStorage.setItem(
+      SEEDED_TEMPLATE_KEYS_STORAGE,
+      JSON.stringify([...keys]),
+    );
+  } catch {
+    // localStorage may be unavailable (private mode, SSR). Failing silently
+    // means we might re-seed on next load, which is acceptable.
+  }
+}
+
+function useSeedNewTemplates(
+  raw: ReturnType<typeof useQuery<typeof api.logs.getProfile>>,
+  habits: HabitConfig[],
+  patchProfile: (updates: PatchProfileArgs) => Promise<void>,
+): void {
+  const hasSeededRef = useRef(false);
+
+  useEffect(() => {
+    if (hasSeededRef.current) return;
+    if (raw === undefined || raw === null) return;
+
+    const seeded = readSeededKeys();
+    const existingTemplateKeys = new Set(
+      habits
+        .map((h) => h.templateKey)
+        .filter((k): k is string => typeof k === "string"),
+    );
+
+    const toAdd: HabitConfig[] = [];
+    for (const key of AUTO_SEED_TEMPLATE_KEYS) {
+      if (seeded.has(key)) continue;
+      if (existingTemplateKeys.has(key)) {
+        seeded.add(key);
+        continue;
+      }
+      const template = HABIT_TEMPLATES[key];
+      if (template) toAdd.push({ ...template, createdAt: Date.now() });
+      seeded.add(key);
+    }
+
+    if (toAdd.length > 0) {
+      void patchProfile({ habits: [...habits, ...toAdd] });
+    }
+    writeSeededKeys(seeded);
+    hasSeededRef.current = true;
+  }, [raw, habits, patchProfile]);
 }
 
 // ---------------------------------------------------------------------------

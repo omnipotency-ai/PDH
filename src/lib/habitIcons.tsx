@@ -10,6 +10,7 @@ import {
   CoffeeIcon,
   CopyCheck,
   Droplets,
+  Fish,
   Footprints,
   GlassWater,
   HeartPlus,
@@ -52,6 +53,7 @@ const HABIT_ICON_BY_ID: Record<string, HabitIconResult> = {
   habit_journaling: { Icon: BookOpen, toneClassName: "text-violet-400" },
   habit_shower: { Icon: ShowerHead, toneClassName: "text-sky-400" },
   habit_brush_teeth: { Icon: Smile, toneClassName: "text-pink-400" },
+  habit_halibut: { Icon: Fish, toneClassName: "text-pink-400" },
   habit_wound_dressing_checkbox: {
     Icon: BriefcaseMedical,
     toneClassName: "text-pink-400",
