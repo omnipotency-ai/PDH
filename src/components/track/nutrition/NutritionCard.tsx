@@ -49,15 +49,23 @@ function NutritionSummaryBar({
   goal,
   unit,
   color,
+  secondaryValue,
+  secondaryColor,
 }: {
   label: string;
   consumed: number;
   goal: number;
   unit: string;
   color: string;
+  secondaryValue?: number;
+  secondaryColor?: string;
 }) {
   const safeGoal = goal > 0 ? goal : 1;
   const progress = Math.min(consumed / safeGoal, 1);
+  const secondaryProgress =
+    secondaryValue !== undefined
+      ? Math.min(Math.max(secondaryValue, 0) / safeGoal, progress)
+      : 0;
 
   return (
     <div className="space-y-1">
@@ -69,14 +77,26 @@ function NutritionSummaryBar({
           {consumed} / {goal} {unit}
         </span>
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-3)]">
+      <div className="relative h-2 overflow-hidden rounded-full bg-[var(--surface-3)]">
         <div
-          className="h-full rounded-full transition-[width] duration-500 ease-out"
+          className="absolute inset-y-0 left-0 rounded-full transition-[width] duration-500 ease-out"
           style={{
             width: `${Math.round(progress * 100)}%`,
             backgroundColor: color,
           }}
         />
+        {secondaryValue !== undefined &&
+          secondaryColor &&
+          secondaryProgress > 0 && (
+            <div
+              className="absolute inset-y-0 left-0 rounded-l-full transition-[width] duration-500 ease-out"
+              style={{
+                width: `${Math.round(secondaryProgress * 100)}%`,
+                backgroundColor: secondaryColor,
+              }}
+              aria-hidden="true"
+            />
+          )}
       </div>
     </div>
   );
@@ -126,7 +146,7 @@ function NutritionSearchInput({
           onSubmit();
         }}
         placeholder="Search or type a food..."
-        className="w-full rounded-xl border border-[var(--color-border-default)] bg-[var(--surface-2)] py-2 pl-[3.75rem] pr-10 text-sm text-[var(--text)] placeholder:text-[var(--text-faint)] transition-colors focus:border-[var(--orange)] focus:outline-none focus:ring-1 focus:ring-[var(--orange)]"
+        className="w-full rounded-xl border-2 border-[color-mix(in_srgb,var(--orange)_45%,transparent)] bg-[var(--surface-1)] py-2 pl-[3.75rem] pr-10 text-sm font-medium text-[var(--text)] shadow-sm placeholder:text-[color-mix(in_srgb,var(--orange)_70%,var(--text-muted))] transition-colors focus:border-[var(--orange)] focus:outline-none focus:ring-1 focus:ring-[var(--orange)]"
         role="combobox"
         aria-label="Search foods"
         aria-autocomplete="list"
@@ -622,6 +642,8 @@ export function NutritionCard({
             goal={fluidGoal}
             unit="ml"
             color="var(--fluid)"
+            secondaryValue={waterOnlyMl}
+            secondaryColor="var(--water)"
           />
         </div>
       </button>
@@ -700,7 +722,8 @@ export function NutritionCard({
 
       {showSearchZeroState && (
         <p className="py-3 text-center text-xs text-[var(--text-faint)]">
-          Type at least 3 characters to search, or press Enter to send the text to the meal parser.
+          Type at least 3 characters to search, or press Enter to send the text
+          to the meal parser.
         </p>
       )}
 

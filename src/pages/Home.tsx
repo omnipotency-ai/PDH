@@ -486,75 +486,61 @@ export default function HomePage() {
 
   return (
     <>
-      {/* ── Shared top row: date strip (left) + status bar (right) ── */}
-      <div className="lg:grid lg:grid-cols-2 lg:items-center lg:gap-6 mb-4">
-        {/* Date strip */}
-        <div className="flex items-center justify-center gap-3">
-          <button
-            type="button"
-            onClick={goBack}
-            aria-label="Go to previous day"
-            className="rounded-full px-3 py-1.5 font-sketch text-sm font-semibold text-(--text-faint) transition-colors hover:text-(--text-muted)"
-          >
-            {formatDatePillShort(addDays(activeDate, -1), todayDate)}
-          </button>
-
-          <div className="relative flex flex-col items-center gap-1 px-4 py-2">
-            <span
-              className="font-sketch text-base font-bold text-teal-400 underline underline-offset-4 decoration-teal-500/70 decoration-2"
-              aria-current="date"
-            >
-              {formatDatePillShort(activeDate, todayDate)}
-            </span>
-          </div>
-
-          {canMoveForward ? (
-            <button
-              type="button"
-              onClick={dayOffset === -1 ? goToToday : goForward}
-              aria-label="Go to next day"
-              className="rounded-full px-3 py-1.5 font-sketch text-sm font-semibold text-(--text-faint) transition-colors hover:text-(--text-muted)"
-            >
-              {formatDatePillShort(addDays(activeDate, 1), todayDate)}
-            </button>
-          ) : (
-            <span className="invisible rounded-full px-3 py-1.5 font-sketch text-sm font-semibold">
-              Fri
-            </span>
-          )}
-        </div>
-        {/* Status bar — hidden on mobile, shown on desktop */}
-        <div className="hidden lg:block">
-          <TodayStatusRow
-            bmCount={bmCount}
-            fluidTotalMl={totalFluidMlForSelected}
-            waterOnlyMl={waterOnlyMl}
-            lastBmTimestamp={lastBmTimestamp}
-            nowMs={now.getTime()}
-            isCurrentDay={dayOffset === 0}
-          />
-        </div>
+      {/* ── Desktop-only status bar ── */}
+      <div className="mb-4 hidden lg:grid lg:grid-cols-2 lg:items-center lg:gap-6">
+        <div />
+        <TodayStatusRow
+          bmCount={bmCount}
+          fluidTotalMl={totalFluidMlForSelected}
+          waterOnlyMl={waterOnlyMl}
+          lastBmTimestamp={lastBmTimestamp}
+          nowMs={now.getTime()}
+          isCurrentDay={dayOffset === 0}
+        />
       </div>
 
       <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
         {/* ── Left column ── */}
         <div className="space-y-4">
-          {/* ── Greeting row ── */}
-          <div className="glass-card glass-card-greeting rounded-2xl p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="font-sketch text-xl font-bold text-sky-300/70">
-                  {greeting},
-                </p>
-                <p className="font-sketch text-xl font-bold text-sky-300/70">
-                  {firstName}
-                </p>
+          {/* ── Greeting + date nav + Dr Poo row ── */}
+          <div className="glass-card glass-card-greeting rounded-2xl p-3">
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+              <p className="font-sketch text-lg font-bold text-sky-300/70 sm:text-xl">
+                {greeting}, {firstName}
+              </p>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={goBack}
+                  aria-label="Go to previous day"
+                  className="rounded-full px-2 py-1 font-sketch text-xs font-semibold text-(--text-faint) transition-colors hover:text-(--text-muted)"
+                >
+                  {formatDatePillShort(addDays(activeDate, -1), todayDate)}
+                </button>
+                <span
+                  className="font-sketch text-sm font-bold text-teal-400 underline underline-offset-4 decoration-teal-500/70 decoration-2"
+                  aria-current="date"
+                >
+                  {formatDatePillShort(activeDate, todayDate)}
+                </span>
+                {canMoveForward ? (
+                  <button
+                    type="button"
+                    onClick={dayOffset === -1 ? goToToday : goForward}
+                    aria-label="Go to next day"
+                    className="rounded-full px-2 py-1 font-sketch text-xs font-semibold text-(--text-faint) transition-colors hover:text-(--text-muted)"
+                  >
+                    {formatDatePillShort(addDays(activeDate, 1), todayDate)}
+                  </button>
+                ) : null}
               </div>
+
               {hasApiKey ? (
                 <button
                   type="button"
                   onClick={() => openConversation()}
-                  className="inline-flex items-center gap-2 rounded-full border border-sky-400/30 bg-sky-500/15 px-4 py-2 font-sketch text-xs font-semibold text-sky-300 transition-colors hover:bg-sky-500/25"
+                  className="inline-flex items-center gap-2 rounded-full border border-sky-400/30 bg-sky-500/15 px-3 py-1.5 font-sketch text-xs font-semibold text-sky-300 transition-colors hover:bg-sky-500/25"
                 >
                   <Stethoscope className="h-4 w-4" />
                   Ask Dr Poo

@@ -123,24 +123,28 @@ export function GlobalHeader() {
           </nav>
 
           {/* Right controls */}
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1">
             <Link
               to="/settings"
               aria-label="Settings"
               aria-current={settingsActive ? "page" : undefined}
               className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-full border border-white/15 transition-colors hover:bg-white/6",
+                "inline-flex h-9 w-9 items-center justify-center rounded-md transition-colors hover:text-[var(--text-muted)]",
                 settingsActive ? SETTINGS_ACTIVE : SETTINGS_INACTIVE,
               )}
             >
-              <Settings className="h-5 w-5" aria-hidden="true" />
+              <Settings className="h-6 w-6" aria-hidden="true" />
             </Link>
-            <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 transition-colors hover:bg-white/6">
-              <ModeToggle />
-            </div>
-            <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15">
-              <UserButton />
-            </div>
+            <ModeToggle />
+            <UserButton
+              appearance={{
+                elements: {
+                  userButtonAvatarBox: "h-9 w-9",
+                  userButtonTrigger:
+                    "focus:shadow-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]/45",
+                },
+              }}
+            />
           </div>
         </div>
       </div>

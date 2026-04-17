@@ -33,12 +33,12 @@ interface HabitIconResult {
 const HABIT_ICON_BY_ID: Record<string, HabitIconResult> = {
   habit_cigarettes: { Icon: Cigarette, toneClassName: "text-gray-400" },
   habit_tina: { Icon: Snowflake, toneClassName: "text-gray-400" },
-  habit_water: { Icon: Droplets, toneClassName: "text-sky-400" },
-  habit_tea: { Icon: Coffee, toneClassName: "text-sky-400" },
-  habit_electrolyte: { Icon: GlassWater, toneClassName: "text-sky-400" },
+  habit_water: { Icon: Droplets, toneClassName: "text-blue-400" },
+  habit_tea: { Icon: Coffee, toneClassName: "text-blue-400" },
+  habit_electrolyte: { Icon: GlassWater, toneClassName: "text-blue-400" },
   habit_confectionery: { Icon: Candy, toneClassName: "text-gray-400" },
   habit_alcohol: { Icon: Beer, toneClassName: "text-gray-400" },
-  habit_coffee: { Icon: CoffeeIcon, toneClassName: "text-sky-400" },
+  habit_coffee: { Icon: CoffeeIcon, toneClassName: "text-blue-400" },
   habit_medication: { Icon: Tablets, toneClassName: "text-violet-400" },
   habit_medication_am: { Icon: Tablets, toneClassName: "text-violet-400" },
   habit_medication_pm: { Icon: Tablets, toneClassName: "text-violet-400" },
@@ -51,9 +51,9 @@ const HABIT_ICON_BY_ID: Record<string, HabitIconResult> = {
   },
   habit_breathing: { Icon: HeartPlus, toneClassName: "text-teal-400" },
   habit_journaling: { Icon: BookOpen, toneClassName: "text-violet-400" },
-  habit_shower: { Icon: ShowerHead, toneClassName: "text-sky-400" },
-  habit_brush_teeth: { Icon: Smile, toneClassName: "text-pink-400" },
-  habit_halibut: { Icon: Fish, toneClassName: "text-pink-400" },
+  habit_shower: { Icon: ShowerHead, toneClassName: "text-blue-400" },
+  habit_brush_teeth: { Icon: Smile, toneClassName: "text-violet-400" },
+  habit_halibut: { Icon: Fish, toneClassName: "text-violet-400" },
   habit_wound_dressing_checkbox: {
     Icon: BriefcaseMedical,
     toneClassName: "text-pink-400",
@@ -64,11 +64,42 @@ const HABIT_ICON_BY_ID: Record<string, HabitIconResult> = {
   },
 };
 
+const HABIT_ICON_BY_TEMPLATE_KEY: Record<string, HabitIconResult> = {
+  cigarettes: { Icon: Cigarette, toneClassName: "text-gray-400" },
+  tina: { Icon: Snowflake, toneClassName: "text-gray-400" },
+  water: { Icon: Droplets, toneClassName: "text-blue-400" },
+  tea: { Icon: Coffee, toneClassName: "text-blue-400" },
+  electrolyte: { Icon: GlassWater, toneClassName: "text-blue-400" },
+  confectionery: { Icon: Candy, toneClassName: "text-gray-400" },
+  alcohol: { Icon: Beer, toneClassName: "text-gray-400" },
+  coffee: { Icon: CoffeeIcon, toneClassName: "text-blue-400" },
+  medication: { Icon: Tablets, toneClassName: "text-violet-400" },
+  medication_am: { Icon: Tablets, toneClassName: "text-violet-400" },
+  medication_pm: { Icon: Tablets, toneClassName: "text-violet-400" },
+  medication_night: { Icon: Tablets, toneClassName: "text-violet-400" },
+  walking: { Icon: Footprints, toneClassName: "text-teal-400" },
+  sleep: { Icon: Moon, toneClassName: "text-violet-400" },
+  stretching: { Icon: HeartPlus, toneClassName: "text-teal-400" },
+  breathing: { Icon: HeartPlus, toneClassName: "text-teal-400" },
+  journaling: { Icon: BookOpen, toneClassName: "text-violet-400" },
+  shower: { Icon: ShowerHead, toneClassName: "text-blue-400" },
+  brush_teeth: { Icon: Smile, toneClassName: "text-violet-400" },
+  halibut: { Icon: Fish, toneClassName: "text-violet-400" },
+  wound_dressing_checkbox: {
+    Icon: BriefcaseMedical,
+    toneClassName: "text-pink-400",
+  },
+  wound_dressing_count: {
+    Icon: BriefcaseMedical,
+    toneClassName: "text-pink-400",
+  },
+};
+
 const HABIT_ICON_BY_TYPE: Record<HabitType, HabitIconResult> = {
   sleep: { Icon: Moon, toneClassName: "text-violet-400" },
   count: { Icon: Tally5, toneClassName: "text-violet-400" },
   activity: { Icon: HeartPlus, toneClassName: "text-teal-400" },
-  fluid: { Icon: Droplets, toneClassName: "text-sky-400" },
+  fluid: { Icon: Droplets, toneClassName: "text-blue-400" },
   destructive: { Icon: AlertTriangle, toneClassName: "text-gray-400" },
   checkbox: { Icon: CopyCheck, toneClassName: "text-violet-400" },
   weight: { Icon: Weight, toneClassName: "text-pink-400" },
@@ -78,7 +109,7 @@ const HABIT_ICON_BY_TYPE: Record<HabitType, HabitIconResult> = {
 const LEGACY_HABIT_ICON_BY_TYPE: Record<string, HabitIconResult> = {
   cigarettes: { Icon: Cigarette, toneClassName: "text-gray-400" },
   rec_drugs: { Icon: Snowflake, toneClassName: "text-gray-400" },
-  hydration: { Icon: Droplets, toneClassName: "text-sky-400" },
+  hydration: { Icon: Droplets, toneClassName: "text-blue-400" },
   confectionery: { Icon: Candy, toneClassName: "text-gray-400" },
   alcohol: { Icon: Beer, toneClassName: "text-gray-400" },
   medication: { Icon: Tablets, toneClassName: "text-violet-400" },
@@ -98,6 +129,29 @@ export function getHabitIcon(habit: HabitConfig): HabitIconResult {
   const byId = HABIT_ICON_BY_ID[habit.id];
   if (byId) return byId;
 
+  // 2. Match by templateKey (handles renamed/duplicated habits that kept their template).
+  const byTemplateKey = HABIT_ICON_BY_TEMPLATE_KEY[habit.templateKey as string];
+  if (byTemplateKey) return byTemplateKey;
+
+  // 3. Name-based fallback — runs before byType so brand-name habits get their
+  //    intended icon even when the habitType has been converted (e.g. checkbox).
+  const nameLower = habit.name.toLowerCase();
+  if (nameLower.includes("brush") && nameLower.includes("teeth")) {
+    return { Icon: Smile, toneClassName: "text-violet-400" };
+  }
+  if (nameLower.includes("halibut")) {
+    return { Icon: Fish, toneClassName: "text-violet-400" };
+  }
+  if (nameLower.includes("stretch")) {
+    return { Icon: HeartPlus, toneClassName: "text-teal-400" };
+  }
+  if (nameLower.includes("breath")) {
+    return { Icon: HeartPlus, toneClassName: "text-teal-400" };
+  }
+  if (nameLower.includes("weight")) {
+    return { Icon: Weight, toneClassName: "text-pink-400" };
+  }
+
   // Custom habits intentionally use a generic icon unless they map to a known
   // legacy type. Templates and built-ins carry either a known ID or templateKey.
   const hasTemplateKey =
@@ -109,21 +163,9 @@ export function getHabitIcon(habit: HabitConfig): HabitIconResult {
     return DEFAULT_HABIT_ICON;
   }
 
-  // 2. Match by canonical habit type.
+  // 4. Match by canonical habit type.
   const byType = HABIT_ICON_BY_TYPE[habit.habitType];
   if (byType) return byType;
-
-  // 3. Name-based fallback for custom habits.
-  const nameLower = habit.name.toLowerCase();
-  if (nameLower.includes("stretch")) {
-    return { Icon: HeartPlus, toneClassName: "text-teal-400" };
-  }
-  if (nameLower.includes("breath")) {
-    return { Icon: HeartPlus, toneClassName: "text-teal-400" };
-  }
-  if (nameLower.includes("weight")) {
-    return { Icon: Weight, toneClassName: "text-pink-400" };
-  }
 
   // 4. Legacy habit types (may appear as string values not in HabitType union).
   const legacyType = LEGACY_HABIT_ICON_BY_TYPE[String(habit.habitType)];
